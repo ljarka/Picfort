@@ -21,8 +21,12 @@ import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.time.Instant
+import java.time.LocalDate
+import java.time.LocalDateTime
 import java.time.ZoneId
+import java.time.ZoneOffset
 import java.time.format.DateTimeFormatter
+import java.time.format.DateTimeParseException
 import java.util.Calendar
 import java.util.Locale
 import java.util.SortedMap
@@ -84,13 +88,13 @@ class TimelineRepository @Inject constructor(
                         year = calendar.get(Calendar.YEAR),
                     )
                 )
-            }.associateBy { Instant.parse(it.timeBucket).toEpochMilli() }
+            }.associateBy { parseDate(it.timeBucket).toEpochMilli() }
 
         val remoteBuckets = timelineBucketsService.getTimeBuckets()
-            .associateBy { Instant.parse(it.timeBucket).toEpochMilli() }
+            .associateBy { parseDate(it.timeBucket).toEpochMilli() }
 
         localBuckets.values.forEach {
-            val timestamp = Instant.parse(it.timeBucket).toEpochMilli()
+            val timestamp = parseDate(it.timeBucket).toEpochMilli()
             val count = it.count + (remoteBuckets[timestamp]?.count ?: 0)
             if (count > 0) {
                 buckets.add(
@@ -103,7 +107,7 @@ class TimelineRepository @Inject constructor(
         }
 
         remoteBuckets.values.forEach {
-            val timestamp = Instant.parse(it.timeBucket).toEpochMilli()
+            val timestamp = parseDate(it.timeBucket).toEpochMilli()
             if (!localBuckets.containsKey(timestamp)) {
                 val count = it.count + (localBuckets[timestamp]?.count ?: 0)
 
@@ -120,7 +124,7 @@ class TimelineRepository @Inject constructor(
 
         return buckets
             .map {
-                val timestamp = Instant.parse(it.timeBucket).toEpochMilli()
+                val timestamp = parseDate(it.timeBucket).toEpochMilli()
 
                 MonthBucketEntity(
                     timestamp = timestamp,
@@ -159,6 +163,23 @@ class TimelineRepository @Inject constructor(
 
     fun getAsset(bucket: Long, position: Int): AssetUi? {
         return timeBucketsCache.value[bucket]?.items?.getOrNull(position)
+    }
+
+    fun parseDate(timeBucket: String): Instant {
+        return try {
+            // Try parsing as full ISO timestamp with timezone
+            Instant.parse(timeBucket)
+        } catch (e1: DateTimeParseException) {
+            try {
+                // Try parsing as LocalDateTime (assumes no timezone, uses UTC)
+                val ldt = LocalDateTime.parse(timeBucket)
+                ldt.toInstant(ZoneOffset.UTC)
+            } catch (e2: DateTimeParseException) {
+                // Try parsing as just a date (assumes midnight UTC)
+                val ld = LocalDate.parse(timeBucket)
+                ld.atStartOfDay().toInstant(ZoneOffset.UTC)
+            }
+        }
     }
 
     suspend fun getAsset(index: Int): AssetUi? {
@@ -215,15 +236,15 @@ class TimelineRepository @Inject constructor(
     private suspend fun updateAssets(bucket: Long) {
         val timeInstant = Instant.ofEpochMilli(bucket)
 
-        val remoteAssets = timelineBucketsService.getBucket(
+        val bucketResponse = timelineBucketsService.getBucket(
             timeBucket = timeInstant.toString()
-        ).map {
+        )
+        val remoteAssets = bucketResponse.id.mapIndexed { index, id ->
             AssetEntity(
                 timestamp = bucket,
-                assetId = it.id,
-                width = it.exifInfo.exifImageWidth,
-                height = it.exifInfo.exifImageHeight,
-                dateTaken = Instant.parse(it.exifInfo.dateTimeOriginal).toEpochMilli(),
+                assetId = id,
+                ratio = bucketResponse.ratio[index],
+                dateTaken = parseDate(bucketResponse.fileCreatedAt[index]).toEpochMilli(),
                 assetIndex = 0,
                 type = AssetType.REMOTE,
             )
@@ -236,8 +257,7 @@ class TimelineRepository @Inject constructor(
                 AssetEntity(
                     timestamp = bucket,
                     assetId = it.id.toString(),
-                    width = it.width,
-                    height = it.height,
+                    ratio = (it.width?.toDouble() ?: 1.0) / (it.height?.toDouble() ?: 1.0),
                     type = AssetType.LOCAL,
                     dateTaken = it.dateTaken,
                     assetIndex = 0,
@@ -261,7 +281,7 @@ class TimelineRepository @Inject constructor(
         return date.format(formatter)
     }
 
-    private fun calculateSpan(ratio: Float) = when {
+    private fun calculateSpan(ratio: Double) = when {
         ratio >= 1.5 -> 4
         ratio >= 1.35 -> 3
         ratio >= 1 -> 2
@@ -294,15 +314,11 @@ class TimelineRepository @Inject constructor(
         return result
     }
 
-    private fun calculateRatio(with: Int, height: Int): Float {
-        return with.toFloat() / height.toFloat()
-    }
-
     private fun AssetEntity.toAssetUi(): AssetUi {
         return AssetUi(
             id = assetId,
             url = urlProvider.getThumbnail(assetId, type),
-            span = calculateSpan(calculateRatio(width ?: 1, height ?: 1)),
+            span = ratio?.let { calculateSpan(it) } ?: 1,
             type = type,
         )
     }

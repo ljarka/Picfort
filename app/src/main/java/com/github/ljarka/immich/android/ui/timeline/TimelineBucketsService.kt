@@ -10,6 +10,8 @@ interface TimelineBucketsService {
         @Query("size") size: String = "MONTH",
         @Query("withPartners") withPartners: Boolean = true,
         @Query("isArchived") isArchived: Boolean = false,
+        @Query("withStacked") isStacked: Boolean = true,
+        @Query("visibility") visibility: String = "timeline",
     ): List<TimeBucket>
 
     @GET("/api/timeline/bucket")
@@ -18,6 +20,8 @@ interface TimelineBucketsService {
         @Query("timeBucket") timeBucket: String,
         @Query("withPartners") withPartners: Boolean = true,
         @Query("isArchived") isArchived: Boolean = false,
-    ): List<Asset>
+        @Query("withStacked") isStacked: Boolean = true,
+        @Query("visibility") visibility: String = "timeline",
+    ): BucketResponse
 
 }

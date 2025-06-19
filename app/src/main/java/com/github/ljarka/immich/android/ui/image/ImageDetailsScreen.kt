@@ -15,8 +15,10 @@ import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
@@ -71,6 +73,7 @@ fun ImageDetailsScreen(
         }
     }
     BackHandler(enabled = true) { dismiss() }
+    val viewModel = hiltViewModel<ImageDetailsViewModel>()
     Scaffold(
         modifier = Modifier
             .fillMaxSize(),
@@ -88,8 +91,15 @@ fun ImageDetailsScreen(
                             .clickable { dismiss() },
                     )
                 },
+                actions = {
+                    IconButton(onClick = {
+                        viewModel.sendToImageFrame(assetId)
+                    }) {
+                        Icon(Icons.Filled.PlayArrow, contentDescription = "Settings")
+                    }
+                }
             )
-        }
+        },
     ) { innerPadding ->
         with(sharedTransitionScope) {
             val viewModel = hiltViewModel<ImageDetailsViewModel>()

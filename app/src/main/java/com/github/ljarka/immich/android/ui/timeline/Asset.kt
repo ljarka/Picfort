@@ -3,14 +3,8 @@ package com.github.ljarka.immich.android.ui.timeline
 import kotlinx.serialization.Serializable
 
 @Serializable
-data class Asset(
-    val id: String,
-    val exifInfo: ExifInfo,
-)
-
-@Serializable
-data class ExifInfo(
-    val exifImageWidth: Int?,
-    val exifImageHeight: Int?,
-    val dateTimeOriginal: String,
+data class BucketResponse(
+    val id: List<String>,
+    val ratio: List<Double>,
+    val fileCreatedAt: List<String>,
 )
