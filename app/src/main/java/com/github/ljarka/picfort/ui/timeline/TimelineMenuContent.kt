@@ -32,6 +32,7 @@ fun TimelineMenuContent(
     onShare: () -> Unit,
     onDownload: () -> Unit,
     onSendToFrame: () -> Unit,
+    onAddToAlbum: () -> Unit,
     onDelete: () -> Unit,
 ) {
     Column(modifier = Modifier.fillMaxWidth()) {
@@ -58,6 +59,11 @@ fun TimelineMenuContent(
                 icon = ImageVector.vectorResource(R.drawable.ic_download),
                 text = "Download",
                 onClick = { if (enabled) onDownload() },
+            )
+            IconTextButton(
+                icon = ImageVector.vectorResource(R.drawable.ic_album),
+                text = "Album",
+                onClick = { if (enabled) onAddToAlbum() },
             )
             IconTextButton(
                 icon = Icons.AutoMirrored.Filled.Send,

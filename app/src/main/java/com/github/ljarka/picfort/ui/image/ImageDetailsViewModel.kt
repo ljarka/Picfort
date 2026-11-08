@@ -1,6 +1,10 @@
 package com.github.ljarka.picfort.ui.image
 
+import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
+import androidx.navigation.toRoute
+import com.github.ljarka.picfort.Screen
+import com.github.ljarka.picfort.collections.CollectionsRepository
 import androidx.lifecycle.viewModelScope
 import com.github.ljarka.picfort.UrlProvider
 import com.github.ljarka.picfort.db.AssetType
@@ -35,7 +39,12 @@ class ImageDetailsViewModel @Inject constructor(
     /** For video streaming: carries the Immich token and the cleartext policy. */
     val okHttpClient: OkHttpClient,
     private val detailsRepository: AssetDetailsRepository,
+    private val collections: CollectionsRepository,
+    savedStateHandle: SavedStateHandle,
 ) : ViewModel() {
+
+    /** Album or search result to page through; null = the timeline. */
+    private val source: String? = savedStateHandle.toRoute<Screen.ImageDetails>().source
 
     private val _details = MutableStateFlow<DetailsState>(DetailsState.Loading)
     val details: StateFlow<DetailsState> = _details.asStateFlow()
@@ -61,9 +70,14 @@ class ImageDetailsViewModel @Inject constructor(
     private val _isSendingToFrame = MutableStateFlow(false)
     val isSendingToFrame: StateFlow<Boolean> = _isSendingToFrame.asStateFlow()
 
-    fun getNumberOfPages(): Int = repository.getAssetsCount()
+    fun getNumberOfPages(): Int = source?.let { collections.list(it).size } ?: repository.getAssetsCount()
 
     fun getAssetIndex(index: Int): Flow<AssetIndex> = flow {
+        if (source != null) {
+            val asset = collections.list(source).getOrNull(index)
+            emit(AssetIndex(index, asset?.id ?: "", AssetType.REMOTE, asset?.isVideo ?: false))
+            return@flow
+        }
         val asset = repository.getAsset(index)
         emit(
             AssetIndex(

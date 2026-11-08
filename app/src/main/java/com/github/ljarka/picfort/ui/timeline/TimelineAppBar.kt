@@ -4,7 +4,10 @@ import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Settings
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.res.vectorResource
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -22,6 +25,8 @@ import com.github.ljarka.picfort.R
 fun TimelineAppBar(
     scrollBehavior: TopAppBarScrollBehavior,
     onSettingsClick: () -> Unit,
+    onSearchClick: () -> Unit,
+    onAlbumsClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     TopAppBar(
@@ -39,6 +44,12 @@ fun TimelineAppBar(
             )
         },
         actions = {
+            IconButton(onClick = onSearchClick) {
+                Icon(Icons.Default.Search, contentDescription = "Search")
+            }
+            IconButton(onClick = onAlbumsClick) {
+                Icon(ImageVector.vectorResource(R.drawable.ic_album), contentDescription = "Albums")
+            }
             IconButton(onClick = onSettingsClick) {
                 Icon(Icons.Default.Settings, contentDescription = "Settings")
             }
