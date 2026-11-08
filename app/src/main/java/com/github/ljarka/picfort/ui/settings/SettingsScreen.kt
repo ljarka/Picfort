@@ -40,15 +40,13 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.github.ljarka.picfort.backup.BackupStatus
 import com.github.ljarka.picfort.local.RequestMediaPermission
-import com.github.ljarka.picfort.ui.frame.FrameSettingsDialog
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun SettingsScreen(onBack: () -> Unit) {
+fun SettingsScreen(onBack: () -> Unit, onFrameClick: () -> Unit) {
     val viewModel: SettingsViewModel = hiltViewModel()
     val backup by viewModel.backup.collectAsStateWithLifecycle()
     val status by viewModel.status.collectAsStateWithLifecycle()
-    var showFrame by remember { mutableStateOf(false) }
     var confirmLogout by remember { mutableStateOf(false) }
 
     LaunchedEffect(status) { viewModel.reloadCounts() }
@@ -62,7 +60,6 @@ fun SettingsScreen(onBack: () -> Unit) {
         viewModel.setEnabled(enabled)
     }
     if (!backup.hasMediaAccess) RequestMediaPermission(onGranted = viewModel::reloadCounts)
-    if (showFrame) FrameSettingsDialog(onDismiss = { showFrame = false })
     if (confirmLogout) {
         AlertDialog(
             onDismissRequest = { confirmLogout = false },
@@ -132,9 +129,9 @@ fun SettingsScreen(onBack: () -> Unit) {
             HorizontalDivider(Modifier.padding(vertical = 8.dp))
             SectionTitle("Picture frame")
             ListItem(
-                modifier = Modifier.clickable { showFrame = true },
-                headlineContent = { Text("Frame address") },
-                supportingContent = { Text("Set up the e-paper frame") },
+                modifier = Modifier.clickable(onClick = onFrameClick),
+                headlineContent = { Text("Frame") },
+                supportingContent = { Text("What's on the frame, slideshow, address") },
             )
 
             HorizontalDivider(Modifier.padding(vertical = 8.dp))
