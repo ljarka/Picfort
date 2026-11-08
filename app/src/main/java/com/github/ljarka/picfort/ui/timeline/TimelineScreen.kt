@@ -492,7 +492,7 @@ private fun GalleryItem(
                 contentScale = ContentScale.Crop,
                 modifier = Modifier
                     .sharedElement(
-                        state = rememberSharedContentState(key = asset.id),
+                        sharedContentState = rememberSharedContentState(key = asset.id),
                         animatedVisibilityScope = animatedVisibilityScope,
                     )
                     .combinedClickable(
