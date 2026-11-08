@@ -1,17 +1,17 @@
 [versions]
 agp = "8.9.0"
-kotlin = "2.0.21"
-coreKtx = "1.15.0"
+kotlin = "2.4.21"
+coreKtx = "1.19.1"
 junit = "4.13.2"
 junitVersion = "1.2.1"
 espressoCore = "3.6.1"
 lifecycleRuntimeKtx = "2.8.7"
 activityCompose = "1.10.1"
 composeBom = "2025.03.01"
-hilt = "2.55"
+hilt = "2.60.1"
 media3 = "1.5.1"
-work = "2.10.0"
-hiltX = "1.2.0"
+work = "2.12.0"
+hiltX = "1.4.0"
 paparazzi = "1.3.5"
 
 [libraries]
@@ -22,7 +22,7 @@ androidx-espresso-core = { group = "androidx.test.espresso", name = "espresso-co
 androidx-lifecycle-runtime-ktx = { group = "androidx.lifecycle", name = "lifecycle-runtime-ktx", version.ref = "lifecycleRuntimeKtx" }
 androidx-activity-compose = { group = "androidx.activity", name = "activity-compose", version.ref = "activityCompose" }
 androidx-compose-bom = { group = "androidx.compose", name = "compose-bom", version.ref = "composeBom" }
-navigation-compose = { group = "androidx.navigation", name = "navigation-compose", version = "2.8.8" }
+navigation-compose = { group = "androidx.navigation", name = "navigation-compose", version = "2.10.2" }
 androidx-ui = { group = "androidx.compose.ui", name = "ui" }
 compose-animation = { group = "androidx.compose.animation", name = "animation" }
 androidx-ui-graphics = { group = "androidx.compose.ui", name = "ui-graphics" }
@@ -31,35 +31,35 @@ androidx-ui-tooling-preview = { group = "androidx.compose.ui", name = "ui-toolin
 androidx-ui-test-manifest = { group = "androidx.compose.ui", name = "ui-test-manifest" }
 androidx-ui-test-junit4 = { group = "androidx.compose.ui", name = "ui-test-junit4" }
 androidx-material3 = { group = "androidx.compose.material3", name = "material3" }
-kotlin-serialization-json = { group = "org.jetbrains.kotlinx", name = "kotlinx-serialization-json", version = "1.6.3" }
+kotlin-serialization-json = { group = "org.jetbrains.kotlinx", name = "kotlinx-serialization-json", version = "1.12.0" }
 hilt-android = { group = "com.google.dagger", name = "hilt-android", version.ref = "hilt" }
 hilt-android-compiler = { group = "com.google.dagger", name = "hilt-android-compiler", version.ref = "hilt" }
-hilt-navigation-compose = { group = "androidx.hilt", name = "hilt-navigation-compose", version = "1.2.0" }
+hilt-navigation-compose = { group = "androidx.hilt", name = "hilt-navigation-compose", version = "1.4.0" }
 hilt-work = { group = "androidx.hilt", name = "hilt-work", version.ref = "hiltX" }
 hilt-androidx-compiler = { group = "androidx.hilt", name = "hilt-compiler", version.ref = "hiltX" }
 work-runtime-ktx = { group = "androidx.work", name = "work-runtime-ktx", version.ref = "work" }
 retrofit = { group = "com.squareup.retrofit2", name = "retrofit", version = "2.11.0" }
 converter-kotlinx-serialization = { group = "com.squareup.retrofit2", name = "converter-kotlinx-serialization", version = "2.11.0" }
 okhttp = { group = "com.squareup.okhttp3", name = "okhttp", version = "4.12.0" }
-datastore-preferences = { group = "androidx.datastore", name = "datastore-preferences", version = "1.1.3" }
-security-crypto = { group = "androidx.security", name = "security-crypto", version = "1.0.0" }
+datastore-preferences = { group = "androidx.datastore", name = "datastore-preferences", version = "1.3.0" }
+security-crypto = { group = "androidx.security", name = "security-crypto", version = "1.1.0" }
 logging-interceptor = { group = "com.squareup.okhttp3", name = "logging-interceptor", version = "4.12.0" }
-coil = { group = "io.coil-kt.coil3", name = "coil-compose", version = "3.1.0" }
-coil-network-okhttp = { group = "io.coil-kt.coil3", name = "coil-network-okhttp", version = "3.1.0" }
-coil-video = { group = "io.coil-kt.coil3", name = "coil-video", version = "3.1.0" }
+coil = { group = "io.coil-kt.coil3", name = "coil-compose", version = "3.6.3" }
+coil-network-okhttp = { group = "io.coil-kt.coil3", name = "coil-network-okhttp", version = "3.6.3" }
+coil-video = { group = "io.coil-kt.coil3", name = "coil-video", version = "3.6.3" }
 media3-exoplayer = { group = "androidx.media3", name = "media3-exoplayer", version.ref = "media3" }
 media3-ui = { group = "androidx.media3", name = "media3-ui", version.ref = "media3" }
 media3-datasource-okhttp = { group = "androidx.media3", name = "media3-datasource-okhttp", version.ref = "media3" }
-error-prone-annotations = { group = "com.google.errorprone", name = "error_prone_annotations", version = "2.28.0" }
-room-runtime = { group = "androidx.room", name = "room-runtime", version = "2.6.1" }
-room-compiler = { group = "androidx.room", name = "room-compiler", version = "2.6.1" }
-room-ktx = { group = "androidx.room", name = "room-ktx", version = "2.6.1" }
+error-prone-annotations = { group = "com.google.errorprone", name = "error_prone_annotations", version = "2.52.0" }
+room-runtime = { group = "androidx.room", name = "room-runtime", version = "2.8.5" }
+room-compiler = { group = "androidx.room", name = "room-compiler", version = "2.8.5" }
+room-ktx = { group = "androidx.room", name = "room-ktx", version = "2.8.5" }
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }
 kotlin-android = { id = "org.jetbrains.kotlin.android", version.ref = "kotlin" }
 kotlin-compose = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "kotlin" }
 kotlin-serialization = { id = "org.jetbrains.kotlin.plugin.serialization", version.ref = "kotlin" }
-ksp = { id = "com.google.devtools.ksp", version = "2.0.21-1.0.28" }
+ksp = { id = "com.google.devtools.ksp", version = "2.3.13" }
 hilt = { id = 'com.google.dagger.hilt.android', version.ref = "hilt" }
 paparazzi = { id = "app.cash.paparazzi", version.ref = "paparazzi" }
 
