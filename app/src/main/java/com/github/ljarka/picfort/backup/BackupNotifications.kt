@@ -15,7 +15,7 @@ private const val NOTIFICATION_ID = 1001
 /** Ongoing "Backing up… 12 of 340" notification for the backup worker's foreground service. */
 fun backupForegroundInfo(context: Context, done: Int, total: Int): ForegroundInfo {
     val manager = context.getSystemService(NotificationManager::class.java)
-    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O && manager.getNotificationChannel(CHANNEL_ID) == null) {
+    if (manager.getNotificationChannel(CHANNEL_ID) == null) {
         manager.createNotificationChannel(
             NotificationChannel(CHANNEL_ID, "Backup", NotificationManager.IMPORTANCE_LOW).apply {
                 description = "Progress while photos are uploaded to Immich"
