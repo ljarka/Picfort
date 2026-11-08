@@ -1,5 +1,6 @@
 package com.github.ljarka.immich.android.network
 
+import com.github.ljarka.immich.android.BuildConfig
 import com.github.ljarka.immich.android.ui.server.ServerUrlStore
 import dagger.Module
 import dagger.Provides
@@ -22,13 +23,21 @@ class NetworkModule {
 
     @Provides
     fun okhttp(authInterceptor: AuthInterceptor): OkHttpClient {
-        val logging = HttpLoggingInterceptor()
-        logging.setLevel(HttpLoggingInterceptor.Level.BODY)
-        val client = OkHttpClient.Builder()
-            .addInterceptor(logging)
+        val builder = OkHttpClient.Builder()
+            .addInterceptor(CleartextPolicyInterceptor())
             .addInterceptor(authInterceptor)
-            .build()
-        return client
+        if (BuildConfig.DEBUG) {
+            // Debug only: bodies include the login password. Added last so it
+            // sees the final request, with credentials redacted.
+            builder.addInterceptor(
+                HttpLoggingInterceptor().apply {
+                    level = HttpLoggingInterceptor.Level.BODY
+                    redactHeader("Authorization")
+                    redactHeader("x-api-key")
+                }
+            )
+        }
+        return builder.build()
     }
 
     @Provides

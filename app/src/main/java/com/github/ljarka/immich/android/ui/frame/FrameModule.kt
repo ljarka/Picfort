@@ -4,6 +4,7 @@ import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
 import dagger.hilt.components.SingletonComponent
+import com.github.ljarka.immich.android.network.CleartextPolicyInterceptor
 import okhttp3.OkHttpClient
 import java.util.concurrent.TimeUnit
 import javax.inject.Singleton
@@ -17,6 +18,7 @@ class FrameModule {
     @Singleton
     @Provides
     fun frameHttpClient(): OkHttpClient = OkHttpClient.Builder()
+        .addInterceptor(CleartextPolicyInterceptor())
         .connectTimeout(5, TimeUnit.SECONDS)
         // The frame downloads and renders the original before answering.
         .readTimeout(60, TimeUnit.SECONDS)

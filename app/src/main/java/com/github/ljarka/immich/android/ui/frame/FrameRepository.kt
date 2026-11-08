@@ -5,6 +5,7 @@ import kotlinx.coroutines.withContext
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
+import com.github.ljarka.immich.android.network.CleartextNotAllowedException
 import okhttp3.HttpUrl
 import okhttp3.OkHttpClient
 import okhttp3.Request
@@ -83,6 +84,8 @@ class FrameRepository @Inject constructor(
                 }
                 map(response.code, body)
             }
+        } catch (e: CleartextNotAllowedException) {
+            FrameResult.Error(e.message ?: "Use https:// for frames outside your network")
         } catch (e: IOException) {
             FrameResult.Error("Can't reach the frame at ${url.host}")
         }
