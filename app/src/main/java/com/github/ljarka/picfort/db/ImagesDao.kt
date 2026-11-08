@@ -22,6 +22,9 @@ interface ImagesDao {
     @Delete
     suspend fun deleteAsset(asset: AssetEntity)
 
+    @Query("DELETE FROM assets where bucket = :bucket")
+    suspend fun deleteAssets(bucket: Long)
+
     @Query("SELECT * FROM month_buckets order by timestamp desc")
     fun getMonthBuckets(): Flow<List<MonthBucketEntity>>
 
@@ -30,6 +33,9 @@ interface ImagesDao {
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertMonthBuckets(bucket: List<MonthBucketEntity>)
+
+    @Query("DELETE FROM month_buckets")
+    suspend fun deleteMonthBuckets()
 
     @Update
     suspend fun updateBucket(monthBucketEntity: MonthBucketEntity): Int

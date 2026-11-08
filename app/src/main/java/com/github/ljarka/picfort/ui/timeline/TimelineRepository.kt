@@ -2,9 +2,12 @@ package com.github.ljarka.picfort.ui.timeline
 
 import android.content.Context
 import android.util.Log
+import androidx.room.withTransaction
 import com.github.ljarka.picfort.AppScope
 import com.github.ljarka.picfort.UrlProvider
 import com.github.ljarka.picfort.db.AssetEntity
+import com.github.ljarka.picfort.db.BackupDao
+import com.github.ljarka.picfort.local.monthRangeMillis
 import com.github.ljarka.picfort.db.AssetType
 import com.github.ljarka.picfort.db.ImagesDatabase
 import com.github.ljarka.picfort.db.MonthBucketEntity
@@ -41,6 +44,7 @@ data class AssetIndex(
     val index: Int,
     val assetId: String,
     val assetType: AssetType,
+    val isVideo: Boolean = false,
 )
 
 private const val TAG = "TimelineRepository"
@@ -52,6 +56,7 @@ class TimelineRepository @Inject constructor(
     private val imagesDatabase: ImagesDatabase,
     private val timelineBucketsService: TimelineBucketsService,
     private val urlProvider: UrlProvider,
+    private val backupDao: BackupDao,
 ) {
     private val timeBucketsCache: MutableStateFlow<SortedMap<Long, TimeBucketUi>> =
         MutableStateFlow(sortedMapOf(reverseOrder()))
@@ -81,16 +86,13 @@ class TimelineRepository @Inject constructor(
             .map {
                 calendar.add(Calendar.MONTH, -1)
                 val time = calendar.toInstant().toString()
-                TimeBucket(
-                    timeBucket = time,
-                    count = localImagesProvider.getImagesCountForMonth(
-                        context = context,
-                        month = YearMonth.of(
-                            calendar.get(Calendar.YEAR),
-                            calendar.get(Calendar.MONTH) + 1,
-                        ),
-                    )
-                )
+                val month = YearMonth.of(calendar.get(Calendar.YEAR), calendar.get(Calendar.MONTH) + 1)
+                val range = monthRangeMillis(month, ZoneId.systemDefault())
+                // Phone photos already in Immich are shown once, as the Immich copy.
+                // This is an estimate; fetchAssets corrects the count when the month loads.
+                val onPhone = localImagesProvider.getImagesCountForMonth(context = context, month = month)
+                val backedUp = backupDao.countBackedUp(range.first, range.last + 1)
+                TimeBucket(timeBucket = time, count = (onPhone - backedUp).coerceAtLeast(0))
             }.associateBy { parseDate(it.timeBucket).toEpochMilli() }
 
         val remoteBuckets = timelineBucketsService.getTimeBuckets()
@@ -148,13 +150,17 @@ class TimelineRepository @Inject constructor(
 
     private fun loadBucketsFromDb() = imagesDao.getMonthBuckets()
         .map { buckets ->
+            // Flat start index of each month, derived from current counts so that a
+            // corrected count can't leave later months pointing at the wrong items.
+            var start = 0
             buckets.map { bucketItem ->
+                val index = start.also { start += bucketItem.count }
                 TimeBucketUi(
                     timeStamp = bucketItem.timestamp,
                     count = bucketItem.count,
                     formattedDate = formatDate(Instant.ofEpochMilli(bucketItem.timestamp)),
                     numberOfRows = bucketItem.rowsNumber ?: 0,
-                    index = bucketItem.index,
+                    index = index,
                     lastUpdate = bucketItem.lastUpdate,
                     items = timeBucketsCache.value[bucketItem.timestamp]?.items?.takeIf { it.isNotEmpty() }
                         ?: itemsCache.remove(bucketItem.timestamp) ?: emptyList(),
@@ -244,6 +250,7 @@ class TimelineRepository @Inject constructor(
         dbBucket?.let {
             imagesDao.updateBucket(
                 dbBucket.copy(
+                    count = items.size, // the estimate from refresh() can be off
                     rowsNumber = rows,
                     lastUpdate = System.currentTimeMillis()
                 )
@@ -266,6 +273,8 @@ class TimelineRepository @Inject constructor(
                 dateTaken = parseDate(bucketResponse.fileCreatedAt[index]).toEpochMilli(),
                 assetIndex = 0,
                 type = AssetType.REMOTE,
+                isVideo = bucketResponse.isImage.getOrNull(index) == false,
+                durationMs = parseImmichDuration(bucketResponse.duration.getOrNull(index)),
             )
         }
 
@@ -281,18 +290,52 @@ class TimelineRepository @Inject constructor(
                     type = AssetType.LOCAL,
                     dateTaken = it.dateTaken,
                     assetIndex = 0,
+                    isVideo = it.isVideo,
+                    durationMs = it.durationMs,
                 )
             }
 
-        updateDbAssets(remoteAssets + localAssets)
+        // Hide phone copies of photos that are already in this Immich month.
+        val remoteIds = remoteAssets.mapTo(HashSet()) { it.assetId }
+        val backedUp = localAssets.map { it.assetId.toLong() }.chunked(500)
+            .flatMap { backupDao.get(it) }
+            .filter { it.remoteId in remoteIds }
+            .mapTo(HashSet()) { it.localId.toString() }
+        val phoneOnly = localAssets.filter { it.assetId !in backedUp }
+
+        updateDbAssets(bucket, remoteAssets + phoneOnly)
     }
 
-    private suspend fun updateDbAssets(assets: List<AssetEntity>) {
-        imagesDao.insertAssets(
-            assets = assets
-                .sortedByDescending { it.dateTaken }
-                .mapIndexed { index, asset -> asset.copy(assetIndex = index) }
-        )
+    /**
+     * Replaces the bucket's rows. Rows are keyed by (bucket, index), so a plain
+     * upsert would leave stale rows behind when a month shrinks (e.g. after a delete).
+     */
+    private suspend fun updateDbAssets(bucket: Long, assets: List<AssetEntity>) {
+        imagesDatabase.withTransaction {
+            imagesDao.deleteAssets(bucket)
+            imagesDao.insertAssets(
+                assets = assets
+                    .sortedByDescending { it.dateTaken }
+                    .mapIndexed { index, asset -> asset.copy(assetIndex = index) }
+            )
+        }
+    }
+
+    /**
+     * Re-downloads the given months and the bucket counts, and drops their
+     * in-memory items so the timeline shows the new contents.
+     */
+    suspend fun reloadBuckets(buckets: Set<Long>) {
+        refresh()
+        buckets.forEach { bucket ->
+            updateAssets(bucket)
+            timeBucketsCache.value[bucket]?.let { cached ->
+                timeBucketsCache.value = timeBucketsCache.value.toSortedMap(reverseOrder()).apply {
+                    put(bucket, cached.copy(items = emptyList()))
+                }
+            }
+            fetchAssets(bucket)
+        }
     }
 
     private fun formatDate(instant: Instant): String {
@@ -337,14 +380,21 @@ class TimelineRepository @Inject constructor(
     private fun AssetEntity.toAssetUi(): AssetUi {
         return AssetUi(
             id = assetId,
-            url = urlProvider.getThumbnail(assetId, type),
+            url = urlProvider.getThumbnail(assetId, type, isVideo),
             span = ratio?.let { calculateSpan(it) } ?: 1,
             type = type,
+            isVideo = isVideo,
+            durationMs = durationMs,
         )
     }
 
     /** Syncs bucket counts with the server and the phone. Throws on network errors. */
     suspend fun refresh() {
-        imagesDao.insertMonthBuckets(loadBucketsInfoFromServerAndDisk())
+        val buckets = loadBucketsInfoFromServerAndDisk()
+        // Replace, so months that became empty disappear (row counts are carried over).
+        imagesDatabase.withTransaction {
+            imagesDao.deleteMonthBuckets()
+            imagesDao.insertMonthBuckets(buckets)
+        }
     }
 }

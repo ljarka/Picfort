@@ -15,6 +15,13 @@ class SessionManager @Inject constructor(
     private val _loggedOut = MutableSharedFlow<Unit>(extraBufferCapacity = 1)
     val loggedOut: SharedFlow<Unit> = _loggedOut.asSharedFlow()
 
+    /** User-initiated logout. */
+    @Synchronized
+    fun logout() {
+        accessTokenStore.accessToken = ""
+        _loggedOut.tryEmit(Unit)
+    }
+
     /** Called from OkHttp threads; many requests may fail at once, only the first counts. */
     @Synchronized
     fun onUnauthorized() {
