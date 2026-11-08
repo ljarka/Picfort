@@ -25,7 +25,12 @@ class BackupWorker @AssistedInject constructor(
 
     override suspend fun doWork(): Result {
         val (result, message) = try {
-            when (val outcome = engine.run { setProgress(workDataOf(KEY_DONE to it.done, KEY_TOTAL to it.total)) }) {
+            promoteToForeground(0, 0)
+            val outcome = engine.run {
+                setProgress(workDataOf(KEY_DONE to it.done, KEY_TOTAL to it.total))
+                promoteToForeground(it.done, it.total)
+            }
+            when (outcome) {
                 is BackupOutcome.Done -> Result.success(workDataOf(KEY_UPLOADED to outcome.uploaded)) to
                     summary(outcome)
                 BackupOutcome.NoMediaAccess -> Result.failure() to "Allow access to photos and videos"
@@ -42,6 +47,19 @@ class BackupWorker @AssistedInject constructor(
         settings.lastResult = message
         settings.lastRunAt = System.currentTimeMillis()
         return result
+    }
+
+    /**
+     * Runs as a foreground service so the 10-minute worker limit doesn't cut off big
+     * backups. Android 12+ may refuse this while the app is in the background; the
+     * backup then continues as a normal (time-limited) worker and resumes next run.
+     */
+    private suspend fun promoteToForeground(done: Int, total: Int) {
+        try {
+            setForeground(backupForegroundInfo(applicationContext, done, total))
+        } catch (e: IllegalStateException) {
+            if (done == 0) Log.i("BackupWorker", "Can't run in the foreground now: ${e.message}")
+        }
     }
 
     private fun summary(o: BackupOutcome.Done) = buildList {
