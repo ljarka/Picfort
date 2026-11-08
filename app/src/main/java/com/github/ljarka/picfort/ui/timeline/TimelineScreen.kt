@@ -75,7 +75,8 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import coil3.compose.SubcomposeAsyncImage
+import coil3.compose.AsyncImage
+import androidx.compose.ui.graphics.painter.ColorPainter
 import com.github.ljarka.picfort.R
 import com.github.ljarka.picfort.db.AssetType
 import com.github.ljarka.picfort.collections.AddToAlbumDialog
@@ -244,8 +245,8 @@ fun TimelineScreen(
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalSharedTransitionApi::class)
 @Composable
-private fun TimeLineContent(
-    viewModel: TimelineViewModel,
+internal fun TimeLineContent(
+    viewModel: TimelineGridModel,
     state: BucketsState,
     gridState: LazyGridState,
     onImageClick: (String, AssetType, Int) -> Unit,
@@ -291,7 +292,7 @@ private fun TimeLineContent(
 private fun ImagesBucketsGrid(
     gridState: LazyGridState,
     state: BucketsState,
-    viewModel: TimelineViewModel,
+    viewModel: TimelineGridModel,
     onImageClick: (String, AssetType, Int) -> Unit,
     sharedTransitionScope: SharedTransitionScope,
     animatedVisibilityScope: AnimatedVisibilityScope,
@@ -486,7 +487,8 @@ private fun GalleryItem(
         Box(
             modifier = Modifier.scale(scale),
         ) {
-            SubcomposeAsyncImage(
+            // AsyncImage, not SubcomposeAsyncImage: subcomposition is slow in lazy grids.
+            AsyncImage(
                 contentScale = ContentScale.Crop,
                 modifier = Modifier
                     .sharedElement(
@@ -501,14 +503,12 @@ private fun GalleryItem(
                     )
                     .padding(4.dp)
                     .height(170.dp)
-                    .clip(RoundedCornerShape(8.dp)),
+                    .clip(RoundedCornerShape(8.dp))
+                    // Grey tile until the image arrives (a background rather than a
+                    // placeholder painter, which previews/screenshots would show instead).
+                    .background(PlaceholderColor),
                 model = asset.url,
-                loading = { PlaceHolder() },
-                error = {
-                    PlaceHolder(
-                        modifier = Modifier.background(Color.Red)
-                    )
-                },
+                error = ColorPainter(MaterialTheme.colorScheme.errorContainer),
                 contentDescription = null,
             )
 
@@ -559,6 +559,8 @@ private fun GalleryItem(
         }
     }
 }
+
+private val PlaceholderColor = Color.LightGray.copy(alpha = 0.3f)
 
 @Composable
 private fun PlaceHolder(modifier: Modifier = Modifier) {

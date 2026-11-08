@@ -55,7 +55,7 @@ class TimelineViewModel @Inject constructor(
     private val assetActions: AssetActions,
     private val frameRepository: FrameRepository,
     private val collections: CollectionsRepository,
-) : ViewModel() {
+) : ViewModel(), TimelineGridModel {
     private val loadingState = MutableStateFlow(LoadingState.DEFAULT)
     private val _messages = Channel<String>(Channel.BUFFERED)
     val messages: Flow<String> = _messages.receiveAsFlow()
@@ -74,7 +74,7 @@ class TimelineViewModel @Inject constructor(
     }
     private val _selection = MutableStateFlow<Map<String, SelectedAsset>>(emptyMap())
     val selection: StateFlow<Map<String, SelectedAsset>> = _selection.asStateFlow()
-    val selectedAssets: StateFlow<Set<String>> = _selection
+    override val selectedAssets: StateFlow<Set<String>> = _selection
         .map { it.keys }
         .stateIn(viewModelScope, SharingStarted.Eagerly, emptySet())
 
@@ -83,22 +83,22 @@ class TimelineViewModel @Inject constructor(
     private val _isBusy = MutableStateFlow(false)
     val isBusy: StateFlow<Boolean> = _isBusy.asStateFlow()
 
-    fun getAssetLoadingState(bucket: Long): StateFlow<AssetLoadingState> {
+    override fun getAssetLoadingState(bucket: Long): StateFlow<AssetLoadingState> {
         return _assetState.getOrPut(bucket) { MutableStateFlow(AssetLoadingState.DEFAULT) }
     }
 
-    fun isFixedSpan(bucket: Long): Boolean = fixedSpans.contains(bucket)
+    override fun isFixedSpan(bucket: Long): Boolean = fixedSpans.contains(bucket)
 
-    fun setFixedSpan(bucket: Long) {
+    override fun setFixedSpan(bucket: Long) {
         fixedSpans.add(bucket)
     }
 
-    fun getAsset(bucket: Long, position: Int): AssetUi? {
+    override fun getAsset(bucket: Long, position: Int): AssetUi? {
         return timelineRepository.getAsset(bucket, position)
     }
 
     @Synchronized
-    fun fetchAssets(bucket: Long) {
+    override fun fetchAssets(bucket: Long) {
         val job = assetFetchingJobs[bucket]
 
         if (job == null) {
@@ -122,11 +122,11 @@ class TimelineViewModel @Inject constructor(
         }
     }
 
-    fun selectAsset(asset: AssetUi, bucket: Long) {
+    override fun selectAsset(asset: AssetUi, bucket: Long) {
         _selection.update { it + (asset.id to SelectedAsset(asset.id, asset.type, bucket, asset.isVideo)) }
     }
 
-    fun deselectAsset(assetId: String) {
+    override fun deselectAsset(assetId: String) {
         _selection.update { it - assetId }
     }
 
@@ -253,7 +253,7 @@ class TimelineViewModel @Inject constructor(
 
     private var refreshAgain = false
 
-    fun refresh() {
+    override fun refresh() {
         if (loadingState.value == LoadingState.REFRESHING) {
             refreshAgain = true // e.g. media permission granted mid-sync
             return
