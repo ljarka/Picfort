@@ -1,6 +1,10 @@
 package com.github.ljarka.picfort.ui.settings
 
+import android.Manifest
+import android.os.Build
 import android.text.format.DateUtils
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
@@ -48,6 +52,15 @@ fun SettingsScreen(onBack: () -> Unit) {
     var confirmLogout by remember { mutableStateOf(false) }
 
     LaunchedEffect(status) { viewModel.reloadCounts() }
+    val notificationPermission = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestPermission()
+    ) { /* backup works either way; this only shows its progress */ }
+    val onEnable: (Boolean) -> Unit = { enabled ->
+        if (enabled && Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            notificationPermission.launch(Manifest.permission.POST_NOTIFICATIONS)
+        }
+        viewModel.setEnabled(enabled)
+    }
     if (!backup.hasMediaAccess) RequestMediaPermission(onGranted = viewModel::reloadCounts)
     if (showFrame) FrameSettingsDialog(onDismiss = { showFrame = false })
     if (confirmLogout) {
@@ -79,7 +92,7 @@ fun SettingsScreen(onBack: () -> Unit) {
                 .verticalScroll(rememberScrollState())
         ) {
             SectionTitle("Backup")
-            SwitchRow("Back up this phone", "Photos and videos are uploaded to Immich", backup.enabled, viewModel::setEnabled)
+            SwitchRow("Back up this phone", "Photos and videos are uploaded to Immich", backup.enabled, onEnable)
             SwitchRow("Only on Wi-Fi", null, backup.wifiOnly, viewModel::setWifiOnly)
             SwitchRow("Only while charging", null, backup.chargingOnly, viewModel::setChargingOnly)
 
