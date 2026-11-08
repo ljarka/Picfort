@@ -15,6 +15,8 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.ListItem
+import androidx.compose.material3.ListItemDefaults
+import androidx.compose.ui.graphics.Color
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Text
@@ -35,8 +37,17 @@ sealed interface DetailsState {
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AssetDetailsSheet(state: DetailsState, onDismiss: () -> Unit) {
-    val context = LocalContext.current
     ModalBottomSheet(onDismissRequest = onDismiss) {
+        AssetDetailsList(state)
+    }
+}
+
+@Composable
+fun AssetDetailsList(state: DetailsState) {
+    val context = LocalContext.current
+    // Let the sheet's own colour show through, instead of banded list items.
+    val transparent = ListItemDefaults.colors(containerColor = Color.Transparent)
+    run {
         Column(Modifier.fillMaxWidth().navigationBarsPadding().padding(bottom = 16.dp)) {
             Text(
                 "Details",
@@ -55,12 +66,14 @@ fun AssetDetailsSheet(state: DetailsState, onDismiss: () -> Unit) {
                 is DetailsState.Loaded -> {
                     state.details.rows.forEach { row ->
                         ListItem(
+                            colors = transparent,
                             overlineContent = { Text(row.label) },
                             headlineContent = { Text(row.value) },
                         )
                     }
                     state.details.location?.let { (lat, lon) ->
                         ListItem(
+                            colors = transparent,
                             modifier = Modifier.clickable {
                                 val geo = String.format(Locale.US, "geo:%f,%f?q=%f,%f", lat, lon, lat, lon)
                                 try {

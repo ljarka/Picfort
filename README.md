@@ -4,6 +4,18 @@ Picfort is an Android client for a self-hosted [Immich](https://immich.app) phot
 
 > **Status:** early, personal project.
 
+## Screenshots
+
+| Album | Search | Details | Picture frame |
+|---|---|---|---|
+| <img src="app/src/test/snapshots/images/com.github.ljarka.picfort.screenshots_ScreenshotTest_album.png" width="200" alt="album"> | <img src="app/src/test/snapshots/images/com.github.ljarka.picfort.screenshots_ScreenshotTest_search.png" width="200" alt="search"> | <img src="app/src/test/snapshots/images/com.github.ljarka.picfort.screenshots_ScreenshotTest_details.png" width="200" alt="details"> | <img src="app/src/test/snapshots/images/com.github.ljarka.picfort.screenshots_ScreenshotTest_frame.png" width="200" alt="frame"> |
+
+| Albums | Backup settings | Dark theme |
+|---|---|---|
+| <img src="app/src/test/snapshots/images/com.github.ljarka.picfort.screenshots_ScreenshotTest_albums.png" width="200" alt="albums"> | <img src="app/src/test/snapshots/images/com.github.ljarka.picfort.screenshots_ScreenshotTest_settings.png" width="200" alt="settings"> | <img src="app/src/test/snapshots/images/com.github.ljarka.picfort.screenshots_ScreenshotTest_settings_dark.png" width="200" alt="settings_dark"> |
+
+These are rendered from the app's UI code with sample photos by the [screenshot tests](#screenshot-tests). They are regenerated whenever the UI changes, so they always match the code.
+
 ## Features
 
 - **One timeline.** Photos from Immich and from the phone's MediaStore (the last 24 months) are merged and grouped by month, newest first. A cloud icon shows where each image comes from.
@@ -80,6 +92,23 @@ The first time you start the app:
 1. Enter your Immich server URL, for example `https://photos.example.com`.
 2. Log in with your Immich email and password.
 3. Allow photo access so photos on the phone appear in the timeline.
+
+## Tests
+
+```bash
+./gradlew testDebugUnitTest           # unit tests (also renders the screenshots)
+./gradlew verifyPaparazziDebug        # fails if a screen no longer matches its screenshot
+```
+
+### Screenshot tests
+
+`app/src/test/.../screenshots/ScreenshotTest.kt` renders screens on the JVM with [Paparazzi](https://github.com/cashapp/paparazzi), with no device or emulator. Photos come from a small generator that draws deterministic landscapes, so the images are stable. The reference images are checked in under `app/src/test/snapshots/images/` and are also used in this README.
+
+After an intended UI change, re-record the screenshots and commit the updated images:
+
+```bash
+./gradlew recordPaparazziDebug
+```
 
 ## ImageFrameServer
 

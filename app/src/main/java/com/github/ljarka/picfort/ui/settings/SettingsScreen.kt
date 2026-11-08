@@ -47,7 +47,6 @@ fun SettingsScreen(onBack: () -> Unit, onFrameClick: () -> Unit) {
     val viewModel: SettingsViewModel = hiltViewModel()
     val backup by viewModel.backup.collectAsStateWithLifecycle()
     val status by viewModel.status.collectAsStateWithLifecycle()
-    var confirmLogout by remember { mutableStateOf(false) }
 
     LaunchedEffect(status) { viewModel.reloadCounts() }
     val notificationPermission = rememberLauncherForActivityResult(
@@ -60,12 +59,43 @@ fun SettingsScreen(onBack: () -> Unit, onFrameClick: () -> Unit) {
         viewModel.setEnabled(enabled)
     }
     if (!backup.hasMediaAccess) RequestMediaPermission(onGranted = viewModel::reloadCounts)
+    SettingsContent(
+        backup = backup,
+        status = status,
+        serverUrl = viewModel.serverUrl,
+        onBack = onBack,
+        onFrameClick = onFrameClick,
+        onEnable = onEnable,
+        onWifiOnly = viewModel::setWifiOnly,
+        onChargingOnly = viewModel::setChargingOnly,
+        onBackUpNow = viewModel::backUpNow,
+        onLogout = viewModel::logout,
+    )
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun SettingsContent(
+    backup: BackupSettingsUi,
+    status: BackupStatus,
+    serverUrl: String,
+    onBack: () -> Unit = {},
+    onFrameClick: () -> Unit = {},
+    onEnable: (Boolean) -> Unit = {},
+    onWifiOnly: (Boolean) -> Unit = {},
+    onChargingOnly: (Boolean) -> Unit = {},
+    onBackUpNow: () -> Unit = {},
+    onLogout: () -> Unit = {},
+    /** Fixed "now" for screenshot tests. */
+    now: Long = System.currentTimeMillis(),
+) {
+    var confirmLogout by remember { mutableStateOf(false) }
     if (confirmLogout) {
         AlertDialog(
             onDismissRequest = { confirmLogout = false },
             title = { Text("Log out?") },
             text = { Text("Backup stops until you log in again.") },
-            confirmButton = { TextButton(onClick = { confirmLogout = false; viewModel.logout() }) { Text("Log out") } },
+            confirmButton = { TextButton(onClick = { confirmLogout = false; onLogout() }) { Text("Log out") } },
             dismissButton = { TextButton(onClick = { confirmLogout = false }) { Text("Cancel") } },
         )
     }
@@ -90,8 +120,8 @@ fun SettingsScreen(onBack: () -> Unit, onFrameClick: () -> Unit) {
         ) {
             SectionTitle("Backup")
             SwitchRow("Back up this phone", "Photos and videos are uploaded to Immich", backup.enabled, onEnable)
-            SwitchRow("Only on Wi-Fi", null, backup.wifiOnly, viewModel::setWifiOnly)
-            SwitchRow("Only while charging", null, backup.chargingOnly, viewModel::setChargingOnly)
+            SwitchRow("Only on Wi-Fi", null, backup.wifiOnly, onWifiOnly)
+            SwitchRow("Only while charging", null, backup.chargingOnly, onChargingOnly)
 
             Column(Modifier.padding(horizontal = 16.dp, vertical = 8.dp)) {
                 when (val s = status) {
@@ -116,11 +146,11 @@ fun SettingsScreen(onBack: () -> Unit, onFrameClick: () -> Unit) {
                     )
                 }
                 backup.lastResult?.let {
-                    val ago = DateUtils.getRelativeTimeSpanString(backup.lastRunAt)
+                    val ago = DateUtils.getRelativeTimeSpanString(backup.lastRunAt, now, DateUtils.MINUTE_IN_MILLIS)
                     Text("Last backup $ago: $it", style = MaterialTheme.typography.bodySmall)
                 }
                 Button(
-                    onClick = viewModel::backUpNow,
+                    onClick = onBackUpNow,
                     enabled = status !is BackupStatus.Running && backup.hasMediaAccess,
                     modifier = Modifier.padding(top = 8.dp),
                 ) { Text("Back up now") }
@@ -136,7 +166,7 @@ fun SettingsScreen(onBack: () -> Unit, onFrameClick: () -> Unit) {
 
             HorizontalDivider(Modifier.padding(vertical = 8.dp))
             SectionTitle("Account")
-            ListItem(headlineContent = { Text("Server") }, supportingContent = { Text(viewModel.serverUrl) })
+            ListItem(headlineContent = { Text("Server") }, supportingContent = { Text(serverUrl) })
             ListItem(
                 modifier = Modifier.clickable { confirmLogout = true },
                 headlineContent = { Text("Log out", color = MaterialTheme.colorScheme.error) },
