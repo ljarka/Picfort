@@ -11,7 +11,9 @@ interface TimelineBucketsService {
         @Query("withPartners") withPartners: Boolean = true,
         @Query("isArchived") isArchived: Boolean = false,
         @Query("withStacked") isStacked: Boolean = true,
-        @Query("visibility") visibility: String = "timeline",
+        @Query("visibility") visibility: String? = "timeline",
+        /** Restrict to one album (then withPartners must be false); null = whole timeline. */
+        @Query("albumId") albumId: String? = null,
     ): List<TimeBucket>
 
     @GET("/api/timeline/bucket")
@@ -21,7 +23,9 @@ interface TimelineBucketsService {
         @Query("withPartners") withPartners: Boolean = true,
         @Query("isArchived") isArchived: Boolean = false,
         @Query("withStacked") isStacked: Boolean = true,
-        @Query("visibility") visibility: String = "timeline",
+        @Query("visibility") visibility: String? = "timeline",
+        /** Restrict to one album (then withPartners must be false); null = whole timeline. */
+        @Query("albumId") albumId: String? = null,
     ): BucketResponse
 
 }

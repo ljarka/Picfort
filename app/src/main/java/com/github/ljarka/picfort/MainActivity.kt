@@ -21,6 +21,10 @@ import com.github.ljarka.picfort.network.SessionManager
 import com.github.ljarka.picfort.ui.image.ImageDetailsScreen
 import com.github.ljarka.picfort.ui.init.InitScreen
 import com.github.ljarka.picfort.ui.theme.PicfortTheme
+import com.github.ljarka.picfort.collections.AlbumScreen
+import com.github.ljarka.picfort.collections.AlbumsScreen
+import com.github.ljarka.picfort.collections.GridAsset
+import com.github.ljarka.picfort.collections.SearchScreen
 import com.github.ljarka.picfort.ui.settings.SettingsScreen
 import com.github.ljarka.picfort.ui.timeline.TimelineScreen
 import dagger.hilt.android.AndroidEntryPoint
@@ -41,8 +45,19 @@ sealed interface Screen {
     data class ImageDetails(
         val assetId: String,
         val assetType: AssetType,
-        val imageIndex: Int
+        val imageIndex: Int,
+        /** CollectionsRepository list key for albums/search; null = timeline. */
+        val source: String? = null,
     ) : Screen
+
+    @Serializable
+    object Albums : Screen
+
+    @Serializable
+    data class Album(val id: String, val name: String) : Screen
+
+    @Serializable
+    object Search : Screen
 }
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalSharedTransitionApi::class)
@@ -92,7 +107,24 @@ class MainActivity : ComponentActivity() {
                                     }
                                 },
                                 onSettingsClick = { navController.navigate(Screen.Settings) },
+                                onSearchClick = { navController.navigate(Screen.Search) },
+                                onAlbumsClick = { navController.navigate(Screen.Albums) },
                             )
+                        }
+                        val openFromCollection: (GridAsset, Int, String) -> Unit = { asset, index, source ->
+                            navController.navigate(Screen.ImageDetails(asset.id, AssetType.REMOTE, index, source))
+                        }
+                        composable<Screen.Albums> {
+                            AlbumsScreen(
+                                onBack = { navController.popBackStack() },
+                                onAlbumClick = { id, name -> navController.navigate(Screen.Album(id, name)) },
+                            )
+                        }
+                        composable<Screen.Album> {
+                            AlbumScreen(onBack = { navController.popBackStack() }, onAssetClick = openFromCollection)
+                        }
+                        composable<Screen.Search> {
+                            SearchScreen(onBack = { navController.popBackStack() }, onAssetClick = openFromCollection)
                         }
                         composable<Screen.Settings> {
                             SettingsScreen(onBack = { navController.popBackStack() })

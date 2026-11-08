@@ -78,6 +78,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil3.compose.SubcomposeAsyncImage
 import com.github.ljarka.picfort.R
 import com.github.ljarka.picfort.db.AssetType
+import com.github.ljarka.picfort.collections.AddToAlbumDialog
 import com.github.ljarka.picfort.local.RequestMediaPermission
 import com.github.ljarka.picfort.ui.timeline.row.CalculatedRows
 import com.github.ljarka.picfort.ui.timeline.row.calculateRowsSizes
@@ -90,6 +91,8 @@ fun TimelineScreen(
     animatedVisibilityScope: AnimatedVisibilityScope,
     onImageClick: (String, AssetType, Int) -> Unit,
     onSettingsClick: () -> Unit,
+    onSearchClick: () -> Unit,
+    onAlbumsClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     Box(modifier = modifier.fillMaxSize()) {
@@ -127,6 +130,20 @@ fun TimelineScreen(
         val selection by viewModel.selection.collectAsStateWithLifecycle()
         val isBusy by viewModel.isBusy.collectAsStateWithLifecycle()
         var confirmDelete by remember { mutableStateOf(false) }
+        var chooseAlbum by remember { mutableStateOf(false) }
+        if (chooseAlbum) {
+            AddToAlbumDialog(
+                onDismiss = { chooseAlbum = false },
+                onAlbumChosen = {
+                    chooseAlbum = false
+                    viewModel.addToAlbum(it.id, it.albumName)
+                },
+                onNewAlbum = {
+                    chooseAlbum = false
+                    viewModel.addToAlbum(null, it, newAlbumName = it)
+                },
+            )
+        }
         LaunchedEffect(selection.isEmpty()) {
             if (selection.isEmpty() && scaffoldState.bottomSheetState.isVisible) {
                 scaffoldState.bottomSheetState.hide()
@@ -174,10 +191,16 @@ fun TimelineScreen(
                     onShare = viewModel::share,
                     onDownload = viewModel::download,
                     onSendToFrame = viewModel::sendToFrame,
+                    onAddToAlbum = { chooseAlbum = true },
                     onDelete = { confirmDelete = true },
                 )
             },
-            topBar = { TimelineAppBar(scrollBehavior = scrollBehavior, onSettingsClick = onSettingsClick) }
+            topBar = { TimelineAppBar(
+                    scrollBehavior = scrollBehavior,
+                    onSettingsClick = onSettingsClick,
+                    onSearchClick = onSearchClick,
+                    onAlbumsClick = onAlbumsClick,
+                ) }
         ) { innerPadding ->
 
             if (state.loadingState == LoadingState.LOADING) {
