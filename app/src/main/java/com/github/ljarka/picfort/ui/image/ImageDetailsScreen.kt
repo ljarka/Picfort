@@ -5,6 +5,7 @@ import androidx.compose.animation.AnimatedVisibilityScope
 import androidx.compose.animation.ExperimentalSharedTransitionApi
 import androidx.compose.animation.SharedTransitionScope
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.gestures.detectTransformGestures
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -16,6 +17,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.Send
+import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -35,6 +37,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
@@ -162,6 +165,7 @@ fun ImageDetailsScreen(
                 modifier = Modifier
                     .pointerInput(imageSize) {
                         detectTransformGestures { centroid: Offset, pan: Offset, zoom: Float, rotation: Float ->
+                            if (currentAsset?.isVideo == true) return@detectTransformGestures
                             val offsetX =
                                 calculateOffset(offset.x, pan.x, imageSize.width / 2f, scale)
                             val offsetY =
@@ -218,6 +222,18 @@ private fun SharedTransitionScope.Page(
     animatedVisibilityScope: AnimatedVisibilityScope,
 ) {
     val viewModel = hiltViewModel<ImageDetailsViewModel>()
+    val assetIndex by remember(page) { viewModel.getAssetIndex(page) }
+        .collectAsState(AssetIndex(page, initialAssetId, initialAssetType))
+
+    if (assetIndex.isVideo && isCurrentPage && assetIndex.index == page) {
+        VideoPlayer(
+            url = viewModel.getVideoUrl(assetIndex),
+            okHttpClient = viewModel.okHttpClient,
+            modifier = modifier.fillMaxSize(),
+        )
+        return
+    }
+
     PinchToZoom(
         modifier = modifier,
         onScaleChanged = onScaleChanged,
@@ -230,36 +246,37 @@ private fun SharedTransitionScope.Page(
             }
         }
     ) {
-        val assetIndex = viewModel.getAssetIndex(page)
-            .collectAsState(AssetIndex(page, initialAssetId, initialAssetType))
-        SubcomposeAsyncImage(
-            modifier = Modifier
-                .fillMaxWidth()
-                .onPlaced { onImageSizeChanged(it.size) }
-                .then(
-                    if (isCurrentPage) Modifier.sharedElement(
-                        state = rememberSharedContentState(key = assetIndex.value.assetId),
-                        animatedVisibilityScope = animatedVisibilityScope,
-                    ) else Modifier
-                )
-                .clip(RoundedCornerShape(8.dp)),
-            model = viewModel.getPreview(
-                assetId = assetIndex.value.assetId,
-                assetType = assetIndex.value.assetType
-            ),
-            contentDescription = null,
-            loading = {
-                AsyncImage(
-                    modifier = Modifier
-                        .fillMaxWidth(),
-                    model = viewModel.getThumbnail(
-                        assetId = assetIndex.value.assetId,
-                        assetType = assetIndex.value.assetType,
-                    ),
+        Box(contentAlignment = Alignment.Center) {
+            SubcomposeAsyncImage(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .onPlaced { onImageSizeChanged(it.size) }
+                    .then(
+                        if (isCurrentPage) Modifier.sharedElement(
+                            state = rememberSharedContentState(key = assetIndex.assetId),
+                            animatedVisibilityScope = animatedVisibilityScope,
+                        ) else Modifier
+                    )
+                    .clip(RoundedCornerShape(8.dp)),
+                model = viewModel.getPreview(assetIndex),
+                contentDescription = null,
+                loading = {
+                    AsyncImage(
+                        modifier = Modifier.fillMaxWidth(),
+                        model = viewModel.getThumbnail(assetIndex),
+                        contentDescription = null,
+                    )
+                }
+            )
+            if (assetIndex.isVideo) {
+                Icon(
+                    Icons.Filled.PlayArrow,
                     contentDescription = null,
+                    tint = Color.White,
+                    modifier = Modifier.size(64.dp),
                 )
             }
-        )
+        }
     }
 }
 

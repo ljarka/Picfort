@@ -42,6 +42,7 @@ data class AssetIndex(
     val index: Int,
     val assetId: String,
     val assetType: AssetType,
+    val isVideo: Boolean = false,
 )
 
 private const val TAG = "TimelineRepository"
@@ -267,6 +268,8 @@ class TimelineRepository @Inject constructor(
                 dateTaken = parseDate(bucketResponse.fileCreatedAt[index]).toEpochMilli(),
                 assetIndex = 0,
                 type = AssetType.REMOTE,
+                isVideo = bucketResponse.isImage.getOrNull(index) == false,
+                durationMs = parseImmichDuration(bucketResponse.duration.getOrNull(index)),
             )
         }
 
@@ -282,6 +285,8 @@ class TimelineRepository @Inject constructor(
                     type = AssetType.LOCAL,
                     dateTaken = it.dateTaken,
                     assetIndex = 0,
+                    isVideo = it.isVideo,
+                    durationMs = it.durationMs,
                 )
             }
 
@@ -362,9 +367,11 @@ class TimelineRepository @Inject constructor(
     private fun AssetEntity.toAssetUi(): AssetUi {
         return AssetUi(
             id = assetId,
-            url = urlProvider.getThumbnail(assetId, type),
+            url = urlProvider.getThumbnail(assetId, type, isVideo),
             span = ratio?.let { calculateSpan(it) } ?: 1,
             type = type,
+            isVideo = isVideo,
+            durationMs = durationMs,
         )
     }
 

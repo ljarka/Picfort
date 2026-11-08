@@ -1,7 +1,6 @@
 package com.github.ljarka.picfort.assets
 
 import android.content.ClipData
-import android.content.ContentUris
 import android.content.ContentValues
 import android.content.Context
 import android.content.Intent
@@ -13,6 +12,8 @@ import android.provider.MediaStore
 import androidx.annotation.RequiresApi
 import androidx.core.content.FileProvider
 import com.github.ljarka.picfort.db.AssetType
+import com.github.ljarka.picfort.local.localImageUri
+import com.github.ljarka.picfort.local.localVideoUri
 import com.github.ljarka.picfort.ui.server.ServerUrlStore
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
@@ -31,6 +32,7 @@ data class SelectedAsset(
     val id: String,
     val type: AssetType,
     val bucket: Long,
+    val isVideo: Boolean = false,
 )
 
 /**
@@ -55,7 +57,10 @@ class AssetActions @Inject constructor(
 
         val items = assets.map { asset ->
             when (asset.type) {
-                AssetType.LOCAL -> localUri(asset.id) to (context.contentResolver.getType(localUri(asset.id)) ?: "image/*")
+                AssetType.LOCAL -> {
+                    val uri = localUri(asset)
+                    uri to (context.contentResolver.getType(uri) ?: if (asset.isVideo) "video/*" else "image/*")
+                }
                 AssetType.REMOTE -> {
                     val info = assetsService.get().getAssetInfo(asset.id)
                     val file = File(shareDir, safeFileName(info))
@@ -134,13 +139,13 @@ class AssetActions @Inject constructor(
 
     /** System dialog asking the user to move phone photos to the phone's trash. */
     @RequiresApi(Build.VERSION_CODES.R)
-    fun localTrashRequest(ids: List<String>): IntentSender =
-        MediaStore.createTrashRequest(context.contentResolver, ids.map(::localUri), true).intentSender
+    fun localTrashRequest(assets: List<SelectedAsset>): IntentSender =
+        MediaStore.createTrashRequest(context.contentResolver, assets.map(::localUri), true).intentSender
 
     // ---------------------------------------------------------------- helpers
 
-    private fun localUri(id: String): Uri =
-        ContentUris.withAppendedId(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, id.toLong())
+    private fun localUri(asset: SelectedAsset): Uri =
+        if (asset.isVideo) localVideoUri(asset.id.toLong()) else localImageUri(asset.id.toLong())
 
     private fun download(assetId: String, out: OutputStream) {
         val request = Request.Builder()

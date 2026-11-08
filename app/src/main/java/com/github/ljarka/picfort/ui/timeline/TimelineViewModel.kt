@@ -121,7 +121,7 @@ class TimelineViewModel @Inject constructor(
     }
 
     fun selectAsset(asset: AssetUi, bucket: Long) {
-        _selection.update { it + (asset.id to SelectedAsset(asset.id, asset.type, bucket)) }
+        _selection.update { it + (asset.id to SelectedAsset(asset.id, asset.type, bucket, asset.isVideo)) }
     }
 
     fun deselectAsset(assetId: String) {
@@ -199,7 +199,7 @@ class TimelineViewModel @Inject constructor(
         if (local.isNotEmpty()) {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
                 pendingLocalDelete = local
-                _events.send(TimelineEvent.ConfirmLocalTrash(assetActions.localTrashRequest(local.map { it.id })))
+                _events.send(TimelineEvent.ConfirmLocalTrash(assetActions.localTrashRequest(local)))
             } else {
                 _messages.send("Deleting phone photos needs Android 11 or newer")
             }
@@ -230,8 +230,13 @@ class TimelineViewModel @Inject constructor(
         refresh()
     }
 
+    private var refreshAgain = false
+
     fun refresh() {
-        if (loadingState.value == LoadingState.REFRESHING) return
+        if (loadingState.value == LoadingState.REFRESHING) {
+            refreshAgain = true // e.g. media permission granted mid-sync
+            return
+        }
         viewModelScope.launch {
             loadingState.value = LoadingState.REFRESHING
             try {
@@ -253,6 +258,10 @@ class TimelineViewModel @Inject constructor(
                 )
             } finally {
                 loadingState.value = LoadingState.LOADED
+                if (refreshAgain) {
+                    refreshAgain = false
+                    refresh()
+                }
             }
         }
     }

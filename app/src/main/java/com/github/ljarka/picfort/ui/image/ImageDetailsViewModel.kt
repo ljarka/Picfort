@@ -17,6 +17,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.launch
+import okhttp3.OkHttpClient
 import javax.inject.Inject
 
 sealed interface FrameEvent {
@@ -29,6 +30,8 @@ class ImageDetailsViewModel @Inject constructor(
     private val urlProvider: UrlProvider,
     private val repository: TimelineRepository,
     private val frameRepository: FrameRepository,
+    /** For video streaming: carries the Immich token and the cleartext policy. */
+    val okHttpClient: OkHttpClient,
 ) : ViewModel() {
 
     private val _frameEvents = Channel<FrameEvent>(Channel.BUFFERED)
@@ -45,16 +48,19 @@ class ImageDetailsViewModel @Inject constructor(
             AssetIndex(
                 index = index,
                 assetId = asset?.id ?: "",
-                assetType = asset?.type ?: AssetType.LOCAL
+                assetType = asset?.type ?: AssetType.LOCAL,
+                isVideo = asset?.isVideo ?: false,
             )
         )
     }
 
-    fun getPreview(assetId: String, assetType: AssetType): String =
-        urlProvider.getPreview(assetId, assetType)
+    fun getPreview(asset: AssetIndex): String =
+        urlProvider.getPreview(asset.assetId, asset.assetType, asset.isVideo)
 
-    fun getThumbnail(assetId: String, assetType: AssetType): String =
-        urlProvider.getThumbnail(assetId, assetType)
+    fun getThumbnail(asset: AssetIndex): String =
+        urlProvider.getThumbnail(asset.assetId, asset.assetType, asset.isVideo)
+
+    fun getVideoUrl(asset: AssetIndex): String = urlProvider.getVideo(asset.assetId, asset.assetType)
 
     fun sendToImageFrame(assetId: String, assetType: AssetType) {
         if (_isSendingToFrame.value) return

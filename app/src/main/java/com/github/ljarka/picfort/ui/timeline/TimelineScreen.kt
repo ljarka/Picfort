@@ -5,6 +5,8 @@ import android.content.res.Configuration.ORIENTATION_PORTRAIT
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.IntentSenderRequest
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.layout.Row
+import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.mutableStateOf
@@ -76,6 +78,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil3.compose.SubcomposeAsyncImage
 import com.github.ljarka.picfort.R
 import com.github.ljarka.picfort.db.AssetType
+import com.github.ljarka.picfort.local.RequestMediaPermission
 import com.github.ljarka.picfort.ui.timeline.row.CalculatedRows
 import com.github.ljarka.picfort.ui.timeline.row.calculateRowsSizes
 import kotlinx.coroutines.launch
@@ -116,6 +119,9 @@ fun TimelineScreen(
                 }
             }
         }
+
+        // Phone photos only appear with media access; re-sync once it's granted.
+        RequestMediaPermission(onGranted = viewModel::refresh)
 
         val selection by viewModel.selection.collectAsStateWithLifecycle()
         val isBusy by viewModel.isBusy.collectAsStateWithLifecycle()
@@ -502,6 +508,26 @@ private fun GalleryItem(
                     tint = Color.White,
                     contentDescription = null
                 )
+            }
+            if (asset.isVideo) {
+                Row(
+                    modifier = Modifier
+                        .align(Alignment.TopEnd)
+                        .padding(10.dp)
+                        .background(Color.Black.copy(alpha = 0.45f), RoundedCornerShape(10.dp))
+                        .padding(horizontal = 6.dp, vertical = 2.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    asset.durationMs?.let {
+                        Text(formatDuration(it), color = Color.White, style = MaterialTheme.typography.labelSmall)
+                    }
+                    Icon(
+                        Icons.Default.PlayArrow,
+                        contentDescription = "Video",
+                        tint = Color.White,
+                        modifier = Modifier.size(16.dp),
+                    )
+                }
             }
             if (isInEditMode) {
                 CheckBox(isSelectedItem)
