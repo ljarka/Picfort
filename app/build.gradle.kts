@@ -1,6 +1,5 @@
 plugins {
     alias(libs.plugins.android.application)
-    alias(libs.plugins.kotlin.android)
     alias(libs.plugins.kotlin.compose)
     alias(libs.plugins.kotlin.serialization)
     alias(libs.plugins.ksp)
@@ -10,7 +9,8 @@ plugins {
 
 android {
     namespace = "com.github.ljarka.picfort"
-    compileSdk = 35
+    // 37 is required by current AndroidX/Compose/OkHttp; targetSdk stays 35 (no behaviour changes).
+    compileSdk = 37
 
     defaultConfig {
         // Kept from before the rename: changing it installs a separate app and
@@ -53,9 +53,7 @@ android {
         sourceCompatibility = JavaVersion.VERSION_11
         targetCompatibility = JavaVersion.VERSION_11
     }
-    kotlinOptions {
-        jvmTarget = "11"
-    }
+
     buildFeatures {
         compose = true
         buildConfig = true
@@ -91,6 +89,7 @@ dependencies {
     implementation(libs.androidx.ui.graphics)
     implementation(libs.androidx.ui.tooling.preview)
     implementation(libs.androidx.material3)
+    implementation(libs.material.icons.core)
     implementation(libs.hilt.navigation.compose)
     implementation(libs.retrofit)
     implementation(libs.converter.kotlinx.serialization)
@@ -103,4 +102,11 @@ dependencies {
     androidTestImplementation(libs.androidx.ui.test.junit4)
     debugImplementation(libs.androidx.ui.tooling)
     debugImplementation(libs.androidx.ui.test.manifest)
+}
+
+// AGP 9 builds Kotlin itself (no org.jetbrains.kotlin.android plugin).
+kotlin {
+    compilerOptions {
+        jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_11)
+    }
 }

@@ -1,6 +1,7 @@
 package com.github.ljarka.picfort.screenshots
 
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.foundation.layout.padding
@@ -95,7 +96,7 @@ class ScreenshotTest {
             ),
             people = listOf(PersonInfo("Ala"), PersonInfo("Tomek")),
         ).toDetails(ZoneId.of("Europe/Warsaw"))
-        Surface(color = MaterialTheme.colorScheme.surfaceContainerLow) {
+        Surface(color = MaterialTheme.colorScheme.surfaceContainerLow, modifier = Modifier.fillMaxSize()) {
             Column(Modifier.padding(top = 24.dp)) { AssetDetailsList(DetailsState.Loaded(details)) }
         }
     }
