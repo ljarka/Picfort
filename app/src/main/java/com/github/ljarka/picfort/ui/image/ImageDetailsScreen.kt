@@ -17,6 +17,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.Send
+import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.CircularProgressIndicator
@@ -113,6 +114,12 @@ fun ImageDetailsScreen(
         FrameSettingsDialog(onDismiss = { showFrameSettings = false })
     }
 
+    var showDetails by remember { mutableStateOf(false) }
+    if (showDetails) {
+        val details by viewModel.details.collectAsState()
+        AssetDetailsSheet(state = details, onDismiss = { showDetails = false })
+    }
+
     Scaffold(
         modifier = Modifier
             .fillMaxSize(),
@@ -132,6 +139,17 @@ fun ImageDetailsScreen(
                     )
                 },
                 actions = {
+                    IconButton(
+                        enabled = currentAsset?.index == currentPage,
+                        onClick = {
+                            currentAsset?.let {
+                                viewModel.loadDetails(it)
+                                showDetails = true
+                            }
+                        },
+                    ) {
+                        Icon(Icons.Filled.Info, contentDescription = "Details")
+                    }
                     IconButton(onClick = { showFrameSettings = true }) {
                         Icon(Icons.Filled.Settings, contentDescription = "Frame settings")
                     }

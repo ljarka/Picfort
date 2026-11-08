@@ -18,6 +18,8 @@ import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.launch
 import okhttp3.OkHttpClient
+import com.github.ljarka.picfort.assets.AssetDetailsRepository
+import kotlinx.coroutines.CancellationException
 import javax.inject.Inject
 
 sealed interface FrameEvent {
@@ -32,7 +34,26 @@ class ImageDetailsViewModel @Inject constructor(
     private val frameRepository: FrameRepository,
     /** For video streaming: carries the Immich token and the cleartext policy. */
     val okHttpClient: OkHttpClient,
+    private val detailsRepository: AssetDetailsRepository,
 ) : ViewModel() {
+
+    private val _details = MutableStateFlow<DetailsState>(DetailsState.Loading)
+    val details: StateFlow<DetailsState> = _details.asStateFlow()
+
+    fun loadDetails(asset: AssetIndex) {
+        _details.value = DetailsState.Loading
+        viewModelScope.launch {
+            _details.value = try {
+                DetailsState.Loaded(detailsRepository.load(asset.assetId, asset.assetType, asset.isVideo))
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                DetailsState.Error(
+                    if (e is java.io.IOException) "Can't reach the server" else "Couldn't load details"
+                )
+            }
+        }
+    }
 
     private val _frameEvents = Channel<FrameEvent>(Channel.BUFFERED)
     val frameEvents: Flow<FrameEvent> = _frameEvents.receiveAsFlow()

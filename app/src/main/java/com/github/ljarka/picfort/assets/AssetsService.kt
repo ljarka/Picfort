@@ -12,7 +12,36 @@ data class AssetInfo(
     val type: String = "IMAGE", // IMAGE, VIDEO, AUDIO, OTHER
     val originalFileName: String = "",
     val originalMimeType: String? = null,
+    val fileCreatedAt: String? = null,
+    val exifInfo: ExifInfo? = null,
+    val people: List<PersonInfo> = emptyList(),
 )
+
+/** Numbers are Double because older servers send e.g. 4000.0 for integers. */
+@Serializable
+data class ExifInfo(
+    val make: String? = null,
+    val model: String? = null,
+    val lensModel: String? = null,
+    val fNumber: Double? = null,
+    val exposureTime: String? = null,
+    val focalLength: Double? = null,
+    val iso: Double? = null,
+    val exifImageWidth: Double? = null,
+    val exifImageHeight: Double? = null,
+    val fileSizeInByte: Long? = null,
+    val dateTimeOriginal: String? = null,
+    val timeZone: String? = null,
+    val city: String? = null,
+    val state: String? = null,
+    val country: String? = null,
+    val latitude: Double? = null,
+    val longitude: Double? = null,
+    val description: String? = null,
+)
+
+@Serializable
+data class PersonInfo(val name: String = "")
 
 @Serializable
 data class AssetBulkDeleteRequest(
