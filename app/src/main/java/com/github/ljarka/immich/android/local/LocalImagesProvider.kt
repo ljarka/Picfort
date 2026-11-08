@@ -5,7 +5,8 @@ import android.net.Uri
 import android.provider.MediaStore
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
-import java.util.Calendar
+import java.time.YearMonth
+import java.time.ZoneId
 
 data class ImageData(
     val id: Long,
@@ -17,15 +18,31 @@ data class ImageData(
     val height: Int?,
 )
 
-class LocalImagesProvider {
+/**
+ * [start, end) in epoch millis covering the whole calendar month in [zone].
+ * Photos' DATE_TAKEN is wall-clock time where they were taken, so months are
+ * bounded in the device's zone, matching how Immich buckets by local date.
+ */
+fun monthRangeMillis(month: YearMonth, zone: ZoneId): LongRange {
+    val start = month.atDay(1).atStartOfDay(zone).toInstant().toEpochMilli()
+    val end = month.plusMonths(1).atDay(1).atStartOfDay(zone).toInstant().toEpochMilli()
+    return start until end
+}
 
-    suspend fun getImagesForMonth(context: Context, month: Int, year: Int): List<ImageData> {
+private const val MONTH_SELECTION =
+    "${MediaStore.Images.Media.DATE_TAKEN} >= ? AND ${MediaStore.Images.Media.DATE_TAKEN} < ?"
+
+private fun monthSelectionArgs(month: YearMonth, zone: ZoneId): Array<String> {
+    val range = monthRangeMillis(month, zone)
+    return arrayOf(range.first.toString(), (range.last + 1).toString())
+}
+
+class LocalImagesProvider(
+    private val zone: ZoneId = ZoneId.systemDefault(),
+) {
+
+    suspend fun getImagesForMonth(context: Context, month: YearMonth): List<ImageData> {
         return withContext(Dispatchers.IO) {
-            val calendar = Calendar.getInstance()
-            calendar.set(year, month, calendar.getActualMinimum(Calendar.DAY_OF_MONTH))
-            val startOfMonth = calendar.timeInMillis
-            calendar.set(Calendar.DAY_OF_MONTH, calendar.getActualMaximum(Calendar.DAY_OF_MONTH))
-            val endOfMonth = calendar.timeInMillis
 
             val uri = MediaStore.Images.Media.EXTERNAL_CONTENT_URI
             val projection = arrayOf(
@@ -36,10 +53,9 @@ class LocalImagesProvider {
                 MediaStore.Images.Media.WIDTH,
                 MediaStore.Images.Media.HEIGHT,
             )
-            val selection =
-                "${MediaStore.Images.Media.DATE_TAKEN} >= ? AND ${MediaStore.Images.Media.DATE_TAKEN} <= ?"
-            val selectionArgs = arrayOf(startOfMonth.toString(), endOfMonth.toString())
-            val sortOrder = "${MediaStore.Images.Media.DATE_ADDED} DESC"
+            val selection = MONTH_SELECTION
+            val selectionArgs = monthSelectionArgs(month, zone)
+            val sortOrder = "${MediaStore.Images.Media.DATE_TAKEN} DESC"
 
             val images = mutableListOf<ImageData>()
             context.contentResolver.query(uri, projection, selection, selectionArgs, sortOrder)
@@ -79,20 +95,13 @@ class LocalImagesProvider {
         }
     }
 
-    suspend fun getImagesCountForMonth(context: Context, month: Int, year: Int): Int {
+    suspend fun getImagesCountForMonth(context: Context, month: YearMonth): Int {
         return withContext(Dispatchers.IO) {
-            val calendar = Calendar.getInstance()
-            calendar.set(year, month, calendar.getActualMinimum(Calendar.DAY_OF_MONTH))
-            val startOfMonth = calendar.timeInMillis
-            calendar.set(Calendar.DAY_OF_MONTH, calendar.getActualMaximum(Calendar.DAY_OF_MONTH))
-            val endOfMonth = calendar.timeInMillis
-
             val uri = MediaStore.Images.Media.EXTERNAL_CONTENT_URI
-            val selection =
-                "${MediaStore.Images.Media.DATE_TAKEN} >= ? AND ${MediaStore.Images.Media.DATE_TAKEN} <= ?"
-            val selectionArgs = arrayOf(startOfMonth.toString(), endOfMonth.toString())
+            val projection = arrayOf(MediaStore.Images.Media._ID)
+            val selectionArgs = monthSelectionArgs(month, zone)
 
-            context.contentResolver.query(uri, null, selection, selectionArgs, null)
+            context.contentResolver.query(uri, projection, MONTH_SELECTION, selectionArgs, null)
                 ?.use { cursor ->
                     return@withContext cursor.count
                 } ?: 0

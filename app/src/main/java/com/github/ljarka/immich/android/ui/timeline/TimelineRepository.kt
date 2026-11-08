@@ -23,6 +23,7 @@ import kotlinx.coroutines.withContext
 import java.time.Instant
 import java.time.LocalDate
 import java.time.LocalDateTime
+import java.time.YearMonth
 import java.time.ZoneId
 import java.time.ZoneOffset
 import java.time.format.DateTimeFormatter
@@ -84,8 +85,10 @@ class TimelineRepository @Inject constructor(
                     timeBucket = time,
                     count = localImagesProvider.getImagesCountForMonth(
                         context = context,
-                        month = calendar.get(Calendar.MONTH),
-                        year = calendar.get(Calendar.YEAR),
+                        month = YearMonth.of(
+                            calendar.get(Calendar.YEAR),
+                            calendar.get(Calendar.MONTH) + 1,
+                        ),
                     )
                 )
             }.associateBy { parseDate(it.timeBucket).toEpochMilli() }
@@ -250,9 +253,10 @@ class TimelineRepository @Inject constructor(
             )
         }
 
-        val zoned = timeInstant.atZone(ZoneId.systemDefault())
+        // Bucket keys are midnight UTC on the 1st; read the month in UTC, or zones
+        // west of UTC would see the previous month.
         val localAssets = LocalImagesProvider()
-            .getImagesForMonth(context, zoned.month.ordinal, zoned.year)
+            .getImagesForMonth(context, YearMonth.from(timeInstant.atZone(ZoneOffset.UTC)))
             .map {
                 AssetEntity(
                     timestamp = bucket,
