@@ -23,5 +23,7 @@ data class AssetEntity(
     @ColumnInfo(name = "assetId") val assetId: String,
     @ColumnInfo(name = "ratio") val ratio: Double?,
     @ColumnInfo(name = "type") val type: AssetType,
-    @ColumnInfo(name = "dateTaken") val dateTaken: Long? = null
+    @ColumnInfo(name = "dateTaken") val dateTaken: Long? = null,
+    @ColumnInfo(name = "isVideo", defaultValue = "0") val isVideo: Boolean = false,
+    @ColumnInfo(name = "durationMs") val durationMs: Long? = null,
 )

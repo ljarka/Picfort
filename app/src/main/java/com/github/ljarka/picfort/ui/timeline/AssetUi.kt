@@ -7,4 +7,6 @@ data class AssetUi(
     val span: Int,
     val id: String,
     val type: AssetType,
+    val isVideo: Boolean = false,
+    val durationMs: Long? = null,
 )

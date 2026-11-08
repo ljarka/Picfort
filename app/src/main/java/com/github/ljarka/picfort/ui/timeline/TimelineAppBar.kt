@@ -3,7 +3,11 @@ package com.github.ljarka.picfort.ui.timeline
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarScrollBehavior
@@ -17,6 +21,7 @@ import com.github.ljarka.picfort.R
 @Composable
 fun TimelineAppBar(
     scrollBehavior: TopAppBarScrollBehavior,
+    onSettingsClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     TopAppBar(
@@ -32,6 +37,11 @@ fun TimelineAppBar(
                     .padding(horizontal = 8.dp)
                     .size(44.dp),
             )
+        },
+        actions = {
+            IconButton(onClick = onSettingsClick) {
+                Icon(Icons.Default.Settings, contentDescription = "Settings")
+            }
         },
         scrollBehavior = scrollBehavior,
     )

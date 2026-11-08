@@ -1,6 +1,17 @@
 package com.github.ljarka.picfort.ui.timeline
 
+import android.app.Activity
 import android.content.res.Configuration.ORIENTATION_PORTRAIT
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.IntentSenderRequest
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.layout.Row
+import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.TextButton
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.animation.AnimatedVisibilityScope
 import androidx.compose.animation.ExperimentalSharedTransitionApi
 import androidx.compose.animation.SharedTransitionScope
@@ -67,6 +78,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil3.compose.SubcomposeAsyncImage
 import com.github.ljarka.picfort.R
 import com.github.ljarka.picfort.db.AssetType
+import com.github.ljarka.picfort.local.RequestMediaPermission
 import com.github.ljarka.picfort.ui.timeline.row.CalculatedRows
 import com.github.ljarka.picfort.ui.timeline.row.calculateRowsSizes
 import kotlinx.coroutines.launch
@@ -77,6 +89,7 @@ fun TimelineScreen(
     sharedTransitionScope: SharedTransitionScope,
     animatedVisibilityScope: AnimatedVisibilityScope,
     onImageClick: (String, AssetType, Int) -> Unit,
+    onSettingsClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     Box(modifier = modifier.fillMaxSize()) {
@@ -94,6 +107,55 @@ fun TimelineScreen(
             viewModel.messages.collect { scaffoldState.snackbarHostState.showSnackbar(it) }
         }
 
+        val context = LocalContext.current
+        val trashLauncher = rememberLauncherForActivityResult(
+            ActivityResultContracts.StartIntentSenderForResult()
+        ) { result -> viewModel.onLocalTrashResult(result.resultCode == Activity.RESULT_OK) }
+        LaunchedEffect(viewModel) {
+            viewModel.events.collect { event ->
+                when (event) {
+                    is TimelineEvent.Launch -> context.startActivity(event.intent)
+                    is TimelineEvent.ConfirmLocalTrash ->
+                        trashLauncher.launch(IntentSenderRequest.Builder(event.request).build())
+                }
+            }
+        }
+
+        // Phone photos only appear with media access; re-sync once it's granted.
+        RequestMediaPermission(onGranted = viewModel::refresh)
+
+        val selection by viewModel.selection.collectAsStateWithLifecycle()
+        val isBusy by viewModel.isBusy.collectAsStateWithLifecycle()
+        var confirmDelete by remember { mutableStateOf(false) }
+        LaunchedEffect(selection.isEmpty()) {
+            if (selection.isEmpty() && scaffoldState.bottomSheetState.isVisible) {
+                scaffoldState.bottomSheetState.hide()
+            }
+        }
+        if (confirmDelete) {
+            val remote = selection.values.count { it.type == AssetType.REMOTE }
+            val local = selection.size - remote
+            AlertDialog(
+                onDismissRequest = { confirmDelete = false },
+                title = { Text("Delete ${selection.size} item${if (selection.size == 1) "" else "s"}?") },
+                text = {
+                    Text(
+                        listOfNotNull(
+                            "$remote from Immich will be moved to Immich's trash.".takeIf { remote > 0 },
+                            "$local on this phone will be moved to the phone's trash.".takeIf { local > 0 },
+                        ).joinToString("\n")
+                    )
+                },
+                confirmButton = {
+                    TextButton(onClick = {
+                        confirmDelete = false
+                        viewModel.delete()
+                    }) { Text("Delete") }
+                },
+                dismissButton = { TextButton(onClick = { confirmDelete = false }) { Text("Cancel") } },
+            )
+        }
+
         MenuClosedObserver(sheetState = scaffoldState.bottomSheetState) {
             viewModel.clearSelection()
         }
@@ -104,8 +166,18 @@ fun TimelineScreen(
                 .fillMaxSize()
                 .nestedScroll(scrollBehavior.nestedScrollConnection),
             scaffoldState = scaffoldState,
-            sheetContent = { TimelineMenuContent() },
-            topBar = { TimelineAppBar(scrollBehavior = scrollBehavior) }
+            sheetContent = {
+                TimelineMenuContent(
+                    selectedCount = selection.size,
+                    isBusy = isBusy,
+                    canSendToFrame = selection.size == 1 && selection.values.single().type == AssetType.REMOTE,
+                    onShare = viewModel::share,
+                    onDownload = viewModel::download,
+                    onSendToFrame = viewModel::sendToFrame,
+                    onDelete = { confirmDelete = true },
+                )
+            },
+            topBar = { TimelineAppBar(scrollBehavior = scrollBehavior, onSettingsClick = onSettingsClick) }
         ) { innerPadding ->
 
             if (state.loadingState == LoadingState.LOADING) {
@@ -260,7 +332,7 @@ private fun ImagesBucketsGrid(
                     selectedAssets = selectedAssets,
                     bucket = bucket,
                     onSelectAssetClick = {
-                        viewModel.selectAsset(it)
+                        asset?.let { viewModel.selectAsset(it, bucket.timeStamp) }
                         onExpandMenuRequest()
                     },
                     onDeselectAssetClick = {
@@ -437,6 +509,26 @@ private fun GalleryItem(
                     tint = Color.White,
                     contentDescription = null
                 )
+            }
+            if (asset.isVideo) {
+                Row(
+                    modifier = Modifier
+                        .align(Alignment.TopEnd)
+                        .padding(10.dp)
+                        .background(Color.Black.copy(alpha = 0.45f), RoundedCornerShape(10.dp))
+                        .padding(horizontal = 6.dp, vertical = 2.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    asset.durationMs?.let {
+                        Text(formatDuration(it), color = Color.White, style = MaterialTheme.typography.labelSmall)
+                    }
+                    Icon(
+                        Icons.Default.PlayArrow,
+                        contentDescription = "Video",
+                        tint = Color.White,
+                        modifier = Modifier.size(16.dp),
+                    )
+                }
             }
             if (isInEditMode) {
                 CheckBox(isSelectedItem)

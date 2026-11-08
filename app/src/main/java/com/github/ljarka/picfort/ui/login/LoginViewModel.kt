@@ -35,6 +35,7 @@ class LoginViewModel @Inject constructor(
         viewModelScope.launch {
             _state.value = try {
                 val result = loginService.login(LoginRequestBody(email.trim(), password))
+                accessTokenStore.userId = result.userId
                 accessTokenStore.accessToken = result.accessToken
                 LoginState.LoggedIn
             } catch (e: CancellationException) {

@@ -21,4 +21,7 @@ class DatabaseModule {
             klass = ImagesDatabase::class.java, "images"
         ).fallbackToDestructiveMigration().build()
     }
+
+    @Provides
+    fun backupDao(database: ImagesDatabase): BackupDao = database.backupDao()
 }
