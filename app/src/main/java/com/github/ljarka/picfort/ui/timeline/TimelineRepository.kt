@@ -2,6 +2,7 @@ package com.github.ljarka.picfort.ui.timeline
 
 import android.content.Context
 import android.util.Log
+import androidx.room.withTransaction
 import com.github.ljarka.picfort.AppScope
 import com.github.ljarka.picfort.UrlProvider
 import com.github.ljarka.picfort.db.AssetEntity
@@ -284,15 +285,39 @@ class TimelineRepository @Inject constructor(
                 )
             }
 
-        updateDbAssets(remoteAssets + localAssets)
+        updateDbAssets(bucket, remoteAssets + localAssets)
     }
 
-    private suspend fun updateDbAssets(assets: List<AssetEntity>) {
-        imagesDao.insertAssets(
-            assets = assets
-                .sortedByDescending { it.dateTaken }
-                .mapIndexed { index, asset -> asset.copy(assetIndex = index) }
-        )
+    /**
+     * Replaces the bucket's rows. Rows are keyed by (bucket, index), so a plain
+     * upsert would leave stale rows behind when a month shrinks (e.g. after a delete).
+     */
+    private suspend fun updateDbAssets(bucket: Long, assets: List<AssetEntity>) {
+        imagesDatabase.withTransaction {
+            imagesDao.deleteAssets(bucket)
+            imagesDao.insertAssets(
+                assets = assets
+                    .sortedByDescending { it.dateTaken }
+                    .mapIndexed { index, asset -> asset.copy(assetIndex = index) }
+            )
+        }
+    }
+
+    /**
+     * Re-downloads the given months and the bucket counts, and drops their
+     * in-memory items so the timeline shows the new contents.
+     */
+    suspend fun reloadBuckets(buckets: Set<Long>) {
+        refresh()
+        buckets.forEach { bucket ->
+            updateAssets(bucket)
+            timeBucketsCache.value[bucket]?.let { cached ->
+                timeBucketsCache.value = timeBucketsCache.value.toSortedMap(reverseOrder()).apply {
+                    put(bucket, cached.copy(items = emptyList()))
+                }
+            }
+            fetchAssets(bucket)
+        }
     }
 
     private fun formatDate(instant: Instant): String {
@@ -345,6 +370,11 @@ class TimelineRepository @Inject constructor(
 
     /** Syncs bucket counts with the server and the phone. Throws on network errors. */
     suspend fun refresh() {
-        imagesDao.insertMonthBuckets(loadBucketsInfoFromServerAndDisk())
+        val buckets = loadBucketsInfoFromServerAndDisk()
+        // Replace, so months that became empty disappear (row counts are carried over).
+        imagesDatabase.withTransaction {
+            imagesDao.deleteMonthBuckets()
+            imagesDao.insertMonthBuckets(buckets)
+        }
     }
 }

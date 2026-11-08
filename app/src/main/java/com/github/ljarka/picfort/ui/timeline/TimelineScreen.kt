@@ -1,6 +1,15 @@
 package com.github.ljarka.picfort.ui.timeline
 
+import android.app.Activity
 import android.content.res.Configuration.ORIENTATION_PORTRAIT
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.IntentSenderRequest
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.TextButton
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.animation.AnimatedVisibilityScope
 import androidx.compose.animation.ExperimentalSharedTransitionApi
 import androidx.compose.animation.SharedTransitionScope
@@ -94,6 +103,52 @@ fun TimelineScreen(
             viewModel.messages.collect { scaffoldState.snackbarHostState.showSnackbar(it) }
         }
 
+        val context = LocalContext.current
+        val trashLauncher = rememberLauncherForActivityResult(
+            ActivityResultContracts.StartIntentSenderForResult()
+        ) { result -> viewModel.onLocalTrashResult(result.resultCode == Activity.RESULT_OK) }
+        LaunchedEffect(viewModel) {
+            viewModel.events.collect { event ->
+                when (event) {
+                    is TimelineEvent.Launch -> context.startActivity(event.intent)
+                    is TimelineEvent.ConfirmLocalTrash ->
+                        trashLauncher.launch(IntentSenderRequest.Builder(event.request).build())
+                }
+            }
+        }
+
+        val selection by viewModel.selection.collectAsStateWithLifecycle()
+        val isBusy by viewModel.isBusy.collectAsStateWithLifecycle()
+        var confirmDelete by remember { mutableStateOf(false) }
+        LaunchedEffect(selection.isEmpty()) {
+            if (selection.isEmpty() && scaffoldState.bottomSheetState.isVisible) {
+                scaffoldState.bottomSheetState.hide()
+            }
+        }
+        if (confirmDelete) {
+            val remote = selection.values.count { it.type == AssetType.REMOTE }
+            val local = selection.size - remote
+            AlertDialog(
+                onDismissRequest = { confirmDelete = false },
+                title = { Text("Delete ${selection.size} item${if (selection.size == 1) "" else "s"}?") },
+                text = {
+                    Text(
+                        listOfNotNull(
+                            "$remote from Immich will be moved to Immich's trash.".takeIf { remote > 0 },
+                            "$local on this phone will be moved to the phone's trash.".takeIf { local > 0 },
+                        ).joinToString("\n")
+                    )
+                },
+                confirmButton = {
+                    TextButton(onClick = {
+                        confirmDelete = false
+                        viewModel.delete()
+                    }) { Text("Delete") }
+                },
+                dismissButton = { TextButton(onClick = { confirmDelete = false }) { Text("Cancel") } },
+            )
+        }
+
         MenuClosedObserver(sheetState = scaffoldState.bottomSheetState) {
             viewModel.clearSelection()
         }
@@ -104,7 +159,17 @@ fun TimelineScreen(
                 .fillMaxSize()
                 .nestedScroll(scrollBehavior.nestedScrollConnection),
             scaffoldState = scaffoldState,
-            sheetContent = { TimelineMenuContent() },
+            sheetContent = {
+                TimelineMenuContent(
+                    selectedCount = selection.size,
+                    isBusy = isBusy,
+                    canSendToFrame = selection.size == 1 && selection.values.single().type == AssetType.REMOTE,
+                    onShare = viewModel::share,
+                    onDownload = viewModel::download,
+                    onSendToFrame = viewModel::sendToFrame,
+                    onDelete = { confirmDelete = true },
+                )
+            },
             topBar = { TimelineAppBar(scrollBehavior = scrollBehavior) }
         ) { innerPadding ->
 
@@ -260,7 +325,7 @@ private fun ImagesBucketsGrid(
                     selectedAssets = selectedAssets,
                     bucket = bucket,
                     onSelectAssetClick = {
-                        viewModel.selectAsset(it)
+                        asset?.let { viewModel.selectAsset(it, bucket.timeStamp) }
                         onExpandMenuRequest()
                     },
                     onDeselectAssetClick = {
