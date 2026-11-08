@@ -76,7 +76,7 @@ Compose UI ──► ViewModel (Hilt) ──► TimelineRepository ──┬─�
 
 ## Requirements
 
-- Android Studio (recent stable), JDK 17+
+- Android Studio (recent stable), JDK 21+ (the Paparazzi plugin requires it)
 - Android 8.0+ (minSdk 26, targetSdk 35)
 - An Immich server you can reach from the phone
 
