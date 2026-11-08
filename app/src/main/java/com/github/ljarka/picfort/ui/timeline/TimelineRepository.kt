@@ -25,13 +25,10 @@ import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.time.Instant
-import java.time.LocalDate
-import java.time.LocalDateTime
 import java.time.YearMonth
 import java.time.ZoneId
 import java.time.ZoneOffset
 import java.time.format.DateTimeFormatter
-import java.time.format.DateTimeParseException
 import java.util.Calendar
 import java.util.Locale
 import java.util.SortedMap
@@ -81,7 +78,6 @@ class TimelineRepository @Inject constructor(
         calendar.set(Calendar.MILLISECOND, 0)
         calendar.set(Calendar.DAY_OF_MONTH, 1)
 
-        val buckets = mutableListOf<TimeBucket>()
         val localBuckets = (0..23) // two years from now interval
             .map {
                 calendar.add(Calendar.MONTH, -1)
@@ -92,60 +88,15 @@ class TimelineRepository @Inject constructor(
                 // This is an estimate; fetchAssets corrects the count when the month loads.
                 val onPhone = localImagesProvider.getImagesCountForMonth(context = context, month = month)
                 val backedUp = backupDao.countBackedUp(range.first, range.last + 1)
-                TimeBucket(timeBucket = time, count = (onPhone - backedUp).coerceAtLeast(0))
-            }.associateBy { parseDate(it.timeBucket).toEpochMilli() }
+                parseBucketDate(time).toEpochMilli() to (onPhone - backedUp).coerceAtLeast(0)
+            }.toMap()
 
         val remoteBuckets = timelineBucketsService.getTimeBuckets()
-            .associateBy { parseDate(it.timeBucket).toEpochMilli() }
+            .associate { parseBucketDate(it.timeBucket).toEpochMilli() to it.count }
 
-        localBuckets.values.forEach {
-            val timestamp = parseDate(it.timeBucket).toEpochMilli()
-            val count = it.count + (remoteBuckets[timestamp]?.count ?: 0)
-            if (count > 0) {
-                buckets.add(
-                    TimeBucket(
-                        timeBucket = it.timeBucket,
-                        count = count
-                    )
-                )
-            }
+        return mergeMonthCounts(localBuckets, remoteBuckets).map { (timestamp, count) ->
+            MonthBucketEntity(timestamp = timestamp, count = count, rowsNumber = dbRowsNumbers?.get(timestamp))
         }
-
-        remoteBuckets.values.forEach {
-            val timestamp = parseDate(it.timeBucket).toEpochMilli()
-            if (!localBuckets.containsKey(timestamp)) {
-                val count = it.count + (localBuckets[timestamp]?.count ?: 0)
-
-                if (count > 0) {
-                    buckets.add(
-                        TimeBucket(
-                            timeBucket = it.timeBucket,
-                            count = count
-                        )
-                    )
-                }
-            }
-        }
-
-        return buckets
-            .map {
-                val timestamp = parseDate(it.timeBucket).toEpochMilli()
-
-                MonthBucketEntity(
-                    timestamp = timestamp,
-                    count = it.count,
-                    rowsNumber = dbRowsNumbers?.get(timestamp)
-                )
-            }.runningFoldIndexed(
-                MonthBucketEntity()
-            ) { index, acc, bucket ->
-                MonthBucketEntity(
-                    timestamp = bucket.timestamp,
-                    index = acc.index + acc.count,
-                    count = bucket.count,
-                    rowsNumber = bucket.rowsNumber,
-                )
-            }.drop(1)
     }
 
     private fun loadBucketsFromDb() = imagesDao.getMonthBuckets()
@@ -174,24 +125,8 @@ class TimelineRepository @Inject constructor(
         return timeBucketsCache.value[bucket]?.items?.getOrNull(position)
     }
 
-    fun parseDate(timeBucket: String): Instant {
-        return try {
-            // Try parsing as full ISO timestamp with timezone
-            Instant.parse(timeBucket)
-        } catch (e1: DateTimeParseException) {
-            try {
-                // Try parsing as LocalDateTime (assumes no timezone, uses UTC)
-                val ldt = LocalDateTime.parse(timeBucket)
-                ldt.toInstant(ZoneOffset.UTC)
-            } catch (e2: DateTimeParseException) {
-                // Try parsing as just a date (assumes midnight UTC)
-                val ld = LocalDate.parse(timeBucket)
-                ld.atStartOfDay().toInstant(ZoneOffset.UTC)
-            }
-        }
-    }
+    fun parseDate(timeBucket: String): Instant = parseBucketDate(timeBucket)
 
-    /** Asset at a flat timeline [index], or null if out of range or it can't be loaded. */
     suspend fun getAsset(index: Int): AssetUi? {
         if (index < 0) return null
         return withContext(Dispatchers.Default) {
@@ -245,7 +180,7 @@ class TimelineRepository @Inject constructor(
         if (!coroutineContext.isActive) return false
         val items = adjustSpans(assets)
         itemsCache.put(bucket, items)
-        val rows = (items.sumOf { it.span } + 3) / 4
+        val rows = rowCount(items.map { it.span })
         val dbBucket = imagesDao.getBucket(bucket)
         dbBucket?.let {
             imagesDao.updateBucket(
@@ -344,38 +279,10 @@ class TimelineRepository @Inject constructor(
         return date.format(formatter)
     }
 
-    private fun calculateSpan(ratio: Double) = when {
-        ratio >= 1.5 -> 4
-        ratio >= 1.35 -> 3
-        ratio >= 1 -> 2
-        else -> 1
-    }
-
-    private fun adjustSpans(assets: List<AssetUi>): List<AssetUi> {
-        val result = mutableListOf<AssetUi>()
-        val spanMax = 4
-        var spanSum = 0
-        assets.forEach {
-            spanSum = spanSum + it.span
-            if (spanSum == spanMax) {
-                result.add(it)
-                spanSum = 0
-            } else if (spanSum < spanMax) {
-                result.add(it)
-            } else {
-                val span = it.span - (spanSum - spanMax)
-
-                if (span == 0) {
-                    result.add(it.copy(span = 1))
-                    spanSum = 1
-                } else {
-                    result.add(it.copy(span = span))
-                    spanSum = 0
-                }
-            }
+    private fun adjustSpans(assets: List<AssetUi>): List<AssetUi> =
+        assets.zip(adjustSpans(assets.map { it.span })) { asset, span ->
+            if (asset.span == span) asset else asset.copy(span = span)
         }
-        return result
-    }
 
     private fun AssetEntity.toAssetUi(): AssetUi {
         return AssetUi(

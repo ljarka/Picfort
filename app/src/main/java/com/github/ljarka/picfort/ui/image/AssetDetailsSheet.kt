@@ -2,7 +2,7 @@ package com.github.ljarka.picfort.ui.image
 
 import android.content.ActivityNotFoundException
 import android.content.Intent
-import android.net.Uri
+import androidx.core.net.toUri
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -77,7 +77,7 @@ fun AssetDetailsList(state: DetailsState) {
                             modifier = Modifier.clickable {
                                 val geo = String.format(Locale.US, "geo:%f,%f?q=%f,%f", lat, lon, lat, lon)
                                 try {
-                                    context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(geo)))
+                                    context.startActivity(Intent(Intent.ACTION_VIEW, geo.toUri()))
                                 } catch (e: ActivityNotFoundException) {
                                     // No maps app installed; nothing to open.
                                 }
