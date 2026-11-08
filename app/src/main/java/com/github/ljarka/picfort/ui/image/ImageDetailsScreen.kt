@@ -271,7 +271,7 @@ private fun SharedTransitionScope.Page(
                     .onPlaced { onImageSizeChanged(it.size) }
                     .then(
                         if (isCurrentPage) Modifier.sharedElement(
-                            state = rememberSharedContentState(key = assetIndex.assetId),
+                            sharedContentState = rememberSharedContentState(key = assetIndex.assetId),
                             animatedVisibilityScope = animatedVisibilityScope,
                         ) else Modifier
                     )
