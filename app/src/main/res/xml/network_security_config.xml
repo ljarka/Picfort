@@ -1,4 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <network-security-config>
+    <!-- Cleartext is needed for self-hosted servers on the LAN (http://192.168.x.x).
+         CleartextPolicyInterceptor refuses plain HTTP to anything that isn't a
+         local network or VPN address. -->
     <base-config cleartextTrafficPermitted="true" />
 </network-security-config>

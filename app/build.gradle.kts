@@ -8,10 +8,12 @@ plugins {
 }
 
 android {
-    namespace = "com.github.ljarka.immich.android"
+    namespace = "com.github.ljarka.picfort"
     compileSdk = 35
 
     defaultConfig {
+        // Kept from before the rename: changing it installs a separate app and
+        // existing installs would lose their login, settings and cache.
         applicationId = "com.github.ljarka.immich.android2"
         minSdk = 26
         targetSdk = 35
@@ -39,18 +41,26 @@ android {
     }
     buildFeatures {
         compose = true
+        buildConfig = true
     }
 }
 
 dependencies {
     ksp(libs.hilt.android.compiler)
     ksp(libs.room.compiler)
+    ksp(libs.hilt.androidx.compiler)
+    implementation(libs.hilt.work)
+    implementation(libs.work.runtime.ktx)
     implementation(libs.room.runtime)
     implementation(libs.room.ktx)
     implementation(libs.error.prone.annotations)
     implementation(libs.compose.animation)
     implementation(libs.coil)
     implementation(libs.coil.network.okhttp)
+    implementation(libs.coil.video)
+    implementation(libs.media3.exoplayer)
+    implementation(libs.media3.ui)
+    implementation(libs.media3.datasource.okhttp)
     implementation(libs.hilt.android)
     implementation(libs.kotlin.serialization.json)
     implementation(libs.navigation.compose)
