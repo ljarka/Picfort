@@ -15,14 +15,19 @@ import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material.icons.automirrored.filled.Send
+import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
@@ -42,6 +47,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import coil3.compose.AsyncImage
 import coil3.compose.SubcomposeAsyncImage
 import com.github.ljarka.immich.android.db.AssetType
+import com.github.ljarka.immich.android.ui.frame.FrameSettingsDialog
 import com.github.ljarka.immich.android.ui.timeline.AssetIndex
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -74,9 +80,40 @@ fun ImageDetailsScreen(
     }
     BackHandler(enabled = true) { dismiss() }
     val viewModel = hiltViewModel<ImageDetailsViewModel>()
+    val pagerState = rememberPagerState(
+        pageCount = { viewModel.getNumberOfPages() },
+        initialPage = imageIndex,
+    )
+    // The asset on screen now, not the one the viewer was opened with.
+    val currentPage = pagerState.currentPage
+    val currentAsset by remember(currentPage) { viewModel.getAssetIndex(currentPage) }
+        .collectAsState(
+            initial = AssetIndex(imageIndex, assetId, assetType).takeIf { currentPage == imageIndex }
+        )
+    val isSending by viewModel.isSendingToFrame.collectAsState()
+    val snackbarHostState = remember { SnackbarHostState() }
+    var showFrameSettings by remember { mutableStateOf(false) }
+
+    LaunchedEffect(viewModel) {
+        viewModel.frameEvents.collect { event ->
+            when (event) {
+                FrameEvent.OpenSettings -> showFrameSettings = true
+                is FrameEvent.Message -> {
+                    snackbarHostState.currentSnackbarData?.dismiss()
+                    snackbarHostState.showSnackbar(event.text)
+                }
+            }
+        }
+    }
+
+    if (showFrameSettings) {
+        FrameSettingsDialog(onDismiss = { showFrameSettings = false })
+    }
+
     Scaffold(
         modifier = Modifier
             .fillMaxSize(),
+        snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
             TopAppBar(
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.Transparent),
@@ -92,22 +129,31 @@ fun ImageDetailsScreen(
                     )
                 },
                 actions = {
-                    IconButton(onClick = {
-                        viewModel.sendToImageFrame(assetId)
-                    }) {
-                        Icon(Icons.Filled.PlayArrow, contentDescription = "Settings")
+                    IconButton(onClick = { showFrameSettings = true }) {
+                        Icon(Icons.Filled.Settings, contentDescription = "Frame settings")
+                    }
+                    val asset = currentAsset?.takeIf { it.index == currentPage && it.assetId.isNotEmpty() }
+                    IconButton(
+                        enabled = asset != null && !isSending,
+                        onClick = { asset?.let { viewModel.sendToImageFrame(it.assetId, it.assetType) } },
+                    ) {
+                        if (isSending) {
+                            CircularProgressIndicator(
+                                modifier = Modifier.size(20.dp),
+                                strokeWidth = 2.dp,
+                            )
+                        } else {
+                            Icon(
+                                Icons.AutoMirrored.Filled.Send,
+                                contentDescription = "Show on frame",
+                            )
+                        }
                     }
                 }
             )
         },
     ) { innerPadding ->
         with(sharedTransitionScope) {
-            val viewModel = hiltViewModel<ImageDetailsViewModel>()
-
-            val pagerState = rememberPagerState(
-                pageCount = { viewModel.getNumberOfPages() },
-                initialPage = imageIndex,
-            )
             HorizontalPager(
                 state = pagerState,
                 beyondViewportPageCount = 3,
