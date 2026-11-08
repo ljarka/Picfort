@@ -4,6 +4,18 @@ Picfort is an Android client for a self-hosted [Immich](https://immich.app) phot
 
 > **Status:** early, personal project.
 
+## Screenshots
+
+| Album | Search | Details | Picture frame |
+|---|---|---|---|
+| <img src="app/src/test/snapshots/images/com.github.ljarka.picfort.screenshots_ScreenshotTest_album.png" width="200" alt="album"> | <img src="app/src/test/snapshots/images/com.github.ljarka.picfort.screenshots_ScreenshotTest_search.png" width="200" alt="search"> | <img src="app/src/test/snapshots/images/com.github.ljarka.picfort.screenshots_ScreenshotTest_details.png" width="200" alt="details"> | <img src="app/src/test/snapshots/images/com.github.ljarka.picfort.screenshots_ScreenshotTest_frame.png" width="200" alt="frame"> |
+
+| Albums | Backup settings | Dark theme |
+|---|---|---|
+| <img src="app/src/test/snapshots/images/com.github.ljarka.picfort.screenshots_ScreenshotTest_albums.png" width="200" alt="albums"> | <img src="app/src/test/snapshots/images/com.github.ljarka.picfort.screenshots_ScreenshotTest_settings.png" width="200" alt="settings"> | <img src="app/src/test/snapshots/images/com.github.ljarka.picfort.screenshots_ScreenshotTest_settings_dark.png" width="200" alt="settings_dark"> |
+
+These are rendered from the app's UI code with sample photos by the [screenshot tests](#screenshot-tests). They are regenerated whenever the UI changes, so they always match the code.
+
 ## Features
 
 - **One timeline.** Photos from Immich and from the phone's MediaStore (the last 24 months) are merged and grouped by month, newest first. A cloud icon shows where each image comes from.
@@ -40,7 +52,10 @@ app/                     Android app (Kotlin, Jetpack Compose)
     backup/              Backup engine, worker, scheduler, upload API
     ui/preferences/      DataStore / encrypted preferences
 ImageFrameServer/        Python service for the picture frame
-  app.py                 Flask HTTP API (/run, /status, /current)
+  app.py                 Flask HTTP API (/run, /status, /slideshow, /next, …)
+  slideshow.py           Slideshow modes, schedule, quiet hours
+  immich.py              Immich API client used by the slideshow
+  tests/                 unittest suite (no hardware or Immich needed)
   frame.py               Fetches from Immich, renders for the panel, drives the display
 ```
 
@@ -77,6 +92,23 @@ The first time you start the app:
 1. Enter your Immich server URL, for example `https://photos.example.com`.
 2. Log in with your Immich email and password.
 3. Allow photo access so photos on the phone appear in the timeline.
+
+## Tests
+
+```bash
+./gradlew testDebugUnitTest           # unit tests (also renders the screenshots)
+./gradlew verifyPaparazziDebug        # fails if a screen no longer matches its screenshot
+```
+
+### Screenshot tests
+
+`app/src/test/.../screenshots/ScreenshotTest.kt` renders screens on the JVM with [Paparazzi](https://github.com/cashapp/paparazzi), with no device or emulator. Photos come from a small generator that draws deterministic landscapes, so the images are stable. The reference images are checked in under `app/src/test/snapshots/images/` and are also used in this README.
+
+After an intended UI change, re-record the screenshots and commit the updated images:
+
+```bash
+./gradlew recordPaparazziDebug
+```
 
 ## ImageFrameServer
 
@@ -136,17 +168,37 @@ The frame uses Waveshare's 13.3" E Ink Spectra 6 panel (1200×1600, 6 colours, a
 | `FRAME_PALETTE` | built-in | Six hex colours (black, white, yellow, red, blue, green) as they look on your panel |
 | `FRAME_SATURATION` / `FRAME_CONTRAST` | `1.3` / `1.1` | Adjustments applied before dithering |
 | `FRAME_MIN_INTERVAL` | `30` | Minimum number of seconds between refreshes (protects the e-paper panel) |
+| `FRAME_STATE_PATH` | `slideshow.json` | Where slideshow settings are saved |
 | `PORT` | `5000` | HTTP port |
 
 HEIC originals need `pip install pillow-heif`. Otherwise the server falls back to Immich's preview image.
+
+### Slideshow
+
+The frame can change photos on its own:
+
+| Mode | Shows |
+|---|---|
+| `off` | Only what you send from the app |
+| `album` | Random photos from one album, avoiding recent repeats |
+| `memories` | "On this day": photos taken on today's date in earlier years (random photos when there are none) |
+| `random` | Random photos from the whole library |
+
+It changes every 15 min to 24 h and can pause during quiet hours (for example 22:00–07:00). A photo sent from the app stays up for a full interval. Set this up in the app under **Settings → Picture frame**, or through the API. The API key needs permission to read assets and albums and to search.
 
 ### API
 
 | Endpoint | Response |
 |---|---|
-| `GET /status` | `{"status":"ok","busy":false,"currentAsset":…,"lastError":…}` |
+| `GET /status` | `{"status":"ok","busy":false,"currentAsset":…,"lastError":…,"slideshow":{…}}` |
 | `GET /run?assetId=<id>` | `202` once the photo is fetched and rendered; the panel then refreshes in the background. Errors: `400` bad id, `404` asset not found, `409` still refreshing, `429` too soon (with `retry_after` and a `Retry-After` header), `502` Immich problem. |
 | `GET /current` | PNG of the last rendered frame |
+| `GET /slideshow` | `{"mode","album_id","interval_minutes","quiet_start","quiet_end","next_change_at",…}` |
+| `PUT /slideshow` | Update any of those fields (JSON). `400` with a message if invalid. |
+| `POST /next` | Show the next slideshow photo now (`409` if the slideshow is off) |
+| `GET /albums` | `[{"id","name"}]`, for choosing a slideshow album |
+
+Run the tests with `cd ImageFrameServer && python3 -m unittest discover -s tests -t tests`.
 
 You can also run it from the command line: `python3 frame.py <assetId>`.
 

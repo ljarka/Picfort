@@ -40,16 +40,13 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.github.ljarka.picfort.backup.BackupStatus
 import com.github.ljarka.picfort.local.RequestMediaPermission
-import com.github.ljarka.picfort.ui.frame.FrameSettingsDialog
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun SettingsScreen(onBack: () -> Unit) {
+fun SettingsScreen(onBack: () -> Unit, onFrameClick: () -> Unit) {
     val viewModel: SettingsViewModel = hiltViewModel()
     val backup by viewModel.backup.collectAsStateWithLifecycle()
     val status by viewModel.status.collectAsStateWithLifecycle()
-    var showFrame by remember { mutableStateOf(false) }
-    var confirmLogout by remember { mutableStateOf(false) }
 
     LaunchedEffect(status) { viewModel.reloadCounts() }
     val notificationPermission = rememberLauncherForActivityResult(
@@ -62,13 +59,43 @@ fun SettingsScreen(onBack: () -> Unit) {
         viewModel.setEnabled(enabled)
     }
     if (!backup.hasMediaAccess) RequestMediaPermission(onGranted = viewModel::reloadCounts)
-    if (showFrame) FrameSettingsDialog(onDismiss = { showFrame = false })
+    SettingsContent(
+        backup = backup,
+        status = status,
+        serverUrl = viewModel.serverUrl,
+        onBack = onBack,
+        onFrameClick = onFrameClick,
+        onEnable = onEnable,
+        onWifiOnly = viewModel::setWifiOnly,
+        onChargingOnly = viewModel::setChargingOnly,
+        onBackUpNow = viewModel::backUpNow,
+        onLogout = viewModel::logout,
+    )
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun SettingsContent(
+    backup: BackupSettingsUi,
+    status: BackupStatus,
+    serverUrl: String,
+    onBack: () -> Unit = {},
+    onFrameClick: () -> Unit = {},
+    onEnable: (Boolean) -> Unit = {},
+    onWifiOnly: (Boolean) -> Unit = {},
+    onChargingOnly: (Boolean) -> Unit = {},
+    onBackUpNow: () -> Unit = {},
+    onLogout: () -> Unit = {},
+    /** Fixed "now" for screenshot tests. */
+    now: Long = System.currentTimeMillis(),
+) {
+    var confirmLogout by remember { mutableStateOf(false) }
     if (confirmLogout) {
         AlertDialog(
             onDismissRequest = { confirmLogout = false },
             title = { Text("Log out?") },
             text = { Text("Backup stops until you log in again.") },
-            confirmButton = { TextButton(onClick = { confirmLogout = false; viewModel.logout() }) { Text("Log out") } },
+            confirmButton = { TextButton(onClick = { confirmLogout = false; onLogout() }) { Text("Log out") } },
             dismissButton = { TextButton(onClick = { confirmLogout = false }) { Text("Cancel") } },
         )
     }
@@ -93,8 +120,8 @@ fun SettingsScreen(onBack: () -> Unit) {
         ) {
             SectionTitle("Backup")
             SwitchRow("Back up this phone", "Photos and videos are uploaded to Immich", backup.enabled, onEnable)
-            SwitchRow("Only on Wi-Fi", null, backup.wifiOnly, viewModel::setWifiOnly)
-            SwitchRow("Only while charging", null, backup.chargingOnly, viewModel::setChargingOnly)
+            SwitchRow("Only on Wi-Fi", null, backup.wifiOnly, onWifiOnly)
+            SwitchRow("Only while charging", null, backup.chargingOnly, onChargingOnly)
 
             Column(Modifier.padding(horizontal = 16.dp, vertical = 8.dp)) {
                 when (val s = status) {
@@ -119,11 +146,11 @@ fun SettingsScreen(onBack: () -> Unit) {
                     )
                 }
                 backup.lastResult?.let {
-                    val ago = DateUtils.getRelativeTimeSpanString(backup.lastRunAt)
+                    val ago = DateUtils.getRelativeTimeSpanString(backup.lastRunAt, now, DateUtils.MINUTE_IN_MILLIS)
                     Text("Last backup $ago: $it", style = MaterialTheme.typography.bodySmall)
                 }
                 Button(
-                    onClick = viewModel::backUpNow,
+                    onClick = onBackUpNow,
                     enabled = status !is BackupStatus.Running && backup.hasMediaAccess,
                     modifier = Modifier.padding(top = 8.dp),
                 ) { Text("Back up now") }
@@ -132,14 +159,14 @@ fun SettingsScreen(onBack: () -> Unit) {
             HorizontalDivider(Modifier.padding(vertical = 8.dp))
             SectionTitle("Picture frame")
             ListItem(
-                modifier = Modifier.clickable { showFrame = true },
-                headlineContent = { Text("Frame address") },
-                supportingContent = { Text("Set up the e-paper frame") },
+                modifier = Modifier.clickable(onClick = onFrameClick),
+                headlineContent = { Text("Frame") },
+                supportingContent = { Text("What's on the frame, slideshow, address") },
             )
 
             HorizontalDivider(Modifier.padding(vertical = 8.dp))
             SectionTitle("Account")
-            ListItem(headlineContent = { Text("Server") }, supportingContent = { Text(viewModel.serverUrl) })
+            ListItem(headlineContent = { Text("Server") }, supportingContent = { Text(serverUrl) })
             ListItem(
                 modifier = Modifier.clickable { confirmLogout = true },
                 headlineContent = { Text("Log out", color = MaterialTheme.colorScheme.error) },
