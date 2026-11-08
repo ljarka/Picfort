@@ -8,10 +8,12 @@ plugins {
 }
 
 android {
-    namespace = "com.github.ljarka.immich.android"
+    namespace = "com.github.ljarka.picfort"
     compileSdk = 35
 
     defaultConfig {
+        // Kept from before the rename: changing it installs a separate app and
+        // existing installs would lose their login, settings and cache.
         applicationId = "com.github.ljarka.immich.android2"
         minSdk = 26
         targetSdk = 35
@@ -39,6 +41,7 @@ android {
     }
     buildFeatures {
         compose = true
+        buildConfig = true
     }
 }
 

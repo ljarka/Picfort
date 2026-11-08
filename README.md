@@ -18,7 +18,7 @@ Picfort is an Android client for a self-hosted [Immich](https://immich.app) phot
 
 ```
 app/                     Android app (Kotlin, Jetpack Compose)
-  src/main/java/com/github/ljarka/immich/android/
+  src/main/java/com/github/ljarka/picfort/
     db/                  Room database: month buckets and assets
     local/               MediaStore queries for photos on the phone
     network/             OkHttp/Retrofit setup and auth interceptor
@@ -144,12 +144,16 @@ You can also run it from the command line: `python3 frame.py <assetId>`.
 
 Open a photo, tap **⚙** and enter the frame's address (for example `192.168.0.105:5000`). Tap **Test**, then **Save**. After that, the **Send** button puts the photo you're viewing on the frame. Only photos on the Immich server can be sent, not photos that exist only on the phone.
 
+## Security notes
+
+- Plain `http://` is only allowed to local network and VPN addresses (private IPs, `.local`/`.lan`, Tailscale). Use `https://` for servers on the internet.
+- HTTP logging is only on in debug builds, with credentials redacted.
+- The access token is stored in encrypted preferences. If the server rejects it, the app returns to the login screen.
+
 ## Known limitations
 
 - Photos that exist only on the phone can't be sent to the frame yet.
-- Cleartext HTTP is allowed for all hosts (`network_security_config.xml`).
-- HTTP body logging is on in every build type.
 - Only photos are shown; video playback isn't supported yet.
-- There are no automated tests yet.
+- Months that were never opened while online show placeholders offline.
 
 See the roadmap in the issues or project board.
