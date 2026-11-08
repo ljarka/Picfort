@@ -1,0 +1,5 @@
+flask>=3.0
+pillow>=10.0
+requests>=2.31
+# Optional, for HEIC/HEIF originals:
+# pillow-heif>=0.16

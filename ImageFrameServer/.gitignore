@@ -1,0 +1,4 @@
+.env
+last_frame.png
+__pycache__/
+.venv/
