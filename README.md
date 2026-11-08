@@ -8,13 +8,13 @@ Picfort is an Android client for a self-hosted [Immich](https://immich.app) phot
 
 ## Screenshots
 
-| Album | Search | Details | Picture frame |
+| Timeline | Album | Search | Details |
 |---|---|---|---|
-| <img src="app/src/test/snapshots/images/com.github.ljarka.picfort.screenshots_ScreenshotTest_album.png" width="200" alt="album"> | <img src="app/src/test/snapshots/images/com.github.ljarka.picfort.screenshots_ScreenshotTest_search.png" width="200" alt="search"> | <img src="app/src/test/snapshots/images/com.github.ljarka.picfort.screenshots_ScreenshotTest_details.png" width="200" alt="details"> | <img src="app/src/test/snapshots/images/com.github.ljarka.picfort.screenshots_ScreenshotTest_frame.png" width="200" alt="frame"> |
+| <img src="app/src/test/snapshots/images/com.github.ljarka.picfort.ui.timeline_TimelineScreenshotTest_timeline.png" width="200" alt="TimelineScreenshotTest_timeline"> | <img src="app/src/test/snapshots/images/com.github.ljarka.picfort.screenshots_ScreenshotTest_album.png" width="200" alt="ScreenshotTest_album"> | <img src="app/src/test/snapshots/images/com.github.ljarka.picfort.screenshots_ScreenshotTest_search.png" width="200" alt="ScreenshotTest_search"> | <img src="app/src/test/snapshots/images/com.github.ljarka.picfort.screenshots_ScreenshotTest_details.png" width="200" alt="ScreenshotTest_details"> |
 
-| Albums | Backup settings | Dark theme |
-|---|---|---|
-| <img src="app/src/test/snapshots/images/com.github.ljarka.picfort.screenshots_ScreenshotTest_albums.png" width="200" alt="albums"> | <img src="app/src/test/snapshots/images/com.github.ljarka.picfort.screenshots_ScreenshotTest_settings.png" width="200" alt="settings"> | <img src="app/src/test/snapshots/images/com.github.ljarka.picfort.screenshots_ScreenshotTest_settings_dark.png" width="200" alt="settings_dark"> |
+| Picture frame | Albums | Backup settings | Dark theme |
+|---|---|---|---|
+| <img src="app/src/test/snapshots/images/com.github.ljarka.picfort.screenshots_ScreenshotTest_frame.png" width="200" alt="ScreenshotTest_frame"> | <img src="app/src/test/snapshots/images/com.github.ljarka.picfort.screenshots_ScreenshotTest_albums.png" width="200" alt="ScreenshotTest_albums"> | <img src="app/src/test/snapshots/images/com.github.ljarka.picfort.screenshots_ScreenshotTest_settings.png" width="200" alt="ScreenshotTest_settings"> | <img src="app/src/test/snapshots/images/com.github.ljarka.picfort.screenshots_ScreenshotTest_settings_dark.png" width="200" alt="ScreenshotTest_settings_dark"> |
 
 These are rendered from the app's UI code with sample photos by the [screenshot tests](#screenshot-tests). They are regenerated whenever the UI changes, so they always match the code.
 
@@ -104,7 +104,7 @@ The first time you start the app:
 
 ### Screenshot tests
 
-`app/src/test/.../screenshots/ScreenshotTest.kt` renders screens on the JVM with [Paparazzi](https://github.com/cashapp/paparazzi), with no device or emulator. Photos come from a small generator that draws deterministic landscapes, so the images are stable. The reference images are checked in under `app/src/test/snapshots/images/` and are also used in this README.
+`ScreenshotTest` and `TimelineScreenshotTest` (in `app/src/test`) render screens on the JVM with [Paparazzi](https://github.com/cashapp/paparazzi), with no device or emulator. Photos come from a small generator that draws deterministic landscapes, so the images are stable. The reference images are checked in under `app/src/test/snapshots/images/` and are also used in this README.
 
 After an intended UI change, re-record the screenshots and commit the updated images:
 
