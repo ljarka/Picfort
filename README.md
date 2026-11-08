@@ -1,18 +1,20 @@
 # Picfort
 
+[![CI](https://github.com/ljarka/Picfort/actions/workflows/ci.yml/badge.svg)](https://github.com/ljarka/Picfort/actions/workflows/ci.yml)
+
 Picfort is an Android client for a self-hosted [Immich](https://immich.app) photo server. It shows your Immich library and the photos on your phone in one timeline. It can also send a photo to a picture frame on your home network.
 
 > **Status:** early, personal project.
 
 ## Screenshots
 
-| Album | Search | Details | Picture frame |
+| Timeline | Album | Search | Details |
 |---|---|---|---|
-| <img src="app/src/test/snapshots/images/com.github.ljarka.picfort.screenshots_ScreenshotTest_album.png" width="200" alt="album"> | <img src="app/src/test/snapshots/images/com.github.ljarka.picfort.screenshots_ScreenshotTest_search.png" width="200" alt="search"> | <img src="app/src/test/snapshots/images/com.github.ljarka.picfort.screenshots_ScreenshotTest_details.png" width="200" alt="details"> | <img src="app/src/test/snapshots/images/com.github.ljarka.picfort.screenshots_ScreenshotTest_frame.png" width="200" alt="frame"> |
+| <img src="app/src/test/snapshots/images/com.github.ljarka.picfort.ui.timeline_TimelineScreenshotTest_timeline.png" width="200" alt="TimelineScreenshotTest_timeline"> | <img src="app/src/test/snapshots/images/com.github.ljarka.picfort.screenshots_ScreenshotTest_album.png" width="200" alt="ScreenshotTest_album"> | <img src="app/src/test/snapshots/images/com.github.ljarka.picfort.screenshots_ScreenshotTest_search.png" width="200" alt="ScreenshotTest_search"> | <img src="app/src/test/snapshots/images/com.github.ljarka.picfort.screenshots_ScreenshotTest_details.png" width="200" alt="ScreenshotTest_details"> |
 
-| Albums | Backup settings | Dark theme |
-|---|---|---|
-| <img src="app/src/test/snapshots/images/com.github.ljarka.picfort.screenshots_ScreenshotTest_albums.png" width="200" alt="albums"> | <img src="app/src/test/snapshots/images/com.github.ljarka.picfort.screenshots_ScreenshotTest_settings.png" width="200" alt="settings"> | <img src="app/src/test/snapshots/images/com.github.ljarka.picfort.screenshots_ScreenshotTest_settings_dark.png" width="200" alt="settings_dark"> |
+| Picture frame | Albums | Backup settings | Dark theme |
+|---|---|---|---|
+| <img src="app/src/test/snapshots/images/com.github.ljarka.picfort.screenshots_ScreenshotTest_frame.png" width="200" alt="ScreenshotTest_frame"> | <img src="app/src/test/snapshots/images/com.github.ljarka.picfort.screenshots_ScreenshotTest_albums.png" width="200" alt="ScreenshotTest_albums"> | <img src="app/src/test/snapshots/images/com.github.ljarka.picfort.screenshots_ScreenshotTest_settings.png" width="200" alt="ScreenshotTest_settings"> | <img src="app/src/test/snapshots/images/com.github.ljarka.picfort.screenshots_ScreenshotTest_settings_dark.png" width="200" alt="ScreenshotTest_settings_dark"> |
 
 These are rendered from the app's UI code with sample photos by the [screenshot tests](#screenshot-tests). They are regenerated whenever the UI changes, so they always match the code.
 
@@ -74,7 +76,7 @@ Compose UI ──► ViewModel (Hilt) ──► TimelineRepository ──┬─�
 
 ## Requirements
 
-- Android Studio (recent stable), JDK 11+
+- Android Studio (recent stable), JDK 17+
 - Android 8.0+ (minSdk 26, targetSdk 35)
 - An Immich server you can reach from the phone
 
@@ -102,13 +104,41 @@ The first time you start the app:
 
 ### Screenshot tests
 
-`app/src/test/.../screenshots/ScreenshotTest.kt` renders screens on the JVM with [Paparazzi](https://github.com/cashapp/paparazzi), with no device or emulator. Photos come from a small generator that draws deterministic landscapes, so the images are stable. The reference images are checked in under `app/src/test/snapshots/images/` and are also used in this README.
+`ScreenshotTest` and `TimelineScreenshotTest` (in `app/src/test`) render screens on the JVM with [Paparazzi](https://github.com/cashapp/paparazzi), with no device or emulator. Photos come from a small generator that draws deterministic landscapes, so the images are stable. The reference images are checked in under `app/src/test/snapshots/images/` and are also used in this README.
 
 After an intended UI change, re-record the screenshots and commit the updated images:
 
 ```bash
 ./gradlew recordPaparazziDebug
 ```
+
+## CI and releases
+
+Every pull request and push to `main` runs [CI](.github/workflows/ci.yml):
+- **Android:** unit tests, screenshot comparison, lint and a debug APK (downloadable from the run). When screenshots differ, the diffs are uploaded as an artifact.
+- **Frame server:** the Python tests on 3.11 (Raspberry Pi OS Bookworm) and 3.13.
+
+Dependabot opens weekly update PRs for Gradle and pip, and monthly ones for GitHub Actions.
+
+### Releasing
+
+Push a version tag and the [release workflow](.github/workflows/release.yml) tests the app, builds a signed APK and publishes it as a GitHub release:
+
+```bash
+git tag v1.0.0 && git push origin v1.0.0
+```
+
+One-time setup: create a signing key and store it as repository secrets. **Keep the keystore and passwords safe**: updates must be signed with the same key.
+
+```bash
+keytool -genkeypair -keystore picfort-release.jks -alias picfort -keyalg RSA -keysize 4096 -validity 10000
+gh secret set PICFORT_KEYSTORE_BASE64 < <(base64 -i picfort-release.jks)
+gh secret set PICFORT_KEYSTORE_PASSWORD
+gh secret set PICFORT_KEY_ALIAS --body picfort
+gh secret set PICFORT_KEY_PASSWORD
+```
+
+Builds made before release signing used the debug key, so moving to a release APK means uninstalling the old app first (you'll log in again).
 
 ## ImageFrameServer
 
