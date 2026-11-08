@@ -29,6 +29,17 @@ jobs:
 
       - uses: gradle/actions/setup-gradle@v6
 
+      # services.gradle.org sometimes stalls from runners; retry fetching Gradle
+      # before the build (cached by setup-gradle after the first success).
+      - name: Download Gradle
+        run: |
+          for attempt in 1 2 3; do
+            ./gradlew --version && exit 0
+            echo "Gradle download failed (attempt $attempt), retrying in 15 s"
+            sleep 15
+          done
+          exit 1
+
       - name: Decode signing key
         env:
           KEYSTORE_BASE64: ${{ secrets.PICFORT_KEYSTORE_BASE64 }}
