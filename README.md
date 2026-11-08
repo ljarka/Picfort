@@ -11,14 +11,18 @@ Picfort is an Android client for a self-hosted [Immich](https://immich.app) phot
 - **Fast scroll.** A draggable scrollbar that shows the month you're scrolling to.
 - **Offline-first cache.** Months and assets are stored in Room. Cached data is shown at once and refreshed in the background. Pull down to refresh.
 - **Viewer.** A swipeable full-screen pager with pinch-to-zoom and a shared-element transition from the grid.
-- **Selection.** Long-press to select several items, with a bottom-sheet menu.
+- **Backup.** Uploads the phone's photos and videos to Immich in the background (WorkManager). You can limit it to Wi-Fi or to while charging. Files Immich already has are detected by SHA-1 checksum and not uploaded again, and phone copies of backed-up photos are hidden so nothing shows twice.
+- **Video.** Phone and Immich videos play in the viewer (Media3), with a duration badge in the grid.
+- **Details.** Date, camera, lens, exposure, size, place, people and a map link for each item.
+- **Selection actions.** Long-press to select items, then share, download to the phone, send to the frame, or delete. Deleted items go to Immich's or the phone's trash.
+- **Settings.** Backup, the frame address, and your account.
 - **Send to frame.** Puts the photo you're viewing on an e-paper picture frame (see below).
 
 ## Repository layout
 
 ```
 app/                     Android app (Kotlin, Jetpack Compose)
-  src/main/java/com/github/ljarka/immich/android/
+  src/main/java/com/github/ljarka/picfort/
     db/                  Room database: month buckets and assets
     local/               MediaStore queries for photos on the phone
     network/             OkHttp/Retrofit setup and auth interceptor
@@ -28,6 +32,9 @@ app/                     Android app (Kotlin, Jetpack Compose)
     ui/timeline/         Timeline screen, repository, grid row layout, fast scroll
     ui/image/            Full-screen viewer, zoom
     ui/frame/            Frame settings, frame HTTP client (no Immich auth)
+    ui/settings/         Settings screen (backup, frame, account)
+    assets/              Share, download, delete, details (Immich API + MediaStore)
+    backup/              Backup engine, worker, scheduler, upload API
     ui/preferences/      DataStore / encrypted preferences
 ImageFrameServer/        Python service for the picture frame
   app.py                 Flask HTTP API (/run, /status, /current)
@@ -144,12 +151,18 @@ You can also run it from the command line: `python3 frame.py <assetId>`.
 
 Open a photo, tap **⚙** and enter the frame's address (for example `192.168.0.105:5000`). Tap **Test**, then **Save**. After that, the **Send** button puts the photo you're viewing on the frame. Only photos on the Immich server can be sent, not photos that exist only on the phone.
 
+## Security notes
+
+- Plain `http://` is only allowed to local network and VPN addresses (private IPs, `.local`/`.lan`, Tailscale). Use `https://` for servers on the internet.
+- HTTP logging is only on in debug builds, with credentials redacted.
+- The access token is stored in encrypted preferences. If the server rejects it, the app returns to the login screen.
+
 ## Known limitations
 
 - Photos that exist only on the phone can't be sent to the frame yet.
-- Cleartext HTTP is allowed for all hosts (`network_security_config.xml`).
-- HTTP body logging is on in every build type.
-- Only photos are shown; video playback isn't supported yet.
-- There are no automated tests yet.
+- Backup covers every photo and video on the phone; you can't pick albums yet.
+- Backup runs in the background without a notification, so a very large first backup takes several runs.
+- Saving to the phone needs Android 10+, and deleting phone photos needs Android 11+.
+- Months that were never opened while online show placeholders offline.
 
 See the roadmap in the issues or project board.

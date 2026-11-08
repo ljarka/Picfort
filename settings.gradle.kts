@@ -19,5 +19,5 @@ dependencyResolutionManagement {
     }
 }
 
-rootProject.name = "ImmichAndroid"
+rootProject.name = "Picfort"
 include(":app")
