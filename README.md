@@ -15,6 +15,8 @@ Picfort is an Android client for a self-hosted [Immich](https://immich.app) phot
 - **Video.** Phone and Immich videos play in the viewer (Media3), with a duration badge in the grid.
 - **Details.** Date, camera, lens, exposure, size, place, people and a map link for each item.
 - **Selection actions.** Long-press to select items, then share, download to the phone, send to the frame, or delete. Deleted items go to Immich's or the phone's trash.
+- **Albums.** Browse your Immich albums, and add selected items to an existing or new album.
+- **Search.** Immich smart search ("dog on the beach"), with results that page in as you scroll.
 - **Settings.** Backup, the frame address, and your account.
 - **Send to frame.** Puts the photo you're viewing on an e-paper picture frame (see below).
 
@@ -33,6 +35,7 @@ app/                     Android app (Kotlin, Jetpack Compose)
     ui/image/            Full-screen viewer, zoom
     ui/frame/            Frame settings, frame HTTP client (no Immich auth)
     ui/settings/         Settings screen (backup, frame, account)
+    collections/         Albums, search, shared asset grid
     assets/              Share, download, delete, details (Immich API + MediaStore)
     backup/              Backup engine, worker, scheduler, upload API
     ui/preferences/      DataStore / encrypted preferences
@@ -161,7 +164,7 @@ Open a photo, tap **⚙** and enter the frame's address (for example `192.168.0.
 
 - Photos that exist only on the phone can't be sent to the frame yet.
 - Backup covers every photo and video on the phone; you can't pick albums yet.
-- Backup runs in the background without a notification, so a very large first backup takes several runs.
+- When Android doesn't allow backup to run in the foreground (it was started in the background on Android 12+), a run stops after about 10 minutes and the next run continues.
 - Saving to the phone needs Android 10+, and deleting phone photos needs Android 11+.
 - Months that were never opened while online show placeholders offline.
 
