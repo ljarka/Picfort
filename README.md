@@ -18,7 +18,7 @@ Picfort is an Android client for a self-hosted [Immich](https://immich.app) phot
 
 ```
 app/                     Android app (Kotlin, Jetpack Compose)
-  src/main/java/com/github/ljarka/immich/android/
+  src/main/java/com/github/ljarka/picfort/
     db/                  Room database: month buckets and assets
     local/               MediaStore queries for photos on the phone
     network/             OkHttp/Retrofit setup and auth interceptor
