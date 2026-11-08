@@ -1,6 +1,14 @@
 package com.github.ljarka.immich.android.ui.timeline
 
+import android.util.Log
 import android.util.LruCache
+import com.github.ljarka.immich.android.network.CleartextNotAllowedException
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.receiveAsFlow
+import retrofit2.HttpException
+import java.io.IOException
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -18,14 +26,21 @@ import java.util.concurrent.ConcurrentHashMap
 import javax.inject.Inject
 
 enum class AssetLoadingState {
-    LOADING, LOADED, DEFAULT
+    LOADING, LOADED, DEFAULT,
+
+    /** Couldn't load (offline); not retried automatically until the next refresh. */
+    FAILED,
 }
+
+private const val TAG = "TimelineViewModel"
 
 @HiltViewModel
 class TimelineViewModel @Inject constructor(
     val timelineRepository: TimelineRepository,
 ) : ViewModel() {
     private val loadingState = MutableStateFlow(LoadingState.DEFAULT)
+    private val _messages = Channel<String>(Channel.BUFFERED)
+    val messages: Flow<String> = _messages.receiveAsFlow()
     val state = combine(timelineRepository.getTimeBuckets(), loadingState) { items, loadingState ->
         BucketsState(
             loadingState = loadingState,
@@ -64,14 +79,19 @@ class TimelineViewModel @Inject constructor(
             assetFetchingJobs.put(bucket, viewModelScope.launch(Dispatchers.IO) {
                 val loadingState = _assetState[bucket]
                 loadingState?.value = AssetLoadingState.LOADING
-                val fetched = timelineRepository.fetchAssets(bucket)
-
-                if (fetched) {
-                    loadingState?.value = AssetLoadingState.LOADED
-                } else {
+                try {
+                    val fetched = timelineRepository.fetchAssets(bucket)
+                    loadingState?.value =
+                        if (fetched) AssetLoadingState.LOADED else AssetLoadingState.DEFAULT
+                } catch (e: CancellationException) {
                     loadingState?.value = AssetLoadingState.DEFAULT
+                    throw e
+                } catch (e: Exception) {
+                    Log.w(TAG, "Couldn't load bucket $bucket", e)
+                    loadingState?.value = AssetLoadingState.FAILED
+                } finally {
+                    assetFetchingJobs.remove(bucket)
                 }
-                assetFetchingJobs.remove(bucket)
             })
         }
     }
@@ -96,11 +116,35 @@ class TimelineViewModel @Inject constructor(
         _selectedAssets.value = emptySet()
     }
 
+    init {
+        refresh()
+    }
+
     fun refresh() {
+        if (loadingState.value == LoadingState.REFRESHING) return
         viewModelScope.launch {
             loadingState.value = LoadingState.REFRESHING
-            timelineRepository.refresh()
-            loadingState.value = LoadingState.LOADED
+            try {
+                timelineRepository.refresh()
+                // Let months that failed while offline try again.
+                _assetState.values.forEach {
+                    it.compareAndSet(AssetLoadingState.FAILED, AssetLoadingState.DEFAULT)
+                }
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                Log.w(TAG, "Refresh failed", e)
+                _messages.send(describe(e))
+            } finally {
+                loadingState.value = LoadingState.LOADED
+            }
         }
+    }
+
+    private fun describe(e: Exception) = when (e) {
+        is CleartextNotAllowedException -> e.message ?: "Use https://"
+        is IOException -> "Can't reach the server, showing saved photos"
+        is HttpException -> "Server error (HTTP ${e.code()})"
+        else -> "Couldn't refresh: ${e.message}"
     }
 }

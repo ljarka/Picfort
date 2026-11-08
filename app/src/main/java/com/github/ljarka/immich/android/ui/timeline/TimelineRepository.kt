@@ -1,6 +1,7 @@
 package com.github.ljarka.immich.android.ui.timeline
 
 import android.content.Context
+import android.util.Log
 import com.github.ljarka.immich.android.AppScope
 import com.github.ljarka.immich.android.UrlProvider
 import com.github.ljarka.immich.android.db.AssetEntity
@@ -9,6 +10,7 @@ import com.github.ljarka.immich.android.db.ImagesDatabase
 import com.github.ljarka.immich.android.db.MonthBucketEntity
 import com.github.ljarka.immich.android.local.LocalImagesProvider
 import dagger.hilt.android.qualifiers.ApplicationContext
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
@@ -16,7 +18,6 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.onEach
-import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -42,6 +43,8 @@ data class AssetIndex(
     val assetType: AssetType,
 )
 
+private const val TAG = "TimelineRepository"
+
 @Singleton
 class TimelineRepository @Inject constructor(
     @AppScope val coroutineScope: CoroutineScope,
@@ -57,11 +60,8 @@ class TimelineRepository @Inject constructor(
 
     fun getAssetsCount(): Int = timeBucketsCache.value.values.sumOf { it.count }
 
-    fun getTimeBuckets(): Flow<List<TimeBucketUi>> {
-        return loadBucketsFromDb().onStart {
-            imagesDao.insertMonthBuckets(loadBucketsInfoFromServerAndDisk())
-        }
-    }
+    /** Cached buckets; call [refresh] to sync with the server and the phone. */
+    fun getTimeBuckets(): Flow<List<TimeBucketUi>> = loadBucketsFromDb()
 
     private suspend fun loadBucketsInfoFromServerAndDisk(): List<MonthBucketEntity> {
         val localImagesProvider = LocalImagesProvider()
@@ -185,7 +185,9 @@ class TimelineRepository @Inject constructor(
         }
     }
 
+    /** Asset at a flat timeline [index], or null if out of range or it can't be loaded. */
     suspend fun getAsset(index: Int): AssetUi? {
+        if (index < 0) return null
         return withContext(Dispatchers.Default) {
             val sortedValues = timeBucketsCache.value.values.sortedByDescending { it.timeStamp }
             var itemsCount = 0
@@ -194,11 +196,17 @@ class TimelineRepository @Inject constructor(
                 itemsCount <= index
             }
             val assetsBefore = bucketsBefore.sumOf { it.count }
-            val currentBucketIndex = bucketsBefore.size
-            val currentBucket = sortedValues[currentBucketIndex]
+            val currentBucket = sortedValues.getOrNull(bucketsBefore.size) ?: return@withContext null
 
             if (currentBucket.items.isEmpty()) {
-                fetchAssets(currentBucket.timeStamp)
+                try {
+                    fetchAssets(currentBucket.timeStamp)
+                } catch (e: CancellationException) {
+                    throw e
+                } catch (e: Exception) {
+                    Log.w(TAG, "Couldn't load bucket ${currentBucket.timeStamp}", e)
+                    return@withContext null
+                }
             }
 
             val bucket = timeBucketsCache.value[currentBucket.timeStamp]
@@ -206,6 +214,7 @@ class TimelineRepository @Inject constructor(
         }
     }
 
+    /** Loads a bucket's assets. Throws if they aren't cached and the server can't be reached. */
     suspend fun fetchAssets(bucket: Long): Boolean {
         if (!coroutineContext.isActive) return false
         val dbAssets = imagesDao.getAssets(bucket)
@@ -215,7 +224,14 @@ class TimelineRepository @Inject constructor(
             imagesDao.getAssets(bucket)
         } else {
             coroutineScope.launch(Dispatchers.IO) {
-                if (coroutineContext.isActive) updateAssets(bucket)
+                // Background refresh of cached data: failing (e.g. offline) is fine.
+                try {
+                    if (coroutineContext.isActive) updateAssets(bucket)
+                } catch (e: CancellationException) {
+                    throw e
+                } catch (e: Exception) {
+                    Log.w(TAG, "Background update of bucket $bucket failed", e)
+                }
             }
             dbAssets
         }.map { it.toAssetUi() }
@@ -327,6 +343,7 @@ class TimelineRepository @Inject constructor(
         )
     }
 
+    /** Syncs bucket counts with the server and the phone. Throws on network errors. */
     suspend fun refresh() {
         imagesDao.insertMonthBuckets(loadBucketsInfoFromServerAndDisk())
     }

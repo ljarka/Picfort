@@ -90,6 +90,10 @@ fun TimelineScreen(
             )
         )
 
+        LaunchedEffect(viewModel) {
+            viewModel.messages.collect { scaffoldState.snackbarHostState.showSnackbar(it) }
+        }
+
         MenuClosedObserver(sheetState = scaffoldState.bottomSheetState) {
             viewModel.clearSelection()
         }
@@ -310,7 +314,7 @@ private fun ImagesBucketItem(
 ) {
 
     if (asset == null) {
-        if (assetLoading != AssetLoadingState.LOADING) {
+        if (assetLoading == AssetLoadingState.DEFAULT || assetLoading == AssetLoadingState.LOADED) {
             LaunchedEffect(bucket.timeStamp) {
                 onFetchRequest(bucket.timeStamp)
             }
