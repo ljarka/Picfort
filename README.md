@@ -1,5 +1,7 @@
 # Picfort
 
+[![CI](https://github.com/ljarka/Picfort/actions/workflows/ci.yml/badge.svg)](https://github.com/ljarka/Picfort/actions/workflows/ci.yml)
+
 Picfort is an Android client for a self-hosted [Immich](https://immich.app) photo server. It shows your Immich library and the photos on your phone in one timeline. It can also send a photo to a picture frame on your home network.
 
 > **Status:** early, personal project.
@@ -74,7 +76,7 @@ Compose UI ──► ViewModel (Hilt) ──► TimelineRepository ──┬─�
 
 ## Requirements
 
-- Android Studio (recent stable), JDK 11+
+- Android Studio (recent stable), JDK 17+
 - Android 8.0+ (minSdk 26, targetSdk 35)
 - An Immich server you can reach from the phone
 
@@ -109,6 +111,34 @@ After an intended UI change, re-record the screenshots and commit the updated im
 ```bash
 ./gradlew recordPaparazziDebug
 ```
+
+## CI and releases
+
+Every pull request and push to `main` runs [CI](.github/workflows/ci.yml):
+- **Android:** unit tests, screenshot comparison, lint and a debug APK (downloadable from the run). When screenshots differ, the diffs are uploaded as an artifact.
+- **Frame server:** the Python tests on 3.11 (Raspberry Pi OS Bookworm) and 3.13.
+
+Dependabot opens weekly update PRs for Gradle and pip, and monthly ones for GitHub Actions.
+
+### Releasing
+
+Push a version tag and the [release workflow](.github/workflows/release.yml) tests the app, builds a signed APK and publishes it as a GitHub release:
+
+```bash
+git tag v1.0.0 && git push origin v1.0.0
+```
+
+One-time setup: create a signing key and store it as repository secrets. **Keep the keystore and passwords safe**: updates must be signed with the same key.
+
+```bash
+keytool -genkeypair -keystore picfort-release.jks -alias picfort -keyalg RSA -keysize 4096 -validity 10000
+gh secret set PICFORT_KEYSTORE_BASE64 < <(base64 -i picfort-release.jks)
+gh secret set PICFORT_KEYSTORE_PASSWORD
+gh secret set PICFORT_KEY_ALIAS --body picfort
+gh secret set PICFORT_KEY_PASSWORD
+```
+
+Builds made before release signing used the debug key, so moving to a release APK means uninstalling the old app first (you'll log in again).
 
 ## ImageFrameServer
 
