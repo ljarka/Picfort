@@ -1,6 +1,6 @@
 [versions]
 agp = "8.9.0"
-kotlin = "2.0.10"
+kotlin = "2.0.21"
 coreKtx = "1.15.0"
 junit = "4.13.2"
 junitVersion = "1.2.1"
@@ -12,6 +12,7 @@ hilt = "2.55"
 media3 = "1.5.1"
 work = "2.10.0"
 hiltX = "1.2.0"
+paparazzi = "1.3.5"
 
 [libraries]
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
@@ -58,6 +59,7 @@ android-application = { id = "com.android.application", version.ref = "agp" }
 kotlin-android = { id = "org.jetbrains.kotlin.android", version.ref = "kotlin" }
 kotlin-compose = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "kotlin" }
 kotlin-serialization = { id = "org.jetbrains.kotlin.plugin.serialization", version.ref = "kotlin" }
-ksp = { id = "com.google.devtools.ksp", version = "2.0.10-1.0.24" }
+ksp = { id = "com.google.devtools.ksp", version = "2.0.21-1.0.28" }
 hilt = { id = 'com.google.dagger.hilt.android', version.ref = "hilt" }
+paparazzi = { id = "app.cash.paparazzi", version.ref = "paparazzi" }
 

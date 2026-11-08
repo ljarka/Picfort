@@ -101,8 +101,19 @@ private fun Message(text: String, modifier: Modifier, onRetry: (() -> Unit)? = n
 fun AlbumsScreen(onBack: () -> Unit, onAlbumClick: (id: String, name: String) -> Unit) {
     val viewModel: AlbumsViewModel = hiltViewModel()
     val albums by viewModel.albums.collectAsStateWithLifecycle()
+    AlbumsContent(albums, viewModel::thumbnail, onBack, viewModel::reload, onAlbumClick)
+}
+
+@Composable
+fun AlbumsContent(
+    albums: LoadState<List<AlbumDto>>,
+    thumbnail: (AlbumDto) -> String?,
+    onBack: () -> Unit = {},
+    onRetry: () -> Unit = {},
+    onAlbumClick: (id: String, name: String) -> Unit = { _, _ -> },
+) {
     BackScaffold("Albums", onBack) { modifier ->
-        LoadStateContent(albums, viewModel::reload, modifier, { it.isEmpty() }, "No albums yet") { list ->
+        LoadStateContent(albums, onRetry, modifier, { it.isEmpty() }, "No albums yet") { list ->
             LazyVerticalGrid(
                 columns = GridCells.Adaptive(160.dp),
                 modifier = modifier.fillMaxSize(),
@@ -119,7 +130,7 @@ fun AlbumsScreen(onBack: () -> Unit, onAlbumClick: (id: String, name: String) ->
                                 .clip(RoundedCornerShape(12.dp))
                                 .background(Color.LightGray.copy(alpha = 0.3f))
                         ) {
-                            viewModel.thumbnail(album)?.let {
+                            thumbnail(album)?.let {
                                 AsyncImage(it, null, Modifier.fillMaxSize(), contentScale = ContentScale.Crop)
                             }
                         }
@@ -145,12 +156,26 @@ fun AlbumsScreen(onBack: () -> Unit, onAlbumClick: (id: String, name: String) ->
 fun AlbumScreen(onBack: () -> Unit, onAssetClick: (asset: GridAsset, index: Int, source: String) -> Unit) {
     val viewModel: AlbumViewModel = hiltViewModel()
     val assets by viewModel.assets.collectAsStateWithLifecycle()
-    BackScaffold(viewModel.name, onBack) { modifier ->
-        LoadStateContent(assets, viewModel::reload, modifier, { it.isEmpty() }, "This album is empty") { list ->
+    AlbumContent(viewModel.name, assets, viewModel::thumbnail, onBack, viewModel::reload) { asset, index ->
+        onAssetClick(asset, index, viewModel.source)
+    }
+}
+
+@Composable
+fun AlbumContent(
+    name: String,
+    assets: LoadState<List<GridAsset>>,
+    thumbnail: (GridAsset) -> String,
+    onBack: () -> Unit = {},
+    onRetry: () -> Unit = {},
+    onAssetClick: (GridAsset, Int) -> Unit = { _, _ -> },
+) {
+    BackScaffold(name, onBack) { modifier ->
+        LoadStateContent(assets, onRetry, modifier, { it.isEmpty() }, "This album is empty") { list ->
             AssetGrid(
                 assets = list,
-                thumbnailUrl = viewModel::thumbnail,
-                onClick = { index -> onAssetClick(list[index], index, viewModel.source) },
+                thumbnailUrl = thumbnail,
+                onClick = { index -> onAssetClick(list[index], index) },
                 modifier = modifier,
             )
         }
@@ -161,6 +186,25 @@ fun AlbumScreen(onBack: () -> Unit, onAssetClick: (asset: GridAsset, index: Int,
 fun SearchScreen(onBack: () -> Unit, onAssetClick: (asset: GridAsset, index: Int, source: String) -> Unit) {
     val viewModel: SearchViewModel = hiltViewModel()
     val state by viewModel.state.collectAsStateWithLifecycle()
+    SearchContent(
+        state = state,
+        thumbnail = viewModel::thumbnail,
+        onBack = onBack,
+        onSearch = viewModel::search,
+        onLoadMore = viewModel::loadMore,
+        onAssetClick = { asset, index -> onAssetClick(asset, index, viewModel.source) },
+    )
+}
+
+@Composable
+fun SearchContent(
+    state: SearchUi,
+    thumbnail: (GridAsset) -> String,
+    onBack: () -> Unit = {},
+    onSearch: (String) -> Unit = {},
+    onLoadMore: () -> Unit = {},
+    onAssetClick: (GridAsset, Int) -> Unit = { _, _ -> },
+) {
     var query by rememberSaveable { mutableStateOf(state.query) }
     val keyboard = LocalSoftwareKeyboardController.current
     val focus = remember { FocusRequester() }
@@ -174,7 +218,7 @@ fun SearchScreen(onBack: () -> Unit, onAssetClick: (asset: GridAsset, index: Int
             last >= gridState.layoutInfo.totalItemsCount - 12
         }
     }
-    LaunchedEffect(nearEnd, state.results.size) { if (nearEnd && state.results.isNotEmpty()) viewModel.loadMore() }
+    LaunchedEffect(nearEnd, state.results.size) { if (nearEnd && state.results.isNotEmpty()) onLoadMore() }
 
     BackScaffold("Search", onBack) { modifier ->
         Column(modifier.fillMaxSize()) {
@@ -187,7 +231,7 @@ fun SearchScreen(onBack: () -> Unit, onAssetClick: (asset: GridAsset, index: Int
                 keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
                 keyboardActions = KeyboardActions(onSearch = {
                     keyboard?.hide()
-                    viewModel.search(query)
+                    onSearch(query)
                 }),
                 modifier = Modifier
                     .fillMaxWidth()
@@ -196,7 +240,7 @@ fun SearchScreen(onBack: () -> Unit, onAssetClick: (asset: GridAsset, index: Int
             )
             when {
                 state.error != null && state.results.isEmpty() ->
-                    Message(state.error!!, Modifier) { viewModel.search(state.query) }
+                    Message(state.error!!, Modifier) { onSearch(state.query) }
                 state.isLoading && state.results.isEmpty() ->
                     Box(Modifier.fillMaxSize(), Alignment.Center) { CircularProgressIndicator() }
                 state.searched && state.results.isEmpty() ->
@@ -205,8 +249,8 @@ fun SearchScreen(onBack: () -> Unit, onAssetClick: (asset: GridAsset, index: Int
                     Message("Search your Immich library by describing what's in the photo.", Modifier)
                 else -> AssetGrid(
                     assets = state.results,
-                    thumbnailUrl = viewModel::thumbnail,
-                    onClick = { index -> onAssetClick(state.results[index], index, viewModel.source) },
+                    thumbnailUrl = thumbnail,
+                    onClick = { index -> onAssetClick(state.results[index], index) },
                     state = gridState,
                 )
             }

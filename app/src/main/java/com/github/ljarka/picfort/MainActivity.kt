@@ -25,6 +25,7 @@ import com.github.ljarka.picfort.collections.AlbumScreen
 import com.github.ljarka.picfort.collections.AlbumsScreen
 import com.github.ljarka.picfort.collections.GridAsset
 import com.github.ljarka.picfort.collections.SearchScreen
+import com.github.ljarka.picfort.ui.frame.FrameScreen
 import com.github.ljarka.picfort.ui.settings.SettingsScreen
 import com.github.ljarka.picfort.ui.timeline.TimelineScreen
 import dagger.hilt.android.AndroidEntryPoint
@@ -40,6 +41,9 @@ sealed interface Screen {
 
     @Serializable
     object Settings : Screen
+
+    @Serializable
+    object Frame : Screen
 
     @Serializable
     data class ImageDetails(
@@ -127,7 +131,13 @@ class MainActivity : ComponentActivity() {
                             SearchScreen(onBack = { navController.popBackStack() }, onAssetClick = openFromCollection)
                         }
                         composable<Screen.Settings> {
-                            SettingsScreen(onBack = { navController.popBackStack() })
+                            SettingsScreen(
+                                onBack = { navController.popBackStack() },
+                                onFrameClick = { navController.navigate(Screen.Frame) },
+                            )
+                        }
+                        composable<Screen.Frame> {
+                            FrameScreen(onBack = { navController.popBackStack() })
                         }
                         composable<Screen.ImageDetails> { backStackEntry ->
                             val imageDetails = backStackEntry.toRoute<Screen.ImageDetails>()
