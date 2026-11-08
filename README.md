@@ -40,7 +40,10 @@ app/                     Android app (Kotlin, Jetpack Compose)
     backup/              Backup engine, worker, scheduler, upload API
     ui/preferences/      DataStore / encrypted preferences
 ImageFrameServer/        Python service for the picture frame
-  app.py                 Flask HTTP API (/run, /status, /current)
+  app.py                 Flask HTTP API (/run, /status, /slideshow, /next, …)
+  slideshow.py           Slideshow modes, schedule, quiet hours
+  immich.py              Immich API client used by the slideshow
+  tests/                 unittest suite (no hardware or Immich needed)
   frame.py               Fetches from Immich, renders for the panel, drives the display
 ```
 
@@ -136,17 +139,37 @@ The frame uses Waveshare's 13.3" E Ink Spectra 6 panel (1200×1600, 6 colours, a
 | `FRAME_PALETTE` | built-in | Six hex colours (black, white, yellow, red, blue, green) as they look on your panel |
 | `FRAME_SATURATION` / `FRAME_CONTRAST` | `1.3` / `1.1` | Adjustments applied before dithering |
 | `FRAME_MIN_INTERVAL` | `30` | Minimum number of seconds between refreshes (protects the e-paper panel) |
+| `FRAME_STATE_PATH` | `slideshow.json` | Where slideshow settings are saved |
 | `PORT` | `5000` | HTTP port |
 
 HEIC originals need `pip install pillow-heif`. Otherwise the server falls back to Immich's preview image.
+
+### Slideshow
+
+The frame can change photos on its own:
+
+| Mode | Shows |
+|---|---|
+| `off` | Only what you send from the app |
+| `album` | Random photos from one album, avoiding recent repeats |
+| `memories` | "On this day": photos taken on today's date in earlier years (random photos when there are none) |
+| `random` | Random photos from the whole library |
+
+It changes every 15 min to 24 h and can pause during quiet hours (for example 22:00–07:00). A photo sent from the app stays up for a full interval. Set this up in the app under **Settings → Picture frame**, or through the API. The API key needs permission to read assets and albums and to search.
 
 ### API
 
 | Endpoint | Response |
 |---|---|
-| `GET /status` | `{"status":"ok","busy":false,"currentAsset":…,"lastError":…}` |
+| `GET /status` | `{"status":"ok","busy":false,"currentAsset":…,"lastError":…,"slideshow":{…}}` |
 | `GET /run?assetId=<id>` | `202` once the photo is fetched and rendered; the panel then refreshes in the background. Errors: `400` bad id, `404` asset not found, `409` still refreshing, `429` too soon (with `retry_after` and a `Retry-After` header), `502` Immich problem. |
 | `GET /current` | PNG of the last rendered frame |
+| `GET /slideshow` | `{"mode","album_id","interval_minutes","quiet_start","quiet_end","next_change_at",…}` |
+| `PUT /slideshow` | Update any of those fields (JSON). `400` with a message if invalid. |
+| `POST /next` | Show the next slideshow photo now (`409` if the slideshow is off) |
+| `GET /albums` | `[{"id","name"}]`, for choosing a slideshow album |
+
+Run the tests with `cd ImageFrameServer && python3 -m unittest discover -s tests -t tests`.
 
 You can also run it from the command line: `python3 frame.py <assetId>`.
 
