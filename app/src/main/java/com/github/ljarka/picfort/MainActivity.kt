@@ -21,6 +21,7 @@ import com.github.ljarka.picfort.network.SessionManager
 import com.github.ljarka.picfort.ui.image.ImageDetailsScreen
 import com.github.ljarka.picfort.ui.init.InitScreen
 import com.github.ljarka.picfort.ui.theme.PicfortTheme
+import com.github.ljarka.picfort.ui.settings.SettingsScreen
 import com.github.ljarka.picfort.ui.timeline.TimelineScreen
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.serialization.Serializable
@@ -32,6 +33,9 @@ sealed interface Screen {
 
     @Serializable
     object Timeline : Screen
+
+    @Serializable
+    object Settings : Screen
 
     @Serializable
     data class ImageDetails(
@@ -86,8 +90,12 @@ class MainActivity : ComponentActivity() {
                                     ) {
                                         popUpTo(Screen.Timeline)
                                     }
-                                }
+                                },
+                                onSettingsClick = { navController.navigate(Screen.Settings) },
                             )
+                        }
+                        composable<Screen.Settings> {
+                            SettingsScreen(onBack = { navController.popBackStack() })
                         }
                         composable<Screen.ImageDetails> { backStackEntry ->
                             val imageDetails = backStackEntry.toRoute<Screen.ImageDetails>()

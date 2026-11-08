@@ -6,6 +6,8 @@ import androidx.room.withTransaction
 import com.github.ljarka.picfort.AppScope
 import com.github.ljarka.picfort.UrlProvider
 import com.github.ljarka.picfort.db.AssetEntity
+import com.github.ljarka.picfort.db.BackupDao
+import com.github.ljarka.picfort.local.monthRangeMillis
 import com.github.ljarka.picfort.db.AssetType
 import com.github.ljarka.picfort.db.ImagesDatabase
 import com.github.ljarka.picfort.db.MonthBucketEntity
@@ -54,6 +56,7 @@ class TimelineRepository @Inject constructor(
     private val imagesDatabase: ImagesDatabase,
     private val timelineBucketsService: TimelineBucketsService,
     private val urlProvider: UrlProvider,
+    private val backupDao: BackupDao,
 ) {
     private val timeBucketsCache: MutableStateFlow<SortedMap<Long, TimeBucketUi>> =
         MutableStateFlow(sortedMapOf(reverseOrder()))
@@ -83,16 +86,13 @@ class TimelineRepository @Inject constructor(
             .map {
                 calendar.add(Calendar.MONTH, -1)
                 val time = calendar.toInstant().toString()
-                TimeBucket(
-                    timeBucket = time,
-                    count = localImagesProvider.getImagesCountForMonth(
-                        context = context,
-                        month = YearMonth.of(
-                            calendar.get(Calendar.YEAR),
-                            calendar.get(Calendar.MONTH) + 1,
-                        ),
-                    )
-                )
+                val month = YearMonth.of(calendar.get(Calendar.YEAR), calendar.get(Calendar.MONTH) + 1)
+                val range = monthRangeMillis(month, ZoneId.systemDefault())
+                // Phone photos already in Immich are shown once, as the Immich copy.
+                // This is an estimate; fetchAssets corrects the count when the month loads.
+                val onPhone = localImagesProvider.getImagesCountForMonth(context = context, month = month)
+                val backedUp = backupDao.countBackedUp(range.first, range.last + 1)
+                TimeBucket(timeBucket = time, count = (onPhone - backedUp).coerceAtLeast(0))
             }.associateBy { parseDate(it.timeBucket).toEpochMilli() }
 
         val remoteBuckets = timelineBucketsService.getTimeBuckets()
@@ -150,13 +150,17 @@ class TimelineRepository @Inject constructor(
 
     private fun loadBucketsFromDb() = imagesDao.getMonthBuckets()
         .map { buckets ->
+            // Flat start index of each month, derived from current counts so that a
+            // corrected count can't leave later months pointing at the wrong items.
+            var start = 0
             buckets.map { bucketItem ->
+                val index = start.also { start += bucketItem.count }
                 TimeBucketUi(
                     timeStamp = bucketItem.timestamp,
                     count = bucketItem.count,
                     formattedDate = formatDate(Instant.ofEpochMilli(bucketItem.timestamp)),
                     numberOfRows = bucketItem.rowsNumber ?: 0,
-                    index = bucketItem.index,
+                    index = index,
                     lastUpdate = bucketItem.lastUpdate,
                     items = timeBucketsCache.value[bucketItem.timestamp]?.items?.takeIf { it.isNotEmpty() }
                         ?: itemsCache.remove(bucketItem.timestamp) ?: emptyList(),
@@ -246,6 +250,7 @@ class TimelineRepository @Inject constructor(
         dbBucket?.let {
             imagesDao.updateBucket(
                 dbBucket.copy(
+                    count = items.size, // the estimate from refresh() can be off
                     rowsNumber = rows,
                     lastUpdate = System.currentTimeMillis()
                 )
@@ -290,7 +295,15 @@ class TimelineRepository @Inject constructor(
                 )
             }
 
-        updateDbAssets(bucket, remoteAssets + localAssets)
+        // Hide phone copies of photos that are already in this Immich month.
+        val remoteIds = remoteAssets.mapTo(HashSet()) { it.assetId }
+        val backedUp = localAssets.map { it.assetId.toLong() }.chunked(500)
+            .flatMap { backupDao.get(it) }
+            .filter { it.remoteId in remoteIds }
+            .mapTo(HashSet()) { it.localId.toString() }
+        val phoneOnly = localAssets.filter { it.assetId !in backedUp }
+
+        updateDbAssets(bucket, remoteAssets + phoneOnly)
     }
 
     /**

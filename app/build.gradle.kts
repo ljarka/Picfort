@@ -48,6 +48,9 @@ android {
 dependencies {
     ksp(libs.hilt.android.compiler)
     ksp(libs.room.compiler)
+    ksp(libs.hilt.androidx.compiler)
+    implementation(libs.hilt.work)
+    implementation(libs.work.runtime.ktx)
     implementation(libs.room.runtime)
     implementation(libs.room.ktx)
     implementation(libs.error.prone.annotations)

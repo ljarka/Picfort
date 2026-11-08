@@ -89,6 +89,7 @@ fun TimelineScreen(
     sharedTransitionScope: SharedTransitionScope,
     animatedVisibilityScope: AnimatedVisibilityScope,
     onImageClick: (String, AssetType, Int) -> Unit,
+    onSettingsClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     Box(modifier = modifier.fillMaxSize()) {
@@ -176,7 +177,7 @@ fun TimelineScreen(
                     onDelete = { confirmDelete = true },
                 )
             },
-            topBar = { TimelineAppBar(scrollBehavior = scrollBehavior) }
+            topBar = { TimelineAppBar(scrollBehavior = scrollBehavior, onSettingsClick = onSettingsClick) }
         ) { innerPadding ->
 
             if (state.loadingState == LoadingState.LOADING) {
