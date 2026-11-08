@@ -74,9 +74,10 @@ fun InitScreen(
                 }
 
                 InitState.REQUIRES_LOGIN -> {
-                    LoginContent(onLoggedIn = {
-                        viewModel.updateState()
-                    })
+                    LoginContent(
+                        onLoggedIn = { viewModel.updateState() },
+                        onChangeServer = { viewModel.updateState() },
+                    )
                 }
 
                 InitState.REQUIRES_SERVER_CONFIGURATION -> {

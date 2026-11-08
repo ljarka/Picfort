@@ -2,7 +2,11 @@ package com.github.ljarka.immich.android.ui.login
 
 sealed class LoginState {
 
-    object LoggedIn : LoginState()
+    data object LoggedOut : LoginState()
 
-    object LoggedOut : LoginState()
+    data object LoggingIn : LoginState()
+
+    data object LoggedIn : LoginState()
+
+    data class Error(val message: String) : LoginState()
 }

@@ -7,6 +7,7 @@ import androidx.activity.enableEdgeToEdge
 import androidx.compose.animation.ExperimentalSharedTransitionApi
 import androidx.compose.animation.SharedTransitionLayout
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -16,12 +17,14 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.toRoute
 import com.github.ljarka.immich.android.db.AssetType
+import com.github.ljarka.immich.android.network.SessionManager
 import com.github.ljarka.immich.android.ui.image.ImageDetailsScreen
 import com.github.ljarka.immich.android.ui.init.InitScreen
 import com.github.ljarka.immich.android.ui.theme.ImmichAndroidTheme
 import com.github.ljarka.immich.android.ui.timeline.TimelineScreen
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.serialization.Serializable
+import javax.inject.Inject
 
 sealed interface Screen {
     @Serializable
@@ -41,11 +44,23 @@ sealed interface Screen {
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalSharedTransitionApi::class)
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
+
+    @Inject
+    lateinit var sessionManager: SessionManager
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         setContent {
             val navController = rememberNavController()
+            LaunchedEffect(Unit) {
+                // Token rejected (revoked, expired, server reset): back to login.
+                sessionManager.loggedOut.collect {
+                    navController.navigate(Screen.Init) {
+                        popUpTo(navController.graph.id) { inclusive = true }
+                    }
+                }
+            }
             ImmichAndroidTheme {
                 SharedTransitionLayout {
                     NavHost(

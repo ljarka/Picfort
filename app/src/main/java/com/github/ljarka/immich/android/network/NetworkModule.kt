@@ -12,6 +12,7 @@ import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
 import okhttp3.logging.HttpLoggingInterceptor
 import retrofit2.Retrofit
+import javax.inject.Singleton
 import retrofit2.converter.kotlinx.serialization.asConverterFactory
 
 @Module
@@ -21,6 +22,7 @@ class NetworkModule {
     @Provides
     fun json() = Json { ignoreUnknownKeys = true }
 
+    @Singleton
     @Provides
     fun okhttp(authInterceptor: AuthInterceptor): OkHttpClient {
         val builder = OkHttpClient.Builder()
