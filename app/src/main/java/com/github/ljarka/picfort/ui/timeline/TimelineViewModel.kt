@@ -6,6 +6,7 @@ import android.os.Build
 import android.util.Log
 import com.github.ljarka.picfort.assets.AssetActions
 import com.github.ljarka.picfort.assets.SelectedAsset
+import com.github.ljarka.picfort.collections.CollectionsRepository
 import com.github.ljarka.picfort.db.AssetType
 import com.github.ljarka.picfort.ui.frame.FrameRepository
 import com.github.ljarka.picfort.ui.frame.FrameResult
@@ -53,6 +54,7 @@ class TimelineViewModel @Inject constructor(
     val timelineRepository: TimelineRepository,
     private val assetActions: AssetActions,
     private val frameRepository: FrameRepository,
+    private val collections: CollectionsRepository,
 ) : ViewModel() {
     private val loadingState = MutableStateFlow(LoadingState.DEFAULT)
     private val _messages = Channel<String>(Channel.BUFFERED)
@@ -185,6 +187,25 @@ class TimelineViewModel @Inject constructor(
             )
             is FrameResult.Error -> _messages.send(result.message)
         }
+    }
+
+    /** Adds the selected Immich items to [albumId], or to a new album called [newAlbumName]. */
+    fun addToAlbum(albumId: String?, albumName: String, newAlbumName: String? = null) = runAction { selected ->
+        val ids = selected.filter { it.type == AssetType.REMOTE }.map { it.id }
+        val skipped = selected.size - ids.size
+        if (ids.isEmpty()) {
+            _messages.send("Back these up first: only items in Immich can go into albums")
+            return@runAction
+        }
+        val message = if (newAlbumName != null) {
+            collections.createAlbum(newAlbumName, ids)
+            "Created \"${newAlbumName.trim()}\" with ${ids.size}"
+        } else {
+            val added = collections.addToAlbum(albumId!!, ids)
+            if (added == 0) "Already in \"$albumName\"" else "Added $added to \"$albumName\""
+        }
+        clearSelection()
+        _messages.send(if (skipped > 0) "$message ($skipped only on this phone were skipped)" else message)
     }
 
     /** Immich assets go to Immich's trash; phone photos go through the system trash dialog. */
