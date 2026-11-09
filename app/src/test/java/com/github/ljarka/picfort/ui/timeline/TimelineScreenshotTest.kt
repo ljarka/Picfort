@@ -105,4 +105,39 @@ class TimelineScreenshotTest {
             }
         }
     }
+
+    @OptIn(ExperimentalSharedTransitionApi::class, ExperimentalMaterial3Api::class)
+    @Test
+    fun timeline_empty() {
+        val state = BucketsState(loadingState = LoadingState.LOADED, items = emptyList())
+        paparazzi.snapshot {
+            PicfortTheme(dynamicColor = false) {
+                SharedTransitionLayout {
+                    AnimatedVisibility(visible = true) {
+                        Scaffold(
+                            topBar = {
+                                TimelineAppBar(
+                                    scrollBehavior = TopAppBarDefaults.enterAlwaysScrollBehavior(),
+                                    onSettingsClick = {}, onSearchClick = {}, onAlbumsClick = {},
+                                )
+                            },
+                        ) { padding ->
+                            TimeLineContent(
+                                viewModel = FakeGrid(emptyList()),
+                                state = state,
+                                gridState = rememberLazyGridState(),
+                                onImageClick = { _, _, _ -> },
+                                onExpandMenuRequest = {},
+                                onCollapseMenuRequest = {},
+                                sharedTransitionScope = this@SharedTransitionLayout,
+                                animatedVisibilityScope = this@AnimatedVisibility,
+                                modifier = Modifier.padding(padding),
+                                account = TimelineAccount("test@example.com", "https://photos.example.com"),
+                            )
+                        }
+                    }
+                }
+            }
+        }
+    }
 }

@@ -10,6 +10,8 @@ import com.github.ljarka.picfort.collections.CollectionsRepository
 import com.github.ljarka.picfort.db.AssetType
 import com.github.ljarka.picfort.ui.frame.FrameRepository
 import com.github.ljarka.picfort.ui.frame.FrameResult
+import com.github.ljarka.picfort.ui.login.AccessTokenStore
+import com.github.ljarka.picfort.ui.server.ServerUrlStore
 import kotlinx.coroutines.flow.map
 import android.util.LruCache
 import com.github.ljarka.picfort.network.CleartextNotAllowedException
@@ -55,7 +57,12 @@ class TimelineViewModel @Inject constructor(
     private val assetActions: AssetActions,
     private val frameRepository: FrameRepository,
     private val collections: CollectionsRepository,
+    private val accessTokenStore: AccessTokenStore,
+    private val serverUrlStore: ServerUrlStore,
 ) : ViewModel(), TimelineGridModel {
+    /** Shown on an empty timeline. Read once: logging out leaves this screen. */
+    val account = TimelineAccount(accessTokenStore.userEmail, serverUrlStore.serverUrl)
+
     private val loadingState = MutableStateFlow(LoadingState.DEFAULT)
     private val _messages = Channel<String>(Channel.BUFFERED)
     val messages: Flow<String> = _messages.receiveAsFlow()

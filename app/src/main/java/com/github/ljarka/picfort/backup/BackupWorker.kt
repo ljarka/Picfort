@@ -35,6 +35,10 @@ class BackupWorker @AssistedInject constructor(
                     summary(outcome)
                 BackupOutcome.NoMediaAccess -> Result.failure() to "Allow access to photos and videos"
                 BackupOutcome.NotLoggedIn -> Result.failure() to "Log in to back up"
+                is BackupOutcome.QuotaExceeded -> Result.failure() to buildString {
+                    if (outcome.uploaded > 0) append("Uploaded ${outcome.uploaded} · ")
+                    append("Storage quota on the server is full. Ask your Immich admin to raise it.")
+                }.also { showQuotaExceededNotification(applicationContext) }
             }
         } catch (e: IOException) {
             Log.w("BackupWorker", "Backup interrupted, will retry", e)
