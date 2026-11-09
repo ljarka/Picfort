@@ -9,13 +9,12 @@ import androidx.room.RoomDatabase
  */
 @Database(
     entities = [
-        AssetEntity::class, MonthBucketEntity::class, LocalBackupEntity::class,
+        LocalBackupEntity::class,
         RemoteAssetEntity::class, RemoteStackEntity::class, PartnerEntity::class, SyncStateEntity::class,
     ],
-    version = 20,
+    version = 21,
 )
 abstract class ImagesDatabase : RoomDatabase() {
-    abstract fun imagesDao(): ImagesDao
     abstract fun backupDao(): BackupDao
     abstract fun remoteAssetsDao(): RemoteAssetsDao
 }
