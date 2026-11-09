@@ -56,13 +56,14 @@ Check these with a second account before relying on them.
   source (`readUtf8Line`), never the whole body at once (the first sync of a large library is
   tens of MB).
 
-### Storage (Room, same `ImagesDatabase`, a real migration)
+### Storage (Room, same `ImagesDatabase`; no migrations, a schema change wipes it)
 - `remote_assets`: id (PK), ownerId, localDateTime, fileCreatedAt, type, visibility, deletedAt,
   width, height, thumbhash, duration, livePhotoVideoId, stackId, isFavorite, checksum.
   Indices on `(localDateTime)` and `(ownerId)`.
 - `remote_stacks`: id, primaryAssetId, ownerId.
 - `partners`: sharedById, inTimeline.
-- `sync_state`: the logged-in user id and the server + session the rows belong to.
+- `sync_state`: the logged-in user id and the server + session the rows belong to. It is in the
+  same database (not SharedPreferences), so a wipe also forgets it and the next sync is a full one.
 - Checkpoints live on the server (per session), not in Room.
 
 ### Sync engine
