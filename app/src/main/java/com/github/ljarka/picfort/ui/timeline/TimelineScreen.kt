@@ -1,5 +1,18 @@
 package com.github.ljarka.picfort.ui.timeline
 
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyListState
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.layout.BoxWithConstraints
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.unit.Dp
+import com.github.ljarka.picfort.ui.timeline.layout.MonthHeaderRow
+import com.github.ljarka.picfort.ui.timeline.layout.Tile
+import com.github.ljarka.picfort.ui.timeline.layout.TilesRow
+import com.github.ljarka.picfort.ui.timeline.layout.TimelineLayout
+import com.github.ljarka.picfort.ui.timeline.layout.Viewport
 import android.app.Activity
 import android.content.res.Configuration.ORIENTATION_PORTRAIT
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -33,11 +46,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.wrapContentHeight
-import androidx.compose.foundation.lazy.grid.GridCells
-import androidx.compose.foundation.lazy.grid.GridItemSpan
-import androidx.compose.foundation.lazy.grid.LazyGridState
-import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
-import androidx.compose.foundation.lazy.grid.rememberLazyGridState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -85,8 +93,6 @@ import com.github.ljarka.picfort.R
 import com.github.ljarka.picfort.db.AssetType
 import com.github.ljarka.picfort.collections.AddToAlbumDialog
 import com.github.ljarka.picfort.local.RequestMediaPermission
-import com.github.ljarka.picfort.ui.timeline.row.CalculatedRows
-import com.github.ljarka.picfort.ui.timeline.row.calculateRowsSizes
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalSharedTransitionApi::class, ExperimentalMaterial3Api::class)
@@ -106,7 +112,7 @@ fun TimelineScreen(
         val syncLines by viewModel.syncLines.collectAsStateWithLifecycle()
         // Back from the background (another app, the Immich web UI…): sync again.
         LifecycleEventEffect(Lifecycle.Event.ON_START) { viewModel.onForeground() }
-        val gridState = rememberLazyGridState()
+        val listState = rememberLazyListState()
         val scaffoldState = rememberBottomSheetScaffoldState(
             bottomSheetState = rememberStandardBottomSheetState(
                 initialValue = SheetValue.Hidden,
@@ -211,9 +217,7 @@ fun TimelineScreen(
                 ) }
         ) { innerPadding ->
 
-            if (state.loadingState == LoadingState.LOADING) {
-                TimelineLoadingComponent()
-            } else {
+            run {
                 val coroutineScope = rememberCoroutineScope()
                 TimeLineContent(
                     state = state,
@@ -221,7 +225,7 @@ fun TimelineScreen(
                         innerPadding
                     ),
                     viewModel = viewModel,
-                    gridState = gridState,
+                    listState = listState,
                     onImageClick = onImageClick,
                     account = viewModel.account,
                     onSetUpBackupClick = onSettingsClick,
@@ -244,21 +248,25 @@ fun TimelineScreen(
             }
         }
 
-        if (state.items.isNotEmpty()) {
+        val months = state.layout?.months.orEmpty()
+        if (months.isNotEmpty()) {
             FastScrollComponent(
-                buckets = state.items,
-                gridState = gridState,
+                months = months,
+                listState = listState,
             )
         }
     }
 }
 
+/** Gap between tiles and rows, and the list's side margin. */
+private val SPACING = 4.dp
+
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalSharedTransitionApi::class)
 @Composable
 internal fun TimeLineContent(
     viewModel: TimelineGridModel,
-    state: BucketsState,
-    gridState: LazyGridState,
+    state: TimelineState,
+    listState: LazyListState,
     onImageClick: (String, AssetType, Int) -> Unit,
     onExpandMenuRequest: () -> Unit,
     onCollapseMenuRequest: () -> Unit,
@@ -272,9 +280,7 @@ internal fun TimeLineContent(
     val pullToRefreshState = rememberPullToRefreshState()
     PullToRefreshBox(
         isRefreshing = state.loadingState == LoadingState.REFRESHING,
-        onRefresh = {
-            viewModel.refresh()
-        },
+        onRefresh = { viewModel.refresh() },
         modifier = modifier,
         state = pullToRefreshState,
         indicator = {
@@ -287,108 +293,99 @@ internal fun TimeLineContent(
             )
         },
     ) {
-        if (account != null && state.items.isEmpty() && state.loadingState == LoadingState.LOADED) {
-            TimelineEmptyComponent(account = account, onSetUpBackupClick = onSetUpBackupClick)
-        } else if (state.items.isEmpty() && syncLines != null) {
-            // First sync: the copy is still empty, show that something is happening.
-            TimelineSyncProgress(syncLines)
-        } else {
-            ImagesBucketsGrid(
-                gridState = gridState,
-                state = state,
-                viewModel = viewModel,
-                onImageClick = onImageClick,
-                sharedTransitionScope = sharedTransitionScope,
-                animatedVisibilityScope = animatedVisibilityScope,
-                onExpandMenuRequest = onExpandMenuRequest,
-                onCollapseMenuRequest = onCollapseMenuRequest,
-            )
+        // The layout depends on the width: measure first, then lay out the whole timeline.
+        BoxWithConstraints(Modifier.fillMaxSize()) {
+            val density = LocalDensity.current
+            val viewport = with(density) {
+                Viewport(width = (maxWidth - SPACING * 2).toPx(), height = maxHeight.toPx(), spacing = SPACING.toPx())
+            }
+            LaunchedEffect(viewport) { viewModel.setViewport(viewport) }
+            val layout = state.layout
+            when {
+                layout == null -> TimelineLoadingComponent()
+                layout.rows.isEmpty() && syncLines != null -> TimelineSyncProgress(syncLines) // first sync
+                layout.rows.isEmpty() && account != null && state.loadingState == LoadingState.LOADED ->
+                    TimelineEmptyComponent(account = account, onSetUpBackupClick = onSetUpBackupClick)
+                else -> TimelineList(
+                    layout = layout,
+                    listState = listState,
+                    viewModel = viewModel,
+                    onImageClick = onImageClick,
+                    sharedTransitionScope = sharedTransitionScope,
+                    animatedVisibilityScope = animatedVisibilityScope,
+                    onExpandMenuRequest = onExpandMenuRequest,
+                    onCollapseMenuRequest = onCollapseMenuRequest,
+                )
+            }
         }
     }
 }
 
+/**
+ * Rows laid out ahead of time (T-016): every size is known before anything is drawn, so
+ * rows never change shape while scrolling.
+ */
 @OptIn(ExperimentalSharedTransitionApi::class)
 @Composable
-private fun ImagesBucketsGrid(
-    gridState: LazyGridState,
-    state: BucketsState,
+private fun TimelineList(
+    layout: TimelineLayout,
+    listState: LazyListState,
     viewModel: TimelineGridModel,
     onImageClick: (String, AssetType, Int) -> Unit,
     sharedTransitionScope: SharedTransitionScope,
     animatedVisibilityScope: AnimatedVisibilityScope,
     onExpandMenuRequest: () -> Unit,
     onCollapseMenuRequest: () -> Unit,
-    modifier: Modifier = Modifier,
 ) {
-    val orientation = LocalConfiguration.current.orientation
-    // Collected once for the grid, not per tile; tiles get plain booleans so they can skip.
+    // Collected once for the list, not per tile; tiles get plain booleans so they can skip.
     val selectedAssets by viewModel.selectedAssets.collectAsStateWithLifecycle()
     val isInEditMode = selectedAssets.isNotEmpty()
-    LazyVerticalGrid(
-        columns = if (orientation == ORIENTATION_PORTRAIT) GridCells.Fixed(4) else GridCells.Fixed(
-            8
-        ),
-        state = gridState,
-        modifier = modifier.fillMaxSize(),
-        contentPadding = PaddingValues(4.dp)
+    val density = LocalDensity.current
+    LazyColumn(
+        state = listState,
+        modifier = Modifier.fillMaxSize(),
+        contentPadding = PaddingValues(SPACING),
+        verticalArrangement = Arrangement.spacedBy(SPACING),
     ) {
-        state.items.forEach { bucket ->
-            item(span = { GridItemSpan(maxLineSpan) }, key = bucket.timeStamp, contentType = "month") {
-                ImagesBucketTitle(bucket.formattedDate)
-            }
-
-            val rows: CalculatedRows? =
-                if (bucket.numberOfRows != null && bucket.numberOfRows != 0) calculateRowsSizes(
-                    bucket.numberOfRows,
-                    bucket.count
-                ) else null
-
-            // Spans and tiles come from this bucket snapshot, never from the repository's
-            // live cache: that cache changes on a background thread before Compose sees the
-            // new state, and a span that changes mid-measure makes LazyVerticalGrid place an
-            // item twice ("Place was called on a node which was placed already").
-            items(
-                count = bucket.count,
-                span = { index ->
-                    val defaultSpan = GridItemSpan(2)
-                    if (viewModel.isFixedSpan(bucket.timeStamp)) {
-                        defaultSpan
-                    } else {
-                        val item = bucket.items.getOrNull(index)
-                        calculateSpan(index, item, rows) ?: defaultSpan.also {
-                            viewModel.setFixedSpan(bucket.timeStamp)
-                        }
+        items(
+            items = layout.rows,
+            key = { it.key },
+            contentType = { if (it is MonthHeaderRow) "month" else "row" },
+        ) { row ->
+            when (row) {
+                is MonthHeaderRow -> ImagesBucketTitle(row.title)
+                is TilesRow -> Row(horizontalArrangement = Arrangement.spacedBy(SPACING)) {
+                    val height = with(density) { row.height.toDp() }
+                    row.tiles.forEach { tile ->
+                        val isSelected = tile.asset.id in selectedAssets
+                        GalleryTile(
+                            tile = tile,
+                            width = with(density) { tile.width.toDp() },
+                            height = height,
+                            isSelected = isSelected,
+                            isInEditMode = isInEditMode,
+                            sharedTransitionScope = sharedTransitionScope,
+                            animatedVisibilityScope = animatedVisibilityScope,
+                            onClick = {
+                                when {
+                                    !isInEditMode -> onImageClick(tile.asset.id, tile.asset.type, tile.index)
+                                    isSelected -> {
+                                        viewModel.deselectAsset(tile.asset.id)
+                                        if (viewModel.selectedAssets.value.isEmpty()) onCollapseMenuRequest()
+                                    }
+                                    else -> {
+                                        viewModel.selectAsset(tile.asset, row.month)
+                                        onExpandMenuRequest()
+                                    }
+                                }
+                            },
+                            onLongClick = {
+                                viewModel.selectAsset(tile.asset, row.month)
+                                onExpandMenuRequest()
+                            },
+                        )
                     }
-                },
-                key = { index -> "${bucket.timeStamp}_$index" }, // a String: Int hashes can collide
-                contentType = { "asset" },
-            ) { index ->
-                val asset = bucket.items.getOrNull(index)
-                val assetLoading by viewModel.getAssetLoadingState(bucket.timeStamp).collectAsState()
-                ImagesBucketItem(
-                    asset = asset,
-                    assetLoading = assetLoading,
-                    isSelected = asset != null && asset.id in selectedAssets,
-                    isInEditMode = isInEditMode,
-                    bucket = bucket,
-                    onSelectAssetClick = {
-                        asset?.let { viewModel.selectAsset(it, bucket.timeStamp) }
-                        onExpandMenuRequest()
-                    },
-                    onDeselectAssetClick = {
-                        viewModel.deselectAsset(it)
-                        if (viewModel.selectedAssets.value.isEmpty()) {
-                            onCollapseMenuRequest()
-                        }
-                    },
-                    onImageClick = onImageClick,
-                    sharedTransitionScope = sharedTransitionScope,
-                    animatedVisibilityScope = animatedVisibilityScope,
-                    index = index,
-                    onFetchRequest = {
-                        viewModel.fetchAssets(it)
-                    }
-                )
+                }
             }
         }
     }
@@ -400,7 +397,7 @@ private fun ImagesBucketTitle(title: String) {
         modifier = Modifier
             .fillMaxWidth()
             .wrapContentHeight()
-            .padding(horizontal = 8.dp, vertical = 16.dp),
+            .padding(horizontal = 4.dp, vertical = 16.dp),
     ) {
         Text(
             text = title,
@@ -409,101 +406,28 @@ private fun ImagesBucketTitle(title: String) {
     }
 }
 
-@OptIn(ExperimentalSharedTransitionApi::class)
-@Composable
-private fun ImagesBucketItem(
-    asset: AssetUi?,
-    assetLoading: AssetLoadingState,
-    isSelected: Boolean,
-    isInEditMode: Boolean,
-    bucket: TimeBucketUi,
-    onSelectAssetClick: (String) -> Unit,
-    onDeselectAssetClick: (String) -> Unit,
-    onImageClick: (String, AssetType, Int) -> Unit,
-    onFetchRequest: (Long) -> Unit,
-    sharedTransitionScope: SharedTransitionScope,
-    animatedVisibilityScope: AnimatedVisibilityScope,
-    index: Int,
-) {
-
-    if (asset == null) {
-        if (assetLoading == AssetLoadingState.DEFAULT || assetLoading == AssetLoadingState.LOADED) {
-            LaunchedEffect(bucket.timeStamp) {
-                onFetchRequest(bucket.timeStamp)
-            }
-        }
-        PlaceHolder(modifier = Modifier.padding(4.dp))
-    } else {
-        GalleryItem(
-            asset = asset,
-            sharedTransitionScope = sharedTransitionScope,
-            animatedVisibilityScope = animatedVisibilityScope,
-            isSelectedItem = isSelected,
-            onClick = {
-                if (!isInEditMode) {
-                    onImageClick(
-                        asset.id,
-                        asset.type,
-                        bucket.index + index
-                    )
-                } else if (isSelected) {
-                    onDeselectAssetClick(asset.id)
-                } else {
-                    onSelectAssetClick(asset.id)
-                }
-            },
-            isInEditMode = isInEditMode,
-            onLongClick = {
-                onSelectAssetClick(asset.id)
-            }
-        )
-    }
-}
-
-private fun calculateSpan(
-    index: Int,
-    item: AssetUi?,
-    rows: CalculatedRows?,
-): GridItemSpan? {
-    return if (item != null) {
-        GridItemSpan(item.span)
-    } else if (rows != null) {
-        if (index + 1 < rows.singleItemRowCount) {
-            GridItemSpan(4)
-        } else if (index + 1 < rows.singleItemRowCount + rows.doubleItemRowCount) {
-            GridItemSpan(2)
-        } else if (index + 1 < rows.singleItemRowCount + rows.doubleItemRowCount + rows.quadrupleItemRowCount) {
-            GridItemSpan(1)
-        } else {
-            GridItemSpan(2)
-        }
-    } else {
-        null
-    }
-}
-
 @OptIn(ExperimentalSharedTransitionApi::class, ExperimentalFoundationApi::class)
 @Composable
-private fun GalleryItem(
-    asset: AssetUi,
-    onClick: (String) -> Unit,
-    onLongClick: (String) -> Unit,
+private fun GalleryTile(
+    tile: Tile,
+    width: Dp,
+    height: Dp,
+    isSelected: Boolean,
     isInEditMode: Boolean,
-    isSelectedItem: Boolean,
+    onClick: () -> Unit,
+    onLongClick: () -> Unit,
     sharedTransitionScope: SharedTransitionScope,
     animatedVisibilityScope: AnimatedVisibilityScope,
 ) {
+    val asset = tile.asset
     with(sharedTransitionScope) {
-        val scale by animateFloatAsState(
-            targetValue = if (isSelectedItem) 0.9f else 1f,
-            label = "scale"
-        )
-
-        Box(
-            modifier = Modifier.scale(scale),
-        ) {
-            val placeholder = remember(asset.placeholder) { asset.placeholder?.let(::BitmapPainter) }
-            // AsyncImage, not SubcomposeAsyncImage: subcomposition is slow in lazy grids.
+        val scale by animateFloatAsState(targetValue = if (isSelected) 0.9f else 1f, label = "scale")
+        Box(modifier = Modifier.size(width, height).scale(scale)) {
+            // Decoded once per asset; ThumbHash previews are tiny (≤ 32 px).
+            val placeholder = remember(asset.thumbhash) {
+                asset.thumbhash?.let(::thumbHashBitmap)?.let(::BitmapPainter)
+            }
+            // AsyncImage, not SubcomposeAsyncImage: subcomposition is slow in lazy lists.
             AsyncImage(
                 contentScale = ContentScale.Crop,
                 modifier = Modifier
@@ -511,14 +435,8 @@ private fun GalleryItem(
                         sharedContentState = rememberSharedContentState(key = asset.id),
                         animatedVisibilityScope = animatedVisibilityScope,
                     )
-                    .combinedClickable(
-                        onClick = { onClick(asset.id) },
-                        onLongClick = {
-                            onLongClick(asset.id)
-                        },
-                    )
-                    .padding(4.dp)
-                    .height(170.dp)
+                    .combinedClickable(onClick = onClick, onLongClick = onLongClick)
+                    .fillMaxSize()
                     .clip(RoundedCornerShape(8.dp))
                     // Blurred ThumbHash (or grey) until the image arrives. Drawn behind the
                     // image rather than as a placeholder painter, which previews/screenshots
@@ -531,32 +449,21 @@ private fun GalleryItem(
                             Modifier
                         }
                     ),
-                model = asset.url,
+                model = tile.url,
                 error = ColorPainter(MaterialTheme.colorScheme.errorContainer),
                 contentDescription = null,
             )
-
-            if (asset.type == AssetType.LOCAL) {
-                Icon(
-                    modifier = Modifier
-                        .align(Alignment.BottomEnd)
-                        .padding(vertical = 8.dp, horizontal = 12.dp)
-                        .alpha(0.5f),
-                    painter = painterResource(R.drawable.ic_cloud_off),
-                    tint = Color.White,
-                    contentDescription = null,
-                )
-            } else {
-                Icon(
-                    modifier = Modifier
-                        .align(Alignment.BottomEnd)
-                        .padding(vertical = 8.dp, horizontal = 12.dp)
-                        .alpha(0.5f),
-                    painter = painterResource(R.drawable.ic_cloud),
-                    tint = Color.White,
-                    contentDescription = null
-                )
-            }
+            Icon(
+                modifier = Modifier
+                    .align(Alignment.BottomEnd)
+                    .padding(vertical = 8.dp, horizontal = 12.dp)
+                    .alpha(0.5f),
+                painter = painterResource(
+                    if (asset.type == AssetType.LOCAL) R.drawable.ic_cloud_off else R.drawable.ic_cloud
+                ),
+                tint = Color.White,
+                contentDescription = null,
+            )
             if (asset.isVideo) {
                 Row(
                     modifier = Modifier
@@ -578,26 +485,13 @@ private fun GalleryItem(
                 }
             }
             if (isInEditMode) {
-                CheckBox(isSelectedItem)
+                CheckBox(isSelected)
             }
         }
     }
 }
 
 private val PlaceholderColor = Color.LightGray.copy(alpha = 0.3f)
-
-@Composable
-private fun PlaceHolder(modifier: Modifier = Modifier) {
-    Spacer(
-        modifier = modifier
-            .height(170.dp)
-            .fillMaxWidth()
-            .background(
-                color = Color.LightGray.copy(alpha = 0.3f),
-                shape = RoundedCornerShape(8.dp)
-            )
-    )
-}
 
 @Composable
 fun IconTextButton(

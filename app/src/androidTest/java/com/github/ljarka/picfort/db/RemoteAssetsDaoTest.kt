@@ -72,7 +72,7 @@ class RemoteAssetsDaoTest {
             )
         )
 
-        val ids = dao.timelineAssets(ME, t("2026-10-01T00:00:00Z"), t("2026-11-01T00:00:00Z")).map { it.id }
+        val ids = dao.timelineAll(ME).first().map { it.id }
 
         assertEquals(
             setOf("mine", "partner-in-timeline", "stack-primary", "stack-unknown"),
@@ -81,31 +81,7 @@ class RemoteAssetsDaoTest {
     }
 
     @Test
-    fun monthsAreCountedInUtcNewestFirst() = runBlocking {
-        dao.upsertAssets(
-            listOf(
-                asset("oct-first-second", at = "2026-10-01T00:00:00Z"),
-                asset("oct-last-second", at = "2026-10-31T23:59:59Z"),
-                asset("sep", at = "2026-09-15T08:00:00Z"),
-                asset("archived-sep", at = "2026-09-16T08:00:00Z", visibility = "archive"),
-                asset("2024", at = "2024-01-26T21:10:32Z"),
-            )
-        )
-
-        val months = dao.monthCounts(ME).first()
-
-        assertEquals(
-            listOf(
-                RemoteMonthCount(t("2026-10-01T00:00:00Z"), 2),
-                RemoteMonthCount(t("2026-09-01T00:00:00Z"), 1),
-                RemoteMonthCount(t("2024-01-01T00:00:00Z"), 1),
-            ),
-            months,
-        )
-    }
-
-    @Test
-    fun monthAssetsAreNewestFirstAndBoundedByTheMonth() = runBlocking {
+    fun timelineIsNewestFirst() = runBlocking {
         dao.upsertAssets(
             listOf(
                 asset("a", at = "2026-10-02T10:00:00Z"),
@@ -115,9 +91,9 @@ class RemoteAssetsDaoTest {
             )
         )
 
-        val ids = dao.timelineAssets(ME, t("2026-10-01T00:00:00Z"), t("2026-11-01T00:00:00Z")).map { it.id }
+        val ids = dao.timelineAll(ME).first().map { it.id }
 
-        assertEquals(listOf("b", "a"), ids)
+        assertEquals(listOf("next-month", "b", "a", "prev-month"), ids)
     }
 
     @Test
@@ -132,6 +108,6 @@ class RemoteAssetsDaoTest {
         dao.upsertAssets(listOf(asset("x")))
         dao.upsertAssets(listOf(asset("x", visibility = "archive")))
         assertEquals(1, dao.countAll())
-        assertEquals(0, dao.timelineAssets(ME, 0, Long.MAX_VALUE).size)
+        assertEquals(0, dao.timelineAll(ME).first().size)
     }
 }

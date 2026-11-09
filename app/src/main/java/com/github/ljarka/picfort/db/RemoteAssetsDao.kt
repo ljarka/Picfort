@@ -49,30 +49,21 @@ interface RemoteAssetsDao {
     @Query("DELETE FROM partners")
     suspend fun clearPartners()
 
-    @Query(
-        """SELECT CAST(strftime('%s', a.localDateTime / 1000, 'unixepoch', 'start of month') AS INTEGER) * 1000
-               AS month, COUNT(*) AS count
-           FROM remote_assets a WHERE $TIMELINE_FILTER
-           GROUP BY month ORDER BY month DESC"""
-    )
-    fun monthCounts(userId: String): Flow<List<RemoteMonthCount>>
-
-    /** Timeline assets with [from] ≤ localDateTime < [to], newest first. */
-    @Query(
-        """SELECT * FROM remote_assets a WHERE $TIMELINE_FILTER
-           AND a.localDateTime >= :from AND a.localDateTime < :to
-           ORDER BY a.localDateTime DESC, a.id"""
-    )
-    suspend fun timelineAssets(userId: String, from: Long, to: Long): List<RemoteAssetEntity>
-
     @Query("SELECT * FROM sync_state WHERE id = 0")
     suspend fun syncState(): SyncStateEntity?
+
+    @Query("SELECT * FROM sync_state WHERE id = 0")
+    fun syncStateFlow(): Flow<SyncStateEntity?>
 
     @Upsert
     suspend fun setSyncState(state: SyncStateEntity)
 
     @Query("DELETE FROM sync_state")
     suspend fun clearSyncState()
+
+    /** The whole timeline, newest first; re-emits on every change to the tables. */
+    @Query("SELECT * FROM remote_assets a WHERE $TIMELINE_FILTER ORDER BY a.localDateTime DESC, a.id")
+    fun timelineAll(userId: String): Flow<List<RemoteAssetEntity>>
 
     @Query("SELECT COUNT(*) FROM remote_assets")
     suspend fun countAll(): Int
