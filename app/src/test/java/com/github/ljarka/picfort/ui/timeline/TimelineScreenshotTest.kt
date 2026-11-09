@@ -121,7 +121,7 @@ class TimelineScreenshotTest {
                             },
                         ) { padding ->
                             TimeLineContent(
-                                viewModel = FakeGrid(emptyList()),
+                                viewModel = FakeGrid(),
                                 state = state,
                                 gridState = rememberLazyGridState(),
                                 onImageClick = { _, _, _ -> },
