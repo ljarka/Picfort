@@ -138,4 +138,39 @@ class TimelineScreenshotTest {
             }
         }
     }
+
+    @OptIn(ExperimentalSharedTransitionApi::class, ExperimentalMaterial3Api::class)
+    @Test
+    fun timeline_syncing() {
+        val state = BucketsState(loadingState = LoadingState.REFRESHING, items = emptyList())
+        paparazzi.snapshot {
+            PicfortTheme(dynamicColor = false) {
+                SharedTransitionLayout {
+                    AnimatedVisibility(visible = true) {
+                        Scaffold(
+                            topBar = {
+                                TimelineAppBar(
+                                    scrollBehavior = TopAppBarDefaults.enterAlwaysScrollBehavior(),
+                                    onSettingsClick = {}, onSearchClick = {}, onAlbumsClick = {},
+                                )
+                            },
+                        ) { padding ->
+                            TimeLineContent(
+                                viewModel = FakeGrid(),
+                                state = state,
+                                gridState = rememberLazyGridState(),
+                                onImageClick = { _, _, _ -> },
+                                onExpandMenuRequest = {},
+                                onCollapseMenuRequest = {},
+                                sharedTransitionScope = this@SharedTransitionLayout,
+                                animatedVisibilityScope = this@AnimatedVisibility,
+                                modifier = Modifier.padding(padding),
+                                syncLines = 1500,
+                            )
+                        }
+                    }
+                }
+            }
+        }
+    }
 }

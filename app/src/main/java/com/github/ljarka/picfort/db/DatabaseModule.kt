@@ -19,8 +19,7 @@ class DatabaseModule {
         return Room.databaseBuilder(
             context = context,
             klass = ImagesDatabase::class.java, "images"
-        ).addMigrations(ImagesDatabase.MIGRATION_18_19)
-            .fallbackToDestructiveMigration()
+        ).fallbackToDestructiveMigration(dropAllTables = true)
             .build()
     }
 
