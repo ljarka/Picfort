@@ -37,13 +37,13 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import java.util.concurrent.ConcurrentHashMap
 import javax.inject.Inject
-
-enum class AssetLoadingState {
-    LOADING, LOADED, DEFAULT,
-
-    /** Couldn't load (offline); not retried automatically until the next refresh. */
-    FAILED,
-}
+import com.github.ljarka.picfort.ui.timeline.layout.layoutTimeline
+import com.github.ljarka.picfort.ui.timeline.layout.Viewport
+import kotlinx.coroutines.flow.flowOn
+import java.util.Locale
+import java.time.format.DateTimeFormatter
+import java.time.ZoneOffset
+import java.time.Instant
 
 private const val TAG = "TimelineViewModel"
 
@@ -71,19 +71,22 @@ class TimelineViewModel @Inject constructor(
     private val loadingState = MutableStateFlow(LoadingState.DEFAULT)
     private val _messages = Channel<String>(Channel.BUFFERED)
     val messages: Flow<String> = _messages.receiveAsFlow()
-    val state = combine(timelineRepository.getTimeBuckets(), loadingState) { items, loadingState ->
-        BucketsState(
-            loadingState = loadingState,
-            items = items,
-        )
-    }.stateIn(viewModelScope, started = SharingStarted.WhileSubscribed(5_000), BucketsState())
-    private val fixedSpans = mutableSetOf<Long>()
-    private val _assetState = ConcurrentHashMap<Long, MutableStateFlow<AssetLoadingState>>()
-    private val assetFetchingJobs = object : LruCache<Long, Job>(5) {
-        override fun entryRemoved(evicted: Boolean, key: Long?, oldValue: Job?, newValue: Job?) {
-            oldValue?.cancel()
-        }
+    private val viewport = MutableStateFlow<Viewport?>(null)
+
+    /** The whole timeline laid out for the current width, off the main thread. */
+    private val layout = combine(timelineRepository.index, viewport) { index, viewport ->
+        if (index == null || viewport == null) null
+        else layoutTimeline(index, viewport, ::formatMonth, timelineRepository::thumbnailUrl)
+    }.flowOn(Dispatchers.Default)
+
+    val state = combine(layout, loadingState) { layout, loadingState ->
+        TimelineState(loadingState = loadingState, layout = layout)
+    }.stateIn(viewModelScope, started = SharingStarted.WhileSubscribed(5_000), TimelineState())
+
+    override fun setViewport(viewport: Viewport) {
+        this.viewport.value = viewport
     }
+
     private val _selection = MutableStateFlow<Map<String, SelectedAsset>>(emptyMap())
     val selection: StateFlow<Map<String, SelectedAsset>> = _selection.asStateFlow()
     override val selectedAssets: StateFlow<Set<String>> = _selection
@@ -95,43 +98,8 @@ class TimelineViewModel @Inject constructor(
     private val _isBusy = MutableStateFlow(false)
     val isBusy: StateFlow<Boolean> = _isBusy.asStateFlow()
 
-    override fun getAssetLoadingState(bucket: Long): StateFlow<AssetLoadingState> {
-        return _assetState.getOrPut(bucket) { MutableStateFlow(AssetLoadingState.DEFAULT) }
-    }
-
-    override fun isFixedSpan(bucket: Long): Boolean = fixedSpans.contains(bucket)
-
-    override fun setFixedSpan(bucket: Long) {
-        fixedSpans.add(bucket)
-    }
-
-    @Synchronized
-    override fun fetchAssets(bucket: Long) {
-        val job = assetFetchingJobs[bucket]
-
-        if (job == null) {
-            assetFetchingJobs.put(bucket, viewModelScope.launch(Dispatchers.IO) {
-                val loadingState = _assetState[bucket]
-                loadingState?.value = AssetLoadingState.LOADING
-                try {
-                    val fetched = timelineRepository.fetchAssets(bucket)
-                    loadingState?.value =
-                        if (fetched) AssetLoadingState.LOADED else AssetLoadingState.DEFAULT
-                } catch (e: CancellationException) {
-                    loadingState?.value = AssetLoadingState.DEFAULT
-                    throw e
-                } catch (e: Exception) {
-                    Log.w(TAG, "Couldn't load bucket $bucket", e)
-                    loadingState?.value = AssetLoadingState.FAILED
-                } finally {
-                    assetFetchingJobs.remove(bucket)
-                }
-            })
-        }
-    }
-
-    override fun selectAsset(asset: AssetUi, bucket: Long) {
-        _selection.update { it + (asset.id to SelectedAsset(asset.id, asset.type, bucket, asset.isVideo)) }
+    override fun selectAsset(asset: TimelineAsset, month: Long) {
+        _selection.update { it + (asset.id to SelectedAsset(asset.id, asset.type, month, asset.isVideo)) }
     }
 
     override fun deselectAsset(assetId: String) {
@@ -222,7 +190,7 @@ class TimelineViewModel @Inject constructor(
         if (remote.isNotEmpty()) {
             assetActions.deleteRemote(remote.map { it.id })
             remote.forEach { deselectAsset(it.id) }
-            timelineRepository.reloadBuckets(remote.map { it.bucket }.toSet())
+            refreshQuietly()
             _messages.send("Moved ${remote.size} to Immich trash")
         }
         if (local.isNotEmpty()) {
@@ -244,14 +212,19 @@ class TimelineViewModel @Inject constructor(
         if (!confirmed || local.isEmpty()) return
         viewModelScope.launch {
             local.forEach { deselectAsset(it.id) }
-            try {
-                timelineRepository.reloadBuckets(local.map { it.bucket }.toSet())
-            } catch (e: CancellationException) {
-                throw e
-            } catch (e: Exception) {
-                Log.w(TAG, "Reload after local delete failed", e)
-            }
+            refreshQuietly()
             _messages.send("Moved ${local.size} to the phone's trash")
+        }
+    }
+
+    /** After our own change: sync so it shows; failing (offline) only means it shows later. */
+    private suspend fun refreshQuietly() {
+        try {
+            timelineRepository.refresh()
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            Log.w(TAG, "Refresh after a change failed", e)
         }
     }
 
@@ -277,10 +250,6 @@ class TimelineViewModel @Inject constructor(
             loadingState.value = LoadingState.REFRESHING
             try {
                 timelineRepository.refresh()
-                // Let months that failed while offline try again.
-                _assetState.values.forEach {
-                    it.compareAndSet(AssetLoadingState.FAILED, AssetLoadingState.DEFAULT)
-                }
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
@@ -309,3 +278,7 @@ class TimelineViewModel @Inject constructor(
         else -> "Something went wrong: ${e.message}"
     }
 }
+private val MONTH_FORMAT = DateTimeFormatter.ofPattern("MMMM, yyyy", Locale.ENGLISH)
+
+/** Month keys are midnight UTC on the 1st; format them in UTC so no zone shifts the month. */
+private fun formatMonth(key: Long): String = Instant.ofEpochMilli(key).atZone(ZoneOffset.UTC).format(MONTH_FORMAT)

@@ -1,15 +1,20 @@
 package com.github.ljarka.picfort.ui.timeline
 
-import androidx.compose.ui.graphics.ImageBitmap
 import com.github.ljarka.picfort.db.AssetType
 
+/** An asset as the full-screen viewer needs it. */
 data class AssetUi(
     val url: String,
-    val span: Int,
     val id: String,
     val type: AssetType,
     val isVideo: Boolean = false,
     val durationMs: Long? = null,
-    /** Blurred preview drawn under the thumbnail until it loads. */
-    val placeholder: ImageBitmap? = null,
+)
+
+/** An asset's position in the whole timeline, as the full-screen viewer pages through it. */
+data class AssetIndex(
+    val index: Int,
+    val assetId: String,
+    val assetType: AssetType,
+    val isVideo: Boolean = false,
 )

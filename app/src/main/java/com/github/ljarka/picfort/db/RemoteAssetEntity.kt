@@ -58,6 +58,3 @@ data class SyncStateEntity(
     /** The synced account's Immich user id, from `AuthUserV2`. */
     val userId: String,
 )
-
-/** Number of timeline assets in a month; [month] is midnight UTC on its 1st, in millis. */
-data class RemoteMonthCount(val month: Long, val count: Int)
