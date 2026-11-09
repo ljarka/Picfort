@@ -21,3 +21,4 @@ dependencyResolutionManagement {
 
 rootProject.name = "Picfort"
 include(":app")
+include(":benchmark")
