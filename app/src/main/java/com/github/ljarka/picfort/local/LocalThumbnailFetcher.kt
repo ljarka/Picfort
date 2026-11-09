@@ -56,17 +56,18 @@ class LocalThumbnailFetcher(
         fun px(d: Dimension) = ((d as? Dimension.Pixels)?.px ?: MAX_THUMBNAIL_PX).coerceIn(1, MAX_THUMBNAIL_PX)
         return Size(px(options.size.width), px(options.size.height))
     }
+}
 
-    class Factory : Fetcher.Factory<Uri> {
-        override fun create(data: Uri, options: Options, imageLoader: ImageLoader): Fetcher? {
-            if (data.scheme != SCHEME || !hasLocalThumbnails) return null
-            val id = data.path?.trim('/')?.toLongOrNull() ?: return null
-            val uri = when (data.authority) {
-                "image" -> localImageUri(id)
-                "video" -> localVideoUri(id)
-                else -> return null
-            }
-            return LocalThumbnailFetcher(uri, options)
+/** Creates [LocalThumbnailFetcher]s for [localThumbnailUrl] models; none before Android 10. */
+class LocalThumbnailFetcherFactory : Fetcher.Factory<Uri> {
+    override fun create(data: Uri, options: Options, imageLoader: ImageLoader): Fetcher? {
+        if (data.scheme != SCHEME || Build.VERSION.SDK_INT < Build.VERSION_CODES.Q) return null
+        val id = data.path?.trim('/')?.toLongOrNull() ?: return null
+        val uri = when (data.authority) {
+            "image" -> localImageUri(id)
+            "video" -> localVideoUri(id)
+            else -> return null
         }
+        return LocalThumbnailFetcher(uri, options)
     }
 }
