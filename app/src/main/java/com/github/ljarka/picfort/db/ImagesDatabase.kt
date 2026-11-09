@@ -2,23 +2,20 @@ package com.github.ljarka.picfort.db
 
 import androidx.room.Database
 import androidx.room.RoomDatabase
-import androidx.room.migration.Migration
-import androidx.sqlite.db.SupportSQLiteDatabase
 
+/**
+ * A cache: a schema change wipes it (no migrations). That includes the backup state, so the
+ * first backup after an update re-hashes the phone's files; nothing is uploaded twice.
+ */
 @Database(
-    entities = [AssetEntity::class, MonthBucketEntity::class, LocalBackupEntity::class],
-    version = 19,
+    entities = [
+        AssetEntity::class, MonthBucketEntity::class, LocalBackupEntity::class,
+        RemoteAssetEntity::class, RemoteStackEntity::class, PartnerEntity::class, SyncStateEntity::class,
+    ],
+    version = 20,
 )
 abstract class ImagesDatabase : RoomDatabase() {
-    companion object {
-        /** Not destructive: the backup state lives in this database too. */
-        val MIGRATION_18_19 = object : Migration(18, 19) {
-            override fun migrate(db: SupportSQLiteDatabase) {
-                db.execSQL("ALTER TABLE assets ADD COLUMN thumbhash TEXT")
-            }
-        }
-    }
-
     abstract fun imagesDao(): ImagesDao
     abstract fun backupDao(): BackupDao
+    abstract fun remoteAssetsDao(): RemoteAssetsDao
 }
