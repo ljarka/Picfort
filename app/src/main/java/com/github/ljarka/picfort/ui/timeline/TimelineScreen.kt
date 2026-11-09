@@ -422,11 +422,14 @@ private fun GalleryTile(
     val asset = tile.asset
     with(sharedTransitionScope) {
         val scale by animateFloatAsState(targetValue = if (isSelected) 0.9f else 1f, label = "scale")
-        Box(modifier = Modifier.size(width, height).scale(scale)) {
-            // Decoded once per asset; ThumbHash previews are tiny (≤ 32 px).
+        // scale() adds a graphics layer: only pay for it while selecting.
+        Box(modifier = Modifier.size(width, height).then(if (isInEditMode) Modifier.scale(scale) else Modifier)) {
+            // Decoded once per asset; ThumbHash previews are tiny (≤ 32 px). Dropped once the
+            // thumbnail is in, so a loaded tile draws one image, not two.
+            var loaded by remember(tile.url) { mutableStateOf(false) }
             val placeholder = remember(asset.thumbhash) {
                 asset.thumbhash?.let(::thumbHashBitmap)?.let(::BitmapPainter)
-            }
+            }.takeUnless { loaded }
             // AsyncImage, not SubcomposeAsyncImage: subcomposition is slow in lazy lists.
             AsyncImage(
                 contentScale = ContentScale.Crop,
@@ -450,6 +453,7 @@ private fun GalleryTile(
                         }
                     ),
                 model = tile.url,
+                onSuccess = { loaded = true },
                 error = ColorPainter(MaterialTheme.colorScheme.errorContainer),
                 contentDescription = null,
             )

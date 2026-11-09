@@ -32,8 +32,8 @@ data class TimelineLayout(val rows: List<TimelineRow>, val months: List<MonthMar
 data class Viewport(val width: Float, val height: Float, val spacing: Float)
 
 /** About this many square photos per row: fewer in portrait, more in landscape. */
-private const val PORTRAIT_PER_ROW = 4
-private const val LANDSCAPE_PER_ROW = 7
+private const val PORTRAIT_PER_ROW = 4f
+private const val LANDSCAPE_PER_ROW = 7f
 
 /**
  * Lays out every month of [index] in justified rows for [viewport]. Pure, so the whole
@@ -47,7 +47,7 @@ fun layoutTimeline(
 ): TimelineLayout {
     if (viewport.width <= 0f) return TimelineLayout.EMPTY
     val perRow = if (viewport.width > viewport.height) LANDSCAPE_PER_ROW else PORTRAIT_PER_ROW
-    val target = (viewport.width - viewport.spacing * (perRow - 1)) / perRow
+    val target = (viewport.width - viewport.spacing * (perRow - 1f)) / perRow
     val rows = ArrayList<TimelineRow>()
     val months = ArrayList<MonthMarker>()
     index.months.forEach { month ->
