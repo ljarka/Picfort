@@ -48,6 +48,14 @@ android {
             )
             signingConfig = signingConfigs.getByName(if (releaseKeystore != null) "release" else "debug")
         }
+        // Release code (R8, no debug overhead) for the :benchmark module. Debug-signed so it
+        // installs over a debug build and keeps its login.
+        create("benchmark") {
+            initWith(getByName("release"))
+            signingConfig = signingConfigs.getByName("debug")
+            matchingFallbacks += listOf("release")
+            isDebuggable = false
+        }
     }
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_11
@@ -95,6 +103,7 @@ dependencies {
     implementation(libs.converter.kotlinx.serialization)
     implementation(libs.okhttp)
     implementation(libs.datastore.preferences)
+    implementation(libs.androidx.profileinstaller)
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
