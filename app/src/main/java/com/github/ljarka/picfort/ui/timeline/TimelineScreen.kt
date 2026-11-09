@@ -75,6 +75,8 @@ import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.compose.LifecycleEventEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil3.compose.AsyncImage
 import androidx.compose.ui.graphics.painter.BitmapPainter
@@ -101,6 +103,9 @@ fun TimelineScreen(
     Box(modifier = modifier.fillMaxSize()) {
         val viewModel: TimelineViewModel = hiltViewModel()
         val state by viewModel.state.collectAsStateWithLifecycle()
+        val syncLines by viewModel.syncLines.collectAsStateWithLifecycle()
+        // Back from the background (another app, the Immich web UI…): sync again.
+        LifecycleEventEffect(Lifecycle.Event.ON_START) { viewModel.onForeground() }
         val gridState = rememberLazyGridState()
         val scaffoldState = rememberBottomSheetScaffoldState(
             bottomSheetState = rememberStandardBottomSheetState(
@@ -220,6 +225,7 @@ fun TimelineScreen(
                     onImageClick = onImageClick,
                     account = viewModel.account,
                     onSetUpBackupClick = onSettingsClick,
+                    syncLines = syncLines,
                     sharedTransitionScope = sharedTransitionScope,
                     animatedVisibilityScope = animatedVisibilityScope,
                     onExpandMenuRequest = {
@@ -261,6 +267,7 @@ internal fun TimeLineContent(
     modifier: Modifier = Modifier,
     account: TimelineAccount? = null,
     onSetUpBackupClick: () -> Unit = {},
+    syncLines: Int? = null,
 ) {
     val pullToRefreshState = rememberPullToRefreshState()
     PullToRefreshBox(
@@ -282,6 +289,9 @@ internal fun TimeLineContent(
     ) {
         if (account != null && state.items.isEmpty() && state.loadingState == LoadingState.LOADED) {
             TimelineEmptyComponent(account = account, onSetUpBackupClick = onSetUpBackupClick)
+        } else if (state.items.isEmpty() && syncLines != null) {
+            // First sync: the copy is still empty, show that something is happening.
+            TimelineSyncProgress(syncLines)
         } else {
             ImagesBucketsGrid(
                 gridState = gridState,

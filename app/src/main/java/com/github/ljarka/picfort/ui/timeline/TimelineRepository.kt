@@ -33,6 +33,8 @@ import java.util.Calendar
 import java.util.Locale
 import java.util.SortedMap
 import java.util.TimeZone
+import java.io.IOException
+import retrofit2.HttpException
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlin.coroutines.coroutineContext
@@ -51,7 +53,7 @@ class TimelineRepository @Inject constructor(
     @AppScope val coroutineScope: CoroutineScope,
     @ApplicationContext private val context: Context,
     private val imagesDatabase: ImagesDatabase,
-    private val timelineBucketsService: TimelineBucketsService,
+    private val remote: SyncTimelineSource,
     private val urlProvider: UrlProvider,
     private val backupDao: BackupDao,
 ) {
@@ -91,8 +93,7 @@ class TimelineRepository @Inject constructor(
                 parseBucketDate(time).toEpochMilli() to (onPhone - backedUp).coerceAtLeast(0)
             }.toMap()
 
-        val remoteBuckets = timelineBucketsService.getTimeBuckets()
-            .associate { parseBucketDate(it.timeBucket).toEpochMilli() to it.count }
+        val remoteBuckets = remote.monthCounts() // local copy, no network
 
         return mergeMonthCounts(localBuckets, remoteBuckets).map { (timestamp, count) ->
             MonthBucketEntity(timestamp = timestamp, count = count, rowsNumber = dbRowsNumbers?.get(timestamp))
@@ -193,22 +194,7 @@ class TimelineRepository @Inject constructor(
     private suspend fun updateAssets(bucket: Long) {
         val timeInstant = Instant.ofEpochMilli(bucket)
 
-        val bucketResponse = timelineBucketsService.getBucket(
-            timeBucket = timeInstant.toString()
-        )
-        val remoteAssets = bucketResponse.id.mapIndexed { index, id ->
-            AssetEntity(
-                timestamp = bucket,
-                assetId = id,
-                ratio = bucketResponse.ratio[index],
-                dateTaken = parseDate(bucketResponse.fileCreatedAt[index]).toEpochMilli(),
-                assetIndex = 0,
-                type = AssetType.REMOTE,
-                isVideo = bucketResponse.isImage.getOrNull(index) == false,
-                durationMs = parseImmichDuration(bucketResponse.duration.getOrNull(index)),
-                thumbhash = bucketResponse.thumbhash.getOrNull(index),
-            )
-        }
+        val remoteAssets = remote.monthAssets(bucket) // local copy, no network
 
         // Bucket keys are midnight UTC on the 1st; read the month in UTC, or zones
         // west of UTC would see the previous month.
@@ -259,15 +245,17 @@ class TimelineRepository @Inject constructor(
      */
     suspend fun reloadBuckets(buckets: Set<Long>) {
         refresh()
-        buckets.forEach { bucket ->
-            updateAssets(bucket)
-            timeBucketsCache.value[bucket]?.let { cached ->
-                timeBucketsCache.value = timeBucketsCache.value.toSortedMap(reverseOrder()).apply {
-                    put(bucket, cached.copy(items = emptyList()))
-                }
+        buckets.forEach { reloadMonth(it) }
+    }
+
+    private suspend fun reloadMonth(bucket: Long) {
+        updateAssets(bucket)
+        timeBucketsCache.value[bucket]?.let { cached ->
+            timeBucketsCache.value = timeBucketsCache.value.toSortedMap(reverseOrder()).apply {
+                put(bucket, cached.copy(items = emptyList()))
             }
-            fetchAssets(bucket)
         }
+        fetchAssets(bucket)
     }
 
     private fun formatDate(instant: Instant): String {
@@ -293,13 +281,33 @@ class TimelineRepository @Inject constructor(
         )
     }
 
-    /** Syncs bucket counts with the server and the phone. Throws on network errors. */
+    /**
+     * Syncs the local copy with Immich, then rebuilds the month counts from it and the phone.
+     * Offline, the months are still rebuilt from the copy before the network error is thrown.
+     */
     suspend fun refresh() {
+        val syncError = try {
+            if (remote.refresh()) reloadLoadedMonthsAfterSync = true
+            null
+        } catch (e: IOException) {
+            e
+        } catch (e: HttpException) {
+            e
+        }
         val buckets = loadBucketsInfoFromServerAndDisk()
         // Replace, so months that became empty disappear (row counts are carried over).
         imagesDatabase.withTransaction {
             imagesDao.deleteMonthBuckets()
             imagesDao.insertMonthBuckets(buckets)
         }
+        if (reloadLoadedMonthsAfterSync) {
+            reloadLoadedMonthsAfterSync = false
+            // Months already on screen were built from the old copy.
+            timeBucketsCache.value.filterValues { it.items.isNotEmpty() }.keys.forEach { reloadMonth(it) }
+        }
+        syncError?.let { throw it }
     }
+
+    @Volatile
+    private var reloadLoadedMonthsAfterSync = false
 }
