@@ -26,10 +26,8 @@ class TimelineScreenshotTest {
     @get:Rule
     val paparazzi = Paparazzi(deviceConfig = DeviceConfig.PIXEL_6, maxPercentDifference = 0.1)
 
-    private class FakeGrid(buckets: List<TimeBucketUi>, selected: Set<String> = emptySet()) : TimelineGridModel {
-        private val items = buckets.associate { it.timeStamp to it.items }
+    private class FakeGrid(selected: Set<String> = emptySet()) : TimelineGridModel {
         override val selectedAssets: StateFlow<Set<String>> = MutableStateFlow(selected)
-        override fun getAsset(bucket: Long, position: Int) = items[bucket]?.getOrNull(position)
         override fun getAssetLoadingState(bucket: Long): StateFlow<AssetLoadingState> =
             MutableStateFlow(AssetLoadingState.LOADED)
         override fun fetchAssets(bucket: Long) = Unit
@@ -86,7 +84,7 @@ class TimelineScreenshotTest {
                                     },
                                 ) { padding ->
                                     TimeLineContent(
-                                        viewModel = FakeGrid(buckets),
+                                        viewModel = FakeGrid(),
                                         state = state,
                                         gridState = gridState,
                                         onImageClick = { _, _, _ -> },

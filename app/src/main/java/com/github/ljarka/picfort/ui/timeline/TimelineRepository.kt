@@ -121,10 +121,6 @@ class TimelineRepository @Inject constructor(
             timeBucketsCache.value = it.associateBy { it.timeStamp }.toSortedMap()
         }
 
-    fun getAsset(bucket: Long, position: Int): AssetUi? {
-        return timeBucketsCache.value[bucket]?.items?.getOrNull(position)
-    }
-
     fun parseDate(timeBucket: String): Instant = parseBucketDate(timeBucket)
 
     suspend fun getAsset(index: Int): AssetUi? {

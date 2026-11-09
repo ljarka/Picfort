@@ -93,10 +93,6 @@ class TimelineViewModel @Inject constructor(
         fixedSpans.add(bucket)
     }
 
-    override fun getAsset(bucket: Long, position: Int): AssetUi? {
-        return timelineRepository.getAsset(bucket, position)
-    }
-
     @Synchronized
     override fun fetchAssets(bucket: Long) {
         val job = assetFetchingJobs[bucket]

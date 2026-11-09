@@ -320,6 +320,10 @@ private fun ImagesBucketsGrid(
                     bucket.count
                 ) else null
 
+            // Spans and tiles come from this bucket snapshot, never from the repository's
+            // live cache: that cache changes on a background thread before Compose sees the
+            // new state, and a span that changes mid-measure makes LazyVerticalGrid place an
+            // item twice ("Place was called on a node which was placed already").
             items(
                 count = bucket.count,
                 span = { index ->
@@ -327,13 +331,13 @@ private fun ImagesBucketsGrid(
                     if (viewModel.isFixedSpan(bucket.timeStamp)) {
                         defaultSpan
                     } else {
-                        val item = viewModel.getAsset(bucket.timeStamp, index)
+                        val item = bucket.items.getOrNull(index)
                         calculateSpan(index, item, rows) ?: defaultSpan.also {
                             viewModel.setFixedSpan(bucket.timeStamp)
                         }
                     }
                 },
-                key = { index -> "${bucket.timeStamp}_$index".hashCode() }) { index ->
+                key = { index -> "${bucket.timeStamp}_$index" }) { index -> // a String: Int hashes can collide
 
                 val itemLifecycleOwner = remember { ItemLifecycleOwner() }
                 DisposableEffect(Unit) {
@@ -343,7 +347,7 @@ private fun ImagesBucketsGrid(
                     }
                 }
 
-                val asset = viewModel.getAsset(bucket.timeStamp, index)
+                val asset = bucket.items.getOrNull(index)
                 val assetLoading by viewModel.getAssetLoadingState(bucket.timeStamp)
                     .collectAsStateWithLifecycle(lifecycleOwner = itemLifecycleOwner)
                 val selectedAssets by
