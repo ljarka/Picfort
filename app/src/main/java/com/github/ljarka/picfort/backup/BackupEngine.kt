@@ -26,10 +26,6 @@ import okio.BufferedSink
 import okio.source
 import retrofit2.HttpException
 import java.io.FileNotFoundException
-import java.time.Instant
-import java.time.YearMonth
-import java.time.ZoneId
-import java.time.ZoneOffset
 import javax.inject.Inject
 import javax.inject.Provider
 import kotlin.coroutines.coroutineContext
@@ -101,7 +97,6 @@ class BackupEngine @Inject constructor(
         var uploaded = 0
         var duplicates = 0
         var rejected = 0
-        val touchedMonths = mutableSetOf<Long>()
         var quotaExceeded = false
 
         try {
@@ -139,7 +134,6 @@ class BackupEngine @Inject constructor(
                         result.action == "reject" && result.assetId != null -> {
                             dao.setRemoteId(localId, result.assetId)
                             duplicates++
-                            touchedMonths += monthKey(m.dateTaken)
                         }
                         result.action == "reject" -> {
                             dao.setRejected(localId, result.reason ?: "rejected")
@@ -150,8 +144,7 @@ class BackupEngine @Inject constructor(
                             else -> {
                                 dao.setRemoteId(localId, remoteId)
                                 uploaded++
-                                touchedMonths += monthKey(m.dateTaken)
-                            }
+                                }
                         }
                     }
                 }
@@ -165,7 +158,7 @@ class BackupEngine @Inject constructor(
 
         // Hide the phone copies that are now in Immich.
         try {
-            timelineRepository.get().reloadBuckets(touchedMonths)
+            timelineRepository.get().refresh()
         } catch (e: CancellationException) {
             throw e
         } catch (e: Exception) {
@@ -198,11 +191,6 @@ class BackupEngine @Inject constructor(
     }
 
     private fun uriOf(m: LocalMedia): Uri = if (m.isVideo) localVideoUri(m.id) else localImageUri(m.id)
-
-    /** Timeline bucket key: midnight UTC on the 1st of the month the photo was taken (device zone). */
-    private fun monthKey(dateTaken: Long): Long =
-        YearMonth.from(Instant.ofEpochMilli(dateTaken).atZone(ZoneId.systemDefault()))
-            .atDay(1).atStartOfDay(ZoneOffset.UTC).toInstant().toEpochMilli()
 }
 
 /** Streams a content:// file into the request without loading it into memory. */
