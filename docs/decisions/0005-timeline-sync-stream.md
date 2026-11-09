@@ -24,8 +24,10 @@ official mobile app keeps a full local copy of the library with it:
 - `POST /api/sync/ack` with `{"acks": [...]}` (max 1000) stores the client's checkpoint
   **per login session**. The next stream only sends what changed after it.
 - `SyncResetV1` tells the client to drop its copy and sync from scratch. The server sends it
-  when asked (`reset: true`), when it decides a reset is needed, and when the last
-  `SyncCompleteV1` ack is older than 30 days.
+  when it has flagged the session for a reset, and when the last `SyncCompleteV1` ack is older
+  than 30 days. It is the only line of that stream. The client acks it to clear the flag.
+  A client-requested `reset: true` is different: it sends **no** `SyncResetV1`, it just clears
+  the checkpoints and streams everything again (checked live, see T-015).
 - `SyncCompleteV1` ends every stream.
 - Sync endpoints refuse API keys (`403 "Sync endpoints cannot be used with API keys"`). They
   need a session token, which the app gets from `/api/auth/login`.
@@ -60,7 +62,10 @@ Rules:
 2. **Write first, ack second.** Lines are written to Room in transactions of a few hundred.
    The latest ack per type is sent only after that transaction commits. If the app dies
    mid-sync, the server re-sends what was not acked, and upserts make that harmless.
-3. **Reset** (`SyncResetV1`): delete all synced rows, ack the reset, start a new stream.
+3. **Reset.** On `SyncResetV1`: delete all synced rows, ack it, start a new stream. Before
+   asking for `reset: true` yourself, delete the synced rows first, because no `SyncResetV1`
+   will come. Either way, a full stream includes `AssetDeleteV1` for assets the client never
+   had, so applying a delete for an unknown id must do nothing.
 4. **Logout or server change:** delete the synced rows. The checkpoints belong to the old
    session anyway.
 5. **When to sync:** on app start, on resume, on pull-to-refresh and after a backup. One
@@ -77,6 +82,8 @@ Rules:
 - First sync of a large library streams every asset once (about 1 KB of JSON per asset).
   It has to run in the background with progress in the UI, and must survive interruption
   (rule 2).
+- Server jobs (thumbnails, metadata, ML) update assets after upload, and each update re-sends
+  the asset. Writes are upserts by id.
 - Room grows with the library (about 100k rows for a large one). That is fine for SQLite,
   but the month and timeline queries need indices on `localDateTime` and `ownerId`.
 - Partners' photos follow `PartnersV1.inTimeline` instead of the `withPartners=true` query flag.

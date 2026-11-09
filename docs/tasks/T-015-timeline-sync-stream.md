@@ -17,19 +17,35 @@ See ADR 0005. In short: an instant timeline on cold start and offline, no reques
 scrolling, deletions and edits made elsewhere show up on the next sync, and month counts no
 longer change after the grid is laid out.
 
-## Before implementing: check the protocol live
+## Protocol checked live (2026-11-09, Immich v3.3.5, test account)
 
-The ADR is based on the server source at `v3.3.5`. Before writing code, run the stream once
-against the real server with a **session token** (API keys get 403):
+Run with a session token against `photos.jarka.club`, with types `AuthUsersV2, PartnersV1,
+AssetsV2, PartnerAssetsV2, StacksV1, PartnerStacksV1`:
 
-- [ ] First stream: record the line types, line count and total bytes for a known library
-      (test account: 256 assets).
-- [ ] Ack the last line of each type, stream again: only `SyncCompleteV1` should come back.
-- [ ] Upload, delete (trash) and archive one asset each, stream again: check which lines arrive.
-- [ ] `reset: true`: check that the stream starts with `SyncResetV1`.
-- [ ] Note real field formats: dates (offset or not), `duration`, `thumbhash`, `checksum`.
+| Step | Result |
+|---|---|
+| First stream, no acks | 258 lines, 167 KB, 0.19 s: 1 `AuthUserV2`, 256 `AssetV2` (avg 652 B/line), 1 `SyncCompleteV1` |
+| Ack the last line of each type, stream again | only `SyncCompleteV1` (96 B) |
+| Upload one asset | new `AssetV2` |
+| Move one asset to the trash | `AssetV2` with `deletedAt` set (not a delete line) |
+| Archive one asset | `AssetV2` with `visibility: "archive"` |
+| Delete permanently (`force: true`) | `AssetDeleteV1 {assetId}` |
+| Nothing changed by the user | an already-synced asset can arrive again (server jobs update it) |
+| `reset: true` | **no `SyncResetV1`**: the full stream again, incl. `AssetDeleteV1` for an asset the client never had |
+| API key instead of session token | 403 on every sync endpoint |
+| `GET /api/sync/ack` | the stored acks per type, `{type, ack}` |
 
-Put the findings in this file and change anything in the design below that turns out wrong.
+Field formats seen:
+- Dates: ISO 8601 UTC with milliseconds (`2024-01-26T21:10:32.000Z`). `localDateTime` is the
+  photo's wall-clock time written as if it were UTC. Group months on it as-is, without
+  converting zones.
+- `checksum` and `thumbhash` are base64. `width` and `height` are present. `type` is `IMAGE`/`VIDEO`.
+- Acks: `<type>|<UUIDv7>`. Each line has its own ack, increasing within a type.
+- `AuthUserV2` comes again when quota usage changes.
+
+Not seen yet (the test account has no videos, partners or stacks): the unit of `AssetV2.duration`
+(an int in V2; probably ms, check against a video), and the partner, stack and backfill lines.
+Check these with a second account before relying on them.
 
 ## Design
 
@@ -88,7 +104,8 @@ Put the findings in this file and change anything in the design below that turns
 - [ ] Stacked assets show once (primary only).
 - [ ] Killing the app during the first sync and starting it again continues without
       duplicates or gaps.
-- [ ] `SyncResetV1` (trigger it with `reset: true`) rebuilds the copy.
+- [ ] A `SyncResetV1` from the server rebuilds the copy, and a client-requested `reset: true`
+      wipes the copy first (no `SyncResetV1` comes for it).
 - [ ] Logout, then log in as another user: no assets of the first user remain.
 - [ ] On a v1 server the old path still works.
 - [ ] Timeline benchmark (`:benchmark`) passes. Compare frame times with `main` interleaved
@@ -103,5 +120,6 @@ Put the findings in this file and change anything in the design below that turns
 - Upserts must be idempotent: the server re-sends anything that wasn't acked.
 - `PartnerAssetBackfillV2` and `PartnerStackBackfillV1` are upserts like their non-backfill types.
 - The server sends `SyncResetV1` on its own when the last completed sync is older than 30 days.
+- A delete line for an unknown asset id is normal (see the live check); ignore it.
 - Don't request Exif, albums, faces, memories or OCR yet; each adds a lot of data to the
   first sync.
