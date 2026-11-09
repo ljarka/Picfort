@@ -4,6 +4,7 @@ import android.app.Application
 import androidx.hilt.work.HiltWorkerFactory
 import androidx.work.Configuration
 import com.github.ljarka.picfort.backup.BackupScheduler
+import com.github.ljarka.picfort.local.LocalThumbnailFetcher
 import coil3.ImageLoader
 import coil3.SingletonImageLoader
 import coil3.network.okhttp.OkHttpNetworkFetcherFactory
@@ -32,7 +33,8 @@ class PicfortApplication : Application(), Configuration.Provider {
         SingletonImageLoader.setSafe { context ->
             ImageLoader.Builder(context)
                 .components {
-                    add(VideoFrameDecoder.Factory()) // thumbnails of videos on the phone
+                    add(LocalThumbnailFetcher.Factory()) // phone photos/videos in the grid
+                    add(VideoFrameDecoder.Factory()) // video frames before Android 10
                     add(
                         OkHttpNetworkFetcherFactory(
                             callFactory = { okHttpClient }

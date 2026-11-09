@@ -1,7 +1,9 @@
 package com.github.ljarka.picfort
 
 import com.github.ljarka.picfort.db.AssetType
+import com.github.ljarka.picfort.local.hasLocalThumbnails
 import com.github.ljarka.picfort.local.localImageUri
+import com.github.ljarka.picfort.local.localThumbnailUrl
 import com.github.ljarka.picfort.local.localVideoUri
 import com.github.ljarka.picfort.ui.server.ServerUrlStore
 import javax.inject.Inject
@@ -19,7 +21,8 @@ class UrlProvider @Inject constructor(
 
     fun getThumbnail(assetId: String, type: AssetType, isVideo: Boolean = false): String {
         return when (type) {
-            AssetType.LOCAL -> localUri(assetId, isVideo)
+            AssetType.LOCAL ->
+                if (hasLocalThumbnails) localThumbnailUrl(assetId.toLong(), isVideo) else localUri(assetId, isVideo)
             AssetType.REMOTE -> "${serverUrlStore.serverUrl}/api/assets/$assetId/thumbnail"
         }
     }

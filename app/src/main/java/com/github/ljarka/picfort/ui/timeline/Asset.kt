@@ -10,6 +10,8 @@ data class BucketResponse(
     val isImage: List<Boolean> = emptyList(),
     /** "H:MM:SS.ffffff" for videos, null for images. */
     val duration: List<String?> = emptyList(),
+    /** Base64 ThumbHash per asset, for a blurred preview while the thumbnail loads. */
+    val thumbhash: List<String?> = emptyList(),
 )
 
 /** Parses Immich's "H:MM:SS.ffffff" duration; null for images or "0:00:00.00000". */
