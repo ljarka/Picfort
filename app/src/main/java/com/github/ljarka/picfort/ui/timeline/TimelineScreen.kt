@@ -56,7 +56,7 @@ import androidx.compose.material3.rememberBottomSheetScaffoldState
 import androidx.compose.material3.rememberStandardBottomSheetState
 import androidx.compose.material3.ripple
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
@@ -65,6 +65,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.paint
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -76,6 +77,7 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil3.compose.AsyncImage
+import androidx.compose.ui.graphics.painter.BitmapPainter
 import androidx.compose.ui.graphics.painter.ColorPainter
 import com.github.ljarka.picfort.R
 import com.github.ljarka.picfort.db.AssetType
@@ -301,6 +303,9 @@ private fun ImagesBucketsGrid(
     modifier: Modifier = Modifier,
 ) {
     val orientation = LocalConfiguration.current.orientation
+    // Collected once for the grid, not per tile; tiles get plain booleans so they can skip.
+    val selectedAssets by viewModel.selectedAssets.collectAsStateWithLifecycle()
+    val isInEditMode = selectedAssets.isNotEmpty()
     LazyVerticalGrid(
         columns = if (orientation == ORIENTATION_PORTRAIT) GridCells.Fixed(4) else GridCells.Fixed(
             8
@@ -310,7 +315,7 @@ private fun ImagesBucketsGrid(
         contentPadding = PaddingValues(4.dp)
     ) {
         state.items.forEach { bucket ->
-            item(span = { GridItemSpan(maxLineSpan) }, key = bucket.timeStamp) {
+            item(span = { GridItemSpan(maxLineSpan) }, key = bucket.timeStamp, contentType = "month") {
                 ImagesBucketTitle(bucket.formattedDate)
             }
 
@@ -337,27 +342,16 @@ private fun ImagesBucketsGrid(
                         }
                     }
                 },
-                key = { index -> "${bucket.timeStamp}_$index" }) { index -> // a String: Int hashes can collide
-
-                val itemLifecycleOwner = remember { ItemLifecycleOwner() }
-                DisposableEffect(Unit) {
-                    itemLifecycleOwner.start()
-                    onDispose {
-                        itemLifecycleOwner.stop()
-                    }
-                }
-
+                key = { index -> "${bucket.timeStamp}_$index" }, // a String: Int hashes can collide
+                contentType = { "asset" },
+            ) { index ->
                 val asset = bucket.items.getOrNull(index)
-                val assetLoading by viewModel.getAssetLoadingState(bucket.timeStamp)
-                    .collectAsStateWithLifecycle(lifecycleOwner = itemLifecycleOwner)
-                val selectedAssets by
-                viewModel.selectedAssets.collectAsStateWithLifecycle(
-                    lifecycleOwner = itemLifecycleOwner
-                )
+                val assetLoading by viewModel.getAssetLoadingState(bucket.timeStamp).collectAsState()
                 ImagesBucketItem(
                     asset = asset,
                     assetLoading = assetLoading,
-                    selectedAssets = selectedAssets,
+                    isSelected = asset != null && asset.id in selectedAssets,
+                    isInEditMode = isInEditMode,
                     bucket = bucket,
                     onSelectAssetClick = {
                         asset?.let { viewModel.selectAsset(it, bucket.timeStamp) }
@@ -402,7 +396,8 @@ private fun ImagesBucketTitle(title: String) {
 private fun ImagesBucketItem(
     asset: AssetUi?,
     assetLoading: AssetLoadingState,
-    selectedAssets: Set<String>,
+    isSelected: Boolean,
+    isInEditMode: Boolean,
     bucket: TimeBucketUi,
     onSelectAssetClick: (String) -> Unit,
     onDeselectAssetClick: (String) -> Unit,
@@ -425,23 +420,21 @@ private fun ImagesBucketItem(
             asset = asset,
             sharedTransitionScope = sharedTransitionScope,
             animatedVisibilityScope = animatedVisibilityScope,
-            isSelectedItem = selectedAssets.contains(asset.id),
+            isSelectedItem = isSelected,
             onClick = {
-                if (selectedAssets.isEmpty()) {
+                if (!isInEditMode) {
                     onImageClick(
                         asset.id,
                         asset.type,
                         bucket.index + index
                     )
+                } else if (isSelected) {
+                    onDeselectAssetClick(asset.id)
                 } else {
-                    if (selectedAssets.contains(it)) {
-                        onDeselectAssetClick(asset.id)
-                    } else {
-                        onSelectAssetClick(asset.id)
-                    }
+                    onSelectAssetClick(asset.id)
                 }
             },
-            isInEditMode = selectedAssets.isNotEmpty(),
+            isInEditMode = isInEditMode,
             onLongClick = {
                 onSelectAssetClick(asset.id)
             }
@@ -491,6 +484,7 @@ private fun GalleryItem(
         Box(
             modifier = Modifier.scale(scale),
         ) {
+            val placeholder = remember(asset.placeholder) { asset.placeholder?.let(::BitmapPainter) }
             // AsyncImage, not SubcomposeAsyncImage: subcomposition is slow in lazy grids.
             AsyncImage(
                 contentScale = ContentScale.Crop,
@@ -508,9 +502,17 @@ private fun GalleryItem(
                     .padding(4.dp)
                     .height(170.dp)
                     .clip(RoundedCornerShape(8.dp))
-                    // Grey tile until the image arrives (a background rather than a
-                    // placeholder painter, which previews/screenshots would show instead).
-                    .background(PlaceholderColor),
+                    // Blurred ThumbHash (or grey) until the image arrives. Drawn behind the
+                    // image rather than as a placeholder painter, which previews/screenshots
+                    // would show instead of the image.
+                    .background(PlaceholderColor)
+                    .then(
+                        if (placeholder != null) {
+                            Modifier.paint(placeholder, contentScale = ContentScale.Crop)
+                        } else {
+                            Modifier
+                        }
+                    ),
                 model = asset.url,
                 error = ColorPainter(MaterialTheme.colorScheme.errorContainer),
                 contentDescription = null,

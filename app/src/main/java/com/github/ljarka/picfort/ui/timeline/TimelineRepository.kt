@@ -206,6 +206,7 @@ class TimelineRepository @Inject constructor(
                 type = AssetType.REMOTE,
                 isVideo = bucketResponse.isImage.getOrNull(index) == false,
                 durationMs = parseImmichDuration(bucketResponse.duration.getOrNull(index)),
+                thumbhash = bucketResponse.thumbhash.getOrNull(index),
             )
         }
 
@@ -288,6 +289,7 @@ class TimelineRepository @Inject constructor(
             type = type,
             isVideo = isVideo,
             durationMs = durationMs,
+            placeholder = thumbhash?.let(::thumbHashBitmap),
         )
     }
 
