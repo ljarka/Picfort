@@ -10,6 +10,7 @@ import com.github.ljarka.picfort.collections.CollectionsRepository
 import com.github.ljarka.picfort.db.AssetType
 import com.github.ljarka.picfort.ui.frame.FrameRepository
 import com.github.ljarka.picfort.ui.frame.FrameResult
+import com.github.ljarka.picfort.sync.SyncEngine
 import com.github.ljarka.picfort.ui.login.AccessTokenStore
 import com.github.ljarka.picfort.ui.server.ServerUrlStore
 import kotlinx.coroutines.flow.map
@@ -59,7 +60,11 @@ class TimelineViewModel @Inject constructor(
     private val collections: CollectionsRepository,
     private val accessTokenStore: AccessTokenStore,
     private val serverUrlStore: ServerUrlStore,
+    syncEngine: SyncEngine,
 ) : ViewModel(), TimelineGridModel {
+    /** Lines applied by a running sync, for progress on a still-empty timeline; null when idle. */
+    val syncLines: StateFlow<Int?> = syncEngine.linesApplied
+
     /** Shown on an empty timeline. Read once: logging out leaves this screen. */
     val account = TimelineAccount(accessTokenStore.userEmail, serverUrlStore.serverUrl)
 
@@ -255,8 +260,15 @@ class TimelineViewModel @Inject constructor(
     }
 
     private var refreshAgain = false
+    private var lastRefreshAt = 0L
+
+    /** The app came back to the foreground: pick up changes made elsewhere, at most once a minute. */
+    fun onForeground() {
+        if (System.currentTimeMillis() - lastRefreshAt > 60_000) refresh()
+    }
 
     override fun refresh() {
+        lastRefreshAt = System.currentTimeMillis()
         if (loadingState.value == LoadingState.REFRESHING) {
             refreshAgain = true // e.g. media permission granted mid-sync
             return
