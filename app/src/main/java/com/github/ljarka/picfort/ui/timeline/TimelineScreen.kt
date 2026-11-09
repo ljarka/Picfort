@@ -218,6 +218,8 @@ fun TimelineScreen(
                     viewModel = viewModel,
                     gridState = gridState,
                     onImageClick = onImageClick,
+                    account = viewModel.account,
+                    onSetUpBackupClick = onSettingsClick,
                     sharedTransitionScope = sharedTransitionScope,
                     animatedVisibilityScope = animatedVisibilityScope,
                     onExpandMenuRequest = {
@@ -257,6 +259,8 @@ internal fun TimeLineContent(
     sharedTransitionScope: SharedTransitionScope,
     animatedVisibilityScope: AnimatedVisibilityScope,
     modifier: Modifier = Modifier,
+    account: TimelineAccount? = null,
+    onSetUpBackupClick: () -> Unit = {},
 ) {
     val pullToRefreshState = rememberPullToRefreshState()
     PullToRefreshBox(
@@ -276,16 +280,20 @@ internal fun TimeLineContent(
             )
         },
     ) {
-        ImagesBucketsGrid(
-            gridState = gridState,
-            state = state,
-            viewModel = viewModel,
-            onImageClick = onImageClick,
-            sharedTransitionScope = sharedTransitionScope,
-            animatedVisibilityScope = animatedVisibilityScope,
-            onExpandMenuRequest = onExpandMenuRequest,
-            onCollapseMenuRequest = onCollapseMenuRequest,
-        )
+        if (account != null && state.items.isEmpty() && state.loadingState == LoadingState.LOADED) {
+            TimelineEmptyComponent(account = account, onSetUpBackupClick = onSetUpBackupClick)
+        } else {
+            ImagesBucketsGrid(
+                gridState = gridState,
+                state = state,
+                viewModel = viewModel,
+                onImageClick = onImageClick,
+                sharedTransitionScope = sharedTransitionScope,
+                animatedVisibilityScope = animatedVisibilityScope,
+                onExpandMenuRequest = onExpandMenuRequest,
+                onCollapseMenuRequest = onCollapseMenuRequest,
+            )
+        }
     }
 }
 
