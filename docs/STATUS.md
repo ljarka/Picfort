@@ -1,6 +1,6 @@
 # Picfort — Roadmap & Status
 
-Last updated: 2026-11-08
+Last updated: 2026-11-09
 
 ## Vision
 
@@ -35,32 +35,32 @@ Surface more of what Immich already knows.
 
 | Task | Description | Status |
 |------|-------------|--------|
-| [T-007](tasks/T-007-memories-screen.md) | Memories screen ("On This Day") | `draft` |
-| [T-008](tasks/T-008-people-screen.md) | People screen (browse by face) | `draft` |
-| [T-009](tasks/T-009-map-view.md) | Map view (photos by location) | `draft` |
+| [T-007](tasks/T-007-memories-screen.md) | Memories screen ("On This Day") | `ready` |
+| [T-008](tasks/T-008-people-screen.md) | People screen (browse by face) | `ready` |
+| [T-009](tasks/T-009-map-view.md) | Map view (photos by location) | `ready` |
 
 ### Phase 4 — Frame enhancements
 Make the picture frame smarter and more connected.
 
 | Task | Description | Status |
 |------|-------------|--------|
-| [T-010](tasks/T-010-bidirectional-frame-status.md) | Show live frame status in app | `draft` |
-| [T-011](tasks/T-011-multi-frame.md) | Multi-frame support | `draft` |
+| [T-010](tasks/T-010-bidirectional-frame-status.md) | Show live frame status in app | `ready` |
+| [T-011](tasks/T-011-multi-frame.md) | Multi-frame support | `ready` |
 
 ### Phase 5 — Android ecosystem
 Deeper integration with Android platform features.
 
 | Task | Description | Status |
 |------|-------------|--------|
-| [T-012](tasks/T-012-android-widget.md) | Home screen widget (Glance API) | `draft` |
-| [T-013](tasks/T-013-material-you.md) | Material You / dynamic color | `draft` |
+| [T-012](tasks/T-012-android-widget.md) | Home screen widget (Glance API) | `ready` |
+| [T-013](tasks/T-013-material-you.md) | Material You / dynamic color | `ready` |
 
 ### Phase 6 — Quality & CI
 Automated checks and architecture guardrails.
 
 | Task | Description | Status |
 |------|-------------|--------|
-| [T-014](tasks/T-014-ci-github-actions.md) | GitHub Actions: build + screenshot tests | `draft` |
+| [T-014](tasks/T-014-ci-github-actions.md) | GitHub Actions: build + screenshot tests | `done` |
 
 ---
 
