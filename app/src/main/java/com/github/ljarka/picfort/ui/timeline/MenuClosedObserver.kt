@@ -6,6 +6,7 @@ import androidx.compose.material3.SheetValue
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.snapshotFlow
+import kotlinx.coroutines.flow.drop
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -15,9 +16,10 @@ fun MenuClosedObserver(
 ) {
     LaunchedEffect(sheetState) {
         snapshotFlow { sheetState.currentValue }
+            .drop(1) // skip initial Hidden state on composition
             .collect { state ->
-                if (state == SheetValue.PartiallyExpanded) {
-                    onMenuClosed
+                if (state == SheetValue.Hidden || state == SheetValue.PartiallyExpanded) {
+                    onMenuClosed()
                 }
             }
     }
