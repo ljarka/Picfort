@@ -43,7 +43,17 @@ sealed interface BackupOutcome {
     data class Done(val uploaded: Int, val alreadyOnServer: Int, val rejected: Int) : BackupOutcome
     data object NoMediaAccess : BackupOutcome
     data object NotLoggedIn : BackupOutcome
+
+    /** The account's storage quota on the server is full; nothing more can be uploaded. */
+    data class QuotaExceeded(val uploaded: Int) : BackupOutcome
 }
+
+/** Immich answers HTTP 400 "Quota has been exceeded!" when the account's quota is full. */
+private class QuotaExceededException : Exception()
+
+/** True when an Immich error response says the account's storage quota is full. */
+fun isQuotaExceeded(errorBody: String?): Boolean =
+    errorBody?.contains("quota", ignoreCase = true) == true
 
 /**
  * Backs up the phone's photos and videos to Immich:
@@ -92,58 +102,65 @@ class BackupEngine @Inject constructor(
         var duplicates = 0
         var rejected = 0
         val touchedMonths = mutableSetOf<Long>()
+        var quotaExceeded = false
 
-        for (batch in todo.chunked(BATCH)) {
-            coroutineContext.ensureActive()
-
-            // 1. Checksums for new or changed files.
-            val rows = withContext(Dispatchers.IO) {
-                batch.mapNotNull { m ->
-                    val row = known[m.id]
-                    if (isUnchanged(m, row)) return@mapNotNull row
-                    val checksum = try {
-                        context.contentResolver.openInputStream(uriOf(m))?.use(::sha1Hex)
-                    } catch (e: FileNotFoundException) {
-                        null // deleted since the scan
-                    } ?: return@mapNotNull null
-                    LocalBackupEntity(m.id, m.dateModified, m.size, m.dateTaken, checksum)
-                }
-            }
-            dao.upsert(rows)
-            val mediaById = batch.associateBy { it.id }
-
-            // 2. Which ones does Immich already have?
-            val results = api.bulkUploadCheck(
-                BulkUploadCheckRequest(rows.map { BulkUploadCheckItem(it.localId.toString(), it.checksum) })
-            ).results
-
-            // 3. Upload the rest.
-            for (result in results) {
+        try {
+            for (batch in todo.chunked(BATCH)) {
                 coroutineContext.ensureActive()
-                val localId = result.id.toLongOrNull() ?: continue
-                val m = mediaById[localId] ?: continue
-                val row = rows.first { it.localId == localId }
-                when {
-                    result.action == "reject" && result.assetId != null -> {
-                        dao.setRemoteId(localId, result.assetId)
-                        duplicates++
-                        touchedMonths += monthKey(m.dateTaken)
+
+                // 1. Checksums for new or changed files.
+                val rows = withContext(Dispatchers.IO) {
+                    batch.mapNotNull { m ->
+                        val row = known[m.id]
+                        if (isUnchanged(m, row)) return@mapNotNull row
+                        val checksum = try {
+                            context.contentResolver.openInputStream(uriOf(m))?.use(::sha1Hex)
+                        } catch (e: FileNotFoundException) {
+                            null // deleted since the scan
+                        } ?: return@mapNotNull null
+                        LocalBackupEntity(m.id, m.dateModified, m.size, m.dateTaken, checksum)
                     }
-                    result.action == "reject" -> {
-                        dao.setRejected(localId, result.reason ?: "rejected")
-                        rejected++
-                    }
-                    else -> when (val remoteId = upload(api, m, row.checksum, serverMajor)) {
-                        null -> rejected++
-                        else -> {
-                            dao.setRemoteId(localId, remoteId)
-                            uploaded++
+                }
+                dao.upsert(rows)
+                val mediaById = batch.associateBy { it.id }
+
+                // 2. Which ones does Immich already have?
+                val results = api.bulkUploadCheck(
+                    BulkUploadCheckRequest(rows.map { BulkUploadCheckItem(it.localId.toString(), it.checksum) })
+                ).results
+
+                // 3. Upload the rest.
+                for (result in results) {
+                    coroutineContext.ensureActive()
+                    val localId = result.id.toLongOrNull() ?: continue
+                    val m = mediaById[localId] ?: continue
+                    val row = rows.first { it.localId == localId }
+                    when {
+                        result.action == "reject" && result.assetId != null -> {
+                            dao.setRemoteId(localId, result.assetId)
+                            duplicates++
                             touchedMonths += monthKey(m.dateTaken)
+                        }
+                        result.action == "reject" -> {
+                            dao.setRejected(localId, result.reason ?: "rejected")
+                            rejected++
+                        }
+                        else -> when (val remoteId = upload(api, m, row.checksum, serverMajor)) {
+                            null -> rejected++
+                            else -> {
+                                dao.setRemoteId(localId, remoteId)
+                                uploaded++
+                                touchedMonths += monthKey(m.dateTaken)
+                            }
                         }
                     }
                 }
+                onProgress(BackupProgress(alreadyBackedUp + uploaded + duplicates + rejected, media.size))
             }
-            onProgress(BackupProgress(alreadyBackedUp + uploaded + duplicates + rejected, media.size))
+        } catch (e: QuotaExceededException) {
+            // Stop: every further upload would fail too. Files stay pending, not rejected,
+            // so they go up once the quota is raised.
+            quotaExceeded = true
         }
 
         // Hide the phone copies that are now in Immich.
@@ -154,6 +171,7 @@ class BackupEngine @Inject constructor(
         } catch (e: Exception) {
             Log.w(TAG, "Timeline reload after backup failed", e)
         }
+        if (quotaExceeded) return BackupOutcome.QuotaExceeded(uploaded)
         return BackupOutcome.Done(uploaded, duplicates, rejected)
     }
 
@@ -166,6 +184,7 @@ class BackupEngine @Inject constructor(
         return try {
             api.upload(checksum, fields, part).id
         } catch (e: HttpException) {
+            if (isQuotaExceeded(e.response()?.errorBody()?.string())) throw QuotaExceededException()
             if (e.code() in listOf(400, 413, 415, 422)) {
                 Log.w(TAG, "Immich refused ${m.fileName}: HTTP ${e.code()}")
                 dao.setRejected(m.id, "HTTP ${e.code()}")
