@@ -31,9 +31,14 @@ data class TimelineLayout(val rows: List<TimelineRow>, val months: List<MonthMar
 /** Screen space for the timeline, in pixels. */
 data class Viewport(val width: Float, val height: Float, val spacing: Float)
 
-/** About this many square photos per row: fewer in portrait, more in landscape. */
-private const val PORTRAIT_PER_ROW = 4f
-private const val LANDSCAPE_PER_ROW = 7f
+/**
+ * About this many square photos per row. Measured with the scroll benchmark: 2.5 in portrait
+ * scrolls as smoothly as the old grid; 4 (Google Photos density) doubled the slow frames and
+ * added ~65 MB, because about three times as many tiles were on screen. Landscape keeps the
+ * same tile size.
+ */
+private const val PORTRAIT_PER_ROW = 2.5f
+private const val LANDSCAPE_PER_ROW = 4.5f
 
 /**
  * Lays out every month of [index] in justified rows for [viewport]. Pure, so the whole

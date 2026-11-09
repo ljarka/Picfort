@@ -35,11 +35,12 @@ class TimelineRowsTest {
     }
 
     @Test
-    fun `portrait shows about 4 squares per row, landscape about 7`() {
+    fun `portrait rows are about 2,5 squares tall, landscape keeps the tile size`() {
         val portrait = layout(width = 1080f, height = 2000f).rows.filterIsInstance<TilesRow>().first()
         val landscape = layout(width = 2000f, height = 1080f).rows.filterIsInstance<TilesRow>().first()
-        assertEquals(4, portrait.tiles.size)
-        assertEquals(7, landscape.tiles.size)
+        assertEquals((1080f - 8f * 1.5f) / 2.5f, portrait.height, portrait.height * 0.35f)
+        assertTrue(portrait.tiles.size in 2..3)
+        assertTrue(landscape.tiles.size in 4..5)
     }
 
     @Test

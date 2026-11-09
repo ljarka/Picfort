@@ -1,6 +1,6 @@
 # T-016 — Justified timeline layout from known aspect ratios
 
-**Status:** draft  
+**Status:** done  
 **Component:** Android app  
 **Depends on:** [T-015](T-015-timeline-sync-stream.md) (every asset's size is in Room)
 
@@ -42,8 +42,14 @@ targetHeight: Float, spacing: Float): List<Row>`, where `Row(items: List<Int>, h
   500-px rows (they're cropped a little instead).
 - The last row of a month is not stretched: keep `targetHeight` and leave it ragged.
 - Unknown size (`null`): ratio 1.0.
-- `targetHeight` depends on the screen width: about 4 photos per row in portrait, 7 in
-  landscape. Pinch-to-zoom between densities can come later.
+- `targetHeight` depends on the screen width: about 2.5 square photos per row in portrait,
+  4.5 in landscape. Pinch-to-zoom between densities can come later.
+
+  Chosen by measurement (scroll benchmark, emulator, Immich test account). At 4 per row
+  (Google Photos density) about three times as many tiles were on screen as with the old
+  grid. Frame CPU P90 went 17.6 → 32.7 ms, overrun P90 2.0 → 17.8 ms, RSS +68 MB. At 2.5:
+  P90 17.9 ms, overrun P90 2.5 ms, RSS +14 MB, i.e. as smooth as the old grid. A real phone
+  may handle 4; not measured.
 
 ### Precomputed, not computed while scrolling
 - Compute the rows of a month in the repository on `Dispatchers.Default` when its assets
