@@ -38,6 +38,8 @@ Surface more of what Immich already knows.
 | [T-007](tasks/T-007-memories-screen.md) | Memories screen ("On This Day") | `ready` |
 | [T-008](tasks/T-008-people-screen.md) | People screen (browse by face) | `ready` |
 | [T-009](tasks/T-009-map-view.md) | Map view (photos by location) | `ready` |
+| [T-015](tasks/T-015-timeline-sync-stream.md) | Timeline from Immich's sync stream (local copy, offline) | `draft` |
+| [T-016](tasks/T-016-justified-timeline-layout.md) | Justified timeline layout from known aspect ratios (after T-015) | `draft` |
 
 ### Phase 4 — Frame enhancements
 Make the picture frame smarter and more connected.
@@ -81,3 +83,4 @@ Automated checks and architecture guardrails.
 | [0002](decisions/0002-family-wall-storage.md) | Family Wall lives in ImageFrameServer SQLite |
 | [0003](decisions/0003-display-strategy.md) | Tablet as primary display target; e-paper as secondary |
 | [0004](decisions/0004-network-auth.md) | No auth on ImageFrameServer (trusted local network) |
+| [0005](decisions/0005-timeline-sync-stream.md) | Timeline from a local copy synced with Immich's sync stream (proposed) |
