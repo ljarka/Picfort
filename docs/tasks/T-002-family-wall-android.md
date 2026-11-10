@@ -151,8 +151,79 @@ initials on a gray ring and are not selectable in the row.
   `delay`); pull-to-refresh.
 - Keep the last fetched posts in memory for the session. Offline → snackbar, the posts
   already loaded stay visible. (No Room cache of posts in v1.)
-- No frame address set → an empty state with a button to the frame settings.
+- No server address set → an empty state ("Connect your Picfort server to use the Family
+  Wall") with a button that opens the server dialog **directly** (see below). After Save,
+  the wall loads without leaving the screen.
 - No posts → "No posts yet. Write the first one!" with the FAB visible.
+
+## Picfort server address
+
+The frame and the Family Wall use the same ImageFrameServer, so the app has one address for
+both (`FrameSettingsStore.frameUrl`, unchanged). It's entered the same way as the Immich
+address: `192.168.0.105:5000` becomes `http://192.168.0.105:5000`.
+
+### Naming
+
+Call it the **Picfort server** in the UI, since it is no longer only the frame:
+- Dialog title "Picfort server", label "Server address", text "The Picfort server on your
+  network runs the picture frame and the Family Wall."
+- Settings: rename the section "Picture frame" to "Picfort server". The row shows the address
+  (or "Not set") and opens the frame screen as today.
+- Code names (`FrameSettingsStore`, `FrameSettingsDialog`) may stay; rename only if it's
+  cheap.
+
+### Connection test
+
+Extend `FrameRepository.testConnection` (button **Test**) with a second request after
+`/status` succeeds: `GET /wall?limit=1` with the Immich token. Show one message:
+
+| `/status` | `/wall` | Message |
+|---|---|---|
+| fails | — | as today ("Not a Picfort server (HTTP …)", connection errors) |
+| ok | 200 | "Connected: frame and Family Wall" |
+| ok | 401 | "Connected, but the server didn't accept your Immich login. Check that it uses the same Immich server (IMMICH_URL)." |
+| ok | 404 | "Connected. This server has no Family Wall yet, update ImageFrameServer." |
+| ok | 502 | "Connected, but the server can't reach Immich." |
+
+**Save** stays enabled for every result that has a valid address, as today. A partial result
+is still useful (the frame works).
+
+### One form, three places
+
+Extract the address field, the test message and the Test button into
+`PicfortServerForm` (state in `FrameSettingsViewModel`). Use it in:
+1. `FrameSettingsDialog` (Settings, ⚙ in the photo viewer): as today.
+2. The wall's empty state: opens `FrameSettingsDialog`; `onSaved` reloads the wall.
+3. The first-run step below.
+
+### First-run step
+
+Before the timeline, show a full-screen step **once** when no server address is set: after
+the first Immich login, or on the first start after this update for someone already logged
+in.
+
+```
+┌─────────────────────────────┐
+│  Picfort server (optional)  │
+│                             │
+│  Do you have a picture frame│
+│  or the Family Wall at home?│
+│  Enter the server address.  │
+│                             │
+│  [ 192.168.0.105:5000     ] │
+│  Connected: frame and …     │
+│                             │
+│  [Test]    [Skip] [Continue]│
+└─────────────────────────────┘
+```
+
+- `Screen.PicfortServerSetup` in the `NavHost`. `InitScreen` navigates there instead of to
+  the timeline when the step is due, then on to the timeline (popping the step).
+- Due when: logged in, `frameUrl` empty, and the `PICFORT_SERVER_PROMPTED` flag (encrypted
+  preferences, next to `FRAME_URL`) is not set. Skip or Continue sets the flag, so it shows
+  once per install. Later changes go through Settings.
+- **Continue** saves the address (enabled only for a valid address). **Skip** saves nothing.
+- Also add a short line to the README "Using it from the app" section.
 
 ## Data layer
 
@@ -181,10 +252,18 @@ initials on a gray ring and are not selectable in the row.
       immediately, with the logged-in user as author.
 - [ ] Delete and pin are offered only on your own posts; delete asks for confirmation.
 - [ ] Another phone's post appears within 60 s while the screen is open.
-- [ ] No frame address → empty state linking to frame settings.
+- [ ] No server address → empty state whose button opens the server dialog; after Save the
+      wall loads.
+- [ ] The UI calls it "Picfort server" (dialog, Settings section).
+- [ ] Test reports each case in the table above (check 401 with a server on another Immich,
+      404 with an ImageFrameServer without the wall).
+- [ ] First login with no server address shows the setup step once; Skip and Continue both
+      go to the timeline, and the step doesn't come back on the next start.
+- [ ] Logged-in users who already have an address never see the step.
 - [ ] Offline → snackbar; already loaded posts stay.
 - [ ] All strings in `strings.xml`.
-- [ ] Paparazzi screenshots: populated, filtered, empty, no frame address.
+- [ ] Paparazzi screenshots: populated, filtered, empty, no server address, server dialog
+      with each test message, first-run step.
 - [ ] CI passes (`verifyPaparazziDebug lintDebug assembleDebug`).
 
 ## Out of scope (v1)
