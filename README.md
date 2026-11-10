@@ -199,6 +199,8 @@ The frame uses Waveshare's 13.3" E Ink Spectra 6 panel (1200×1600, 6 colours, a
 | `FRAME_SATURATION` / `FRAME_CONTRAST` | `1.3` / `1.1` | Adjustments applied before dithering |
 | `FRAME_MIN_INTERVAL` | `30` | Minimum number of seconds between refreshes (protects the e-paper panel) |
 | `FRAME_STATE_PATH` | `slideshow.json` | Where slideshow settings are saved |
+| `WALL_DB_PATH` | `wall.db` | Family Wall database (SQLite) |
+| `WALL_PHOTOS_PATH` | `wall_photos` | Directory for photos attached to wall posts |
 | `PORT` | `5000` | HTTP port |
 
 HEIC originals need `pip install pillow-heif`. Otherwise the server falls back to Immich's preview image.
@@ -227,6 +229,13 @@ It changes every 15 min to 24 h and can pause during quiet hours (for example 22
 | `PUT /slideshow` | Update any of those fields (JSON). `400` with a message if invalid. |
 | `POST /next` | Show the next slideshow photo now (`409` if the slideshow is off) |
 | `GET /albums` | `[{"id","name"}]`, for choosing a slideshow album |
+| `GET /wall?limit=20` | Family Wall posts, pinned first, then newest first (`limit` 1–100) |
+| `POST /wall` | New post, `multipart/form-data`: `author_id` (Immich user id), `author` (name), `text` and/or `photo` (JPEG, PNG or HEIC, max 10 MB). `201` with the post; `400` missing author or both text and photo, `413` photo too large, `415` not a supported image. |
+| `DELETE /wall/<id>` | `204`; also deletes the photo (`404` if no such post) |
+| `PUT /wall/<id>/pin` | Toggles `pinned` and returns the post |
+| `GET /wall/photo/<file>` | The photo attached to a post (`photo_url` in the post) |
+
+A post looks like `{"id","author_id","author","text","photo_url","photo_width","photo_height","pinned","created"}`. `photo_width`/`photo_height` are the upright size, so the app can lay out photos before they load. The wall is stored in SQLite next to the server (ADR 0002). There are no migrations: if a new version changes the schema, the wall starts empty. There's no authentication, so anyone on the local network can post and delete (ADR 0004).
 
 Run the tests with `cd ImageFrameServer && python3 -m unittest discover -s tests -t tests`.
 

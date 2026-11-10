@@ -1,6 +1,6 @@
 # T-001 — Family Wall: ImageFrameServer backend
 
-**Status:** ready  
+**Status:** done  
 **Component:** ImageFrameServer (Python)  
 **Depends on:** —
 
@@ -94,22 +94,23 @@ Serve the attached photo file. Returns 404 if not found.
 - Filename: `<uuid4>.<original_ext>`
 
 ### Error handling
-All error responses: `{"error": "<message>"}` with appropriate HTTP status.
+All error responses use the server's existing shape, `{"status": "error", "message": "<message>"}`,
+with the appropriate HTTP status.
 
 ## Acceptance criteria
 
-- [ ] `GET /wall` returns empty list when no posts exist
-- [ ] `POST /wall` with text only creates a post; `photo_url` is null
-- [ ] `POST /wall` without `author_id` or `author` returns 400
-- [ ] A photo post returns `photo_width`/`photo_height` of the upright image
-- [ ] `POST /wall` with photo saves the file and returns a valid `photo_url`
-- [ ] `GET /wall/photo/<filename>` serves the uploaded file
-- [ ] `DELETE /wall/<id>` removes the post and the photo file from disk
-- [ ] `PUT /wall/<id>/pin` toggles pinned; second call toggles back
-- [ ] Posts are ordered newest-first in `GET /wall`
-- [ ] Pinned posts appear first in `GET /wall`, then newest-first among the rest
-- [ ] Existing tests pass: `python3 -m unittest discover -s tests -t tests`
-- [ ] `GET /status` still works (no regression)
+- [x] `GET /wall` returns empty list when no posts exist
+- [x] `POST /wall` with text only creates a post; `photo_url` is null
+- [x] `POST /wall` without `author_id` or `author` returns 400
+- [x] A photo post returns `photo_width`/`photo_height` of the upright image
+- [x] `POST /wall` with photo saves the file and returns a valid `photo_url`
+- [x] `GET /wall/photo/<filename>` serves the uploaded file
+- [x] `DELETE /wall/<id>` removes the post and the photo file from disk
+- [x] `PUT /wall/<id>/pin` toggles pinned; second call toggles back
+- [x] Posts are ordered newest-first in `GET /wall`
+- [x] Pinned posts appear first in `GET /wall`, then newest-first among the rest
+- [x] Existing tests pass: `python3 -m unittest discover -s tests -t tests`
+- [x] `GET /status` still works (no regression)
 
 ## Notes for implementing agent
 

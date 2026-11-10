@@ -8,6 +8,13 @@
     PUT  /slideshow             -> update settings (JSON body, same shape as GET)
     POST /next                  -> show the next slideshow photo now
     GET  /albums                -> [{"id", "name"}] for choosing a slideshow album
+
+Family Wall (see wall.py):
+    GET    /wall?limit=20       -> posts, pinned first, then newest first
+    POST   /wall                -> 201 new post (multipart: author_id, author, text?, photo?)
+    DELETE /wall/<id>           -> 204
+    PUT    /wall/<id>/pin       -> the post with pinned toggled
+    GET    /wall/photo/<file>   -> the photo attached to a post
 """
 
 import logging
@@ -18,11 +25,14 @@ import threading
 import time
 
 from flask import Flask, jsonify, request, send_file
+from werkzeug.exceptions import RequestEntityTooLarge
 
 import frame
 from immich import ImmichClient
 from slideshow import INTERVALS, MODES, Picker, SettingsStore, Slideshow, SlideshowSettings
+from wall import DEFAULT_LIMIT, MAX_LIMIT, MAX_PHOTO_BYTES, WallError, WallStore
 
+PHOTO_MIME_TYPES = {"jpg": "image/jpeg", "png": "image/png", "heic": "image/heic"}
 UUID_RE = re.compile(r"^[0-9a-fA-F-]{36}$")
 
 
@@ -114,8 +124,11 @@ def settings_json(slideshow: Slideshow):
     }
 
 
-def create_app(controller: FrameController, slideshow: Slideshow, immich: ImmichClient) -> Flask:
+def create_app(controller: FrameController, slideshow: Slideshow, immich: ImmichClient,
+               wall: WallStore = None) -> Flask:
     app = Flask(__name__)
+    # The photo plus a little room for the text fields; larger requests get 413.
+    app.config["MAX_CONTENT_LENGTH"] = MAX_PHOTO_BYTES + 64 * 1024
     controller.on_shown = slideshow.photo_changed
 
     @app.route("/run")
@@ -187,7 +200,59 @@ def create_app(controller: FrameController, slideshow: Slideshow, immich: Immich
         except Exception as e:
             return error(f"Could not load albums from Immich: {e}", 502)
 
+    if wall is not None:
+        register_wall(app, wall)
     return app
+
+
+def register_wall(app: Flask, wall: WallStore):
+    @app.errorhandler(RequestEntityTooLarge)
+    def too_large(_):
+        return error("The photo is larger than 10 MB", 413)
+
+    @app.route("/wall", methods=["GET"])
+    def list_posts():
+        try:
+            limit = int(request.args.get("limit", DEFAULT_LIMIT))
+        except ValueError:
+            return error("limit must be a number", 400)
+        if not 1 <= limit <= MAX_LIMIT:
+            return error(f"limit must be between 1 and {MAX_LIMIT}", 400)
+        return jsonify(wall.list(limit))
+
+    @app.route("/wall", methods=["POST"])
+    def create_post():
+        upload = request.files.get("photo")
+        photo = upload.read() if upload and upload.filename else None
+        try:
+            post = wall.create(request.form.get("author_id"), request.form.get("author"),
+                               request.form.get("text"), photo)
+        except WallError as e:
+            return error(str(e), e.status)
+        log.info("Wall post %s by %s", post["id"], post["author"])
+        return jsonify(post), 201
+
+    @app.route("/wall/<int:post_id>", methods=["DELETE"])
+    def delete_post(post_id):
+        if not wall.delete(post_id):
+            return error("Post not found", 404)
+        return "", 204
+
+    @app.route("/wall/<int:post_id>/pin", methods=["PUT"])
+    def pin_post(post_id):
+        post = wall.toggle_pin(post_id)
+        if post is None:
+            return error("Post not found", 404)
+        return jsonify(post)
+
+    @app.route("/wall/photo/<filename>")
+    def wall_photo(filename):
+        path = wall.photo_path(filename)
+        if path is None:
+            return error("Photo not found", 404)
+        # Names are random and never reused, so the file can be cached for good.
+        mimetype = PHOTO_MIME_TYPES[filename.rsplit(".", 1)[1]]  # Python 3.11 doesn't know .heic
+        return send_file(os.path.abspath(path), mimetype=mimetype, max_age=365 * 24 * 3600)
 
 
 log = logging.getLogger("server")
@@ -203,6 +268,8 @@ if __name__ == "__main__":
         show=frame_controller.try_show,
     )
     show_slideshow.start()
-    create_app(frame_controller, show_slideshow, immich_client).run(
+    family_wall = WallStore(os.environ.get("WALL_DB_PATH", "wall.db"),
+                            os.environ.get("WALL_PHOTOS_PATH", "wall_photos"))
+    create_app(frame_controller, show_slideshow, immich_client, family_wall).run(
         host="0.0.0.0", port=int(os.environ.get("PORT", "5000")), threaded=True
     )
