@@ -3,3 +3,5 @@ last_frame.png
 __pycache__/
 .venv/
 slideshow.json
+wall.db
+wall_photos/
