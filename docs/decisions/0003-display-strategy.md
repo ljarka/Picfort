@@ -39,3 +39,7 @@ the live Family Wall feed.
   it may instead show the latest pinned post on each slideshow advance.
 - Users with an Android tablet get the full Family Wall experience.
 - Users with e-paper get the photo slideshow and the latest pinned Wall post.
+- Update 2026-11-10 (T-003): the tablet still needs ImageFrameServer (the "Picfort server"):
+  it holds the Family Wall (ADR 0002) and the slideshow settings, which the tablet reads, so
+  the family changes them from their phones. The tablet picks and shows the photos itself.
+  It is logged in with a parent's Immich account.
