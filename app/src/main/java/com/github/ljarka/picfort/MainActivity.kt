@@ -26,6 +26,8 @@ import com.github.ljarka.picfort.collections.AlbumsScreen
 import com.github.ljarka.picfort.collections.GridAsset
 import com.github.ljarka.picfort.collections.SearchScreen
 import com.github.ljarka.picfort.ui.frame.FrameScreen
+import com.github.ljarka.picfort.ui.frame.PicfortServerSetupScreen
+import com.github.ljarka.picfort.ui.wall.FamilyWallScreen
 import com.github.ljarka.picfort.ui.settings.SettingsScreen
 import com.github.ljarka.picfort.ui.timeline.TimelineScreen
 import dagger.hilt.android.AndroidEntryPoint
@@ -62,6 +64,13 @@ sealed interface Screen {
 
     @Serializable
     object Search : Screen
+
+    @Serializable
+    object FamilyWall : Screen
+
+    /** One-time, optional step after login when no Picfort server is set. */
+    @Serializable
+    object PicfortServerSetup : Screen
 }
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalSharedTransitionApi::class)
@@ -92,12 +101,26 @@ class MainActivity : ComponentActivity() {
                     ) {
                         composable<Screen.Init> {
                             InitScreen(
-                                onInitialized = {
-                                    navController.navigate(Screen.Timeline) {
+                                onInitialized = { picfortServerStep ->
+                                    navController.navigate(
+                                        if (picfortServerStep) Screen.PicfortServerSetup else Screen.Timeline
+                                    ) {
                                         popUpTo(Screen.Init) { inclusive = true }
                                     }
                                 }
                             )
+                        }
+                        composable<Screen.PicfortServerSetup> {
+                            PicfortServerSetupScreen(
+                                onDone = {
+                                    navController.navigate(Screen.Timeline) {
+                                        popUpTo(Screen.PicfortServerSetup) { inclusive = true }
+                                    }
+                                }
+                            )
+                        }
+                        composable<Screen.FamilyWall> {
+                            FamilyWallScreen(onBack = { navController.popBackStack() })
                         }
                         composable<Screen.Timeline> {
                             TimelineScreen(
@@ -113,6 +136,7 @@ class MainActivity : ComponentActivity() {
                                 onSettingsClick = { navController.navigate(Screen.Settings) },
                                 onSearchClick = { navController.navigate(Screen.Search) },
                                 onAlbumsClick = { navController.navigate(Screen.Albums) },
+                                onWallClick = { navController.navigate(Screen.FamilyWall) },
                             )
                         }
                         val openFromCollection: (GridAsset, Int, String) -> Unit = { asset, index, source ->

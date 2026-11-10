@@ -2,6 +2,7 @@ package com.github.ljarka.picfort.ui.init
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.github.ljarka.picfort.ui.frame.FrameSettingsStore
 import com.github.ljarka.picfort.ui.login.AccessTokenStore
 import com.github.ljarka.picfort.ui.server.ServerUrlStore
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -17,7 +18,11 @@ import javax.inject.Inject
 class InitViewModel @Inject constructor(
     private val serverUrlStore: ServerUrlStore,
     private val accessTokenStore: AccessTokenStore,
+    private val frameSettingsStore: FrameSettingsStore,
 ) : ViewModel() {
+
+    /** After login: whether to show the one-time Picfort server step before the timeline. */
+    val needsPicfortServerStep: Boolean get() = frameSettingsStore.needsSetupStep
 
     private val initUpdates = MutableSharedFlow<InitState>()
 

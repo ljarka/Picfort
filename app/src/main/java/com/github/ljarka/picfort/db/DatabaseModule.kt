@@ -25,4 +25,7 @@ class DatabaseModule {
 
     @Provides
     fun backupDao(database: ImagesDatabase): BackupDao = database.backupDao()
+
+    @Provides
+    fun usersDao(database: ImagesDatabase): UsersDao = database.usersDao()
 }

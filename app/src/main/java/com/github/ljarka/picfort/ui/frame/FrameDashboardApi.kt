@@ -86,7 +86,7 @@ class FrameDashboardApi @Inject constructor(
         }
     }
 
-    private fun base() = normalizeFrameUrl(settings.frameUrl) ?: throw FrameException("Set the frame address first")
+    private fun base() = normalizeFrameUrl(settings.frameUrl) ?: throw FrameException("Set the Picfort server address first")
 
     private suspend fun call(method: String, path: String, jsonBody: String? = null): String =
         withContext(Dispatchers.IO) {
@@ -107,7 +107,7 @@ class FrameDashboardApi @Inject constructor(
     } catch (e: CleartextNotAllowedException) {
         throw FrameException(e.message ?: "Use https:// for frames outside your network")
     } catch (e: IOException) {
-        throw FrameException("Can't reach the frame at ${request.url.host}")
+        throw FrameException("Can't reach the Picfort server at ${request.url.host}")
     }
 }
 

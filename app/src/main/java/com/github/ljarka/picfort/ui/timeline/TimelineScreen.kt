@@ -104,6 +104,7 @@ fun TimelineScreen(
     onSettingsClick: () -> Unit,
     onSearchClick: () -> Unit,
     onAlbumsClick: () -> Unit,
+    onWallClick: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     Box(modifier = modifier.fillMaxSize()) {
@@ -214,6 +215,7 @@ fun TimelineScreen(
                     onSettingsClick = onSettingsClick,
                     onSearchClick = onSearchClick,
                     onAlbumsClick = onAlbumsClick,
+                    onWallClick = onWallClick,
                 ) }
         ) { innerPadding ->
 

@@ -24,6 +24,7 @@ class RoomSyncStore @Inject constructor(
     private val database: ImagesDatabase,
 ) : SyncStore {
     private val dao by lazy { database.remoteAssetsDao() }
+    private val users by lazy { database.usersDao() }
 
     override suspend fun apply(changes: List<SyncChange>) {
         database.withTransaction {
@@ -54,6 +55,8 @@ class RoomSyncStore @Inject constructor(
                 val userId = (run.last() as SyncChange.SetUser).id
                 dao.setSyncState((dao.syncState() ?: SyncStateEntity(owner = "", userId = "")).copy(userId = userId))
             }
+            is SyncChange.UpsertUser -> users.upsert(run.map { (it as SyncChange.UpsertUser).user })
+            is SyncChange.DeleteUser -> users.delete(run.map { (it as SyncChange.DeleteUser).id })
             SyncChange.Reset, SyncChange.AckOnly -> Unit
         }
     }
@@ -72,6 +75,7 @@ class RoomSyncStore @Inject constructor(
             dao.clearStacks()
             dao.clearPartners()
             dao.clearSyncState()
+            users.clear()
         }
     }
 }
