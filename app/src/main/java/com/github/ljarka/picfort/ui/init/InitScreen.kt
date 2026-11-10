@@ -25,7 +25,8 @@ import com.github.ljarka.picfort.ui.server.ServerConfigurationContent
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun InitScreen(
-    onInitialized: () -> Unit,
+    /** Logged in; true when the one-time Picfort server step should come before the timeline. */
+    onInitialized: (picfortServerStep: Boolean) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     Scaffold(
@@ -69,7 +70,7 @@ fun InitScreen(
             when (state.value) {
                 InitState.INITIALIZED -> {
                     LaunchedEffect(Unit) {
-                        onInitialized()
+                        onInitialized(viewModel.needsPicfortServerStep)
                     }
                 }
 

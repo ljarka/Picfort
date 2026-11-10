@@ -10,6 +10,7 @@ import com.github.ljarka.picfort.backup.LocalMediaScanner
 import com.github.ljarka.picfort.db.BackupDao
 import com.github.ljarka.picfort.local.hasMediaAccess
 import com.github.ljarka.picfort.network.SessionManager
+import com.github.ljarka.picfort.ui.frame.FrameSettingsStore
 import com.github.ljarka.picfort.ui.server.ServerUrlStore
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
@@ -41,6 +42,7 @@ class SettingsViewModel @Inject constructor(
     private val scanner: LocalMediaScanner,
     private val backupDao: BackupDao,
     private val serverUrlStore: ServerUrlStore,
+    private val frameSettingsStore: FrameSettingsStore,
     private val sessionManager: SessionManager,
 ) : ViewModel() {
 
@@ -51,6 +53,9 @@ class SettingsViewModel @Inject constructor(
         scheduler.status.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), BackupStatus.Idle)
 
     val serverUrl: String get() = serverUrlStore.serverUrl
+
+    /** The Picfort server (frame + Family Wall), or "" when not set. */
+    val picfortServer: String get() = frameSettingsStore.frameUrl
 
     init {
         reloadCounts()

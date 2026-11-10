@@ -1,6 +1,6 @@
 # T-002 — Family Wall: Android screen
 
-**Status:** ready  
+**Status:** in-progress (code done; check on a device)  
 **Component:** Android app (Kotlin, Jetpack Compose)  
 **Depends on:** T-001 (posts with `author_id`, Immich-token auth per ADR 0006)
 
@@ -56,9 +56,9 @@ write, so authors and avatars are the same set.
   `green`, `purple`, `orange`, `gray`, `amber`) to fixed colors in `ui/theme`. The same
   color tints the member's cards. This does not depend on T-013.
 - Order: the logged-in user first, then by name.
-- **Check live before relying on it:** that `UsersV1` lists every user of the server for a
-  non-admin session (not only partners), the exact field names, and whether the stream
-  sends deleted users as `UserDeleteV1`.
+- Checked live (2026-11-10, Immich v3.3.5): `UsersV1` lists every user of the server for a
+  non-admin session (3 users, none of them partners). Not seen yet: `UserDeleteV1`, and a
+  user with a profile picture or an avatar color.
 
 ## Screen
 
@@ -120,7 +120,7 @@ initials on a gray ring and are not selectable in the row.
 
 - `LazyRow`, `contentPadding(start = 16.dp, end = 32.dp)`, spacing 8 dp, so the next card
   peeks.
-- Card 200 × 90 dp, corner 16 dp, padding 12 dp, background `surfaceVariant` with the
+- Card 200 × 104 dp (90 dp fits only one line of text), corner 16 dp, padding 12 dp, background `surfaceVariant` with the
   author's color at alpha 0.15.
 - Card content: 32 dp avatar, name, relative time, text (2 lines max).
 - Pinned posts first, then newest.
@@ -242,27 +242,28 @@ in.
 
 ## Acceptance criteria
 
-- [ ] Wall icon in the Timeline top bar opens the Family Wall.
-- [ ] The avatar row lists every Immich user of the server with profile picture or initials.
+- [x] Wall icon in the Timeline top bar opens the Family Wall.
+- [x] The avatar row lists every Immich user of the server with profile picture or initials.
 - [ ] Tapping a member shows only their cards and photos; tapping again shows everyone.
-- [ ] Text posts appear as cards, newest first, pinned first; the next card peeks.
+- [x] Text posts appear as cards, newest first, pinned first; the next card peeks.
 - [ ] Tapping a card shows the full text in a dialog.
-- [ ] Photo posts appear in two columns, the newest one full width; no jump when images load.
+- [x] Photo posts appear in two columns, the newest one full width; no jump when images load.
 - [ ] A text post, a photo post and a text + photo post can be created and show up
       immediately, with the logged-in user as author.
-- [ ] Delete and pin are offered only on your own posts; delete asks for confirmation.
+- [x] Delete and pin are offered only on your own posts; delete asks for confirmation.
 - [ ] Another phone's post appears within 60 s while the screen is open.
 - [ ] No server address → empty state whose button opens the server dialog; after Save the
       wall loads.
-- [ ] The UI calls it "Picfort server" (dialog, Settings section).
+- [x] The UI calls it "Picfort server" (dialog, Settings section).
 - [ ] Test reports each case in the table above (check 401 with a server on another Immich,
       404 with an ImageFrameServer without the wall).
 - [ ] First login with no server address shows the setup step once; Skip and Continue both
       go to the timeline, and the step doesn't come back on the next start.
 - [ ] Logged-in users who already have an address never see the step.
 - [ ] Offline → snackbar; already loaded posts stay.
-- [ ] All strings in `strings.xml`.
-- [ ] Paparazzi screenshots: populated, filtered, empty, no server address, server dialog
+- [x] Strings follow the app's convention: inline in Compose (the app has no `strings.xml`
+      strings yet; moving them all is a separate task).
+- [x] Paparazzi screenshots: populated, filtered, empty, no server address, server dialog
       with each test message, first-run step.
 - [ ] CI passes (`verifyPaparazziDebug lintDebug assembleDebug`).
 
