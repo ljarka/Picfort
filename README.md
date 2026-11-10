@@ -142,7 +142,9 @@ Builds made before release signing used the debug key, so moving to a release AP
 
 ## ImageFrameServer
 
-A small Flask service that puts Immich photos on a picture frame. It is meant to run on the device that drives the display, a Raspberry Pi with a Waveshare 13.3" e-Paper HAT+ (E). The frame downloads photos from Immich with its own API key, so the app never sends it your login token.
+A small Flask service that puts Immich photos on a picture frame. It is meant to run on the device that drives the display, a Raspberry Pi with a Waveshare 13.3" e-Paper HAT+ (E). The frame downloads photos from Immich with its own API key, so controlling the frame never needs your login token. Only the Family Wall does: the app sends its Immich token on `/wall` calls, and the server asks Immich who you are (ADR 0006).
+
+**Don't expose ImageFrameServer to the internet** (no port forwarding, no public tunnel). The frame endpoints have no authentication (ADR 0004). Use it on your home network or over a VPN such as Tailscale.
 
 ### Setup
 
@@ -230,12 +232,12 @@ It changes every 15 min to 24 h and can pause during quiet hours (for example 22
 | `POST /next` | Show the next slideshow photo now (`409` if the slideshow is off) |
 | `GET /albums` | `[{"id","name"}]`, for choosing a slideshow album |
 | `GET /wall?limit=20` | Family Wall posts, pinned first, then newest first (`limit` 1–100) |
-| `POST /wall` | New post, `multipart/form-data`: `author_id` (Immich user id), `author` (name), `text` and/or `photo` (JPEG, PNG or HEIC, max 10 MB). `201` with the post; `400` missing author or both text and photo, `413` photo too large, `415` not a supported image. |
-| `DELETE /wall/<id>` | `204`; also deletes the photo (`404` if no such post) |
-| `PUT /wall/<id>/pin` | Toggles `pinned` and returns the post |
+| `POST /wall` | New post by the caller, `multipart/form-data`: `text` and/or `photo` (JPEG, PNG or HEIC, max 10 MB). `201` with the post; `400` neither text nor photo, `413` photo too large, `415` not a supported image. |
+| `DELETE /wall/<id>` | `204`; also deletes the photo. Own posts only (`403`), `404` if no such post. |
+| `PUT /wall/<id>/pin` | Toggles `pinned` and returns the post. Own posts only (`403`). |
 | `GET /wall/photo/<file>` | The photo attached to a post (`photo_url` in the post) |
 
-A post looks like `{"id","author_id","author","text","photo_url","photo_width","photo_height","pinned","created"}`. `photo_width`/`photo_height` are the upright size, so the app can lay out photos before they load. The wall is stored in SQLite next to the server (ADR 0002). There are no migrations: if a new version changes the schema, the wall starts empty. There's no authentication, so anyone on the local network can post and delete (ADR 0004).
+A post looks like `{"id","author_id","author","text","photo_url","photo_width","photo_height","pinned","created"}`. `photo_width`/`photo_height` are the upright size, so the app can lay out photos before they load. The wall is stored in SQLite next to the server (ADR 0002). There are no migrations: if a new version changes the schema, the wall starts empty. Every `/wall` call needs `Authorization: Bearer <Immich access token>` (an API key doesn't work). The server checks it with `GET /api/users/me` on its own `IMMICH_URL` and remembers the answer for 5 minutes. No token or a rejected one gives `401`; if Immich can't be reached, `502`. The author of a post is the user of the token.
 
 Run the tests with `cd ImageFrameServer && python3 -m unittest discover -s tests -t tests`.
 

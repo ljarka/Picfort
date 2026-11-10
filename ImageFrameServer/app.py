@@ -9,11 +9,12 @@
     POST /next                  -> show the next slideshow photo now
     GET  /albums                -> [{"id", "name"}] for choosing a slideshow album
 
-Family Wall (see wall.py):
+Family Wall (see wall.py). Every call needs `Authorization: Bearer <Immich token>` (auth.py);
+the author is the Immich user of that token.
     GET    /wall?limit=20       -> posts, pinned first, then newest first
-    POST   /wall                -> 201 new post (multipart: author_id, author, text?, photo?)
-    DELETE /wall/<id>           -> 204
-    PUT    /wall/<id>/pin       -> the post with pinned toggled
+    POST   /wall                -> 201 new post (multipart: text?, photo?)
+    DELETE /wall/<id>           -> 204 (own posts only)
+    PUT    /wall/<id>/pin       -> the post with pinned toggled (own posts only)
     GET    /wall/photo/<file>   -> the photo attached to a post
 """
 
@@ -24,10 +25,11 @@ import re
 import threading
 import time
 
-from flask import Flask, jsonify, request, send_file
+from flask import Flask, g, jsonify, request, send_file
 from werkzeug.exceptions import RequestEntityTooLarge
 
 import frame
+from auth import Authenticator, AuthError, AuthUnavailable, immich_lookup
 from immich import ImmichClient
 from slideshow import INTERVALS, MODES, Picker, SettingsStore, Slideshow, SlideshowSettings
 from wall import DEFAULT_LIMIT, MAX_LIMIT, MAX_PHOTO_BYTES, WallError, WallStore
@@ -125,7 +127,7 @@ def settings_json(slideshow: Slideshow):
 
 
 def create_app(controller: FrameController, slideshow: Slideshow, immich: ImmichClient,
-               wall: WallStore = None) -> Flask:
+               wall: WallStore = None, auth: Authenticator = None) -> Flask:
     app = Flask(__name__)
     # The photo plus a little room for the text fields; larger requests get 413.
     app.config["MAX_CONTENT_LENGTH"] = MAX_PHOTO_BYTES + 64 * 1024
@@ -201,14 +203,38 @@ def create_app(controller: FrameController, slideshow: Slideshow, immich: Immich
             return error(f"Could not load albums from Immich: {e}", 502)
 
     if wall is not None:
-        register_wall(app, wall)
+        register_wall(app, wall, auth)
     return app
 
 
-def register_wall(app: Flask, wall: WallStore):
+def register_wall(app: Flask, wall: WallStore, auth: Authenticator):
     @app.errorhandler(RequestEntityTooLarge)
     def too_large(_):
         return error("The photo is larger than 10 MB", 413)
+
+    @app.before_request
+    def authenticate():
+        if not request.path.startswith("/wall"):
+            return None
+        try:
+            g.user = auth.user(request.headers.get("Authorization"))
+        except AuthError as e:
+            resp, status = error(str(e), 401)
+            resp.headers["WWW-Authenticate"] = "Bearer"
+            return resp, status
+        except AuthUnavailable as e:
+            log.warning("Wall auth: %s", e)
+            return error(str(e), 502)
+        return None
+
+    def own_post(post_id):
+        """(post, None) if it exists and belongs to the caller, else (None, error response)."""
+        post = wall.get(post_id)
+        if post is None:
+            return None, error("Post not found", 404)
+        if post["author_id"] != g.user.id:
+            return None, error("Only the author can change this post", 403)
+        return post, None
 
     @app.route("/wall", methods=["GET"])
     def list_posts():
@@ -225,8 +251,7 @@ def register_wall(app: Flask, wall: WallStore):
         upload = request.files.get("photo")
         photo = upload.read() if upload and upload.filename else None
         try:
-            post = wall.create(request.form.get("author_id"), request.form.get("author"),
-                               request.form.get("text"), photo)
+            post = wall.create(g.user.id, g.user.name, request.form.get("text"), photo)
         except WallError as e:
             return error(str(e), e.status)
         log.info("Wall post %s by %s", post["id"], post["author"])
@@ -234,25 +259,30 @@ def register_wall(app: Flask, wall: WallStore):
 
     @app.route("/wall/<int:post_id>", methods=["DELETE"])
     def delete_post(post_id):
-        if not wall.delete(post_id):
-            return error("Post not found", 404)
+        _, failure = own_post(post_id)
+        if failure:
+            return failure
+        wall.delete(post_id)
         return "", 204
 
     @app.route("/wall/<int:post_id>/pin", methods=["PUT"])
     def pin_post(post_id):
-        post = wall.toggle_pin(post_id)
-        if post is None:
-            return error("Post not found", 404)
-        return jsonify(post)
+        _, failure = own_post(post_id)
+        if failure:
+            return failure
+        return jsonify(wall.toggle_pin(post_id))
 
     @app.route("/wall/photo/<filename>")
     def wall_photo(filename):
         path = wall.photo_path(filename)
         if path is None:
             return error("Photo not found", 404)
-        # Names are random and never reused, so the file can be cached for good.
+        # Names are random and never reused, so the file can be cached for good (privately: it needs a login).
         mimetype = PHOTO_MIME_TYPES[filename.rsplit(".", 1)[1]]  # Python 3.11 doesn't know .heic
-        return send_file(os.path.abspath(path), mimetype=mimetype, max_age=365 * 24 * 3600)
+        resp = send_file(os.path.abspath(path), mimetype=mimetype, max_age=365 * 24 * 3600)
+        resp.cache_control.private = True
+        resp.cache_control.public = False
+        return resp
 
 
 log = logging.getLogger("server")
@@ -270,6 +300,7 @@ if __name__ == "__main__":
     show_slideshow.start()
     family_wall = WallStore(os.environ.get("WALL_DB_PATH", "wall.db"),
                             os.environ.get("WALL_PHOTOS_PATH", "wall_photos"))
-    create_app(frame_controller, show_slideshow, immich_client, family_wall).run(
+    wall_auth = Authenticator(immich_lookup(config.immich_url))
+    create_app(frame_controller, show_slideshow, immich_client, family_wall, wall_auth).run(
         host="0.0.0.0", port=int(os.environ.get("PORT", "5000")), threaded=True
     )
