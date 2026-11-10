@@ -69,7 +69,7 @@ class FrameRepository @Inject constructor(
         val url = base.newBuilder().addPathSegment("status").build()
         return request(url) { code, body ->
             if (code == 200 && body?.status == "ok") FrameResult.Sent
-            else FrameResult.Error("Not a Picfort frame (HTTP $code)")
+            else FrameResult.Error("Not a Picfort server (HTTP $code)")
         }
     }
 
@@ -87,7 +87,7 @@ class FrameRepository @Inject constructor(
         } catch (e: CleartextNotAllowedException) {
             FrameResult.Error(e.message ?: "Use https:// for frames outside your network")
         } catch (e: IOException) {
-            FrameResult.Error("Can't reach the frame at ${url.host}")
+            FrameResult.Error("Can't reach the Picfort server at ${url.host}")
         }
     }
 }

@@ -9,6 +9,7 @@ import javax.inject.Inject
 import javax.inject.Singleton
 
 private const val FRAME_URL = "FRAME_URL"
+private const val PICFORT_SERVER_PROMPTED = "PICFORT_SERVER_PROMPTED"
 
 @Singleton
 class FrameSettingsStore @Inject constructor(
@@ -18,7 +19,15 @@ class FrameSettingsStore @Inject constructor(
         get() = preferences.getString(FRAME_URL, "") ?: ""
         set(value) = preferences.edit { putString(FRAME_URL, value) }
 
+    /** Whether the one-time "Picfort server" step was shown (skipped or saved). */
+    var serverPrompted: Boolean
+        get() = preferences.getBoolean(PICFORT_SERVER_PROMPTED, false)
+        set(value) = preferences.edit { putBoolean(PICFORT_SERVER_PROMPTED, value) }
+
     fun hasData() = frameUrl.isNotEmpty()
+
+    /** Show the first-run step: no address yet and never asked on this install. */
+    val needsSetupStep: Boolean get() = !hasData() && !serverPrompted
 }
 
 /**

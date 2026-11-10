@@ -63,6 +63,7 @@ fun SettingsScreen(onBack: () -> Unit, onFrameClick: () -> Unit) {
         backup = backup,
         status = status,
         serverUrl = viewModel.serverUrl,
+        picfortServer = viewModel.picfortServer,
         onBack = onBack,
         onFrameClick = onFrameClick,
         onEnable = onEnable,
@@ -79,6 +80,8 @@ fun SettingsContent(
     backup: BackupSettingsUi,
     status: BackupStatus,
     serverUrl: String,
+    /** Picfort server address, "" when not set. */
+    picfortServer: String = "",
     onBack: () -> Unit = {},
     onFrameClick: () -> Unit = {},
     onEnable: (Boolean) -> Unit = {},
@@ -157,11 +160,11 @@ fun SettingsContent(
             }
 
             HorizontalDivider(Modifier.padding(vertical = 8.dp))
-            SectionTitle("Picture frame")
+            SectionTitle("Picfort server")
             ListItem(
                 modifier = Modifier.clickable(onClick = onFrameClick),
-                headlineContent = { Text("Frame") },
-                supportingContent = { Text("What's on the frame, slideshow, address") },
+                headlineContent = { Text(picfortServer.ifEmpty { "Not set" }) },
+                supportingContent = { Text("Picture frame, slideshow and the Family Wall") },
             )
 
             HorizontalDivider(Modifier.padding(vertical = 8.dp))

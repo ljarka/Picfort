@@ -2,15 +2,19 @@ package com.github.ljarka.picfort.sync
 
 import com.github.ljarka.picfort.db.RemoteAssetEntity
 import com.github.ljarka.picfort.db.RemoteStackEntity
+import com.github.ljarka.picfort.db.UserEntity
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.decodeFromJsonElement
 import java.time.Instant
 
-/** The types the timeline needs (ADR 0005). Order doesn't matter; the server has its own. */
+/**
+ * The types we sync: the timeline's (ADR 0005) and the server's users (Family Wall members,
+ * T-002). Order doesn't matter; the server has its own.
+ */
 val TIMELINE_SYNC_TYPES = listOf(
-    "AuthUsersV2", "PartnersV1", "AssetsV2", "PartnerAssetsV2", "StacksV1", "PartnerStacksV1",
+    "AuthUsersV2", "UsersV1", "PartnersV1", "AssetsV2", "PartnerAssetsV2", "StacksV1", "PartnerStacksV1",
 )
 
 /** One line of `/api/sync/stream`: `{"type": …, "data": {…}, "ack": "<type>|<id>[|<extra>]"}`. */
@@ -57,6 +61,21 @@ internal data class SyncPartnerDeleteDto(val sharedById: String, val sharedWithI
 @Serializable
 internal data class SyncAuthUserDto(val id: String)
 
+/** `UserV1`. Only the id is certain; the rest is optional so a field change can't stall the sync. */
+@Serializable
+internal data class SyncUserDto(
+    val id: String,
+    val name: String? = null,
+    val email: String? = null,
+    val avatarColor: String? = null,
+    val hasProfileImage: Boolean = false,
+    val profileChangedAt: String? = null,
+    val deletedAt: String? = null,
+)
+
+@Serializable
+internal data class SyncUserDeleteDto(val userId: String)
+
 /** What one stream line asks the local copy to do. */
 sealed interface SyncChange {
     data class UpsertAsset(val asset: RemoteAssetEntity) : SyncChange
@@ -66,6 +85,8 @@ sealed interface SyncChange {
     data class UpsertPartner(val sharedById: String, val inTimeline: Boolean) : SyncChange
     data class DeletePartner(val sharedById: String) : SyncChange
     data class SetUser(val id: String) : SyncChange
+    data class UpsertUser(val user: UserEntity) : SyncChange
+    data class DeleteUser(val id: String) : SyncChange
 
     /** Drop the local copy and sync from scratch. */
     data object Reset : SyncChange
@@ -91,11 +112,25 @@ fun SyncLine.toChange(json: Json): SyncChange = when (type) {
     }
     "PartnerDeleteV1" -> SyncChange.DeletePartner(json.decodeFromJsonElement<SyncPartnerDeleteDto>(data).sharedById)
     "AuthUserV2" -> SyncChange.SetUser(json.decodeFromJsonElement<SyncAuthUserDto>(data).id)
+    "UserV1" -> json.decodeFromJsonElement<SyncUserDto>(data).let {
+        // A soft-deleted user is gone for the wall.
+        if (it.deletedAt != null) SyncChange.DeleteUser(it.id) else SyncChange.UpsertUser(it.toEntity())
+    }
+    "UserDeleteV1" -> SyncChange.DeleteUser(json.decodeFromJsonElement<SyncUserDeleteDto>(data).userId)
     "SyncResetV1" -> SyncChange.Reset
     else -> SyncChange.AckOnly
 }
 
 private fun String.toEpochMillis(): Long = Instant.parse(this).toEpochMilli()
+
+internal fun SyncUserDto.toEntity() = UserEntity(
+    id = id,
+    name = name?.takeIf { it.isNotBlank() } ?: email ?: id,
+    email = email.orEmpty(),
+    avatarColor = avatarColor,
+    hasProfileImage = hasProfileImage,
+    profileChangedAt = profileChangedAt?.let { runCatching { it.toEpochMillis() }.getOrNull() },
+)
 
 internal fun SyncAssetDto.toEntity() = RemoteAssetEntity(
     id = id,
