@@ -28,9 +28,12 @@ Rationale:
 ```sql
 CREATE TABLE posts (
   id      INTEGER PRIMARY KEY AUTOINCREMENT,
-  author  TEXT    NOT NULL,
+  author_id TEXT  NOT NULL,            -- Immich user id
+  author  TEXT    NOT NULL,            -- display name at the time of posting
   text    TEXT,
   photo   TEXT,                        -- relative path in wall_photos/
+  photo_width  INTEGER,
+  photo_height INTEGER,
   pinned  INTEGER NOT NULL DEFAULT 0,
   created TEXT    NOT NULL             -- ISO 8601 UTC
 );
@@ -41,7 +44,7 @@ CREATE TABLE posts (
 | Method | Path | Description |
 |--------|------|-------------|
 | GET | /wall | List posts, newest first; `?limit=20` |
-| POST | /wall | Create post (multipart: author, text, photo optional) |
+| POST | /wall | Create post (multipart: author_id, author, text, photo optional) |
 | DELETE | /wall/`<id>` | Delete post |
 | PUT | /wall/`<id>`/pin | Toggle pin |
 | GET | /wall/photo/`<filename>` | Serve attached photo |
@@ -55,5 +58,7 @@ directory. Files are named `<uuid>.<ext>`. The database stores the filename only
 
 - Posts are stored only on the ImageFrameServer host; they are not backed up to Immich.
 - If ImageFrameServer is unavailable, the Wall tab in the app shows a cached copy of the last fetch.
+- Family members are the Immich users of the server (2026-11-10). A post carries the
+  author's Immich user id, which the app takes from its login; the server trusts it.
 - No authentication: any device on the local network can post and delete.
   See ADR 0004 for the auth decision.

@@ -1,6 +1,6 @@
 # Picfort — Roadmap & Status
 
-Last updated: 2026-11-09
+Last updated: 2026-11-10
 
 ## Vision
 
@@ -18,7 +18,7 @@ A shared digital board for the family: notes, photos, fridge-magnet-style messag
 | Task | Description | Status |
 |------|-------------|--------|
 | [T-001](tasks/T-001-family-wall-backend.md) | Family Wall — ImageFrameServer backend | `ready` |
-| [T-002](tasks/T-002-family-wall-android.md) | Family Wall — Android screen | `ready` |
+| [T-002](tasks/T-002-family-wall-android.md) | Family Wall — Android screen (approved mockup, members = Immich users) | `ready` |
 | [T-003](tasks/T-003-frame-mode-tablet.md) | Frame/kiosk mode on Android tablet | `ready` |
 
 ### Phase 2 — Fix known limitations
