@@ -17,7 +17,7 @@ A shared digital board for the family: notes, photos, fridge-magnet-style messag
 
 | Task | Description | Status |
 |------|-------------|--------|
-| [T-001](tasks/T-001-family-wall-backend.md) | Family Wall — ImageFrameServer backend | `ready` |
+| [T-001](tasks/T-001-family-wall-backend.md) | Family Wall — ImageFrameServer backend | `done` |
 | [T-002](tasks/T-002-family-wall-android.md) | Family Wall — Android screen (approved mockup, members = Immich users) | `ready` |
 | [T-003](tasks/T-003-frame-mode-tablet.md) | Frame/kiosk mode on Android tablet | `ready` |
 
@@ -84,3 +84,4 @@ Automated checks and architecture guardrails.
 | [0003](decisions/0003-display-strategy.md) | Tablet as primary display target; e-paper as secondary |
 | [0004](decisions/0004-network-auth.md) | No auth on ImageFrameServer (trusted local network) |
 | [0005](decisions/0005-timeline-sync-stream.md) | Timeline from a local copy synced with Immich's sync stream (proposed) |
+| [0006](decisions/0006-family-wall-auth.md) | Family Wall checks the caller's Immich token (supersedes 0004 for `/wall`) |
