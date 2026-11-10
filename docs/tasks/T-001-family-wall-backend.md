@@ -1,6 +1,6 @@
 # T-001 — Family Wall: ImageFrameServer backend
 
-**Status:** ready  
+**Status:** done  
 **Component:** ImageFrameServer (Python)  
 **Depends on:** —
 
@@ -68,8 +68,7 @@ Response:
 
 **POST /wall**
 Create a new post. `multipart/form-data`:
-- `author_id` (required, string; the author's Immich user id, not verified, see ADR 0004)
-- `author` (required, string; display name)
+- No author fields: the author is the user of the request's Immich token (see Authentication)
 - `text` (optional, string)
 - `photo` (optional, file; JPEG or PNG; max 10 MB)
 
@@ -93,23 +92,31 @@ Serve the attached photo file. Returns 404 if not found.
   clients can lay out the photo before it loads
 - Filename: `<uuid4>.<original_ext>`
 
+### Authentication (ADR 0006)
+Every `/wall` request needs `Authorization: Bearer <Immich access token>`. The server asks
+`GET <IMMICH_URL>/api/users/me` who it is and caches the answer for 5 minutes (keyed by a hash
+of the token). No token or rejected → 401; Immich unreachable → 502. Only the author may
+delete or pin a post (403). The frame endpoints stay open (ADR 0004).
+
 ### Error handling
-All error responses: `{"error": "<message>"}` with appropriate HTTP status.
+All error responses use the server's existing shape, `{"status": "error", "message": "<message>"}`,
+with the appropriate HTTP status.
 
 ## Acceptance criteria
 
-- [ ] `GET /wall` returns empty list when no posts exist
-- [ ] `POST /wall` with text only creates a post; `photo_url` is null
-- [ ] `POST /wall` without `author_id` or `author` returns 400
-- [ ] A photo post returns `photo_width`/`photo_height` of the upright image
-- [ ] `POST /wall` with photo saves the file and returns a valid `photo_url`
-- [ ] `GET /wall/photo/<filename>` serves the uploaded file
-- [ ] `DELETE /wall/<id>` removes the post and the photo file from disk
-- [ ] `PUT /wall/<id>/pin` toggles pinned; second call toggles back
-- [ ] Posts are ordered newest-first in `GET /wall`
-- [ ] Pinned posts appear first in `GET /wall`, then newest-first among the rest
-- [ ] Existing tests pass: `python3 -m unittest discover -s tests -t tests`
-- [ ] `GET /status` still works (no regression)
+- [x] `GET /wall` returns empty list when no posts exist
+- [x] `POST /wall` with text only creates a post; `photo_url` is null
+- [x] `/wall` without a valid Immich token returns 401; the author comes from the token
+- [x] Deleting or pinning someone else's post returns 403
+- [x] A photo post returns `photo_width`/`photo_height` of the upright image
+- [x] `POST /wall` with photo saves the file and returns a valid `photo_url`
+- [x] `GET /wall/photo/<filename>` serves the uploaded file
+- [x] `DELETE /wall/<id>` removes the post and the photo file from disk
+- [x] `PUT /wall/<id>/pin` toggles pinned; second call toggles back
+- [x] Posts are ordered newest-first in `GET /wall`
+- [x] Pinned posts appear first in `GET /wall`, then newest-first among the rest
+- [x] Existing tests pass: `python3 -m unittest discover -s tests -t tests`
+- [x] `GET /status` still works (no regression)
 
 ## Notes for implementing agent
 

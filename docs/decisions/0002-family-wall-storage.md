@@ -44,7 +44,7 @@ CREATE TABLE posts (
 | Method | Path | Description |
 |--------|------|-------------|
 | GET | /wall | List posts, newest first; `?limit=20` |
-| POST | /wall | Create post (multipart: author_id, author, text, photo optional) |
+| POST | /wall | Create post by the caller (multipart: text and/or photo) |
 | DELETE | /wall/`<id>` | Delete post |
 | PUT | /wall/`<id>`/pin | Toggle pin |
 | GET | /wall/photo/`<filename>` | Serve attached photo |
@@ -59,6 +59,4 @@ directory. Files are named `<uuid>.<ext>`. The database stores the filename only
 - Posts are stored only on the ImageFrameServer host; they are not backed up to Immich.
 - If ImageFrameServer is unavailable, the Wall tab in the app shows a cached copy of the last fetch.
 - Family members are the Immich users of the server (2026-11-10). A post carries the
-  author's Immich user id, which the app takes from its login; the server trusts it.
-- No authentication: any device on the local network can post and delete.
-  See ADR 0004 for the auth decision.
+  author's Immich user id and name, taken from the caller's Immich token (ADR 0006).

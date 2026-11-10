@@ -1,6 +1,6 @@
 # ADR 0004 — No authentication on ImageFrameServer (trusted local network)
 
-**Status:** accepted  
+**Status:** accepted; superseded for `/wall` by [ADR 0006](0006-family-wall-auth.md)  
 **Date:** 2026-11-08
 
 ## Context
