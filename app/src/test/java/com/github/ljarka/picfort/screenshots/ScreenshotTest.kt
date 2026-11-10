@@ -5,6 +5,8 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.height
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
@@ -23,7 +25,18 @@ import com.github.ljarka.picfort.collections.GridAsset
 import com.github.ljarka.picfort.collections.LoadState
 import com.github.ljarka.picfort.collections.SearchContent
 import com.github.ljarka.picfort.collections.SearchUi
+import com.github.ljarka.picfort.ui.frame.ConnectionTest
 import com.github.ljarka.picfort.ui.frame.FrameAlbum
+import com.github.ljarka.picfort.ui.frame.PicfortServerForm
+import com.github.ljarka.picfort.ui.frame.PicfortServerSetupContent
+import com.github.ljarka.picfort.ui.frame.wallTestResult
+import com.github.ljarka.picfort.ui.wall.FamilyMember
+import com.github.ljarka.picfort.ui.wall.FamilyWallContent
+import com.github.ljarka.picfort.ui.wall.FamilyWallUiState
+import com.github.ljarka.picfort.ui.wall.WallException
+import com.github.ljarka.picfort.ui.wall.WallPost
+import com.github.ljarka.picfort.ui.wall.avatarColor
+import java.time.Instant
 import com.github.ljarka.picfort.ui.frame.FrameContent
 import com.github.ljarka.picfort.ui.frame.FrameUi
 import com.github.ljarka.picfort.ui.frame.SlideshowState
@@ -110,7 +123,7 @@ class ScreenshotTest {
     fun settings() = snap {
         SettingsContent(
             backup = backup, status = BackupStatus.Running(done = 2_455, total = 2_546),
-            serverUrl = "https://photos.example.com", now = NOW,
+            serverUrl = "https://photos.example.com", picfortServer = "http://192.168.0.105:5000", now = NOW,
         )
     }
 
@@ -138,6 +151,91 @@ class ScreenshotTest {
     @Test
     fun frame_not_configured() = snap {
         FrameContent(FrameUi(configured = false, loading = false))
+    }
+
+    private val members = listOf(
+        FamilyMember("mama", "Mama", avatarUrl = "avatar-mama", color = avatarColor("pink")),
+        FamilyMember("tata", "Tata", avatarUrl = null, color = avatarColor("blue")),
+        FamilyMember("ola", "Ola", avatarUrl = "avatar-ola", color = avatarColor("green")),
+        FamilyMember("babcia", "Babcia Zosia", avatarUrl = null, color = avatarColor("amber")),
+    )
+
+    private fun wallPost(id: Int, author: String, minutesAgo: Long, text: String?, photo: Pair<Int, Int>? = null,
+                         pinned: Boolean = false) = WallPost(
+        id = id, authorId = author, authorName = author, text = text,
+        photoUrl = photo?.let { "photo-$id" }, photoWidth = photo?.first, photoHeight = photo?.second,
+        pinned = pinned, created = Instant.ofEpochMilli(NOW - minutesAgo * 60_000),
+    )
+
+    private val wallPosts = listOf(
+        wallPost(1, "mama", 25, "Pierwsze pomidory z ogródka! 🍅"),
+        wallPost(2, "tata", 90, "Kto odbiera Olę z treningu w czwartek?", pinned = true),
+        wallPost(3, "babcia", 300, "Dziękuję za odwiedziny, było cudownie ❤️"),
+        wallPost(4, "ola", 600, "Mam piątkę z matmy!!!"),
+        wallPost(5, "mama", 40, "Wycieczka w Tatry", photo = 1920 to 1280),
+        wallPost(6, "tata", 120, null, photo = 1080 to 1440),
+        wallPost(7, "ola", 200, "Burek", photo = 1440 to 1440),
+        wallPost(8, "babcia", 500, null, photo = 1440 to 1080),
+        wallPost(9, "mama", 900, null, photo = 1080 to 1620),
+    )
+
+    @Test
+    fun wall() = snap {
+        FamilyWallContent(
+            FamilyWallUiState(members = members, posts = wallPosts, myId = "mama", isLoading = false), now = NOW,
+        )
+    }
+
+    @Test
+    fun wall_dark() = snap(dark = true) {
+        FamilyWallContent(
+            FamilyWallUiState(members = members, posts = wallPosts, myId = "mama", isLoading = false), now = NOW,
+        )
+    }
+
+    @Test
+    fun wall_filtered() = snap {
+        FamilyWallContent(
+            FamilyWallUiState(
+                members = members, posts = wallPosts, myId = "mama", isLoading = false, selectedMemberId = "tata",
+            ),
+            now = NOW,
+        )
+    }
+
+    @Test
+    fun wall_empty() = snap {
+        FamilyWallContent(FamilyWallUiState(members = members, myId = "mama", isLoading = false), now = NOW)
+    }
+
+    @Test
+    fun wall_no_server() = snap {
+        FamilyWallContent(FamilyWallUiState(configured = false, isLoading = false), now = NOW)
+    }
+
+    @Test
+    fun picfort_server_form() = snap {
+        // The dialog's content for each kind of test result (dialogs don't render in Paparazzi).
+        Surface(Modifier.fillMaxSize()) {
+            Column(Modifier.padding(24.dp)) {
+                listOf(
+                    wallTestResult(null),
+                    wallTestResult(WallException.NotAccepted()),
+                    wallTestResult(WallException.NoWall()),
+                    ConnectionTest.Failed("Can't reach the Picfort server at 192.168.0.105"),
+                ).forEach { test ->
+                    PicfortServerForm(address = "192.168.0.105:5000", onAddressChange = {}, test = test)
+                    Spacer(Modifier.height(24.dp))
+                }
+            }
+        }
+    }
+
+    @Test
+    fun picfort_server_setup() = snap {
+        PicfortServerSetupContent(
+            address = "192.168.0.105:5000", onAddressChange = {}, test = wallTestResult(null),
+        )
     }
 
     private companion object {

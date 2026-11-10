@@ -16,6 +16,10 @@ Picfort is an Android client for a self-hosted [Immich](https://immich.app) phot
 |---|---|---|---|
 | <img src="app/src/test/snapshots/images/com.github.ljarka.picfort.screenshots_ScreenshotTest_frame.png" width="200" alt="ScreenshotTest_frame"> | <img src="app/src/test/snapshots/images/com.github.ljarka.picfort.screenshots_ScreenshotTest_albums.png" width="200" alt="ScreenshotTest_albums"> | <img src="app/src/test/snapshots/images/com.github.ljarka.picfort.screenshots_ScreenshotTest_settings.png" width="200" alt="ScreenshotTest_settings"> | <img src="app/src/test/snapshots/images/com.github.ljarka.picfort.screenshots_ScreenshotTest_settings_dark.png" width="200" alt="ScreenshotTest_settings_dark"> |
 
+| Family Wall | Family Wall, one member | Picfort server | Family Wall, dark |
+|---|---|---|---|
+| <img src="app/src/test/snapshots/images/com.github.ljarka.picfort.screenshots_ScreenshotTest_wall.png" width="200" alt="ScreenshotTest_wall"> | <img src="app/src/test/snapshots/images/com.github.ljarka.picfort.screenshots_ScreenshotTest_wall_filtered.png" width="200" alt="ScreenshotTest_wall_filtered"> | <img src="app/src/test/snapshots/images/com.github.ljarka.picfort.screenshots_ScreenshotTest_picfort_server_setup.png" width="200" alt="ScreenshotTest_picfort_server_setup"> | <img src="app/src/test/snapshots/images/com.github.ljarka.picfort.screenshots_ScreenshotTest_wall_dark.png" width="200" alt="ScreenshotTest_wall_dark"> |
+
 These are rendered from the app's UI code with sample photos by the [screenshot tests](#screenshot-tests). They are regenerated whenever the UI changes, so they always match the code.
 
 ## Features
@@ -31,7 +35,8 @@ These are rendered from the app's UI code with sample photos by the [screenshot 
 - **Selection actions.** Long-press to select items, then share, download to the phone, send to the frame, or delete. Deleted items go to Immich's or the phone's trash.
 - **Albums.** Browse your Immich albums, and add selected items to an existing or new album.
 - **Search.** Immich smart search ("dog on the beach"), with results that page in as you scroll.
-- **Settings.** Backup, the frame address, and your account.
+- **Family Wall.** A shared board for the family: text posts as cards, photo posts in a grid, and a row of family members (the Immich users of your server) to filter by person. Write, pin and delete your own posts. Posts live on the Picfort server, so every phone and the frame see the same wall (ADR 0002, 0006).
+- **Settings.** Backup, the Picfort server address, and your account.
 - **Send to frame.** Puts the photo you're viewing on an e-paper picture frame (see below).
 
 ## Repository layout
@@ -245,7 +250,7 @@ You can also run it from the command line: `python3 frame.py <assetId>`.
 
 ### Using it from the app
 
-Open a photo, tap **⚙** and enter the frame's address (for example `192.168.0.105:5000`). Tap **Test**, then **Save**. After that, the **Send** button puts the photo you're viewing on the frame. Only photos on the Immich server can be sent, not photos that exist only on the phone.
+The app calls ImageFrameServer the **Picfort server**: one address for the frame and the Family Wall. After the first login the app asks for it once (you can skip). Later, set it under **Settings → Picfort server**, with **⚙** in the photo viewer, or from the Family Wall. Enter the address (for example `192.168.0.105:5000`) and tap **Test**: it says whether the frame and the Family Wall both work, or what's wrong (for example a server that uses another Immich). Then tap **Save**. After that, the **Send** button puts the photo you're viewing on the frame. Only photos on the Immich server can be sent, not photos that exist only on the phone.
 
 ## Security notes
 

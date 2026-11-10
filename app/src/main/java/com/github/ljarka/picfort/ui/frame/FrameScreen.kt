@@ -113,7 +113,7 @@ fun FrameContent(
                 },
                 actions = {
                     IconButton(onClick = onRefresh) { Icon(Icons.Default.Refresh, "Refresh") }
-                    IconButton(onClick = onEditAddress) { Icon(Icons.Default.Settings, "Frame address") }
+                    IconButton(onClick = onEditAddress) { Icon(Icons.Default.Settings, "Picfort server address") }
                 },
             )
         },
@@ -128,7 +128,7 @@ fun FrameContent(
             when {
                 !state.configured -> Centered(
                     "Connect Picfort to your e-paper frame to send photos and run a slideshow.",
-                    "Set frame address", onEditAddress,
+                    "Set server address", onEditAddress,
                 )
                 state.loading && state.image == null -> Box(Modifier.padding(64.dp)) { CircularProgressIndicator() }
                 state.error != null -> Centered(state.error, "Retry", onRefresh)
