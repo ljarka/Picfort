@@ -84,3 +84,4 @@ Automated checks and architecture guardrails.
 | [0003](decisions/0003-display-strategy.md) | Tablet as primary display target; e-paper as secondary |
 | [0004](decisions/0004-network-auth.md) | No auth on ImageFrameServer (trusted local network) |
 | [0005](decisions/0005-timeline-sync-stream.md) | Timeline from a local copy synced with Immich's sync stream (proposed) |
+| [0006](decisions/0006-family-wall-auth.md) | Family Wall checks the caller's Immich token (supersedes 0004 for `/wall`) |

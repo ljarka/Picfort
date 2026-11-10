@@ -68,8 +68,7 @@ Response:
 
 **POST /wall**
 Create a new post. `multipart/form-data`:
-- `author_id` (required, string; the author's Immich user id, not verified, see ADR 0004)
-- `author` (required, string; display name)
+- No author fields: the author is the user of the request's Immich token (see Authentication)
 - `text` (optional, string)
 - `photo` (optional, file; JPEG or PNG; max 10 MB)
 
@@ -93,6 +92,12 @@ Serve the attached photo file. Returns 404 if not found.
   clients can lay out the photo before it loads
 - Filename: `<uuid4>.<original_ext>`
 
+### Authentication (ADR 0006)
+Every `/wall` request needs `Authorization: Bearer <Immich access token>`. The server asks
+`GET <IMMICH_URL>/api/users/me` who it is and caches the answer for 5 minutes (keyed by a hash
+of the token). No token or rejected → 401; Immich unreachable → 502. Only the author may
+delete or pin a post (403). The frame endpoints stay open (ADR 0004).
+
 ### Error handling
 All error responses use the server's existing shape, `{"status": "error", "message": "<message>"}`,
 with the appropriate HTTP status.
@@ -101,7 +106,8 @@ with the appropriate HTTP status.
 
 - [x] `GET /wall` returns empty list when no posts exist
 - [x] `POST /wall` with text only creates a post; `photo_url` is null
-- [x] `POST /wall` without `author_id` or `author` returns 400
+- [x] `/wall` without a valid Immich token returns 401; the author comes from the token
+- [x] Deleting or pinning someone else's post returns 403
 - [x] A photo post returns `photo_width`/`photo_height` of the upright image
 - [x] `POST /wall` with photo saves the file and returns a valid `photo_url`
 - [x] `GET /wall/photo/<filename>` serves the uploaded file

@@ -8,6 +8,7 @@ from helpers import FakeImmich
 
 import frame
 import wall
+from auth import Authenticator, AuthUnavailable, User
 from app import FrameController, create_app
 from PIL import Image
 from slideshow import Picker, SettingsStore, Slideshow
@@ -15,6 +16,21 @@ from wall import WallStore
 
 MAMA = "11111111-1111-1111-1111-111111111111"
 TATA = "22222222-2222-2222-2222-222222222222"
+USERS = {"mama-token": User(MAMA, "Mama"), "tata-token": User(TATA, "Tata")}
+
+
+class FakeImmichAuth:
+    """Stands in for Immich's /api/users/me."""
+
+    def __init__(self):
+        self.calls = []
+        self.down = False
+
+    def __call__(self, token):
+        self.calls.append(token)
+        if self.down:
+            raise AuthUnavailable("Could not reach Immich")
+        return USERS.get(token)
 
 
 def image_bytes(fmt="JPEG", size=(40, 30), orientation=None):
@@ -50,15 +66,19 @@ class WallApiTest(unittest.TestCase):
         controller = FrameController(cfg, min_interval=30, display=lambda img: None, prepare=lambda a: a)
         slideshow = Slideshow(SettingsStore(os.path.join(self.dir, "s.json")), Picker(FakeImmich()),
                               controller.try_show)
-        self.client = create_app(controller, slideshow, FakeImmich(), self.store).test_client()
+        self.immich = FakeImmichAuth()
+        self.client = create_app(controller, slideshow, FakeImmich(), self.store,
+                                 Authenticator(self.immich)).test_client()
+        self.client.environ_base["HTTP_AUTHORIZATION"] = "Bearer mama-token"
 
-    def post(self, author_id=MAMA, author="Mama", text=None, photo=None, filename="p.jpg"):
-        data = {"author_id": author_id, "author": author}
+    def post(self, token="mama-token", text=None, photo=None, filename="p.jpg", **form):
+        data = dict(form)
         if text is not None:
             data["text"] = text
         if photo is not None:
             data["photo"] = (BytesIO(photo), filename)
-        return self.client.post("/wall", data=data, content_type="multipart/form-data")
+        return self.client.post("/wall", data=data, content_type="multipart/form-data",
+                                headers={"Authorization": f"Bearer {token}"})
 
     def test_empty_wall(self):
         r = self.client.get("/wall")
@@ -78,7 +98,7 @@ class WallApiTest(unittest.TestCase):
 
     def test_photo_post_is_served(self):
         photo = image_bytes("PNG", (40, 30))
-        r = self.post(author_id=TATA, author="Tata", photo=photo, filename="whatever.jpg")
+        r = self.post(token="tata-token", photo=photo, filename="whatever.jpg")
         self.assertEqual(201, r.status_code, r.get_json())
         post = r.get_json()
         self.assertIsNone(post["text"])
@@ -86,6 +106,7 @@ class WallApiTest(unittest.TestCase):
         self.assertEqual((40, 30), (post["photo_width"], post["photo_height"]))
         served = self.client.get(post["photo_url"])
         self.assertEqual(200, served.status_code)
+        self.assertIn("private", served.headers["Cache-Control"])
         self.assertEqual("image/png", served.mimetype)
         self.assertEqual(photo, served.data)
         served.close()
@@ -101,8 +122,6 @@ class WallApiTest(unittest.TestCase):
 
     def test_invalid_posts(self):
         self.assertEqual(400, self.post(text="   ").status_code)  # neither text nor photo
-        self.assertEqual(400, self.post(author_id="", text="hi").status_code)
-        self.assertEqual(400, self.post(author=" ", text="hi").status_code)
         r = self.post(photo=b"not an image", filename="x.jpg")
         self.assertEqual(415, r.status_code)
         self.assertEqual("error", r.get_json()["status"])
@@ -162,6 +181,49 @@ class WallApiTest(unittest.TestCase):
         reopened = WallStore(self.store.db_path, self.photos)
         self.assertEqual([], reopened.list())
         self.assertEqual([], os.listdir(self.photos))
+
+    def test_author_comes_from_the_token(self):
+        post = self.post(token="tata-token", text="hi", author_id=MAMA, author="Mama").get_json()
+        self.assertEqual((TATA, "Tata"), (post["author_id"], post["author"]))
+
+    def test_wall_needs_a_valid_token(self):
+        photo_url = self.post(photo=image_bytes()).get_json()["photo_url"]
+        for header in (None, "Bearer", "Basic bWFtYTp4", "Bearer wrong-token"):
+            headers = {"Authorization": header} if header else {}
+            if header is None:
+                self.client.environ_base.pop("HTTP_AUTHORIZATION")
+            for method, path in (("get", "/wall"), ("post", "/wall"), ("delete", "/wall/1"),
+                                 ("put", "/wall/1/pin"), ("get", photo_url)):
+                r = getattr(self.client, method)(path, headers=headers)
+                self.assertEqual(401, r.status_code, (header, method, path))
+                self.assertEqual("Bearer", r.headers["WWW-Authenticate"])
+        self.assertEqual(1, len(self.store.list()))
+
+    def test_immich_down_is_502_not_401(self):
+        self.immich.down = True
+        self.assertEqual(502, self.client.get("/wall").status_code)
+
+    def test_token_lookups_are_cached(self):
+        for _ in range(3):
+            self.client.get("/wall")
+        self.assertEqual(["mama-token"], self.immich.calls)
+        self.assertEqual(401, self.client.get("/wall", headers={"Authorization": "Bearer x"}).status_code)
+        self.assertEqual(401, self.client.get("/wall", headers={"Authorization": "Bearer x"}).status_code)
+        self.assertEqual(["mama-token", "x", "x"], self.immich.calls)  # rejections aren't cached
+
+    def test_only_the_author_can_delete_or_pin(self):
+        post_id = self.post(text="Mama's").get_json()["id"]
+        tata = {"Authorization": "Bearer tata-token"}
+        self.assertEqual(403, self.client.delete(f"/wall/{post_id}", headers=tata).status_code)
+        self.assertEqual(403, self.client.put(f"/wall/{post_id}/pin", headers=tata).status_code)
+        self.assertEqual(200, self.client.get("/wall", headers=tata).status_code)  # everyone can read
+        self.assertFalse(self.store.get(post_id)["pinned"])
+        self.assertEqual(204, self.client.delete(f"/wall/{post_id}").status_code)
+
+    def test_frame_endpoints_need_no_token(self):
+        self.client.environ_base.pop("HTTP_AUTHORIZATION")
+        self.assertEqual(200, self.client.get("/status").status_code)
+        self.assertEqual([], self.immich.calls)
 
     def test_status_still_works(self):
         self.assertEqual("ok", self.client.get("/status").get_json()["status"])

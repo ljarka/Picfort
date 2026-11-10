@@ -2,7 +2,7 @@
 
 **Status:** ready  
 **Component:** Android app (Kotlin, Jetpack Compose)  
-**Depends on:** T-001 (posts with `author_id`)
+**Depends on:** T-001 (posts with `author_id`, Immich-token auth per ADR 0006)
 
 ## Summary
 
@@ -138,8 +138,8 @@ initials on a gray ring and are not selectable in the row.
 
 ### New post (FAB → bottom sheet)
 
-- The author is the logged-in user: send their Immich id and name. There is no author
-  field.
+- The author is the logged-in user; the server takes it from the token. There is no author
+  field, and the request sends none.
 - Text (multiline, optional), photo from the photo picker or camera, preview with remove.
 - Send is disabled while both text and photo are empty.
 - Compress the photo before upload: longest edge 1920 px, JPEG 85%.
@@ -155,6 +155,13 @@ initials on a gray ring and are not selectable in the row.
 - No posts → "No posts yet. Write the first one!" with the FAB visible.
 
 ## Data layer
+
+- Every `/wall` call (including photos loaded by Coil) sends `Authorization: Bearer <token>`
+  with the Immich access token from `AccessTokenStore`, added by an OkHttp interceptor on the
+  wall client only. Frame-control calls stay without it (ADR 0006).
+- `401` from the wall → a snackbar "Couldn't verify your Immich login with the frame". Don't
+  log out (the frame may use another Immich server). `502` → "The frame can't reach Immich".
+  `403` on delete/pin → roll back and show a snackbar.
 
 - `WallApi` (Retrofit, base URL = the frame address from `FrameSettingsStore`, same
   pattern as `FrameDashboardApi`): `GET /wall`, `POST /wall` (multipart), `DELETE /wall/{id}`,
@@ -185,5 +192,4 @@ initials on a gray ring and are not selectable in the row.
 - Push notifications for new posts.
 - Offline cache of posts in Room.
 - Editing posts.
-- Authentication on ImageFrameServer (ADR 0004: trusted local network; `author_id` is not
-  verified by the server).
+- Authentication for the frame-control endpoints (ADR 0004).
