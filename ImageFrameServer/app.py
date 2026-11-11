@@ -300,6 +300,9 @@ def create_app(controller: FrameController, slideshow: Slideshow, immich: Immich
         register_family(app, family)
     if events is not None:
         register_events(app, events)
+    if family is not None and events is not None:
+        family.events = events
+        events.family = family
     return app
 
 
@@ -479,7 +482,10 @@ def register_events(app: Flask, events: EventStore):
 
     @app.route("/events", methods=["POST"])
     def create_event():
-        return jsonify(events.create(g.user.id, json_body())), 201
+        body = json_body()
+        if "kind" in body or "member_id" in body:
+            return error("kind and member_id are managed by the server", 400)
+        return jsonify(events.create(g.user.id, body)), 201
 
     @app.route("/events/<int:event_id>", methods=["GET"])
     def get_event(event_id):

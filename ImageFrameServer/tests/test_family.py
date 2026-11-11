@@ -14,6 +14,7 @@ import family
 import frame
 from app import FrameController, create_app
 from auth import Authenticator
+from events import EventStore
 from family import FamilyStore
 from shopping import ShoppingStore
 from slideshow import Picker, SettingsStore, Slideshow
@@ -29,7 +30,10 @@ class FamilyApiTest(unittest.TestCase):
         self.photos = os.path.join(self.dir, "profile_photos")
         self.shopping_db = os.path.join(self.dir, "shopping.db")
         self.wall_db = os.path.join(self.dir, "wall.db")
-        self.store = FamilyStore(self.db, self.photos, clock=Clock())
+        self.events_db = os.path.join(self.dir, "events.db")
+        self.events = EventStore(self.events_db, clock=Clock())
+        self.store = FamilyStore(self.db, self.photos, clock=Clock(), events=self.events)
+        self.events.family = self.store
         self.shopping = ShoppingStore(self.shopping_db, clock=Clock())
         self.wall = WallStore(self.wall_db, os.path.join(self.dir, "wall_photos"), clock=Clock())
         cfg = frame.Config(immich_url="http://immich", immich_api_key="k",
@@ -39,7 +43,7 @@ class FamilyApiTest(unittest.TestCase):
                               controller.try_show)
         self.client = create_app(controller, slideshow, FakeImmich(), self.wall,
                                  Authenticator(FakeImmichAuth()), shopping=self.shopping,
-                                 family=self.store).test_client()
+                                 family=self.store, events=self.events).test_client()
         self.client.environ_base["HTTP_AUTHORIZATION"] = "Bearer mama-token"
 
     def as_tata(self):
@@ -290,6 +294,86 @@ class FamilyApiTest(unittest.TestCase):
         # The migrated database accepts the new features.
         migrated.add_member(MAMA, {"display_name": "Babcia"})
         self.assertEqual(3, len(migrated.profiles()))
+
+    def test_family_member_creates_birthday_event_and_updates_and_deletes(self):
+        # Adding a member with birth_date creates a birthday event
+        r = self.client.post("/family/members", json={"display_name": "Ola", "birth_date": "2015-06-12"})
+        self.assertEqual(201, r.status_code)
+        member_id = r.get_json()["user_id"]
+
+        events = self.client.get("/events?after=2026-01-01").get_json()
+        bday = [e for e in events if e.get("member_id") == member_id]
+        self.assertEqual(1, len(bday))
+        self.assertEqual("Ola", bday[0]["title"])
+        self.assertEqual("birthday", bday[0]["kind"])
+        self.assertEqual("2015-06-12", bday[0]["start_date"])
+        self.assertEqual("2026-06-12", bday[0]["occurrence_start"])
+        self.assertEqual("yearly", bday[0]["repeat"])
+        self.assertEqual(11, bday[0]["turns"])
+
+        # Renaming the member updates the event's title
+        self.client.patch(f"/family/{member_id}", json={"display_name": "Aleksandra"})
+        events = self.client.get("/events?after=2026-01-01").get_json()
+        bday = [e for e in events if e.get("member_id") == member_id]
+        self.assertEqual("Aleksandra", bday[0]["title"])
+
+        # Changing the birth date updates the start_date and turns
+        self.client.patch(f"/family/{member_id}", json={"birth_date": "2014-06-12"})
+        events = self.client.get("/events?after=2026-01-01").get_json()
+        bday = [e for e in events if e.get("member_id") == member_id]
+        self.assertEqual("2014-06-12", bday[0]["start_date"])
+        self.assertEqual(12, bday[0]["turns"])
+
+        # Clearing the birth date deletes the birthday event
+        self.client.patch(f"/family/{member_id}", json={"birth_date": None})
+        events = self.client.get("/events?after=2026-01-01").get_json()
+        self.assertEqual([], [e for e in events if e.get("member_id") == member_id])
+
+    def test_family_member_birthday_without_year(self):
+        r = self.client.post("/family/members", json={
+            "display_name": "Babcia",
+            "birth_date": "--12-05",
+            "today": "2026-11-11",
+        })
+        self.assertEqual(201, r.status_code)
+        member_id = r.get_json()["user_id"]
+
+        events = self.client.get("/events?after=2026-01-01").get_json()
+        bday = [e for e in events if e.get("member_id") == member_id]
+        self.assertEqual(1, len(bday))
+        self.assertEqual("2026-12-05", bday[0]["start_date"])
+        self.assertEqual("2026-12-05", bday[0]["occurrence_start"])
+        self.assertIsNone(bday[0]["turns"])
+
+    def test_delete_manual_member_removes_birthday_event(self):
+        r = self.client.post("/family/members", json={"display_name": "Dziadek", "birth_date": "1950-03-10"})
+        self.assertEqual(201, r.status_code)
+        member_id = r.get_json()["user_id"]
+
+        events = self.client.get("/events?after=2026-01-01").get_json()
+        self.assertEqual(1, len([e for e in events if e.get("member_id") == member_id]))
+
+        del_r = self.client.delete(f"/family/{member_id}")
+        self.assertEqual(204, del_r.status_code)
+
+        events_after = self.client.get("/events?after=2026-01-01").get_json()
+        self.assertEqual([], [e for e in events_after if e.get("member_id") == member_id])
+
+    def test_immich_user_birthday_cleared_when_profile_empty(self):
+        self.client.patch(f"/family/{MAMA}", json={"birth_date": "1980-05-15"})
+        events = self.client.get("/events?after=2026-01-01").get_json()
+        bday = [e for e in events if e.get("member_id") == MAMA]
+        self.assertEqual(1, len(bday))
+        self.assertEqual("Birthday", bday[0]["title"])
+
+        self.client.patch(f"/family/{MAMA}", json={"display_name": "Mama"})
+        events = self.client.get("/events?after=2026-01-01").get_json()
+        self.assertEqual("Mama", [e for e in events if e.get("member_id") == MAMA][0]["title"])
+
+        # When clearing all profile fields, member row is deleted and birthday event is removed
+        self.client.patch(f"/family/{MAMA}", json={"birth_date": None, "display_name": None})
+        events_after = self.client.get("/events?after=2026-01-01").get_json()
+        self.assertEqual([], [e for e in events_after if e.get("member_id") == MAMA])
 
 
 if __name__ == "__main__":

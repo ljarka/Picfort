@@ -1,6 +1,6 @@
 # T-035 — Recurring events: Picfort server
 
-**Status:** ready  
+**Status:** done  
 **Component:** ImageFrameServer  
 **Depends on:** T-022 (`events.db`), [ADR 0010](../decisions/0010-family-members-birthdays-recurring-events.md)
 

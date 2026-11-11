@@ -437,7 +437,7 @@ class EventsApiTest(unittest.TestCase):
         with closing(sqlite3.connect(old_db + ".v1.bak")) as conn:
             self.assertEqual(1, conn.execute("PRAGMA user_version").fetchone()[0])
         with closing(sqlite3.connect(old_db)) as conn:
-            self.assertEqual(2, conn.execute("PRAGMA user_version").fetchone()[0])
+            self.assertEqual(3, conn.execute("PRAGMA user_version").fetchone()[0])
         created = store.create(MAMA, {"title": "Weekly", "start_date": "2026-11-12", "repeat": "weekly"})
         self.assertEqual("weekly", created["repeat"])
         self.assertEqual(2, len(store.upcoming("2026-11-11")))
@@ -451,6 +451,79 @@ class EventsApiTest(unittest.TestCase):
             if found is not None:
                 self.assertGreaterEqual(found[1], on)
                 self.assertLessEqual(found[0], date(2026, 12, 15))
+
+    def test_post_events_rejects_kind_or_member_id(self):
+        r1 = self.client.post("/events", json={"title": "Party", "start_date": "2026-11-20", "kind": "birthday"})
+        self.assertEqual(400, r1.status_code)
+        r2 = self.client.post("/events", json={"title": "Party", "start_date": "2026-11-20", "member_id": MAMA})
+        self.assertEqual(400, r2.status_code)
+
+    def test_birthday_event_patch_and_delete_rules(self):
+        bday = self.store.sync_birthday(MAMA, "Mama", "2015-06-12", MAMA)
+        self.assertEqual("birthday", bday["kind"])
+        self.assertEqual(MAMA, bday["member_id"])
+        self.assertEqual(11, self.store.upcoming("2026-01-01")[0]["turns"])
+
+        ev_id = bday["id"]
+        # Forbidden fields return 409
+        for key, val in [("title", "New"), ("start_date", "2026-01-01"), ("end_date", "2026-01-02"),
+                         ("repeat", "weekly"), ("repeat_until", "2030-01-01")]:
+            r = self.client.patch(f"/events/{ev_id}", json={key: val})
+            self.assertEqual(409, r.status_code, f"{key} should be forbidden")
+            self.assertIn("Family settings", r.get_json()["message"])
+
+        # Delete returns 409
+        r = self.client.delete(f"/events/{ev_id}")
+        self.assertEqual(409, r.status_code)
+
+        # Allowed fields: note, album_id, location, start_time
+        r = self.client.patch(f"/events/{ev_id}", json={
+            "album_id": ALBUM_ID,
+            "note": "Bring cake",
+            "location": "Garden",
+            "start_time": "15:00",
+        })
+        self.assertEqual(200, r.status_code)
+        updated = r.get_json()
+        self.assertEqual(ALBUM_ID, updated["album_id"])
+        self.assertEqual("Bring cake", updated["note"])
+        self.assertEqual("Garden", updated["location"])
+        self.assertEqual("15:00", updated["start_time"])
+        self.assertEqual("Mama", updated["title"])
+
+    def test_v2_database_migration_to_v3_and_unique_index(self):
+        v2_db = os.path.join(self.dir, "v2-events.db")
+        with closing(sqlite3.connect(v2_db)) as conn, conn:
+            conn.executescript(
+                "CREATE TABLE events (id INTEGER PRIMARY KEY AUTOINCREMENT, title TEXT NOT NULL,"
+                " start_date TEXT NOT NULL, end_date TEXT, start_time TEXT, location TEXT, note TEXT,"
+                " album_id TEXT, repeat TEXT, repeat_until TEXT, created_by TEXT NOT NULL, created TEXT NOT NULL, updated TEXT NOT NULL);"
+                "CREATE INDEX events_start ON events(start_date);"
+                f"INSERT INTO events (title, start_date, created_by, created, updated)"
+                f" VALUES ('Old', '2026-11-10', '{MAMA}', '2026-11-01T10:00:00Z', '2026-11-01T10:00:00Z');"
+                "PRAGMA user_version = 2;"
+            )
+        store = EventStore(v2_db)
+        self.assertTrue(os.path.exists(v2_db + ".v2.bak"))
+        with closing(sqlite3.connect(v2_db)) as conn:
+            self.assertEqual(3, conn.execute("PRAGMA user_version").fetchone()[0])
+            # Check unique index constraint on member_id
+            conn.execute("INSERT INTO events (title, start_date, kind, member_id, created_by, created, updated)"
+                         f" VALUES ('B1', '2026-11-10', 'birthday', '{MAMA}', '{MAMA}', 'now', 'now')")
+            with self.assertRaises(sqlite3.IntegrityError):
+                conn.execute("INSERT INTO events (title, start_date, kind, member_id, created_by, created, updated)"
+                             f" VALUES ('B2', '2026-11-10', 'birthday', '{MAMA}', '{MAMA}', 'now', 'now')")
+
+    def test_feb_29_birthday_turns(self):
+        self.store.sync_birthday(MAMA, "Leap Baby", "2000-02-29", MAMA)
+        # Non-leap year 2025: clamped to Feb 28, turns 25
+        up_2025 = self.store.upcoming("2025-01-01")
+        self.assertEqual("2025-02-28", up_2025[0]["occurrence_start"])
+        self.assertEqual(25, up_2025[0]["turns"])
+        # Leap year 2028: Feb 29, turns 28
+        up_2028 = self.store.upcoming("2028-01-01")
+        self.assertEqual("2028-02-29", up_2028[0]["occurrence_start"])
+        self.assertEqual(28, up_2028[0]["turns"])
 
 
 if __name__ == "__main__":

@@ -23,21 +23,24 @@ REPEATS = ("weekly", "monthly", "yearly")
 
 SCHEMA = """
 CREATE TABLE events (
-  id          INTEGER PRIMARY KEY AUTOINCREMENT,
-  title       TEXT NOT NULL,
-  start_date  TEXT NOT NULL,
-  end_date    TEXT,
-  start_time  TEXT,
-  location    TEXT,
-  note        TEXT,
-  album_id    TEXT,
-  repeat      TEXT,
+  id           INTEGER PRIMARY KEY AUTOINCREMENT,
+  title        TEXT NOT NULL,
+  start_date   TEXT NOT NULL,
+  end_date     TEXT,
+  start_time   TEXT,
+  location     TEXT,
+  note         TEXT,
+  album_id     TEXT,
+  repeat       TEXT,
   repeat_until TEXT,
-  created_by  TEXT NOT NULL,
-  created     TEXT NOT NULL,
-  updated     TEXT NOT NULL
+  kind         TEXT,
+  member_id    TEXT,
+  created_by   TEXT NOT NULL,
+  created      TEXT NOT NULL,
+  updated      TEXT NOT NULL
 );
 CREATE INDEX events_start ON events(start_date);
+CREATE UNIQUE INDEX events_member ON events(member_id) WHERE member_id IS NOT NULL;
 """
 
 
@@ -193,7 +196,7 @@ def _validate_event(data: dict) -> dict:
 
 
 class EventStore(SqliteStore):
-    SCHEMA_VERSION = 2
+    SCHEMA_VERSION = 3
     SCHEMA = SCHEMA
     NAME = "Events"
     MIGRATIONS = {
@@ -201,7 +204,17 @@ class EventStore(SqliteStore):
             "ALTER TABLE events ADD COLUMN repeat TEXT",
             "ALTER TABLE events ADD COLUMN repeat_until TEXT",
         ],
+        2: [
+            "ALTER TABLE events ADD COLUMN kind TEXT",
+            "ALTER TABLE events ADD COLUMN member_id TEXT",
+            "CREATE UNIQUE INDEX events_member ON events(member_id) WHERE member_id IS NOT NULL",
+        ],
     }
+
+    def __init__(self, db_path: str, clock=utc_now, family=None):
+        self.family = family
+        self._birth_dates = {}
+        super().__init__(db_path, clock=clock)
 
     def upcoming(self, after: str) -> list:
         """One entry per event: the occurrence that is ongoing or next on `after`; ended series are left out."""
@@ -250,13 +263,15 @@ class EventStore(SqliteStore):
         return self._json(row, occurrence)
 
     def create(self, user_id: str, body: dict) -> dict:
+        if "kind" in body or "member_id" in body:
+            raise StoreError("kind and member_id cannot be set directly", 400)
         fields = _validate_event(body)
         now = self.clock()
         with closing(self.connect()) as conn, conn:
             cur = conn.execute(
                 "INSERT INTO events (title, start_date, end_date, start_time, location, note,"
-                " album_id, repeat, repeat_until, created_by, created, updated)"
-                " VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                " album_id, repeat, repeat_until, kind, member_id, created_by, created, updated)"
+                " VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, NULL, NULL, ?, ?, ?)",
                 (
                     fields["title"],
                     fields["start_date"],
@@ -277,6 +292,10 @@ class EventStore(SqliteStore):
     def update(self, event_id: int, body: dict) -> dict:
         with closing(self.connect()) as conn, conn:
             row = self._row(conn, event_id)
+            if row["kind"] == "birthday":
+                forbidden = [f for f in ("start_date", "end_date", "repeat", "repeat_until", "title") if f in body]
+                if forbidden:
+                    raise StoreError("Edit the birthday in Family settings", 409)
             if not any(f in body for f in FIELDS):
                 return self._json(row)
             merged = {f: body[f] if f in body else row[f] for f in FIELDS}
@@ -307,9 +326,50 @@ class EventStore(SqliteStore):
     def delete(self, event_id: int, user_id: str):
         with closing(self.connect()) as conn, conn:
             row = self._row(conn, event_id)
+            if row["kind"] == "birthday":
+                raise StoreError("Edit the birthday in Family settings", 409)
             if row["created_by"] != user_id:
                 raise StoreError("Only the creator can delete this event", 403)
             conn.execute("DELETE FROM events WHERE id = ?", (event_id,))
+
+    def sync_birthday(self, member_id: str, display_name: str | None, birth_date: str | None,
+                      actor_id: str, today: str = None) -> dict | None:
+        if birth_date is None:
+            self.delete_birthday(member_id)
+            return None
+        self._birth_dates[member_id] = birth_date
+        title = (display_name or "").strip() or "Birthday"
+        if birth_date.startswith("--"):
+            ref = date.fromisoformat(today) if today else date.fromisoformat(self.clock()[:10])
+            month = int(birth_date[2:4])
+            day = int(birth_date[5:7])
+            max_day = calendar.monthrange(ref.year, month)[1]
+            start_date = f"{ref.year:04d}-{month:02d}-{min(day, max_day):02d}"
+        else:
+            start_date = birth_date
+
+        now = self.clock()
+        with closing(self.connect()) as conn, conn:
+            row = conn.execute("SELECT * FROM events WHERE member_id = ?", (member_id,)).fetchone()
+            if row is None:
+                cur = conn.execute(
+                    "INSERT INTO events (title, start_date, end_date, start_time, location, note,"
+                    " album_id, repeat, repeat_until, kind, member_id, created_by, created, updated)"
+                    " VALUES (?, ?, NULL, NULL, NULL, NULL, NULL, 'yearly', NULL, 'birthday', ?, ?, ?, ?)",
+                    (title, start_date, member_id, actor_id, now, now),
+                )
+                return self._json(self._row(conn, cur.lastrowid))
+            else:
+                conn.execute(
+                    "UPDATE events SET title = ?, start_date = ?, updated = ? WHERE id = ?",
+                    (title, start_date, now, row["id"]),
+                )
+                return self._json(self._row(conn, row["id"]))
+
+    def delete_birthday(self, member_id: str):
+        self._birth_dates.pop(member_id, None)
+        with closing(self.connect()) as conn, conn:
+            conn.execute("DELETE FROM events WHERE member_id = ?", (member_id,))
 
     @staticmethod
     def _row(conn, event_id: int):
@@ -318,8 +378,23 @@ class EventStore(SqliteStore):
             raise StoreError("Event not found", 404)
         return row
 
-    @staticmethod
-    def _json(row, occurrence=None) -> dict:
+    def _turns(self, row, occ_start: date):
+        if row["kind"] != "birthday" or not row["member_id"]:
+            return None
+        birth_date = None
+        if self.family is not None:
+            birth_date = self.family.get_birth_date(row["member_id"])
+        if birth_date is None:
+            birth_date = self._birth_dates.get(row["member_id"])
+        if birth_date and not birth_date.startswith("--"):
+            try:
+                birth_year = int(birth_date[:4])
+                return occ_start.year - birth_year
+            except ValueError:
+                return None
+        return None
+
+    def _json(self, row, occurrence=None) -> dict:
         """`occurrence` is (start, end) as dates; default is the first occurrence (= start_date / end_date)."""
         if occurrence is None:
             occurrence = _series(row)[0], _series(row)[0] + _series(row)[1]
@@ -335,8 +410,11 @@ class EventStore(SqliteStore):
             "album_id": row["album_id"],
             "repeat": row["repeat"],
             "repeat_until": row["repeat_until"],
+            "kind": row["kind"],
+            "member_id": row["member_id"],
             "occurrence_start": occ_start.isoformat(),
             "occurrence_end": occ_end.isoformat() if occ_end > occ_start else None,
+            "turns": self._turns(row, occ_start),
             "created_by": row["created_by"],
             "created": row["created"],
             "updated": row["updated"],
