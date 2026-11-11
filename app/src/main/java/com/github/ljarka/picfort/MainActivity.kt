@@ -45,9 +45,12 @@ import com.github.ljarka.picfort.ui.events.EventFormScreen
 import com.github.ljarka.picfort.ui.events.EventsListScreen
 import com.github.ljarka.picfort.ui.family.FamilySettingsScreen
 import com.github.ljarka.picfort.ui.frame.FrameScreen
+import com.github.ljarka.picfort.ui.frame.FrameSettingsDialog
 import com.github.ljarka.picfort.ui.frame.PicfortServerSetupScreen
 import com.github.ljarka.picfort.ui.wall.FamilyWallScreen
 import com.github.ljarka.picfort.ui.settings.SettingsScreen
+import com.github.ljarka.picfort.ui.timeline.AlbumRoute
+import com.github.ljarka.picfort.ui.timeline.ImageDetailsRoute
 import com.github.ljarka.picfort.ui.timeline.TimelineScreen
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.serialization.Serializable
@@ -70,19 +73,7 @@ sealed interface Screen {
     object Frame : Screen
 
     @Serializable
-    data class ImageDetails(
-        val assetId: String,
-        val assetType: AssetType,
-        val imageIndex: Int,
-        /** CollectionsRepository list key for albums/search; null = timeline. */
-        val source: String? = null,
-    ) : Screen
-
-    @Serializable
     object Albums : Screen
-
-    @Serializable
-    data class Album(val id: String, val name: String) : Screen
 
     @Serializable
     object Search : Screen
@@ -291,7 +282,7 @@ class MainActivity : ComponentActivity() {
                                             animatedVisibilityScope = this@composable,
                                             onImageClick = { assetId, assetType, imageIndex ->
                                                 navController.navigate(
-                                                    Screen.ImageDetails(assetId, assetType, imageIndex)
+                                                    ImageDetailsRoute(assetId, assetType, imageIndex)
                                                 ) {
                                                     popUpTo(Screen.Timeline)
                                                 }
@@ -304,15 +295,15 @@ class MainActivity : ComponentActivity() {
                                     }
                                 }
                                 val openFromCollection: (GridAsset, Int, String) -> Unit = { asset, index, source ->
-                                    navController.navigate(Screen.ImageDetails(asset.id, AssetType.REMOTE, index, source))
+                                    navController.navigate(ImageDetailsRoute(asset.id, AssetType.REMOTE, index, source))
                                 }
                                 composable<Screen.Albums> {
                                     AlbumsScreen(
                                         onBack = { navController.popBackStack() },
-                                        onAlbumClick = { id, name -> navController.navigate(Screen.Album(id, name)) },
+                                        onAlbumClick = { id, name -> navController.navigate(AlbumRoute(id, name)) },
                                     )
                                 }
-                                composable<Screen.Album> {
+                                composable<AlbumRoute> {
                                     AlbumScreen(onBack = { navController.popBackStack() }, onAssetClick = openFromCollection)
                                 }
                                 composable<Screen.Search> {
@@ -350,8 +341,8 @@ class MainActivity : ComponentActivity() {
                             composable<Screen.Frame> {
                                 FrameScreen(onBack = { navController.popBackStack() })
                             }
-                            composable<Screen.ImageDetails> { backStackEntry ->
-                                val imageDetails = backStackEntry.toRoute<Screen.ImageDetails>()
+                            composable<ImageDetailsRoute> { backStackEntry ->
+                                val imageDetails = backStackEntry.toRoute<ImageDetailsRoute>()
                                 val assetId = imageDetails.assetId
                                 val assetType = imageDetails.assetType
                                 val imageIndex = imageDetails.imageIndex
@@ -368,6 +359,7 @@ class MainActivity : ComponentActivity() {
                                     assetId = requireNotNull(assetId),
                                     assetType = requireNotNull(assetType),
                                     imageIndex = requireNotNull(imageIndex),
+                                    frameSettingsDialog = { onDismiss -> FrameSettingsDialog(onDismiss = onDismiss) },
                                 )
                             }
                         }

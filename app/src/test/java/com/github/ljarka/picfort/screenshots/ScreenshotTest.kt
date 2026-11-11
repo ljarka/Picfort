@@ -23,21 +23,8 @@ import androidx.compose.ui.unit.dp
 import app.cash.paparazzi.DeviceConfig
 import app.cash.paparazzi.Paparazzi
 import com.android.resources.NightMode
-import com.github.ljarka.picfort.assets.AssetInfo
-import com.github.ljarka.picfort.assets.ExifInfo
-import com.github.ljarka.picfort.assets.PersonInfo
-import com.github.ljarka.picfort.assets.toDetails
 import com.github.ljarka.picfort.backup.BackupStatus
-import com.github.ljarka.picfort.collections.AlbumContent
-import com.github.ljarka.picfort.collections.AlbumDto
-import com.github.ljarka.picfort.collections.AlbumsContent
-import com.github.ljarka.picfort.collections.GridAsset
-import com.github.ljarka.picfort.collections.LoadState
-import com.github.ljarka.picfort.collections.SearchContent
-import com.github.ljarka.picfort.collections.SearchUi
 import java.time.Instant
-import com.github.ljarka.picfort.ui.image.AssetDetailsList
-import com.github.ljarka.picfort.ui.image.DetailsState
 import com.github.ljarka.picfort.ui.settings.BackupSettingsUi
 import com.github.ljarka.picfort.ui.settings.SettingsContent
 import com.github.ljarka.picfort.ui.theme.PicfortTheme
@@ -70,51 +57,7 @@ class ScreenshotTest {
         }
     }
 
-    private val photos = (1..30).map { i ->
-        GridAsset(id = "asset-$i", isVideo = i % 7 == 3, durationMs = if (i % 7 == 3) 15_000L * i else null)
-    }
 
-    @Test
-    fun album() = snap {
-        AlbumContent(name = "Summer in Kraków", assets = LoadState.Loaded(photos), thumbnail = { it.id })
-    }
-
-    @Test
-    fun albums() = snap {
-        val albums = listOf(
-            "Summer in Kraków" to 214, "Family" to 1_032, "Hiking" to 87,
-            "Frame favourites" to 46, "Winter 2024" to 158, "Garden" to 23,
-        ).mapIndexed { i, (name, count) -> AlbumDto("album-$i", name, "cover-$i", count) }
-        AlbumsContent(albums = LoadState.Loaded(albums), thumbnail = { it.albumThumbnailAssetId })
-    }
-
-    @Test
-    fun search() = snap {
-        SearchContent(
-            state = SearchUi(query = "sunset over the hills", results = photos.drop(4), searched = true),
-            thumbnail = { it.id },
-        )
-    }
-
-    @Test
-    fun details() = snap {
-        val details = AssetInfo(
-            id = "x",
-            originalFileName = "IMG_2041.HEIC",
-            exifInfo = ExifInfo(
-                make = "Apple", model = "iPhone 15 Pro", lensModel = "Main Camera — 24 mm",
-                fNumber = 1.8, exposureTime = "1/250", focalLength = 6.86, iso = 64.0,
-                exifImageWidth = 4032.0, exifImageHeight = 3024.0, fileSizeInByte = 2_870_000,
-                dateTimeOriginal = "2025-07-14T18:42:00.000Z", timeZone = "Europe/Warsaw",
-                city = "Kraków", state = "Lesser Poland", country = "Poland",
-                latitude = 50.0614, longitude = 19.9366,
-            ),
-            people = listOf(PersonInfo("Ala"), PersonInfo("Tomek")),
-        ).toDetails(ZoneId.of("Europe/Warsaw"))
-        Surface(color = MaterialTheme.colorScheme.surfaceContainerLow, modifier = Modifier.fillMaxSize()) {
-            Column(Modifier.padding(top = 24.dp)) { AssetDetailsList(DetailsState.Loaded(details)) }
-        }
-    }
 
     private val backup = BackupSettingsUi(
         enabled = true, wifiOnly = true, chargingOnly = false, backedUp = 2_418, onPhone = 2_546,
