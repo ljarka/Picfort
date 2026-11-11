@@ -24,11 +24,15 @@ Picfort is an Android client for a self-hosted [Immich](https://immich.app) phot
 |---|---|---|---|
 | <img src="app/src/test/snapshots/images/com.github.ljarka.picfort.screenshots_ScreenshotTest_wall_filtered.png" width="200" alt="ScreenshotTest_wall_filtered"> | <img src="app/src/test/snapshots/images/com.github.ljarka.picfort.screenshots_ScreenshotTest_picfort_server_setup.png" width="200" alt="ScreenshotTest_picfort_server_setup"> | <img src="app/src/test/snapshots/images/com.github.ljarka.picfort.screenshots_ScreenshotTest_shopping_lists.png" width="200" alt="ScreenshotTest_shopping_lists"> | <img src="app/src/test/snapshots/images/com.github.ljarka.picfort.screenshots_ScreenshotTest_school_coming_soon_dark.png" width="200" alt="ScreenshotTest_school_coming_soon_dark"> |
 
+| Events | Event | Add event | Events, dark |
+|---|---|---|---|
+| <img src="app/src/test/snapshots/images/com.github.ljarka.picfort.screenshots_ScreenshotTest_events_upcoming.png" width="200" alt="ScreenshotTest_events_upcoming"> | <img src="app/src/test/snapshots/images/com.github.ljarka.picfort.screenshots_ScreenshotTest_event_detail.png" width="200" alt="ScreenshotTest_event_detail"> | <img src="app/src/test/snapshots/images/com.github.ljarka.picfort.screenshots_ScreenshotTest_event_form.png" width="200" alt="ScreenshotTest_event_form"> | <img src="app/src/test/snapshots/images/com.github.ljarka.picfort.screenshots_ScreenshotTest_events_upcoming_dark.png" width="200" alt="ScreenshotTest_events_upcoming_dark"> |
+
 These are rendered from the app's UI code with sample photos by the [screenshot tests](#screenshot-tests). They are regenerated whenever the UI changes, so they always match the code.
 
 ## Features
 
-- **Family hub.** The app opens on the Family Wall. A bottom bar switches between Wall, Shopping, Events, School and Photos; each tab keeps its place. Events and School are coming (Phase 7 in [docs/STATUS.md](docs/STATUS.md)).
+- **Family hub.** The app opens on the Family Wall. A bottom bar switches between Wall, Shopping, Events, School and Photos; each tab keeps its place. School is coming (Phase 7 in [docs/STATUS.md](docs/STATUS.md)).
 - **Shopping lists.** Shared lists for the family, like Google Keep: check items off, checked ones fold away with the avatar of who checked them, add item after item without closing the keyboard, delete with Undo, archive. An open list updates every 10 seconds. Without a connection (in the shop) the last loaded lists stay readable. Lists live on the Picfort server.
 - **One timeline.** Photos from Immich and from the phone's MediaStore (the last 24 months) are merged and grouped by month, newest first. A cloud icon shows where each image comes from.
 - **Aspect-ratio grid.** A 4-column grid where wide photos take more columns. The number of rows per month is cached so the scrollbar is right before the images load.
@@ -42,6 +46,7 @@ These are rendered from the app's UI code with sample photos by the [screenshot 
 - **Albums.** Browse your Immich albums, and add selected items to an existing or new album.
 - **Search.** Immich smart search ("dog on the beach"), with results that page in as you scroll.
 - **Family Wall.** A shared board for the family: text posts as cards, photo posts in a grid, and a row of family members (the Immich users of your server) to filter by person. Write, pin and delete your own posts. Posts live on the Picfort server, so every phone and the frame see the same wall (ADR 0002, 0006).
+- **Events.** Trips, holidays and birthdays for the whole family, nearest first: ongoing trips under "Now", then by month, with "tomorrow" or "in 12 days"; past events in a second tab. Anyone can add or edit an event (dates, time, place, note); only the person who added it can delete it. Tap the place to open it in maps. The list updates every minute while open. Events live on the Picfort server.
 - **Family settings.** Under **Settings → Family** (or by long-pressing an avatar on the wall), anyone in the family can set the display name shown for each Immich user, pick their avatar from the faces Immich recognised, or hide test accounts. Names and avatars are used everywhere in the app (Wall, Shopping) and cached on the phone for offline starts.
 - **Settings.** Backup, the Picfort server address, family members, and your account. Open them with ⚙ on any tab.
 - **Send to frame.** Puts the photo you're viewing on an e-paper picture frame (see below).
@@ -175,7 +180,7 @@ docker compose up -d
 
 Then in the app: **Settings → Picfort server**, enter `<this machine's IP>:5000` and tap **Test**.
 
-- The Family Wall and its photos, the shopping lists, the family profiles and the slideshow settings are stored in `./data` (`DATA_LOCATION` in `.env`). Back up that folder.
+- The Family Wall and its photos, the shopping lists, the family profiles, the events and the slideshow settings are stored in `./data` (`DATA_LOCATION` in `.env`). Back up that folder.
 - Update: `docker compose pull && docker compose up -d`. Pin a version with `PICFORT_VERSION=v0.3.0` in `.env`.
 - Logs: `docker compose logs -f`.
 - The image is built for `amd64` and `arm64` (64-bit Raspberry Pi OS). Any variable from the table below can go in `.env`.
@@ -269,6 +274,7 @@ The frame uses Waveshare's 13.3" E Ink Spectra 6 panel (1200×1600, 6 colours, a
 | `SHOPPING_DB_PATH` | `shopping.db` | Shopping lists (SQLite) |
 | `FAMILY_DB_PATH` | `family.db` | Family member profiles (SQLite) |
 | `PROFILE_PHOTOS_PATH` | `profile_photos` | Directory for family profile photos |
+| `EVENTS_DB_PATH` | `events.db` | Family events (SQLite) |
 | `FRAME_PREVIEW_PATH` | `last_frame.png` | Where the last rendered frame is saved (shown at `/current`) |
 | `PORT` | `5000` | HTTP port |
 | `PICFORT_API_KEY` | (empty) | When set, every request needs `X-Picfort-Key: <key>` (enter it in the app next to the address). Required before exposing the server outside your network (ADR 0007). |
@@ -338,6 +344,21 @@ Shared display name, profile photo and hidden flag for each Immich user; anyone 
 | `GET /family/photo/<file>` | The profile photo (`photo_url` in the profile), `Cache-Control: private`. |
 
 A profile looks like `{"user_id","display_name","photo_url","hidden","updated_by","updated"}` (unset fields are `null`). Profiles are stored in `family.db` and photos in `profile_photos/` (ADR 0008).
+
+#### Events
+
+Family events (trips, holidays, birthdays) with plain calendar dates and an optional Immich album; anyone in the family can add and edit, only the creator deletes (T-022, ADR 0008). Auth as `/wall`.
+
+| Endpoint | Result |
+|---|---|
+| `GET /events?after=2026-11-11` | Upcoming and ongoing events (`coalesce(end_date, start_date) >= after`), ordered by `start_date`, then `start_time` (untimed first), then `id`. |
+| `GET /events?before=2026-11-11&limit=50&offset=0` | Past events (`coalesce(end_date, start_date) < before`), latest end first (`limit` 1–100, default 50). |
+| `POST /events` | `{"title", "start_date", "end_date"?, "start_time"?, "location"?, "note"?, "album_id"?}` → `201` with the event. |
+| `GET /events/<id>` | One event. |
+| `PATCH /events/<id>` | Any of those fields (`null` clears an optional one). Anyone. Returns the event. |
+| `DELETE /events/<id>` | `204`. The creator only (`403`). Does not touch the Immich album. |
+
+An event looks like `{"id","title","start_date","end_date","start_time","location","note","album_id","created_by","created","updated"}` (unset fields are `null`; an `end_date` equal to `start_date` is stored as `null`). Events are stored in `events.db` (ADR 0008); a schema version change keeps `events.db.v<old>.bak`.
 
 Run the tests with `cd ImageFrameServer && python3 -m unittest discover -s tests -t tests`.
 
