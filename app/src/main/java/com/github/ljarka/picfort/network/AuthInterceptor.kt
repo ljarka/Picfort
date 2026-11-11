@@ -52,12 +52,15 @@ class AuthInterceptor @Inject constructor(
     }
 }
 
+/** Family features on the Picfort server; the same list as the server's AUTH_PREFIXES (T-018). */
+val PICFORT_FAMILY_PATHS = listOf("wall", "lists", "receipts", "spending", "events", "school", "family")
+
 /**
- * Adds the Immich token to Family Wall requests on the Picfort server (`<server>/wall…`,
- * ADR 0006). Never to the frame-control endpoints. A 401 from the Picfort server does not log
+ * Adds the Immich token to family-feature requests on the Picfort server (`<server>/wall…`,
+ * `/lists…`, …; ADR 0006, 0008). Never to the frame-control endpoints. A 401 from the Picfort server does not log
  * out: it may simply use another Immich server.
  */
-class WallAuthInterceptor @Inject constructor(
+class PicfortAuthInterceptor @Inject constructor(
     private val tokenProvider: Provider<AccessTokenStore>,
     private val frameSettings: Provider<FrameSettingsStore>,
 ) : Interceptor {
@@ -65,9 +68,9 @@ class WallAuthInterceptor @Inject constructor(
     override fun intercept(chain: Interceptor.Chain): Response {
         val request = chain.request()
         val base = normalizeFrameUrl(frameSettings.get().frameUrl)
-        val wall = base?.newBuilder()?.addPathSegment("wall")?.build()
         val token = tokenProvider.get().accessToken
-        if (wall == null || token.isEmpty() || !request.url.isUnder(wall)) {
+        val family = base != null && PICFORT_FAMILY_PATHS.any { request.url.isUnder(base.newBuilder().addPathSegment(it).build()) }
+        if (!family || token.isEmpty()) {
             return chain.proceed(request)
         }
         return chain.proceed(request.newBuilder().header("Authorization", "Bearer $token").build())

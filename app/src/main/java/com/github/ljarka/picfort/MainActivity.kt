@@ -26,6 +26,8 @@ import androidx.navigation.compose.navigation
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.toRoute
 import com.github.ljarka.picfort.ui.shell.ComingSoonScreen
+import com.github.ljarka.picfort.ui.shopping.ShoppingListScreen
+import com.github.ljarka.picfort.ui.shopping.ShoppingListsScreen
 import com.github.ljarka.picfort.ui.shell.Tab
 import com.github.ljarka.picfort.ui.shell.TabBar
 import com.github.ljarka.picfort.ui.shell.TabRoot
@@ -88,6 +90,14 @@ sealed interface Screen {
     /** Placeholders until T-019, T-023 and T-029. */
     @Serializable
     object Shopping : Screen
+
+    /** `archived` is read by ShoppingListsViewModel. */
+    @Serializable
+    data class ArchivedShopping(val archived: Boolean = true) : Screen
+
+    /** `id` and `focusAdd` are read by ShoppingListViewModel / the screen. */
+    @Serializable
+    data class ShoppingList(val id: Long, val focusAdd: Boolean = false) : Screen
 
     @Serializable
     object Events : Screen
@@ -202,13 +212,24 @@ class MainActivity : ComponentActivity() {
                             navigation<TabGraph.Shopping>(startDestination = Screen.Shopping) {
                                 composable<Screen.Shopping> {
                                     TabRoot {
-                                        ComingSoonScreen(
-                                            title = "Shopping",
-                                            message = "Shopping lists are coming soon.",
-                                            serverMessage = "Connect your Picfort server to use shopping lists.",
+                                        ShoppingListsScreen(
+                                            onOpen = { list, focusAdd -> navController.navigate(Screen.ShoppingList(list.id, focusAdd)) },
+                                            onArchivedClick = { navController.navigate(Screen.ArchivedShopping()) },
                                             onSettingsClick = openSettings,
                                         )
                                     }
+                                }
+                                composable<Screen.ArchivedShopping> {
+                                    ShoppingListsScreen(
+                                        onOpen = { list, _ -> navController.navigate(Screen.ShoppingList(list.id)) },
+                                        onBack = { navController.popBackStack() },
+                                    )
+                                }
+                                composable<Screen.ShoppingList> { entry ->
+                                    ShoppingListScreen(
+                                        onBack = { navController.popBackStack() },
+                                        focusAdd = entry.toRoute<Screen.ShoppingList>().focusAdd,
+                                    )
                                 }
                             }
                             navigation<TabGraph.Events>(startDestination = Screen.Events) {

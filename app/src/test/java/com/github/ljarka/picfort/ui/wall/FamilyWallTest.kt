@@ -1,5 +1,6 @@
 package com.github.ljarka.picfort.ui.wall
 
+import com.github.ljarka.picfort.network.PicfortServerException
 import com.github.ljarka.picfort.ui.frame.ConnectionTest
 import com.github.ljarka.picfort.ui.frame.wallTestResult
 import kotlinx.serialization.json.Json
@@ -98,10 +99,10 @@ class FamilyWallTest {
     fun `connection test messages`() {
         assertTrue(wallTestResult(null) is ConnectionTest.Ok)
         listOf(
-            WallException.NotAccepted() to "didn't accept your Immich login",
-            WallException.NoWall() to "no Family Wall yet",
-            WallException.ImmichUnreachable() to "can't reach Immich",
-            WallException.Unreachable("x") to "didn't answer",
+            PicfortServerException.NotAccepted() to "didn't accept your Immich login",
+            PicfortServerException.NoWall() to "no Family Wall yet",
+            PicfortServerException.ImmichUnreachable() to "can't reach Immich",
+            PicfortServerException.Unreachable("x") to "didn't answer",
         ).forEach { (error, expected) ->
             val result = wallTestResult(error)
             assertTrue("$error", result is ConnectionTest.Partial && expected in result.message)
