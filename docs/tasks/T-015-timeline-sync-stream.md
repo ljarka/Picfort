@@ -1,6 +1,6 @@
 # T-015 — Timeline from Immich's sync stream
 
-**Status:** draft  
+**Status:** in-progress (code merged in PR #27; check the criteria below on a device)  
 **Component:** Android app  
 **Depends on:** — (decision: [ADR 0005](../decisions/0005-timeline-sync-stream.md))
 
@@ -8,8 +8,9 @@
 
 Keep a local Room copy of the user's and timeline partners' Immich assets, synced with
 `POST /api/sync/stream` and `POST /api/sync/ack`, and build the timeline from it instead of
-requesting months while the user scrolls. Servers older than v2 keep the current bucket
-endpoints.
+requesting months while the user scrolls. Servers older than v2 are not supported (owner
+decision 2026-11-09), so there is no fallback to the bucket endpoints; they are still used for
+album contents.
 
 ## Why
 
@@ -108,7 +109,7 @@ Check these with a second account before relying on them.
 - [ ] A `SyncResetV1` from the server rebuilds the copy, and a client-requested `reset: true`
       wipes the copy first (no `SyncResetV1` comes for it).
 - [ ] Logout, then log in as another user: no assets of the first user remain.
-- [ ] On a v1 server the old path still works.
+- ~~On a v1 server the old path still works.~~ Dropped: Immich older than v2 is not supported.
 - [ ] Timeline benchmark (`:benchmark`) passes. Compare frame times with `main` interleaved
       (emulator noise is large, see PR #25).
 - [ ] Unit tests: line parsing, ack batching (latest per type, ≤ 1000), reset handling and the

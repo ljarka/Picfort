@@ -1,6 +1,6 @@
 # ADR 0005 — Timeline from a local copy synced with Immich's sync stream
 
-**Status:** proposed  
+**Status:** accepted (implemented in T-015, PR #27)  
 **Date:** 2026-11-09
 
 ## Context

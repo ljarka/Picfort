@@ -22,6 +22,10 @@ Mockup: [`docs/wireframes/family-wall-approved-v4.png`](../wireframes/family-wal
 mockup's bottom bar and status bar are not part of the design (the app has no bottom
 navigation).
 
+Later changes to this screen, not in the mockup: T-017 makes the wall a tab (bottom
+navigation, no back arrow, ⚙ in the top bar); T-027 adds a "today" panel above the message
+carousel and needs its own mockup (`wall-today-panel-v1.png`) before coding.
+
 ```
 ┌─────────────────────────────┐
 │ ←  Family Wall              │  TopAppBar
@@ -43,7 +47,9 @@ The mockup shows two photos side by side under the cards; the hero item is what 
 ## Family members
 
 Members are the **users of the Immich server**, not face-recognition people. A member can
-write, so authors and avatars are the same set.
+write, so authors and avatars are the same set. Test accounts (a name containing "test",
+case-insensitive) are not members: they and their posts are hidden (PR #37); the logged-in
+user is never hidden.
 
 - Source: the sync stream (T-015). Add `UsersV1` to the requested types and store the
   lines in a new Room table `users` (id, name, avatarColor, hasProfileImage,
