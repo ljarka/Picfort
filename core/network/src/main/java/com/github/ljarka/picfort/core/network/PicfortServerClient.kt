@@ -38,6 +38,14 @@ class PicfortServerClient @Inject constructor(
     fun base(address: String = settings.frameUrl): HttpUrl =
         normalizeFrameUrl(address) ?: throw PicfortServerException.NotConfigured()
 
+    /** Tests whether the Family Wall endpoint responds on the server. */
+    suspend fun pingWall(address: String = settings.frameUrl, apiKey: String = settings.apiKey) {
+        val base = base(address)
+        val url = base.newBuilder().addPathSegment("wall").addQueryParameter("limit", "1").build()
+        val request = Request.Builder().url(url).picfortKey(apiKey).build()
+        execute(request) { PicfortServerException.NoWall() }
+    }
+
     /** 2xx and 304 come back as a [Reply]; everything else throws. [notFound] maps a 404. */
     suspend fun execute(unsigned: Request, notFound: () -> PicfortServerException): Reply = withContext(Dispatchers.IO) {
         // Signed here too (not only by PicfortAuthInterceptor), so an address that isn't saved

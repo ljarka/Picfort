@@ -1,6 +1,9 @@
 package com.github.ljarka.picfort.ui.frame
 
-import com.github.ljarka.picfort.network.CleartextNotAllowedException
+import com.github.ljarka.picfort.core.network.CleartextNotAllowedException
+import com.github.ljarka.picfort.core.network.FrameSettingsStore
+import com.github.ljarka.picfort.core.network.isPicfortKeyRejected
+import com.github.ljarka.picfort.core.network.normalizeFrameUrl
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.SerialName
@@ -10,7 +13,6 @@ import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonNull
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
-import com.github.ljarka.picfort.network.isPicfortKeyRejected
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
 import okhttp3.Request

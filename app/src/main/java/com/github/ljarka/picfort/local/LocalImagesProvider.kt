@@ -6,10 +6,15 @@ import android.database.Cursor
 import android.net.Uri
 import android.os.Build
 import android.provider.MediaStore
+import com.github.ljarka.picfort.core.model.localImageUri
+import com.github.ljarka.picfort.core.model.localVideoUri
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.time.YearMonth
 import java.time.ZoneId
+
+fun localImageUri(id: Long): Uri = com.github.ljarka.picfort.core.model.localImageUri(id)
+fun localVideoUri(id: Long): Uri = com.github.ljarka.picfort.core.model.localVideoUri(id)
 
 data class ImageData(
     val id: Long,
@@ -35,8 +40,7 @@ fun monthRangeMillis(month: YearMonth, zone: ZoneId): LongRange {
 
 private val FILES_URI: Uri get() = MediaStore.Files.getContentUri("external")
 
-fun localImageUri(id: Long): Uri = ContentUris.withAppendedId(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, id)
-fun localVideoUri(id: Long): Uri = ContentUris.withAppendedId(MediaStore.Video.Media.EXTERNAL_CONTENT_URI, id)
+
 
 private val ALL_SELECTION =
     "${MediaStore.Files.FileColumns.MEDIA_TYPE} IN (" +

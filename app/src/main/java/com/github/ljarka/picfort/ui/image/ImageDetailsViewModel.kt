@@ -8,8 +8,8 @@ import com.github.ljarka.picfort.collections.CollectionsRepository
 import androidx.lifecycle.viewModelScope
 import com.github.ljarka.picfort.UrlProvider
 import com.github.ljarka.picfort.db.AssetType
-import com.github.ljarka.picfort.ui.frame.FrameRepository
-import com.github.ljarka.picfort.ui.frame.FrameResult
+import com.github.ljarka.picfort.core.model.FrameResult
+import com.github.ljarka.picfort.core.model.FrameSender
 import com.github.ljarka.picfort.ui.timeline.AssetIndex
 import com.github.ljarka.picfort.ui.timeline.TimelineRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -35,7 +35,7 @@ sealed interface FrameEvent {
 class ImageDetailsViewModel @Inject constructor(
     private val urlProvider: UrlProvider,
     private val repository: TimelineRepository,
-    private val frameRepository: FrameRepository,
+    private val frameRepository: FrameSender,
     /** For video streaming: carries the Immich token and the cleartext policy. */
     val okHttpClient: OkHttpClient,
     private val detailsRepository: AssetDetailsRepository,
