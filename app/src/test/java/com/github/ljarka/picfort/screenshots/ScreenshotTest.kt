@@ -52,6 +52,7 @@ import com.github.ljarka.picfort.ui.wall.FamilyWallContent
 import com.github.ljarka.picfort.ui.wall.FamilyWallUiState
 import com.github.ljarka.picfort.network.PicfortServerException
 import com.github.ljarka.picfort.ui.wall.WallPost
+import com.github.ljarka.picfort.ui.wall.todayPanel
 import com.github.ljarka.picfort.ui.wall.avatarColor
 import java.time.Instant
 import com.github.ljarka.picfort.ui.frame.FrameContent
@@ -240,6 +241,97 @@ class ScreenshotTest {
             ),
             now = NOW,
         )
+    }
+
+    private val panelDay = LocalDate.of(2026, 11, 11)
+    private val panelNow = LocalTime.of(12, 0)
+
+    private fun panelEvent(
+        id: Long, title: String, start: LocalDate = panelDay, end: LocalDate? = null,
+        time: LocalTime? = null, location: String? = null,
+    ) = FamilyEvent(
+        id = id, title = title, startDate = start, endDate = end, startTime = time, location = location,
+        created = "2026-11-0${id}T10:00:00Z",
+    )
+
+    private fun wallWithPanel(vararg events: FamilyEvent) = FamilyWallUiState(
+        members = members, posts = wallPosts, myId = "mama", isLoading = false,
+        panel = todayPanel(events.toList(), panelDay, panelNow),
+    )
+
+    @Test
+    fun wall_panel_event_today() = snap {
+        WithTabBar(Tab.WALL) {
+            FamilyWallContent(
+                wallWithPanel(panelEvent(1, "Dentist", time = LocalTime.of(18, 0), location = "Przychodnia Zdrowie")),
+                now = NOW,
+            )
+        }
+    }
+
+    @Test
+    fun wall_panel_trip_ongoing() = snap {
+        WithTabBar(Tab.WALL) {
+            FamilyWallContent(
+                wallWithPanel(
+                    panelEvent(1, "Mazury trip", start = panelDay.minusDays(1), end = panelDay.plusDays(3), location = "Giżycko"),
+                ),
+                now = NOW,
+            )
+        }
+    }
+
+    @Test
+    fun wall_panel_several_events() = snap {
+        WithTabBar(Tab.WALL) {
+            FamilyWallContent(
+                wallWithPanel(
+                    panelEvent(1, "Mazury trip", start = panelDay.minusDays(1), end = panelDay.plusDays(3), location = "Giżycko"),
+                    panelEvent(2, "Ola's football match", time = LocalTime.of(17, 30), location = "Orlik"),
+                    panelEvent(3, "Grandma's birthday"),
+                ),
+                now = NOW,
+            )
+        }
+    }
+
+    @Test
+    fun wall_panel_next_event() = snap {
+        WithTabBar(Tab.WALL) {
+            FamilyWallContent(
+                wallWithPanel(panelEvent(1, "Grandpa's 80th birthday", start = panelDay.plusDays(12))),
+                now = NOW,
+            )
+        }
+    }
+
+    @Test
+    fun wall_panel_date_only() = snap {
+        WithTabBar(Tab.WALL) { FamilyWallContent(wallWithPanel(), now = NOW) }
+    }
+
+    @Test
+    fun wall_panel_empty_wall() = snap {
+        FamilyWallContent(
+            FamilyWallUiState(
+                members = members, myId = "mama", isLoading = false,
+                panel = todayPanel(listOf(panelEvent(1, "Dentist", time = LocalTime.of(18, 0))), panelDay, panelNow),
+            ),
+            now = NOW,
+        )
+    }
+
+    @Test
+    fun wall_panel_dark() = snap(dark = true) {
+        WithTabBar(Tab.WALL) {
+            FamilyWallContent(
+                wallWithPanel(
+                    panelEvent(1, "Mazury trip", start = panelDay.minusDays(1), end = panelDay.plusDays(3), location = "Giżycko"),
+                    panelEvent(2, "Ola's football match", time = LocalTime.of(17, 30)),
+                ),
+                now = NOW,
+            )
+        }
     }
 
     @Test

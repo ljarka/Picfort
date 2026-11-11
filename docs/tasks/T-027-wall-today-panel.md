@@ -1,6 +1,7 @@
 # T-027 — Family Wall: today panel (date and the day's event)
 
-**Status:** ready (first step: mockup for the owner to approve)  
+**Status:** in-progress (mockup approved 2026-11-11; code, unit tests and Paparazzi done; the device checks
+below are left)  
 **Component:** Android app  
 **Depends on:** T-017 (wall as a tab), T-022 (`GET /events`), T-023 (`EventsRepository`, event
 detail)
@@ -13,7 +14,7 @@ the most important event of the day. No server change.
 ## Mockup first
 
 `docs/wireframes/wall-today-panel-v1.png`: the wall with the panel in each state below,
-approved by the owner before coding. It extends the approved wall mockup
+approved by the owner 2026-11-11 before coding. It extends the approved wall mockup
 (`family-wall-approved-v4.png`), which has no panel.
 
 ## Design
@@ -81,19 +82,19 @@ panel.
 
 ## Acceptance criteria
 
-- [ ] The panel is above the carousel, scrolls with the grid, and stays when a member is
+- [x] The panel is above the carousel, scrolls with the grid, and stays when a member is
       selected, when there are no text posts and when the wall is empty.
-- [ ] Event today (timed, one-day, multi-day with "Day N of M") shows as specified; the
+- [x] Event today (timed, one-day, multi-day with "Day N of M") shows as specified; the
       choice among several follows the order above and shows "+N more".
-- [ ] No event today: "Next: …" within 30 days, otherwise only the date.
+- [x] No event today: "Next: …" within 30 days, otherwise only the date.
 - [ ] Tap opens the event detail; "+N more" opens the Events tab; back returns to the wall.
 - [ ] Old server (`404` on `/events`) or offline: only the date, no error message.
 - [ ] An event added on another phone for today appears within 60 s; after midnight the
       date and event change without reopening the app.
 - [ ] TalkBack reads the panel as one element: "Today, <date>. <event>, <details>".
-- [ ] Unit tests for `todayPanel`: each rule and tie, day counting across months, next-event
+- [x] Unit tests for `todayPanel`: each rule and tie, day counting across months, next-event
       window, empty input.
-- [ ] Paparazzi: event today, multi-day ongoing, several events, next-upcoming fallback, date
+- [x] Paparazzi: event today, multi-day ongoing, several events, next-upcoming fallback, date
       only, dark.
 - [ ] README screenshots; CI passes.
 
@@ -104,3 +105,12 @@ panel.
 - Shopping or spending information in the panel.
 - School finish times per child ("Ola 13:40"): a follow-up after T-029, which provides the
   `schoolDay` function (owner decision 2026-11-11).
+
+## Implementation notes
+
+- `ui/wall/TodayPanel.kt`: `TodayPanelState`, pure `todayPanel(events, today, now)`, `TodayPanel` composable.
+- `FamilyWallViewModel` injects `EventsRepository`, keeps `FamilyWallUiState.panel` (null without a server),
+  refreshes events independently of the posts on the 60 s tick and pull-to-refresh, and swallows events
+  errors (the panel keeps what it has, no wall error).
+- Layout follows the approved mockup: date, title, then `time · Day N of M · location`; "+N more" on the right.
+- Not yet checked on a device: old server (`404`), tap targets, midnight rollover, TalkBack.

@@ -45,7 +45,7 @@ These are rendered from the app's UI code with sample photos by the [screenshot 
 - **Selection actions.** Long-press to select items, then share, download to the phone, send to the frame, or delete. Deleted items go to Immich's or the phone's trash.
 - **Albums.** Browse your Immich albums, and add selected items to an existing or new album.
 - **Search.** Immich smart search ("dog on the beach"), with results that page in as you scroll.
-- **Family Wall.** A shared board for the family: text posts as cards, photo posts in a grid, and a row of family members (the Immich users of your server) to filter by person. Write, pin and delete your own posts. Posts live on the Picfort server, so every phone and the frame see the same wall (ADR 0002, 0006).
+- **Family Wall.** A shared board for the family: text posts as cards, photo posts in a grid, and a row of family members (the Immich users of your server) to filter by person. A panel at the top shows today's date and the day's event (or the next one within 30 days). Write, pin and delete your own posts. Posts live on the Picfort server, so every phone and the frame see the same wall (ADR 0002, 0006).
 - **Events.** Trips, holidays and birthdays for the whole family, nearest first: ongoing trips under "Now", then by month, with "tomorrow" or "in 12 days"; past events in a second tab. Anyone can add or edit an event (dates, time, place, note); only the person who added it can delete it. Tap the place to open it in maps. The list updates every minute while open. Events live on the Picfort server.
 - **Family settings.** Under **Settings → Family** (or by long-pressing an avatar on the wall), anyone in the family can set the display name shown for each Immich user, pick their avatar from the faces Immich recognised, or hide test accounts. Names and avatars are used everywhere in the app (Wall, Shopping) and cached on the phone for offline starts.
 - **Settings.** Backup, the Picfort server address, family members, and your account. Open them with ⚙ on any tab.
@@ -337,13 +337,15 @@ Shared display name, profile photo and hidden flag for each Immich user; anyone 
 
 | Endpoint | Result |
 |---|---|
-| `GET /family` | `{"profiles": [profile, …]}`: only users that have a custom profile. |
-| `PATCH /family/<user_id>` | `{"display_name"?, "hidden"?}` (`null` clears a field; when every field is `null` the row is deleted). Returns the profile. |
+| `GET /family` | `{"profiles": [profile, …]}`: Immich users that have a custom profile, plus every manual member. |
+| `POST /family/members` | `{"display_name", "birth_date"?}`: a member who isn't an Immich user (a grandmother, a baby). `201` with the profile and a new `user_id`, `"manual": true`. |
+| `PATCH /family/<user_id>` | `{"display_name"?, "hidden"?, "birth_date"?}` (`null` clears a field; when every field is `null` the row of an Immich user is deleted; a manual member keeps its name). `birth_date` is `YYYY-MM-DD` (1900 up to today) or `--MM-DD` when the year is unknown. Returns the profile. |
+| `DELETE /family/<user_id>` | `204`; only for manual members (their photo goes too). `409` for an Immich user: clear its fields instead. `404` unknown. |
 | `PUT /family/<user_id>/photo` | `multipart/form-data` `photo` (JPEG or PNG, max 2 MB). Replaces and deletes any previous photo. Returns the profile. |
 | `DELETE /family/<user_id>/photo` | `204`; reverts to the Immich profile picture. |
 | `GET /family/photo/<file>` | The profile photo (`photo_url` in the profile), `Cache-Control: private`. |
 
-A profile looks like `{"user_id","display_name","photo_url","hidden","updated_by","updated"}` (unset fields are `null`). Profiles are stored in `family.db` and photos in `profile_photos/` (ADR 0008).
+A profile looks like `{"user_id","display_name","photo_url","hidden","manual","birth_date","updated_by","updated"}` (unset fields are `null`). Profiles are stored in `family.db` and photos in `profile_photos/` (ADR 0008).
 
 #### Events
 

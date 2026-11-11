@@ -29,7 +29,7 @@ import java.util.concurrent.ConcurrentHashMap
 import javax.inject.Inject
 import javax.inject.Singleton
 
-/** The last `GET /lists` answer, kept on the phone for the shop (T-019). */
+/** The active lists as last seen online, kept on the phone for the shop (T-019). */
 interface OfflineCopy {
     fun save(raw: String)
 
@@ -112,8 +112,8 @@ class ShoppingRepository @Inject constructor(
             current.filterValues { it.archived != archived || inFlight.containsKey(it.id) } +
                 fresh.filter { !inFlight.containsKey(it.id) }.associateBy { it.id }
         }
-        if (!archived) offline.save(raw)
         _offlineSince.value = null
+        if (!archived) offline.save(raw)
         null
     } catch (e: PicfortServerException) {
         if (e is PicfortServerException.Unreachable && !archived) useOfflineCopy()
@@ -126,8 +126,11 @@ class ShoppingRepository @Inject constructor(
         val known = all.value[id]?.revision
         return try {
             val fetched = backend.list(id, known).list
-            if (fetched != null && !inFlight.containsKey(id)) all.update { it + (id to fetched) }
             _offlineSince.value = null
+            if (fetched != null && !inFlight.containsKey(id)) {
+                all.update { it + (id to fetched) }
+                keepOfflineCopy()
+            }
             null
         } catch (e: PicfortServerException.Gone) {
             all.update { it - id }
@@ -202,6 +205,16 @@ class ShoppingRepository @Inject constructor(
 
     // Helpers
 
+    /**
+     * Saves what the phone knows now, so a later offline start shows the open list as it was
+     * last seen, not as the lists grid last loaded it. Items not yet saved are left out.
+     */
+    private fun keepOfflineCopy() {
+        if (_offlineSince.value != null) return
+        val known = active().map { list -> list.copy(items = list.items.filter { it.id > 0 }) }
+        offline.save(backend.encodeLists(known))
+    }
+
     private fun useOfflineCopy() {
         val (savedAt, raw) = offline.load() ?: return
         val copy = runCatching { backend.decodeLists(raw) }.getOrNull() ?: return
@@ -227,6 +240,7 @@ class ShoppingRepository @Inject constructor(
         return scope.launch {
             try {
                 locks.getOrPut(listId) { Mutex() }.withLock { remote() }
+                keepOfflineCopy()
             } catch (e: PicfortServerException) {
                 undo(listId, before, e)
             } finally {

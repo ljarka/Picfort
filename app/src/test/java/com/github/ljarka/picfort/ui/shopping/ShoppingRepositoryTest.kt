@@ -46,8 +46,14 @@ private class FakeBackend : ShoppingBackend {
         return found to "raw:" + found.joinToString(",") { "${it.id}" }
     }
 
-    override fun decodeLists(raw: String) = raw.removePrefix("raw:").split(",").filter { it.isNotEmpty() }
+    /** What [encodeLists] was given, by the text it returned, so decoding gives the lists back. */
+    private val encoded = mutableMapOf<String, List<ShoppingList>>()
+
+    override fun decodeLists(raw: String) = encoded[raw] ?: raw.removePrefix("raw:").split(",").filter { it.isNotEmpty() }
         .map { ShoppingList(it.toLong(), "offline ${it}") }
+
+    override fun encodeLists(lists: List<ShoppingList>): String =
+        ("saved#${encoded.size}:" + lists.joinToString(",") { "${it.id}" }).also { encoded[it] = lists }
 
     override suspend fun list(id: Long, knownRevision: Long?): ListFetch {
         read()
@@ -191,6 +197,24 @@ class ShoppingRepositoryTest {
         backend.down = true
         repo.edit(1, list().items.first(), "oat milk").join()
         assertEquals("milk", list().items.first().text)
+    }
+
+    @Test
+    fun `the offline copy follows polls and saved changes of an open list`() = runBlocking {
+        repo.refresh()
+        // Someone else checks bread; the poll of the open list brings it.
+        backend.lists[1] = backend.lists.getValue(1).let { l ->
+            l.copy(items = l.items.map { if (it.text == "bread") it.copy(checked = true) else it }, revision = l.revision + 1)
+        }
+        assertNull(repo.refreshList(1))
+        // And we rename milk here.
+        repo.edit(1, list().items.first { it.text == "milk" }, "oat milk").join()
+
+        backend.down = true
+        val restarted = ShoppingRepository(backend, copy, CoroutineScope(SupervisorJob() + Dispatchers.Default))
+        assertTrue(restarted.refresh() is PicfortServerException.Unreachable)
+        val items = restarted.lists.value.getValue(1).items
+        assertEquals(listOf("oat milk" to false, "bread" to true), items.map { it.text to it.checked })
     }
 
     @Test

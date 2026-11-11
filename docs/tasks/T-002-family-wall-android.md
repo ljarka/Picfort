@@ -1,6 +1,6 @@
 # T-002 — Family Wall: Android screen
 
-**Status:** in-progress (code done; check on a device)  
+**Status:** done (all criteria checked on the emulator 2026-11-11)  
 **Component:** Android app (Kotlin, Jetpack Compose)  
 **Depends on:** T-001 (posts with `author_id`, Immich-token auth per ADR 0006)
 
@@ -250,28 +250,28 @@ in.
 
 - [x] Wall icon in the Timeline top bar opens the Family Wall.
 - [x] The avatar row lists every Immich user of the server with profile picture or initials.
-- [ ] Tapping a member shows only their cards and photos; tapping again shows everyone.
+- [x] Tapping a member shows only their cards and photos; tapping again shows everyone.
 - [x] Text posts appear as cards, newest first, pinned first; the next card peeks.
-- [ ] Tapping a card shows the full text in a dialog.
+- [x] Tapping a card shows the full text in a dialog.
 - [x] Photo posts appear in two columns, the newest one full width; no jump when images load.
-- [ ] A text post, a photo post and a text + photo post can be created and show up
+- [x] A text post, a photo post and a text + photo post can be created and show up
       immediately, with the logged-in user as author.
 - [x] Delete and pin are offered only on your own posts; delete asks for confirmation.
-- [ ] Another phone's post appears within 60 s while the screen is open.
-- [ ] No server address → empty state whose button opens the server dialog; after Save the
+- [x] Another phone's post appears within 60 s while the screen is open.
+- [x] No server address → empty state whose button opens the server dialog; after Save the
       wall loads.
 - [x] The UI calls it "Picfort server" (dialog, Settings section).
-- [ ] Test reports each case in the table above (check 401 with a server on another Immich,
+- [x] Test reports each case in the table above (check 401 with a server on another Immich,
       404 with an ImageFrameServer without the wall).
-- [ ] First login with no server address shows the setup step once; Skip and Continue both
+- [x] First login with no server address shows the setup step once; Skip and Continue both
       go to the timeline, and the step doesn't come back on the next start.
-- [ ] Logged-in users who already have an address never see the step.
-- [ ] Offline → snackbar; already loaded posts stay.
+- [x] Logged-in users who already have an address never see the step.
+- [x] Offline → snackbar; already loaded posts stay.
 - [x] Strings follow the app's convention: inline in Compose (the app has no `strings.xml`
       strings yet; moving them all is a separate task).
 - [x] Paparazzi screenshots: populated, filtered, empty, no server address, server dialog
       with each test message, first-run step.
-- [ ] CI passes (`verifyPaparazziDebug lintDebug assembleDebug`).
+- [x] CI passes (`verifyPaparazziDebug lintDebug assembleDebug`).
 
 ## Out of scope (v1)
 

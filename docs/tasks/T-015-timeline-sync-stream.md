@@ -98,22 +98,27 @@ Check these with a second account before relying on them.
 
 ## Acceptance criteria
 
-- [ ] Cold start with a synced Room shows the full timeline with no network (airplane mode).
-- [ ] Scrolling the whole timeline makes no `/timeline/bucket` requests (check OkHttp logs).
-- [ ] Deleting, archiving or uploading an asset in the Immich web UI shows up after
+- [x] Cold start with a synced Room shows the full timeline with no network (airplane mode).
+- [x] Scrolling the whole timeline makes no `/timeline/bucket` requests (check OkHttp logs).
+- [x] Deleting, archiving or uploading an asset in the Immich web UI shows up after
       pull-to-refresh.
 - [ ] Partners with "show in timeline" appear, and disappear when the setting is turned off.
-- [ ] Stacked assets show once (primary only).
-- [ ] Killing the app during the first sync and starting it again continues without
+      _Not checked: needs another Immich user sharing with the test account._
+- [x] Stacked assets show once (primary only).
+- [x] Killing the app during the first sync and starting it again continues without
       duplicates or gaps.
+      _Emulator 2026-11-11: killed 0.4 s into the stream; the test account (261 assets) fits one batch, so a half-applied copy is covered only by `SyncEngineTest`._
 - [ ] A `SyncResetV1` from the server rebuilds the copy, and a client-requested `reset: true`
       wipes the copy first (no `SyncResetV1` comes for it).
-- [ ] Logout, then log in as another user: no assets of the first user remain.
+      _Emulator 2026-11-11: the client-requested half passes (empty copy → `"reset":true`, no `SyncResetV1`). A server-sent `SyncResetV1` was not triggered (needs a flag in the Immich DB)._
+- [x] Logout, then log in as another user: no assets of the first user remain.
 - ~~On a v1 server the old path still works.~~ Dropped: Immich older than v2 is not supported.
 - [ ] Timeline benchmark (`:benchmark`) passes. Compare frame times with `main` interleaved
       (emulator noise is large, see PR #25).
+      _2026-11-11: the benchmark now opens the Photos tab (the app starts on the Wall) and passes on the emulator (frame CPU P90 10.5 ms, overrun P90 1.6 ms). The interleaved comparison with the pre-T-015 build is still to do._
 - [ ] Unit tests: line parsing, ack batching (latest per type, ≤ 1000), reset handling and the
       timeline filter query (Room in-memory DB).
+      _Parsing, ack batching and reset are covered by `SyncEngineTest`; the timeline filter query has no Room in-memory test._
 
 ## Notes for implementing agent
 

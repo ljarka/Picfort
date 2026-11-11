@@ -36,7 +36,9 @@ Shopping lists (see shopping.py, T-018), same token auth; everyone can edit ever
 
 Family profiles (see family.py, T-031), same token auth; anyone can edit any member's profile.
     GET    /family                           -> {"profiles": [profile, …]}
-    PATCH  /family/<user_id>                 -> {display_name?, hidden?} (null clears)
+    POST   /family/members                   -> {display_name, birth_date?}: a member who isn't an Immich user
+    PATCH  /family/<user_id>                 -> {display_name?, hidden?, birth_date?} (null clears)
+    DELETE /family/<user_id>                 -> 204, only members who aren't Immich users (T-033)
     PUT    /family/<user_id>/photo           -> multipart photo (JPEG/PNG <= 2 MB)
     DELETE /family/<user_id>/photo           -> 204
     GET    /family/photo/<file>              -> the profile photo
@@ -416,6 +418,15 @@ def register_family(app: Flask, family: FamilyStore):
     def get_family():
         return jsonify(profiles=family.profiles())
 
+    @app.route("/family/members", methods=["POST"])
+    def add_family_member():
+        return jsonify(family.add_member(g.user.id, json_body())), 201
+
+    @app.route("/family/<user_id>", methods=["DELETE"])
+    def delete_family_member(user_id):
+        family.delete_member(user_id)
+        return "", 204
+
     @app.route("/family/<user_id>", methods=["PATCH"])
     def update_family_member(user_id):
         return jsonify(family.update(user_id, g.user.id, json_body()))
@@ -472,7 +483,7 @@ def register_events(app: Flask, events: EventStore):
 
     @app.route("/events/<int:event_id>", methods=["GET"])
     def get_event(event_id):
-        return jsonify(events.get(event_id))
+        return jsonify(events.get(event_id, on=request.args.get("on")))
 
     @app.route("/events/<int:event_id>", methods=["PATCH"])
     def update_event(event_id):

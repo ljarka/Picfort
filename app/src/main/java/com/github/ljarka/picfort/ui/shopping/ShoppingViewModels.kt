@@ -1,5 +1,6 @@
 package com.github.ljarka.picfort.ui.shopping
 
+import android.os.SystemClock
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -126,10 +127,13 @@ class ShoppingListViewModel @Inject constructor(
 
     suspend fun keepFresh() {
         while (true) {
+            // Polls start every LIST_POLL_MILLIS, request time included, so a change made on
+            // another phone shows within that time (T-019), not that time plus the request.
+            val started = SystemClock.elapsedRealtime()
             val error = repository.refreshList(listId)
             if (error is PicfortServerException.Gone) extra.update { it.copy(loadError = "This list no longer exists") }
             else if (error != null && repository.lists.value[listId] == null) extra.update { it.copy(loadError = error.message) }
-            delay(LIST_POLL_MILLIS)
+            delay((LIST_POLL_MILLIS - (SystemClock.elapsedRealtime() - started)).coerceAtLeast(1_000L))
         }
     }
 
