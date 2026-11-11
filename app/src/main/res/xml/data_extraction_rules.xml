@@ -1,19 +1,22 @@
-<?xml version="1.0" encoding="utf-8"?><!--
-   Sample data extraction rules file; uncomment and customize as necessary.
-   See https://developer.android.com/about/versions/12/backup-restore#xml-changes
-   for details.
--->
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Nothing leaves the phone through Android backup or device-to-device transfer:
+     the photo index is rebuilt from Immich, and the login token and server keys
+     (EncryptedSharedPreferences, keyed to this device's Keystore) can't be restored
+     on another device anyway. allowBackup="false" covers Android 11 and older;
+     these rules cover Android 12+, where device transfer ignores allowBackup. -->
 <data-extraction-rules>
     <cloud-backup>
-        <!-- TODO: Use <include> and <exclude> to control what is backed up.
-        <include .../>
-        <exclude .../>
-        -->
+        <exclude domain="root" path="." />
+        <exclude domain="file" path="." />
+        <exclude domain="database" path="." />
+        <exclude domain="sharedpref" path="." />
+        <exclude domain="external" path="." />
     </cloud-backup>
-    <!--
     <device-transfer>
-        <include .../>
-        <exclude .../>
+        <exclude domain="root" path="." />
+        <exclude domain="file" path="." />
+        <exclude domain="database" path="." />
+        <exclude domain="sharedpref" path="." />
+        <exclude domain="external" path="." />
     </device-transfer>
-    -->
 </data-extraction-rules>
