@@ -9,7 +9,10 @@
 
 Each child has a weekly timetable: lessons and extracurricular activities per day of the
 week, plus a bell schedule (period times) so a lesson can be entered as "period 3: Maths".
-Children are rows on the Picfort server, not Immich users. Stored in `school.db`.
+Children are rows on the Picfort server, not Immich users. Stored in `school.db`. A child can
+have a photo (a face from Immich, T-030) and, **per parent**, a link to a person in that
+parent's Immich library: face recognition is per user in Immich, so the same child has a
+different person id in each parent's library.
 
 ## Data (`school.db`, `SCHEMA_VERSION = 1`)
 
@@ -20,9 +23,16 @@ CREATE TABLE children (
   color           TEXT NOT NULL,        -- an Immich avatar color name: primary, pink, red,
                                         -- yellow, blue, green, purple, orange, gray, amber
   immich_user_id  TEXT,                 -- reserved (optional link to an Immich user); no UI in v1
+  photo           TEXT,                 -- file name in CHILD_PHOTOS_PATH, optional
   created_by      TEXT NOT NULL,
   created         TEXT NOT NULL,        -- ISO 8601 UTC
   updated         TEXT NOT NULL
+);
+CREATE TABLE child_people (             -- each parent's link to an Immich person (T-030)
+  child_id        INTEGER NOT NULL REFERENCES children(id) ON DELETE CASCADE,
+  immich_user_id  TEXT NOT NULL,        -- the parent (from the token)
+  person_id       TEXT NOT NULL,        -- Immich person id (UUID) in that parent's library
+  PRIMARY KEY (child_id, immich_user_id)
 );
 CREATE TABLE periods (                  -- the child's bell schedule
   child_id    INTEGER NOT NULL REFERENCES children(id) ON DELETE CASCADE,
@@ -55,8 +65,9 @@ CREATE INDEX entries_child_day ON entries(child_id, weekday);
 - The color names are the ones the app already maps for Immich users (T-002), so a child
   chip looks like a family member's avatar ring.
 
-`SCHOOL_DB_PATH` (default `school.db`); add `SCHOOL_DB_PATH=/data/school.db` to the
-`Dockerfile` `ENV` block.
+`SCHOOL_DB_PATH` (default `school.db`) and `CHILD_PHOTOS_PATH` (default `child_photos`); add
+`SCHOOL_DB_PATH=/data/school.db` and `CHILD_PHOTOS_PATH=/data/child_photos` to the
+`Dockerfile` `ENV` block. Both tables are in schema version 1, so T-030 needs no schema change.
 
 ## API
 
@@ -64,6 +75,7 @@ All under `/school`, JSON, `snake_case`. A child, as returned everywhere:
 
 ```json
 {"id": 1, "name": "Ola", "color": "pink", "immich_user_id": null,
+ "photo_url": "/school/children/photo/<file>", "my_person_id": "<uuid>",
  "created_by": "<immich user id>", "updated": "2026-11-11T17:03:00Z",
  "periods": [{"number": 1, "start_time": "08:00", "end_time": "08:45"}],
  "entries": [{"id": 7, "kind": "lesson", "weekday": 1, "start_time": "08:00",
@@ -71,14 +83,21 @@ All under `/school`, JSON, `snake_case`. A child, as returned everywhere:
               "teacher": "Mrs Nowak", "note": null}]}
 ```
 
-`periods` by `number`; `entries` by `weekday`, `start_time`, `id`.
+`periods` by `number`; `entries` by `weekday`, `start_time`, `id`. `photo_url` is null without
+a photo. `my_person_id` is the **caller's** link (from `child_people` for the token's user), or
+null; other parents' links are never returned.
 
 | Endpoint | Result |
 |---|---|
 | `GET /school` | `{"children": [child, …]}` by name: everything in one response (a few children, ~40 entries each). |
 | `POST /school/children` `{name, color}` | `201` child. |
 | `PATCH /school/children/<id>` `{name?, color?, immich_user_id?}` | Updated child. |
-| `DELETE /school/children/<id>` | `204`; deletes its periods and entries. Anyone (ADR 0008). |
+| `DELETE /school/children/<id>` | `204`; deletes its periods, entries, links and photo file. Anyone (ADR 0008). |
+| `PUT /school/children/<id>/photo` multipart `photo` | The child with `photo_url`. JPEG or PNG up to 2 MB, checked like wall photos; replaces (and deletes) the old file. Anyone. |
+| `DELETE /school/children/<id>/photo` | `204`. Anyone. |
+| `GET /school/children/photo/<file>` | The photo, `Cache-Control: private`, long max-age (new file name on change). |
+| `PUT /school/children/<id>/person` `{person_id}` | Sets the caller's link (replaces it); returns the child. `person_id` must be a UUID; the server doesn't ask Immich (the app chose it from the caller's own people). |
+| `DELETE /school/children/<id>/person` | `204`; removes the caller's link only. |
 | `PUT /school/children/<id>/periods` `[{number, start_time, end_time}, …]` | Replaces the bell schedule; returns the child. Lessons with a `period` still in the schedule get its new times; lessons whose period was removed keep their times and get `period: null`. One transaction. |
 | `POST /school/children/<id>/entries` `{kind, weekday, title, period? \| start_time + end_time, place?, teacher?, note?}` | `201` entry. A lesson with `period` takes its times from the bell schedule (`400` if that period doesn't exist); otherwise both times are required. `period` on an activity is `400`. |
 | `PATCH /school/children/<id>/entries/<entry>` | Same fields; `null` clears an optional one. Validated against the resulting entry. |
@@ -97,7 +116,9 @@ All under `/school`, JSON, `snake_case`. A child, as returned everywhere:
 
 `tests/test_school.py`: children CRUD and cascade; bell schedule replace (lesson times
 follow, removed period → `period: null` with times kept); lesson by period and by explicit
-times; activity rules; every validation rule; ordering; copy-day (replaces only the given
+times; activity rules; every validation rule; ordering; photo upload/replace/delete removes
+files; person links are per caller (user A's link is not visible to user B, B can set their
+own, deleting the child removes both); copy-day (replaces only the given
 kinds, leaves activities when copying lessons); copy-periods; `401` without a token; schema
 version change keeps a `.bak` and leaves the other databases alone.
 
