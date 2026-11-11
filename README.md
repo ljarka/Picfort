@@ -42,7 +42,8 @@ These are rendered from the app's UI code with sample photos by the [screenshot 
 - **Albums.** Browse your Immich albums, and add selected items to an existing or new album.
 - **Search.** Immich smart search ("dog on the beach"), with results that page in as you scroll.
 - **Family Wall.** A shared board for the family: text posts as cards, photo posts in a grid, and a row of family members (the Immich users of your server) to filter by person. Write, pin and delete your own posts. Posts live on the Picfort server, so every phone and the frame see the same wall (ADR 0002, 0006).
-- **Settings.** Backup, the Picfort server address, and your account. Open them with ⚙ on any tab.
+- **Family settings.** Under **Settings → Family** (or by long-pressing an avatar on the wall), anyone in the family can set the display name shown for each Immich user, pick their avatar from the faces Immich recognised, or hide test accounts. Names and avatars are used everywhere in the app (Wall, Shopping) and cached on the phone for offline starts.
+- **Settings.** Backup, the Picfort server address, family members, and your account. Open them with ⚙ on any tab.
 - **Send to frame.** Puts the photo you're viewing on an e-paper picture frame (see below).
 
 ## Repository layout

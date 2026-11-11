@@ -16,8 +16,8 @@ import androidx.lifecycle.repeatOnLifecycle
 import androidx.lifecycle.viewModelScope
 import com.github.ljarka.picfort.network.PicfortServerClient
 import com.github.ljarka.picfort.network.PicfortServerException
+import com.github.ljarka.picfort.ui.family.FamilyRepository
 import com.github.ljarka.picfort.ui.frame.FrameSettingsDialog
-import com.github.ljarka.picfort.ui.wall.WallRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -42,6 +42,7 @@ internal fun Long.asTime(zone: ZoneId = ZoneId.systemDefault()): String =
 @HiltViewModel
 class ShoppingListsViewModel @Inject constructor(
     private val repository: ShoppingRepository,
+    private val family: FamilyRepository,
     private val server: PicfortServerClient,
     savedState: SavedStateHandle,
 ) : ViewModel() {
@@ -79,6 +80,7 @@ class ShoppingListsViewModel @Inject constructor(
             return
         }
         extra.update { it.copy(configured = true) }
+        viewModelScope.launch { family.refresh() }
         val error = repository.refresh(archived)
         val nothing = (if (archived) repository.archived() else repository.active()).isEmpty()
         extra.update {
@@ -102,12 +104,12 @@ class ShoppingListsViewModel @Inject constructor(
 @HiltViewModel
 class ShoppingListViewModel @Inject constructor(
     private val repository: ShoppingRepository,
-    private val wall: WallRepository,
+    private val family: FamilyRepository,
     savedState: SavedStateHandle,
 ) : ViewModel() {
     val listId: Long = savedState.get<Long>("id") ?: 0L
-    private val extra = MutableStateFlow(ShoppingListUi(myId = wall.myId))
-    private val _state = MutableStateFlow(ShoppingListUi(myId = wall.myId))
+    private val extra = MutableStateFlow(ShoppingListUi(myId = family.myId))
+    private val _state = MutableStateFlow(ShoppingListUi(myId = family.myId))
     val state: StateFlow<ShoppingListUi> = _state.asStateFlow()
     /** Set after a delete, for the snackbar's Undo. */
     var undoable: ShoppingItem? = null
@@ -115,7 +117,7 @@ class ShoppingListViewModel @Inject constructor(
 
     init {
         viewModelScope.launch {
-            combine(repository.lists, repository.offlineSince, wall.members, extra) { lists, since, members, ui ->
+            combine(repository.lists, repository.offlineSince, family.members, extra) { lists, since, members, ui ->
                 ui.copy(list = lists[listId], members = members, offlineSince = since?.asTime())
             }.collect { _state.value = it }
         }
@@ -135,7 +137,7 @@ class ShoppingListViewModel @Inject constructor(
         viewModelScope.launch { repository.refreshList(listId) }
     }
 
-    fun toggle(item: ShoppingItem) = repository.toggle(listId, item, wall.myId)
+    fun toggle(item: ShoppingItem) = repository.toggle(listId, item, family.myId)
     fun edit(item: ShoppingItem, text: String) = repository.edit(listId, item, text)
     fun add(text: String) = repository.addItem(listId, text)
     fun rename(title: String) = repository.rename(listId, title)

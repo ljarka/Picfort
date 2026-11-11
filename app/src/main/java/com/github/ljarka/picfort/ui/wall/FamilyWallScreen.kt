@@ -104,7 +104,7 @@ private val GRID_GUTTER = 12.dp
 private val SPACING = 4.dp
 
 @Composable
-fun FamilyWallScreen(onSettingsClick: () -> Unit) {
+fun FamilyWallScreen(onSettingsClick: () -> Unit, onEditMember: (String) -> Unit = {}) {
     val viewModel = hiltViewModel<FamilyWallViewModel>()
     val state by viewModel.state.collectAsStateWithLifecycle()
     val lifecycle = LocalLifecycleOwner.current.lifecycle
@@ -120,6 +120,7 @@ fun FamilyWallScreen(onSettingsClick: () -> Unit) {
         onSettingsClick = onSettingsClick,
         onRefresh = viewModel::refreshNow,
         onSelect = viewModel::select,
+        onEditMember = onEditMember,
         onPost = viewModel::post,
         onDelete = viewModel::delete,
         onTogglePin = viewModel::togglePin,
@@ -135,6 +136,7 @@ fun FamilyWallContent(
     onSettingsClick: () -> Unit = {},
     onRefresh: () -> Unit = {},
     onSelect: (String?) -> Unit = {},
+    onEditMember: (String) -> Unit = {},
     onPost: (String, Uri?) -> Unit = { _, _ -> },
     onDelete: (WallPost) -> Unit = {},
     onTogglePin: (WallPost) -> Unit = {},
@@ -220,7 +222,7 @@ fun FamilyWallContent(
                 state.loadError != null && state.posts.isEmpty() -> Centered(state.loadError, "Retry", onRefresh)
                 else -> {
                     if (state.members.isNotEmpty()) {
-                        AvatarRow(state.members, state.selectedMemberId, onSelect)
+                        AvatarRow(state.members, state.selectedMemberId, onSelect, onEditMember)
                     }
                     PullToRefreshBox(isRefreshing = false, onRefresh = onRefresh, modifier = Modifier.weight(1f)) {
                         WallGrid(
@@ -311,35 +313,53 @@ private fun Modifier.bleed(horizontal: Dp) = layout { measurable, constraints ->
     layout(constraints.maxWidth, placeable.height) { placeable.place(-extra / 2, 0) }
 }
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
-private fun AvatarRow(members: List<FamilyMember>, selectedId: String?, onSelect: (String?) -> Unit) {
+private fun AvatarRow(
+    members: List<FamilyMember>,
+    selectedId: String?,
+    onSelect: (String?) -> Unit,
+    onEditMember: (String) -> Unit = {},
+) {
     LazyRow(
         contentPadding = PaddingValues(horizontal = 8.dp, vertical = 8.dp),
         modifier = Modifier.fillMaxWidth(),
     ) {
         items(members, key = { it.id }) { member ->
             val selected = member.id == selectedId
-            Column(
-                horizontalAlignment = Alignment.CenterHorizontally,
-                modifier = Modifier
-                    .padding(horizontal = 4.dp)
-                    .clip(RoundedCornerShape(16.dp))
-                    .background(if (selected) member.color.copy(alpha = 0.18f) else Color.Transparent)
-                    .clickable { onSelect(member.id) }
-                    .padding(horizontal = 4.dp, vertical = 6.dp),
-            ) {
-                MemberAvatar(member, size = AVATAR_SIZE, ring = if (selected) 3.dp else 2.dp)
-                Text(
-                    member.name,
-                    style = MaterialTheme.typography.labelSmall,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                    textAlign = TextAlign.Center,
-                    fontWeight = if (selected) FontWeight.Bold else null,
+            var menu by remember { mutableStateOf(false) }
+            Box {
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
                     modifier = Modifier
-                        .width(AVATAR_SIZE + 8.dp)
-                        .padding(top = 4.dp),
-                )
+                        .padding(horizontal = 4.dp)
+                        .clip(RoundedCornerShape(16.dp))
+                        .background(if (selected) member.color.copy(alpha = 0.18f) else Color.Transparent)
+                        .combinedClickable(
+                            onClick = { onSelect(member.id) },
+                            onLongClick = { menu = true },
+                        )
+                        .padding(horizontal = 4.dp, vertical = 6.dp),
+                ) {
+                    MemberAvatar(member, size = AVATAR_SIZE, ring = if (selected) 3.dp else 2.dp)
+                    Text(
+                        member.name,
+                        style = MaterialTheme.typography.labelSmall,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        textAlign = TextAlign.Center,
+                        fontWeight = if (selected) FontWeight.Bold else null,
+                        modifier = Modifier
+                            .width(AVATAR_SIZE + 8.dp)
+                            .padding(top = 4.dp),
+                    )
+                }
+                DropdownMenu(expanded = menu, onDismissRequest = { menu = false }) {
+                    DropdownMenuItem(
+                        text = { Text("Edit") },
+                        onClick = { menu = false; onEditMember(member.id) },
+                    )
+                }
             }
         }
     }

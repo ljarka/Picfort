@@ -147,10 +147,12 @@ class ShoppingRepositoryTest {
     @Test
     fun `add shows the item at once, then with the server's id`() = runBlocking {
         repo.refresh()
+        backend.gate = CompletableDeferred()
         val job = repo.addItem(1, "eggs")
         val temp = list().items.last()
         assertTrue(temp.id < 0)
         assertEquals(3.0, temp.position, 0.0)
+        backend.gate!!.complete(Unit)
         job.join()
         assertEquals(listOf("milk", "bread", "eggs"), list().unchecked.map { it.text })
         assertTrue(list().items.all { it.id > 0 })
