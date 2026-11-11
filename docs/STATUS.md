@@ -74,7 +74,7 @@ Delivery order (each milestone is usable on its own):
 - **M1 shell:** T-017.
 - **M2 lists:** T-018 → T-019.
 - **M3 events:** T-022 → T-023 → T-026 (albums), T-027 (today panel on the wall).
-- **M4 school timetable:** T-028 → T-029.
+- **M4 school timetable:** T-028 → T-029 → T-030 (children from Immich people).
 - **M5 receipts & spending:** T-020 → T-024 (Gemini) → T-021 → T-025.
 
 Events and school before receipts: no external dependency, daily use, and receipts are the
@@ -97,6 +97,7 @@ Android task except T-017 and T-026 starts with a mockup the owner approves.
 | [T-027](tasks/T-027-wall-today-panel.md) | Family Wall — today panel: date and the day's event | `ready` |
 | [T-028](tasks/T-028-school-timetable-backend.md) | School timetable — server API (`school.db`): children, bell schedule, lessons, activities | `ready` |
 | [T-029](tasks/T-029-school-timetable-android.md) | School timetable — Android: child chips, "finishes at", week by day, editing | `ready` |
+| [T-030](tasks/T-030-children-immich-people.md) | Children from Immich people: face photo, per-parent link, "Photos of Ola" | `ready` |
 
 Decided by the owner (2026-11-11), as recommended:
 - **Schema changes** in `shopping.db` / `events.db`: no migrations; the old file is kept as
@@ -111,6 +112,9 @@ Decided by the owner (2026-11-11), as recommended:
   follow-up task once both are done.
 - **Children are not linked to Immich users;** the server keeps an unused `immich_user_id`
   column so a later link needs no schema change.
+- **Children can be chosen from Immich people** (face recognition), with the face as their
+  photo, and each parent can browse the child's photos from their own library (T-030). The
+  link is per parent, because Immich people are per user.
 - **Deleting a child** (and its timetable): anyone, after a confirmation (either parent must
   be able to).
 - **Five tabs:** Wall · Shopping · Events · School · Photos. It is the Material maximum: a sixth

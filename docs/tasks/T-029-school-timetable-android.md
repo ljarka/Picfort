@@ -37,7 +37,8 @@ entry sheet (lesson, activity) and the bell schedule screen. Owner approval befo
 └─────────────────────────────┘
 ```
 
-- **Child chips:** a colored dot with the initial + name, in name order. The chosen child is
+- **Child chips:** the child's photo (`photo_url`, through the authenticated Coil loader) or a
+  colored dot with the initial, + name, in name order. The chosen child is
   remembered across sessions (preferences); if it no longer exists, the first one. With one
   child the row still shows (it is where children are added).
 - **Week:** day chips above a `HorizontalPager`, one page per day, kept in sync (tap a chip or
@@ -141,4 +142,6 @@ changed by accident.
 - The summary in the Family Wall today panel (T-027): recommended as a small follow-up once
   both tasks are done, one line per child ("Ola 13:40 · Staś 14:35"); owner decision 2026-11-11.
 - Linking a child to an Immich user (the column exists on the server; no UI).
+- Choosing a child from Immich people, the face photo and browsing the child's photos: T-030
+  (the server side is already in T-028).
 - Children seeing only their own timetable.
