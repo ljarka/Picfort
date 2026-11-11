@@ -1,6 +1,6 @@
 # T-050 — Modularization: :feature:timeline and :feature:frame
 
-**Status:** ready  
+**Status:** done  
 **Component:** Android feature modules  
 **Depends on:** T-043 (`:core:model`), T-044 (`:core:ui`), T-045 (`:core:network`, `:core:database`), [ADR 0011](../decisions/0011-modular-architecture.md)
 
@@ -13,18 +13,18 @@ Extract photo timeline viewing and ambient e-paper frame mode into dedicated fea
 
 1. **`:feature:timeline`**:
    - `TimelineScreen.kt`, `TimelineViewModel.kt`
-   - `JustifiedTimelineLayout.kt`
-   - Photo detail viewer, zoom, metadata sheet
+   - `JustifiedLayout.kt`, `TimelineRows.kt`
+   - Photo detail viewer (`ImageDetailsScreen.kt`), zoom, metadata sheet, collections, sync, local media provider
    - `feature/timeline/AGENTS.md`
 2. **`:feature:frame`**:
-   - `FrameActivity.kt` / `FrameScreen.kt`, `FrameViewModel.kt`
-   - Ambient slideshow, pairing QR/flow, frame status indicators
+   - `FrameScreen.kt`, `FrameViewModel.kt`, `FrameRepository.kt`
+   - Server setup dialog and setup screen
    - `feature/frame/AGENTS.md`
 3. **Paparazzi tests**:
-   - Migrate timeline and frame screenshot tests to their respective modules.
+   - Migrated timeline and frame screenshot tests to their respective modules.
 
 ## Acceptance criteria
 
-- [ ] `:feature:timeline` and `:feature:frame` compile independently.
-- [ ] Timeline rendering and frame mode functional without regression.
-- [ ] Module `AGENTS.md` created for both.
+- [x] `:feature:timeline` and `:feature:frame` compile independently.
+- [x] Timeline rendering and frame mode functional without regression.
+- [x] Module `AGENTS.md` created for both.
