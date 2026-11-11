@@ -91,8 +91,8 @@ Android task except T-017 and T-026 starts with a mockup the owner approves.
 | [T-019](tasks/T-019-shopping-lists-android.md) | Shopping lists — Android, Keep-like checklist, read-only offline copy | `in-progress` |
 | [T-020](tasks/T-020-receipts-backend.md) | Receipts + `/spending` — server, totals typed by hand | `ready` |
 | [T-021](tasks/T-021-receipts-android.md) | Receipts — Android: add to a list, check, correct | `ready` |
-| [T-022](tasks/T-022-events-backend.md) | Events — server API (`events.db`) | `ready` |
-| [T-023](tasks/T-023-events-android.md) | Events — Android: upcoming / past, add, edit | `ready` |
+| [T-022](tasks/T-022-events-backend.md) | Events — server API (`events.db`) | `done` |
+| [T-023](tasks/T-023-events-android.md) | Events — Android: upcoming / past, add, edit | `in-progress` |
 | [T-024](tasks/T-024-receipt-reading-gemini.md) | Receipts — read shop, date, total with Gemini (server, opt-in) | `ready` |
 | [T-025](tasks/T-025-spending-summary-android.md) | Spending summary — Android: month, 6-month bars, by shop and person | `ready` |
 | [T-026](tasks/T-026-event-albums-android.md) | Events — link or create a family-shared Immich album (Android) | `ready` |
@@ -100,8 +100,8 @@ Android task except T-017 and T-026 starts with a mockup the owner approves.
 | [T-028](tasks/T-028-school-timetable-backend.md) | School timetable — server API (`school.db`): children, bell schedule, lessons, activities | `ready` |
 | [T-029](tasks/T-029-school-timetable-android.md) | School timetable — Android: child chips, "finishes at", week by day, editing | `ready` |
 | [T-030](tasks/T-030-children-immich-people.md) | Children from Immich people: face photo, per-parent link, "Photos of Ola" | `ready` |
-| [T-031](tasks/T-031-family-profiles-backend.md) | Family profiles — server (`family.db`): display name, photo, hidden, per Immich user | `in-progress` |
-| [T-032](tasks/T-032-family-settings-android.md) | Family settings — Android: rename, photo from Immich people, hide; one source of members | `in-progress` |
+| [T-031](tasks/T-031-family-profiles-backend.md) | Family profiles — server (`family.db`): display name, photo, hidden, per Immich user | `done` |
+| [T-032](tasks/T-032-family-settings-android.md) | Family settings — Android: rename, photo from Immich people, hide; one source of members | `done` |
 
 Decided by the owner (2026-11-11), as recommended:
 - **Schema changes** in `shopping.db` / `events.db`: no migrations; the old file is kept as

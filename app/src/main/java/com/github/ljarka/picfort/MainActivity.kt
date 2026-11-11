@@ -40,6 +40,9 @@ import com.github.ljarka.picfort.collections.AlbumScreen
 import com.github.ljarka.picfort.collections.AlbumsScreen
 import com.github.ljarka.picfort.collections.GridAsset
 import com.github.ljarka.picfort.collections.SearchScreen
+import com.github.ljarka.picfort.ui.events.EventDetailScreen
+import com.github.ljarka.picfort.ui.events.EventFormScreen
+import com.github.ljarka.picfort.ui.events.EventsListScreen
 import com.github.ljarka.picfort.ui.family.FamilySettingsScreen
 import com.github.ljarka.picfort.ui.frame.FrameScreen
 import com.github.ljarka.picfort.ui.frame.PicfortServerSetupScreen
@@ -91,7 +94,7 @@ sealed interface Screen {
     @Serializable
     object PicfortServerSetup : Screen
 
-    /** Placeholders until T-019, T-023 and T-029. */
+    /** School stays a placeholder until T-029. */
     @Serializable
     object Shopping : Screen
 
@@ -105,6 +108,14 @@ sealed interface Screen {
 
     @Serializable
     object Events : Screen
+
+    /** Reachable from any tab (T-023). `eventId` is read by EventDetailViewModel. */
+    @Serializable
+    data class EventDetail(val eventId: Long) : Screen
+
+    /** `eventId` 0 = a new event; read by EventFormViewModel. */
+    @Serializable
+    data class EventForm(val eventId: Long = 0L) : Screen
 
     @Serializable
     object School : Screen
@@ -244,10 +255,9 @@ class MainActivity : ComponentActivity() {
                             navigation<TabGraph.Events>(startDestination = Screen.Events) {
                                 composable<Screen.Events> {
                                     TabRoot {
-                                        ComingSoonScreen(
-                                            title = "Events",
-                                            message = "Events are coming soon.",
-                                            serverMessage = "Connect your Picfort server to use events.",
+                                        EventsListScreen(
+                                            onOpenEvent = { id -> navController.navigate(Screen.EventDetail(id)) },
+                                            onAddEvent = { navController.navigate(Screen.EventForm()) },
                                             onSettingsClick = openSettings,
                                         )
                                     }
@@ -306,6 +316,24 @@ class MainActivity : ComponentActivity() {
                                     onBack = { navController.popBackStack() },
                                     onFrameClick = { navController.navigate(Screen.Frame) },
                                     onFamilyClick = { navController.navigate(Screen.FamilySettings()) },
+                                )
+                            }
+                            composable<Screen.EventDetail> {
+                                EventDetailScreen(
+                                    onBack = { navController.popBackStack() },
+                                    onEdit = { id -> navController.navigate(Screen.EventForm(id)) },
+                                )
+                            }
+                            composable<Screen.EventForm> {
+                                EventFormScreen(
+                                    onBack = { navController.popBackStack() },
+                                    // A new event returns to the list, an edit to the detail (which reloads).
+                                    onSaved = { navController.popBackStack() },
+                                    onEventGone = {
+                                        if (!navController.popBackStack<Screen.EventDetail>(inclusive = true)) {
+                                            navController.popBackStack()
+                                        }
+                                    },
                                 )
                             }
                             composable<Screen.FamilySettings> {

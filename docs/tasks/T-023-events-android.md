@@ -1,6 +1,6 @@
 # T-023 — Events: Android screens
 
-**Status:** ready (first step: mockup for the owner to approve)  
+**Status:** in-progress (code, tests and screenshots done; the device checks below are left)  
 **Component:** Android app  
 **Depends on:** T-017 (Events tab), T-022 (API), T-019 (`PicfortServerClient`,
 `PicfortAuthInterceptor`; extract them here if T-019 hasn't landed)
@@ -79,22 +79,22 @@ with a title and a start date.
 
 ## Acceptance criteria
 
-- [ ] Add, edit, delete (own) events; delete is not offered on someone else's event; anyone
+- [x] Add, edit, delete (own) events; delete is not offered on someone else's event; anyone
       can edit.
-- [ ] One-day, multi-day and timed events display correctly in the list and the detail.
-- [ ] Upcoming: ongoing first, then nearest first; an event that ended yesterday is only in
+- [x] One-day, multi-day and timed events display correctly in the list and the detail.
+- [x] Upcoming: ongoing first, then nearest first; an event that ended yesterday is only in
       Past; an event ending today is still in Upcoming.
-- [ ] Past shows the latest first and loads more on scroll.
+- [x] Past shows the latest first and loads more on scroll.
 - [ ] With the screen open over midnight, yesterday's event moves to Past within a minute.
 - [ ] An event added on another phone appears within 60 s while the tab is open.
 - [ ] The date picked is the date saved (check with the phone set to a zone west of UTC).
-- [ ] No server address → the shared empty state from T-017.
+- [x] No server address → the shared empty state from T-017.
 - [ ] TalkBack: a row is read as "<title>, <dates>, <relative label>"; the date badge is not
       read separately.
-- [ ] Unit tests: upcoming/now/past grouping, relative labels, date range formatting, picker
+- [x] Unit tests: upcoming/now/past grouping, relative labels, date range formatting, picker
       millis → `LocalDate`.
-- [ ] Paparazzi: upcoming (with Now), past, both empty states, detail, form, one dark.
-- [ ] README Features and screenshots; CI passes.
+- [x] Paparazzi: upcoming (with Now), past, both empty states, detail, form, one dark.
+- [x] README Features and screenshots; CI passes.
 
 ## Out of scope
 
