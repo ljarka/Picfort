@@ -20,8 +20,21 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.NavigationBar
-import androidx.compose.material3.NavigationBarItem
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.tween
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.Surface
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.semantics.selected
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
@@ -61,31 +74,94 @@ enum class Tab(val label: String, @param:DrawableRes val icon: Int) {
     PHOTOS("Photos", R.drawable.ic_photo_library),
 }
 
-/** M3 navigation bar height, without the system navigation bar below it. */
-private val TAB_BAR_HEIGHT = 80.dp
+/** Floating navigation bar height and outer vertical spacing. */
+private val FLOATING_BAR_HEIGHT = 64.dp
+private val FLOATING_BAR_MARGIN_BOTTOM = 8.dp
+private val TAB_BAR_TOTAL_HEIGHT = FLOATING_BAR_HEIGHT + (FLOATING_BAR_MARGIN_BOTTOM * 2)
 
 /**
- * The bottom bar. Labels are always shown and read by TalkBack (icons have no description);
- * the collection semantics make TalkBack say "tab, 2 of 5".
+ * The floating bottom navigation bar.
+ * Designed as a capsule hovering above the bottom edge with rounded corners,
+ * subtle surface elevation/shadow, and an animated selection indicator for the active tab.
  */
 @Composable
 fun TabBar(selected: Tab?, onSelect: (Tab) -> Unit, modifier: Modifier = Modifier) {
-    NavigationBar(
-        modifier.semantics { collectionInfo = CollectionInfo(rowCount = 1, columnCount = Tab.entries.size) },
+    Surface(
+        shape = RoundedCornerShape(32.dp),
+        color = MaterialTheme.colorScheme.surface.copy(alpha = 0.94f),
+        contentColor = MaterialTheme.colorScheme.onSurface,
+        tonalElevation = 6.dp,
+        shadowElevation = 8.dp,
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f)),
+        modifier = modifier
+            .navigationBarsPadding()
+            .padding(horizontal = 16.dp, vertical = FLOATING_BAR_MARGIN_BOTTOM)
+            .fillMaxWidth()
+            .height(FLOATING_BAR_HEIGHT)
+            .semantics { collectionInfo = CollectionInfo(rowCount = 1, columnCount = Tab.entries.size) },
     ) {
-        Tab.entries.forEachIndexed { index, tab ->
-            NavigationBarItem(
-                selected = tab == selected,
-                onClick = { onSelect(tab) },
-                icon = { Icon(ImageVector.vectorResource(tab.icon), contentDescription = null) },
-                // labelSmall (11 sp) instead of the default 12 sp: "Shopping" must fit a fifth of
-                // a 360 dp screen at font scale 1.3.
-                label = { Text(tab.label, maxLines = 1, softWrap = false, style = MaterialTheme.typography.labelSmall) },
-                alwaysShowLabel = true,
-                modifier = Modifier.semantics {
-                    collectionItemInfo = CollectionItemInfo(rowIndex = 0, rowSpan = 1, columnIndex = index, columnSpan = 1)
-                },
-            )
+        Row(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(horizontal = 4.dp, vertical = 4.dp),
+            horizontalArrangement = Arrangement.SpaceAround,
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Tab.entries.forEachIndexed { index, tab ->
+                val isSelected = tab == selected
+                val interactionSource = remember { MutableInteractionSource() }
+
+                val containerColor by animateColorAsState(
+                    targetValue = if (isSelected) MaterialTheme.colorScheme.primaryContainer else Color.Transparent,
+                    animationSpec = tween(durationMillis = 200),
+                    label = "tabContainerColor",
+                )
+                val contentColor by animateColorAsState(
+                    targetValue = if (isSelected) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurfaceVariant,
+                    animationSpec = tween(durationMillis = 200),
+                    label = "tabContentColor",
+                )
+
+                Surface(
+                    shape = RoundedCornerShape(24.dp),
+                    color = containerColor,
+                    contentColor = contentColor,
+                    modifier = Modifier
+                        .weight(1f)
+                        .fillMaxHeight()
+                        .clickable(
+                            interactionSource = interactionSource,
+                            indication = null,
+                            onClick = { onSelect(tab) },
+                        )
+                        .semantics {
+                            this.selected = isSelected
+                            collectionItemInfo = CollectionItemInfo(rowIndex = 0, rowSpan = 1, columnIndex = index, columnSpan = 1)
+                        },
+                ) {
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.Center,
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(horizontal = 2.dp, vertical = 2.dp),
+                    ) {
+                        Icon(
+                            imageVector = ImageVector.vectorResource(tab.icon),
+                            contentDescription = null,
+                            modifier = Modifier.size(22.dp),
+                        )
+                        Spacer(Modifier.height(2.dp))
+                        Text(
+                            text = tab.label,
+                            maxLines = 1,
+                            softWrap = false,
+                            style = MaterialTheme.typography.labelSmall,
+                            fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Normal,
+                        )
+                    }
+                }
+            }
         }
     }
 }
@@ -99,7 +175,7 @@ fun TabBar(selected: Tab?, onSelect: (Tab) -> Unit, modifier: Modifier = Modifie
 @Composable
 fun TabRoot(content: @Composable () -> Unit) {
     val systemBar = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
-    val room = PaddingValues(bottom = TAB_BAR_HEIGHT + systemBar)
+    val room = PaddingValues(bottom = TAB_BAR_TOTAL_HEIGHT + systemBar)
     Box(
         Modifier
             .fillMaxSize()

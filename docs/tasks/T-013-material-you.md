@@ -1,6 +1,6 @@
 # T-013 — Material You / dynamic color
 
-**Status:** ready  
+**Status:** done (Rebranding "The Lens & Hearth", adaptive app icon, themed icon, floating nav bar, and M3 dynamic color palette implemented 2026-11-11)  
 **Component:** Android app  
 **Depends on:** —
 
