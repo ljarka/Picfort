@@ -43,10 +43,11 @@ import com.github.ljarka.picfort.local.RequestMediaPermission
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun SettingsScreen(onBack: () -> Unit, onFrameClick: () -> Unit) {
+fun SettingsScreen(onBack: () -> Unit, onFrameClick: () -> Unit, onFamilyClick: () -> Unit = {}) {
     val viewModel: SettingsViewModel = hiltViewModel()
     val backup by viewModel.backup.collectAsStateWithLifecycle()
     val status by viewModel.status.collectAsStateWithLifecycle()
+    val showFamily by viewModel.showFamily.collectAsStateWithLifecycle()
 
     LaunchedEffect(status) { viewModel.reloadCounts() }
     val notificationPermission = rememberLauncherForActivityResult(
@@ -64,8 +65,10 @@ fun SettingsScreen(onBack: () -> Unit, onFrameClick: () -> Unit) {
         status = status,
         serverUrl = viewModel.serverUrl,
         picfortServer = viewModel.picfortServer,
+        showFamily = showFamily,
         onBack = onBack,
         onFrameClick = onFrameClick,
+        onFamilyClick = onFamilyClick,
         onEnable = onEnable,
         onWifiOnly = viewModel::setWifiOnly,
         onChargingOnly = viewModel::setChargingOnly,
@@ -82,8 +85,10 @@ fun SettingsContent(
     serverUrl: String,
     /** Picfort server address, "" when not set. */
     picfortServer: String = "",
+    showFamily: Boolean = false,
     onBack: () -> Unit = {},
     onFrameClick: () -> Unit = {},
+    onFamilyClick: () -> Unit = {},
     onEnable: (Boolean) -> Unit = {},
     onWifiOnly: (Boolean) -> Unit = {},
     onChargingOnly: (Boolean) -> Unit = {},
@@ -166,6 +171,13 @@ fun SettingsContent(
                 headlineContent = { Text(picfortServer.ifEmpty { "Not set" }) },
                 supportingContent = { Text("Picture frame, slideshow and the Family Wall") },
             )
+            if (showFamily) {
+                ListItem(
+                    modifier = Modifier.clickable(onClick = onFamilyClick),
+                    headlineContent = { Text("Family") },
+                    supportingContent = { Text("Names, photos and hidden accounts") },
+                )
+            }
 
             HorizontalDivider(Modifier.padding(vertical = 8.dp))
             SectionTitle("Account")

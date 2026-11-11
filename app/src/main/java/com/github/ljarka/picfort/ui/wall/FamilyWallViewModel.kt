@@ -3,8 +3,10 @@ package com.github.ljarka.picfort.ui.wall
 import android.net.Uri
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.github.ljarka.picfort.ui.family.FamilyRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -56,6 +58,7 @@ private fun List<WallPost>.ordered() =
 @HiltViewModel
 class FamilyWallViewModel @Inject constructor(
     private val repository: WallRepository,
+    private val family: FamilyRepository,
 ) : ViewModel() {
 
     private val _state = MutableStateFlow(FamilyWallUiState(myId = repository.myId))
@@ -66,10 +69,15 @@ class FamilyWallViewModel @Inject constructor(
 
     init {
         viewModelScope.launch {
-            repository.members.collect { members -> _state.update { it.copy(members = members) } }
+            family.members.collect { members ->
+                _state.update { s ->
+                    val selected = s.selectedMemberId?.takeIf { id -> members.any { it.id == id } }
+                    s.copy(members = members, selectedMemberId = selected)
+                }
+            }
         }
         viewModelScope.launch {
-            repository.testAccountIds.collect { ids -> _state.update { it.copy(hiddenAuthorIds = ids) } }
+            family.hiddenIds.collect { ids -> _state.update { it.copy(hiddenAuthorIds = ids) } }
         }
     }
 
@@ -92,7 +100,10 @@ class FamilyWallViewModel @Inject constructor(
         }
         _state.update { it.copy(configured = true, isLoading = it.posts.isEmpty()) }
         try {
-            val posts = repository.posts()
+            val posts = coroutineScope {
+                launch { family.refresh() }
+                repository.posts()
+            }
             _state.update { s ->
                 s.copy(posts = posts + s.posts.filter { it.id < 0 }, isLoading = false, loadError = null)
             }

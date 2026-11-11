@@ -40,6 +40,7 @@ import com.github.ljarka.picfort.collections.AlbumScreen
 import com.github.ljarka.picfort.collections.AlbumsScreen
 import com.github.ljarka.picfort.collections.GridAsset
 import com.github.ljarka.picfort.collections.SearchScreen
+import com.github.ljarka.picfort.ui.family.FamilySettingsScreen
 import com.github.ljarka.picfort.ui.frame.FrameScreen
 import com.github.ljarka.picfort.ui.frame.PicfortServerSetupScreen
 import com.github.ljarka.picfort.ui.wall.FamilyWallScreen
@@ -58,6 +59,9 @@ sealed interface Screen {
 
     @Serializable
     object Settings : Screen
+
+    @Serializable
+    data class FamilySettings(val editUserId: String? = null) : Screen
 
     @Serializable
     object Frame : Screen
@@ -206,7 +210,12 @@ class MainActivity : ComponentActivity() {
                             }
                             navigation<TabGraph.Wall>(startDestination = Screen.FamilyWall) {
                                 composable<Screen.FamilyWall> {
-                                    TabRoot { FamilyWallScreen(onSettingsClick = openSettings) }
+                                    TabRoot {
+                                        FamilyWallScreen(
+                                            onSettingsClick = openSettings,
+                                            onEditMember = { userId -> navController.navigate(Screen.FamilySettings(userId)) },
+                                        )
+                                    }
                                 }
                             }
                             navigation<TabGraph.Shopping>(startDestination = Screen.Shopping) {
@@ -296,7 +305,11 @@ class MainActivity : ComponentActivity() {
                                 SettingsScreen(
                                     onBack = { navController.popBackStack() },
                                     onFrameClick = { navController.navigate(Screen.Frame) },
+                                    onFamilyClick = { navController.navigate(Screen.FamilySettings()) },
                                 )
+                            }
+                            composable<Screen.FamilySettings> {
+                                FamilySettingsScreen(onBack = { navController.popBackStack() })
                             }
                             composable<Screen.Frame> {
                                 FrameScreen(onBack = { navController.popBackStack() })
