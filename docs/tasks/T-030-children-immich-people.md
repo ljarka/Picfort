@@ -66,7 +66,8 @@ People picker (bottom sheet, grid of faces):
 
 ## Data
 
-- `PeopleApi` on the Immich Retrofit client (`/api/people`, thumbnail via OkHttp bytes).
+- `PeopleApi` on the Immich Retrofit client (`/api/people`, thumbnail via OkHttp bytes) and
+  `PeoplePickerSheet`, shared with T-032 (whichever lands first builds them).
   Reuse it in T-008 (People screen) later.
 - `ChildPhotosPagingSource` on `search/metadata` (person filter); the grid model as albums.
 - School repository: `uploadPhoto`, `linkPerson`, `unlinkPerson` (T-028 endpoints).
