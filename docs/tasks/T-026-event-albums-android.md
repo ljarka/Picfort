@@ -44,7 +44,8 @@ A row **Album** below the note, opening a bottom sheet:
 
 - **No album** (default).
 - **Create album "<event title>"**: on Save of the event, `POST /api/albums` with the title
-  and all family members as `editor`, then the event with the new `album_id`. Renaming the
+  and all family members as `editor` (the wall's members: Immich users without test
+  accounts, `isTestAccount`), then the event with the new `album_id`. Renaming the
   event later does not rename the album.
 - The user's albums from `GET /api/albums` (own and shared with them), by name, with cover and
   photo count, and a search field when there are more than 10. Loading and error (Retry)

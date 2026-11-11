@@ -47,7 +47,9 @@ The mockup shows two photos side by side under the cards; the hero item is what 
 ## Family members
 
 Members are the **users of the Immich server**, not face-recognition people. A member can
-write, so authors and avatars are the same set.
+write, so authors and avatars are the same set. Test accounts (a name containing "test",
+case-insensitive) are not members: they and their posts are hidden (PR #37); the logged-in
+user is never hidden.
 
 - Source: the sync stream (T-015). Add `UsersV1` to the requested types and store the
   lines in a new Room table `users` (id, name, avatarColor, hasProfileImage,
