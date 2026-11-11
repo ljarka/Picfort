@@ -12,18 +12,21 @@ import com.github.ljarka.picfort.ui.login.AccessTokenStore
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import com.github.ljarka.picfort.ui.family.BirthDate
 import java.io.ByteArrayOutputStream
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlin.math.max
 
-/** A family member: an Immich user of the server (T-002). */
+/** A family member: an Immich user or manual member (T-002, T-034). */
 data class FamilyMember(
     val id: String,
     val name: String,
-    /** Profile picture URL on Immich, or null to show initials. */
+    /** Profile picture URL on Immich or Picfort server, or null to show initials. */
     val avatarUrl: String?,
     val color: Color,
+    val isImmichUser: Boolean = true,
+    val birthDate: BirthDate? = null,
 )
 
 /** Immich's avatar color names → ring colors. Unknown or missing → primary. */

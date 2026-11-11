@@ -1,6 +1,6 @@
 # T-034 — Family settings: add people, Immich badge, birth date (Android)
 
-**Status:** ready (first step: mockup for the owner to approve)  
+**Status:** done  
 **Component:** Android app  
 **Depends on:** T-032 (Family screen, `FamilyRepository`), T-033 (API)
 

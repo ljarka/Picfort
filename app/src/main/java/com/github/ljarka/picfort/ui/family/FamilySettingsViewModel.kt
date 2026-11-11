@@ -41,6 +41,11 @@ class FamilySettingsViewModel @Inject constructor(
                 }
             }
         }
+        viewModelScope.launch {
+            repository.canAddMembers.collect { canAdd ->
+                _state.update { it.copy(canAddMembers = canAdd) }
+            }
+        }
     }
 
     suspend fun keepFresh() {
@@ -132,18 +137,129 @@ class FamilySettingsViewModel @Inject constructor(
         }
     }
 
+    fun openAddPerson() {
+        _state.update { it.copy(addingPerson = AddPersonUi()) }
+    }
+
+    fun dismissAddPerson() {
+        if (_state.value.addingPerson?.saving == true) return
+        _state.update { it.copy(addingPerson = null) }
+    }
+
+    fun updateAddPersonName(name: String) {
+        _state.update { s -> s.copy(addingPerson = s.addingPerson?.copy(name = name.take(50))) }
+    }
+
+    fun updateAddPersonBirthDate(date: BirthDate?) {
+        _state.update { s -> s.copy(addingPerson = s.addingPerson?.copy(birthDate = date)) }
+    }
+
+    fun updateAddPersonHideYear(hide: Boolean) {
+        _state.update { s ->
+            val add = s.addingPerson ?: return@update s
+            val newBirthDate = if (hide) add.birthDate?.copy(year = null) else add.birthDate
+            s.copy(addingPerson = add.copy(hideBirthYear = hide, birthDate = newBirthDate))
+        }
+    }
+
+    fun updateAddPersonPhoto(bytes: ByteArray?) {
+        _state.update { s -> s.copy(addingPerson = s.addingPerson?.copy(photoBytes = bytes)) }
+    }
+
+    fun saveAddPerson() {
+        val add = _state.value.addingPerson ?: return
+        if (add.name.isBlank() || add.saving) return
+        _state.update { it.copy(addingPerson = add.copy(saving = true)) }
+        viewModelScope.launch {
+            try {
+                val effectiveBirthDate = if (add.hideBirthYear) add.birthDate?.copy(year = null) else add.birthDate
+                repository.addMember(
+                    displayName = add.name.trim(),
+                    birthDate = effectiveBirthDate,
+                    photoBytes = add.photoBytes,
+                )
+                _state.update { it.copy(addingPerson = null) }
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                _state.update { s ->
+                    s.copy(
+                        addingPerson = s.addingPerson?.copy(saving = false),
+                        message = e.message ?: "Couldn't add member",
+                    )
+                }
+            }
+        }
+    }
+
+    fun updateMemberBirthDate(date: BirthDate?) {
+        _state.update { s ->
+            val edit = s.editing ?: return@update s
+            val newDate = if (edit.hideBirthYear) date?.copy(year = null) else date
+            s.copy(editing = edit.copy(birthDate = newDate, clearBirthDate = date == null))
+        }
+    }
+
+    fun updateMemberHideYear(hide: Boolean) {
+        _state.update { s ->
+            val edit = s.editing ?: return@update s
+            val newDate = if (hide) edit.birthDate?.copy(year = null) else edit.birthDate
+            s.copy(editing = edit.copy(hideBirthYear = hide, birthDate = newDate))
+        }
+    }
+
+    fun clearMemberBirthDate() {
+        _state.update { s ->
+            val edit = s.editing ?: return@update s
+            s.copy(editing = edit.copy(birthDate = null, clearBirthDate = true))
+        }
+    }
+
+    fun askDeleteMember() {
+        _state.update { s -> s.copy(editing = s.editing?.copy(confirmDelete = true)) }
+    }
+
+    fun cancelDeleteMember() {
+        _state.update { s -> s.copy(editing = s.editing?.copy(confirmDelete = false)) }
+    }
+
+    fun confirmDeleteMember() {
+        val edit = _state.value.editing ?: return
+        if (edit.saving) return
+        _state.update { it.copy(editing = edit.copy(saving = true, confirmDelete = false)) }
+        viewModelScope.launch {
+            try {
+                repository.deleteMember(edit.user.id)
+                _state.update { it.copy(editing = null) }
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                _state.update { s ->
+                    s.copy(
+                        editing = s.editing?.copy(saving = false),
+                        message = e.message ?: "Couldn't delete member",
+                    )
+                }
+            }
+        }
+    }
+
     fun saveMember() {
         val edit = _state.value.editing ?: return
         if (edit.saving) return
         _state.update { it.copy(editing = edit.copy(saving = true)) }
         viewModelScope.launch {
             try {
+                val effectiveBirthDate = if (edit.hideBirthYear) edit.birthDate?.copy(year = null) else edit.birthDate
                 repository.saveMember(
                     user = edit.user,
                     displayName = edit.displayName,
                     pickedPersonId = edit.pickedPersonId,
+                    photoBytes = edit.pickedPhotoBytes,
                     clearPhoto = edit.clearPhoto,
                     showInFamily = edit.showInFamily,
+                    birthDate = effectiveBirthDate,
+                    clearBirthDate = edit.clearBirthDate,
                 )
                 _state.update { it.copy(editing = null, peoplePicker = null) }
             } catch (e: CancellationException) {

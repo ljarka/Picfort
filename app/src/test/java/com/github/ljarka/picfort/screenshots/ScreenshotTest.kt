@@ -60,6 +60,9 @@ import com.github.ljarka.picfort.ui.frame.FrameUi
 import com.github.ljarka.picfort.ui.frame.SlideshowState
 import com.github.ljarka.picfort.ui.image.AssetDetailsList
 import com.github.ljarka.picfort.ui.image.DetailsState
+import com.github.ljarka.picfort.ui.family.AddPersonSheetContent
+import com.github.ljarka.picfort.ui.family.AddPersonUi
+import com.github.ljarka.picfort.ui.family.BirthDate
 import com.github.ljarka.picfort.ui.family.FamilyMemberEditUi
 import com.github.ljarka.picfort.ui.family.FamilyMemberSheetContent
 import com.github.ljarka.picfort.ui.family.FamilySettingsContent
@@ -459,11 +462,16 @@ class ScreenshotTest {
 
     private val familyUsers = listOf(
         FamilyUserUi("mama", name = "Mama", immichName = "Anna Kowalska", avatarUrl = "avatar-mama",
-            hasCustomPhoto = true, color = avatarColor("pink"), isMe = true),
-        FamilyUserUi("tata", name = "Tata", immichName = "Tata", avatarUrl = null, color = avatarColor("blue")),
+            hasCustomPhoto = true, color = avatarColor("pink"), isMe = true,
+            birthDate = BirthDate(month = 5, day = 14, year = 1988)),
+        FamilyUserUi("tata", name = "Tata", immichName = "Tata", avatarUrl = null, color = avatarColor("blue"),
+            birthDate = BirthDate(month = 11, day = 28)),
         FamilyUserUi("ola", name = "Ola", immichName = "Aleksandra K.", avatarUrl = "avatar-ola",
-            hasCustomPhoto = true, color = avatarColor("green")),
+            hasCustomPhoto = true, color = avatarColor("green"),
+            birthDate = BirthDate(month = 9, day = 3, year = 2018)),
         FamilyUserUi("babcia", name = "Babcia Zosia", immichName = "Zofia Nowak", avatarUrl = null, color = avatarColor("amber")),
+        FamilyUserUi("stasiu", name = "Staś", immichName = "", avatarUrl = null, color = avatarColor("teal"),
+            isImmichUser = false, birthDate = BirthDate(month = 3, day = 12, year = 2021)),
         FamilyUserUi("test", name = "LukaszTest", immichName = "LukaszTest", avatarUrl = null,
             color = avatarColor("gray"), hidden = true),
     )
@@ -516,6 +524,22 @@ class ScreenshotTest {
                         previewAvatarUrl = "avatar-ola",
                         hasCustomPhoto = true,
                         showInFamily = true,
+                        birthDate = BirthDate(month = 9, day = 3, year = 2018),
+                    )
+                )
+            },
+        )
+    }
+
+    @Test
+    fun family_add_member_sheet() = snap {
+        WithSheet(
+            background = { FamilySettingsContent(FamilySettingsUi(users = familyUsers)) },
+            sheet = {
+                AddPersonSheetContent(
+                    AddPersonUi(
+                        name = "Dziadek Jan",
+                        birthDate = BirthDate(month = 6, day = 20, year = 1955),
                     )
                 )
             },

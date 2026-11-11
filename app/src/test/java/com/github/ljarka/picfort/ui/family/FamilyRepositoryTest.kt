@@ -65,7 +65,7 @@ private class FakeFamilyBackend(
         val list = map.values.toList()
         val raw = """{"profiles":[${
             list.joinToString(",") { p ->
-                """{"user_id":"${p.userId}","display_name":${p.displayName?.let { "\"$it\"" } ?: "null"},"photo_url":${p.photoUrl?.let { "\"$it\"" } ?: "null"},"hidden":${p.hidden ?: "null"}}"""
+                """{"user_id":"${p.userId}","display_name":${p.displayName?.let { "\"$it\"" } ?: "null"},"photo_url":${p.photoUrl?.let { "\"$it\"" } ?: "null"},"hidden":${p.hidden ?: "null"},"manual":${p.manual},"birth_date":${p.birthDate?.let { "\"$it\"" } ?: "null"}}"""
             }
         }]}"""
         return list to raw
@@ -79,6 +79,9 @@ private class FakeFamilyBackend(
         displayName: String?,
         hidden: Boolean?,
         includeHidden: Boolean,
+        birthDate: String?,
+        includeBirthDate: Boolean,
+        today: String?,
     ): FamilyProfile {
         failWith?.let { throw it }
         val existing = map[userId]
@@ -87,13 +90,37 @@ private class FakeFamilyBackend(
             displayName = displayName,
             photoUrl = existing?.photoUrl,
             hidden = if (includeHidden) hidden else existing?.hidden,
+            manual = existing?.manual ?: false,
+            birthDate = if (includeBirthDate) birthDate else existing?.birthDate,
         )
-        if (updated.displayName == null && updated.photoUrl == null && updated.hidden == null) {
+        if (updated.displayName == null && updated.photoUrl == null && updated.hidden == null && updated.birthDate == null && !updated.manual) {
             map.remove(userId)
         } else {
             map[userId] = updated
         }
         return updated
+    }
+
+    override suspend fun addMember(
+        displayName: String,
+        birthDate: String?,
+        today: String?,
+    ): FamilyProfile {
+        failWith?.let { throw it }
+        val id = java.util.UUID.randomUUID().toString()
+        val created = FamilyProfile(
+            userId = id,
+            displayName = displayName,
+            manual = true,
+            birthDate = birthDate,
+        )
+        map[id] = created
+        return created
+    }
+
+    override suspend fun deleteMember(userId: String) {
+        failWith?.let { throw it }
+        map.remove(userId)
     }
 
     override suspend fun uploadPhoto(userId: String, photoJpeg: ByteArray): FamilyProfile {
@@ -298,5 +325,116 @@ class FamilyRepositoryTest {
         val parsed = PeopleApi.parseNamedPeople(raw, "https://photos.example.com/", Json { ignoreUnknownKeys = true })
         assertEquals(listOf("Ola", "Staś"), parsed.map { it.name })
         assertEquals("https://photos.example.com/api/people/3/thumbnail", parsed.first().thumbnailUrl)
+    }
+
+    @Test
+    fun `merge family users marks immich vs manual and parses birth dates`() {
+        val immich = listOf(
+            UserEntity("1", "Mama", "mama@example.com", avatarColor = "pink", hasProfileImage = false, profileChangedAt = null),
+        )
+        val profiles = mapOf(
+            "1" to FamilyProfile("1", displayName = "Mama Anna", birthDate = "1985-05-17"),
+            "2" to FamilyProfile("2", displayName = "Babcia Zosia", manual = true, birthDate = "--12-05"),
+        )
+        val merged = mergeFamilyUsers(immich, profiles, myId = "1", immichServerUrl = "http://immich")
+        assertEquals(2, merged.size)
+
+        val u1 = merged.first { it.id == "1" }
+        assertTrue(u1.isImmichUser)
+        assertEquals("Mama Anna", u1.name)
+        assertEquals("Mama", u1.immichName)
+        assertEquals(BirthDate(5, 17, 1985), u1.birthDate)
+
+        val u2 = merged.first { it.id == "2" }
+        assertFalse(u2.isImmichUser)
+        assertEquals("Babcia Zosia", u2.name)
+        assertEquals("", u2.immichName)
+        assertEquals(BirthDate(12, 5, null), u2.birthDate)
+    }
+
+    @Test
+    fun `birth date formatting with and without year`() {
+        val today = java.time.LocalDate.of(2026, 11, 11)
+        val withYearPast = BirthDate(5, 17, 1985)
+        assertEquals("17 May · 41", withYearPast.formatDisplay(today))
+
+        val withYearFutureThisYear = BirthDate(12, 25, 2015)
+        assertEquals("25 Dec · 10", withYearFutureThisYear.formatDisplay(today))
+
+        val withoutYear = BirthDate(12, 5, null)
+        assertEquals("5 Dec", withoutYear.formatDisplay(today))
+
+        assertEquals("1985-05-17", withYearPast.toIsoString())
+        assertEquals("--12-05", withoutYear.toIsoString())
+        assertEquals(withYearPast, BirthDate.parse("1985-05-17"))
+        assertEquals(withoutYear, BirthDate.parse("--12-05"))
+        assertNull(BirthDate.parse(null))
+        assertNull(BirthDate.parse(""))
+    }
+
+    @Test
+    fun `members flow excludes manual members while allMembers includes all`() = runBlocking {
+        val backend = FakeFamilyBackend()
+        backend.map["manual1"] = FamilyProfile("manual1", displayName = "Babcia", manual = true)
+        val repo = FamilyRepository(
+            backend = backend,
+            people = FakePeopleSource(),
+            offline = FakeOfflineCopy(),
+            usersDao = FakeUsersDao(listOf(
+                UserEntity("mama", "Mama", "m@example.com", avatarColor = "pink", hasProfileImage = false, profileChangedAt = null),
+            )),
+            immichServerUrl = { "http://immich" },
+            currentUserId = { "mama" },
+        )
+        repo.refresh()
+
+        val wallMembers = repo.members.first()
+        assertEquals(listOf("mama"), wallMembers.map { it.id })
+
+        val allMembers = repo.allMembers.first()
+        assertEquals(setOf("mama", "manual1"), allMembers.map { it.id }.toSet())
+    }
+
+    @Test
+    fun `add manual member and delete member updates repository`() = runBlocking {
+        val backend = FakeFamilyBackend()
+        val repo = FamilyRepository(
+            backend = backend,
+            people = FakePeopleSource(),
+            offline = FakeOfflineCopy(),
+            usersDao = FakeUsersDao(emptyList()),
+            immichServerUrl = { "http://immich" },
+            currentUserId = { "mama" },
+        )
+        repo.addMember("Dziadek Jan", BirthDate(3, 10, 1950))
+        val users = repo.users.first()
+        assertEquals(1, users.size)
+        val dziadek = users.first()
+        assertEquals("Dziadek Jan", dziadek.name)
+        assertFalse(dziadek.isImmichUser)
+        assertEquals(BirthDate(3, 10, 1950), dziadek.birthDate)
+
+        repo.deleteMember(dziadek.id)
+        assertTrue(repo.users.first().isEmpty())
+    }
+
+    @Test
+    fun `canAddMembers becomes false on outdated server`() = runBlocking {
+        val backend = FakeFamilyBackend().apply {
+            failWith = PicfortServerException.Outdated("family members")
+        }
+        val repo = FamilyRepository(
+            backend = backend,
+            people = FakePeopleSource(),
+            offline = FakeOfflineCopy(),
+            usersDao = FakeUsersDao(emptyList()),
+            immichServerUrl = { "http://immich" },
+            currentUserId = { "mama" },
+        )
+        assertTrue(repo.canAddMembers.value)
+        try {
+            repo.addMember("Babcia")
+        } catch (_: PicfortServerException.Outdated) {}
+        assertFalse(repo.canAddMembers.value)
     }
 }
