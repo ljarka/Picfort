@@ -122,15 +122,15 @@ and fast isolated snapshot testing (`./gradlew :feature:<name>:verifyPaparazziDe
 
 | Task | Description | Status |
 |------|-------------|--------|
-| [T-043](tasks/T-043-modularization-foundation-core-model.md) | Build-logic convention plugins & pure domain `:core:model` | `ready` |
-| [T-044](tasks/T-044-modularization-core-ui.md) | Design system & shared UI components `:core:ui` | `ready` |
-| [T-045](tasks/T-045-modularization-core-network-database.md) | Network infrastructure `:core:network` & persistence `:core:database` | `ready` |
-| [T-046](tasks/T-046-modularization-feature-shopping.md) | Feature slice `:feature:shopping` (lists, offline copy, local snapshots) | `ready` |
-| [T-047](tasks/T-047-modularization-feature-events.md) | Feature slice `:feature:events` (upcoming, form, detail, local snapshots) | `ready` |
-| [T-048](tasks/T-048-modularization-feature-family.md) | Feature slice `:feature:family` (settings, members, birth dates, local snapshots) | `ready` |
-| [T-049](tasks/T-049-modularization-feature-wall.md) | Feature slice `:feature:wall` (dashboard, today panel, member chips, local snapshots) | `ready` |
-| [T-050](tasks/T-050-modularization-feature-timeline-frame.md) | Feature slices `:feature:timeline` & `:feature:frame` | `ready` |
-| [T-051](tasks/T-051-modularization-app-shell-cleanup.md) | Thin `:app` shell, root navigation assembly & architecture boundary guard | `ready` |
+| [T-043](tasks/T-043-modularization-foundation-core-model.md) | Build-logic convention plugins & pure domain `:core:model` | `done` |
+| [T-044](tasks/T-044-modularization-core-ui.md) | Design system & shared UI components `:core:ui` | `done` |
+| [T-045](tasks/T-045-modularization-core-network-database.md) | Network infrastructure `:core:network` & persistence `:core:database` | `done` |
+| [T-046](tasks/T-046-modularization-feature-shopping.md) | Feature slice `:feature:shopping` (lists, offline copy, local snapshots) | `done` |
+| [T-047](tasks/T-047-modularization-feature-events.md) | Feature slice `:feature:events` (upcoming, form, detail, local snapshots) | `done` |
+| [T-048](tasks/T-048-modularization-feature-family.md) | Feature slice `:feature:family` (settings, members, birth dates, local snapshots) | `done` |
+| [T-049](tasks/T-049-modularization-feature-wall.md) | Feature slice `:feature:wall` (dashboard, today panel, member chips, local snapshots) | `done` |
+| [T-050](tasks/T-050-modularization-feature-timeline-frame.md) | Feature slices `:feature:timeline` & `:feature:frame` | `done` |
+| [T-051](tasks/T-051-modularization-app-shell-cleanup.md) | Thin `:app` shell, root navigation assembly & architecture boundary guard | `done` |
 
 Decided by the owner (2026-11-11), as recommended:
 - **Schema changes** in `shopping.db` / `events.db`: no migrations; the old file is kept as
