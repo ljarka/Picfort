@@ -55,7 +55,7 @@ Deeper integration with Android platform features.
 | Task | Description | Status |
 |------|-------------|--------|
 | [T-012](tasks/T-012-android-widget.md) | Home screen widget (Glance API) | `ready` |
-| [T-013](tasks/T-013-material-you.md) | Material You / dynamic color | `ready` |
+| [T-013](tasks/T-013-material-you.md) | Material You / dynamic color & visual rebranding | `done` |
 
 ### Phase 6 — Quality & CI
 Automated checks and architecture guardrails.
