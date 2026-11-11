@@ -38,6 +38,14 @@ Family profiles (see family.py, T-031), same token auth; anyone can edit any mem
     PUT    /family/<user_id>/photo           -> multipart photo (JPEG/PNG <= 2 MB)
     DELETE /family/<user_id>/photo           -> 204
     GET    /family/photo/<file>              -> the profile photo
+
+Events (see events.py, T-022), same token auth; anyone can edit, only the creator deletes.
+    GET    /events?after=<YYYY-MM-DD>        -> upcoming and ongoing events
+    GET    /events?before=<YYYY-MM-DD>[&limit=50&offset=0] -> past events, latest end first
+    POST   /events                           -> 201 new event
+    GET    /events/<id>                      -> the event
+    PATCH  /events/<id>                      -> update any field (null clears optional ones)
+    DELETE /events/<id>                      -> 204 (creator only)
 """
 
 import hmac
@@ -54,6 +62,7 @@ from werkzeug.exceptions import RequestEntityTooLarge
 
 import frame
 from auth import Authenticator, AuthError, AuthUnavailable, immich_lookup
+from events import DEFAULT_LIMIT as EVENTS_DEFAULT_LIMIT, EventStore
 from family import FamilyStore
 from immich import ImmichClient
 from shopping import ShoppingStore
@@ -155,7 +164,8 @@ def settings_json(slideshow: Slideshow):
 
 def create_app(controller: FrameController, slideshow: Slideshow, immich: ImmichClient,
                wall: WallStore = None, auth: Authenticator = None, api_key: str = "",
-               shopping: ShoppingStore = None, family: FamilyStore = None) -> Flask:
+               shopping: ShoppingStore = None, family: FamilyStore = None,
+               events: EventStore = None) -> Flask:
     app = Flask(__name__)
     if api_key:
         require_api_key(app, api_key)
@@ -244,6 +254,8 @@ def create_app(controller: FrameController, slideshow: Slideshow, immich: Immich
         register_shopping(app, shopping)
     if family is not None:
         register_family(app, family)
+    if events is not None:
+        register_events(app, events)
     return app
 
 
@@ -389,6 +401,47 @@ def register_family(app: Flask, family: FamilyStore):
         return resp
 
 
+def _int_arg(name: str, default: int) -> int:
+    raw = request.args.get(name)
+    if raw is None:
+        return default
+    try:
+        return int(raw)
+    except ValueError:
+        raise StoreError(f"{name} must be a number")
+
+
+def register_events(app: Flask, events: EventStore):
+    @app.route("/events", methods=["GET"])
+    def get_events():
+        after = request.args.get("after")
+        before = request.args.get("before")
+        if (after is None) == (before is None):
+            raise StoreError("Specify either after or before")
+        if after is not None:
+            return jsonify(events.upcoming(after))
+        limit = _int_arg("limit", EVENTS_DEFAULT_LIMIT)
+        offset = _int_arg("offset", 0)
+        return jsonify(events.past(before, limit=limit, offset=offset))
+
+    @app.route("/events", methods=["POST"])
+    def create_event():
+        return jsonify(events.create(g.user.id, json_body())), 201
+
+    @app.route("/events/<int:event_id>", methods=["GET"])
+    def get_event(event_id):
+        return jsonify(events.get(event_id))
+
+    @app.route("/events/<int:event_id>", methods=["PATCH"])
+    def update_event(event_id):
+        return jsonify(events.update(event_id, json_body()))
+
+    @app.route("/events/<int:event_id>", methods=["DELETE"])
+    def delete_event(event_id):
+        events.delete(event_id, g.user.id)
+        return "", 204
+
+
 def register_wall(app: Flask, wall: WallStore):
     @app.errorhandler(RequestEntityTooLarge)
     def too_large(_):
@@ -473,11 +526,12 @@ if __name__ == "__main__":
     shopping_store = ShoppingStore(os.environ.get("SHOPPING_DB_PATH", "shopping.db"))
     family_store = FamilyStore(os.environ.get("FAMILY_DB_PATH", "family.db"),
                                os.environ.get("PROFILE_PHOTOS_PATH", "profile_photos"))
+    event_store = EventStore(os.environ.get("EVENTS_DB_PATH", "events.db"))
     wall_auth = Authenticator(immich_lookup(config.immich_url))
     api_key = os.environ.get("PICFORT_API_KEY", "").strip()
     if not api_key:
         log.info("PICFORT_API_KEY is not set: anyone who can reach this server can use it.")
     create_app(frame_controller, show_slideshow, immich_client, family_wall, wall_auth, api_key,
-               shopping_store, family_store).run(
+               shopping_store, family_store, event_store).run(
         host="0.0.0.0", port=int(os.environ.get("PORT", "5000")), threaded=True
     )

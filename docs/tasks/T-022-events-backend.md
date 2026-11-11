@@ -1,6 +1,6 @@
 # T-022 — Events: Picfort server API
 
-**Status:** ready  
+**Status:** done  
 **Component:** ImageFrameServer  
 **Depends on:** T-018 (`store.py`, auth prefixes), [ADR 0008](../decisions/0008-family-hub-storage.md)
 
@@ -67,9 +67,9 @@ version change keeps a `.bak` and leaves `wall.db` and `shopping.db` alone.
 
 ## Acceptance criteria
 
-- [ ] Endpoints above with token auth and the optional Picfort key.
-- [ ] `events.db` at `EVENTS_DB_PATH`; `/data/events.db` in the Docker image.
-- [ ] Tests pass in CI; README (API table, backup line) and the `DATA_LOCATION` comment in
+- [x] Endpoints above with token auth and the optional Picfort key.
+- [x] `events.db` at `EVENTS_DB_PATH`; `/data/events.db` in the Docker image.
+- [x] Tests pass in CI; README (API table, backup line) and the `DATA_LOCATION` comment in
       `docker/example.env` updated.
 
 ## Out of scope

@@ -11,7 +11,8 @@ ENV PYTHONUNBUFFERED=1 \
     WALL_PHOTOS_PATH=/data/wall_photos \
     SHOPPING_DB_PATH=/data/shopping.db \
     FAMILY_DB_PATH=/data/family.db \
-    PROFILE_PHOTOS_PATH=/data/profile_photos
+    PROFILE_PHOTOS_PATH=/data/profile_photos \
+    EVENTS_DB_PATH=/data/events.db
 
 WORKDIR /app
 COPY requirements.txt .
