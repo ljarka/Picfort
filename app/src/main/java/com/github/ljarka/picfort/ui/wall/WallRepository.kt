@@ -8,14 +8,9 @@ import android.graphics.Matrix
 import android.media.ExifInterface
 import android.net.Uri
 import androidx.compose.ui.graphics.Color
-import com.github.ljarka.picfort.db.UserEntity
-import com.github.ljarka.picfort.db.UsersDao
 import com.github.ljarka.picfort.ui.login.AccessTokenStore
-import com.github.ljarka.picfort.ui.server.ServerUrlStore
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.withContext
 import java.io.ByteArrayOutputStream
 import javax.inject.Inject
@@ -73,22 +68,11 @@ fun List<FamilyMember>.meFirst(myId: String): List<FamilyMember> =
 @Singleton
 class WallRepository @Inject constructor(
     private val api: WallApi,
-    private val usersDao: UsersDao,
-    private val serverUrlStore: ServerUrlStore,
     private val accessTokenStore: AccessTokenStore,
     @ApplicationContext private val context: Context,
 ) {
     val isConfigured: Boolean get() = api.isConfigured
     val myId: String get() = accessTokenStore.userId
-
-    val members: Flow<List<FamilyMember>> = usersDao.all().map { users ->
-        users.filter { it.id == myId || !isTestAccount(it.name) }.map { it.toMember() }.meFirst(myId)
-    }
-
-    /** Ids of test accounts (see [isTestAccount]), whose posts the wall hides. */
-    val testAccountIds: Flow<Set<String>> = usersDao.all().map { users ->
-        users.filter { it.id != myId && isTestAccount(it.name) }.mapTo(HashSet()) { it.id }
-    }
 
     suspend fun posts(): List<WallPost> = api.posts()
 
@@ -99,16 +83,6 @@ class WallRepository @Inject constructor(
     suspend fun delete(id: Int) = api.delete(id)
 
     suspend fun togglePin(id: Int): WallPost = api.togglePin(id)
-
-    private fun UserEntity.toMember() = FamilyMember(
-        id = id,
-        name = name,
-        avatarUrl = if (hasProfileImage) {
-            // profileChangedAt busts Coil's cache when the picture changes.
-            "${serverUrlStore.serverUrl}/api/users/$id/profile-image?v=${profileChangedAt ?: 0}"
-        } else null,
-        color = avatarColor(avatarColor),
-    )
 
     private suspend fun compress(uri: Uri): ByteArray = withContext(Dispatchers.IO) {
         val resolver = context.contentResolver

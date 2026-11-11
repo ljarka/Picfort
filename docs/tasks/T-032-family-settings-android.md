@@ -1,6 +1,6 @@
 # T-032 — Family settings: name, photo from Immich people, hide (Android)
 
-**Status:** ready (first step: mockup for the owner to approve)  
+**Status:** in-progress (code and tests done; check on a device). Mockup: `docs/wireframes/family-settings-v1.png` and `ScreenshotTest_family_*` / `people_picker`, approved by the owner 2026-11-11.  
 **Component:** Android app  
 **Depends on:** T-031 (API). Shares the Immich people picker with T-030: whichever lands
 first builds `PeopleApi` and `PeoplePickerSheet`, the other reuses them.
