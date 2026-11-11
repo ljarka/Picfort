@@ -104,8 +104,9 @@ fun TimelineScreen(
     onSettingsClick: () -> Unit,
     onSearchClick: () -> Unit,
     onAlbumsClick: () -> Unit,
-    onWallClick: () -> Unit = {},
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    /** Bumped when the Photos tab is reselected: scroll back to the newest photos. */
+    scrollToTop: Int = 0,
 ) {
     Box(modifier = modifier.fillMaxSize()) {
         val viewModel: TimelineViewModel = hiltViewModel()
@@ -114,6 +115,9 @@ fun TimelineScreen(
         // Back from the background (another app, the Immich web UI…): sync again.
         LifecycleEventEffect(Lifecycle.Event.ON_START) { viewModel.onForeground() }
         val listState = rememberLazyListState()
+        LaunchedEffect(scrollToTop) {
+            if (scrollToTop > 0) listState.animateScrollToItem(0)
+        }
         val scaffoldState = rememberBottomSheetScaffoldState(
             bottomSheetState = rememberStandardBottomSheetState(
                 initialValue = SheetValue.Hidden,
@@ -215,7 +219,6 @@ fun TimelineScreen(
                     onSettingsClick = onSettingsClick,
                     onSearchClick = onSearchClick,
                     onAlbumsClick = onAlbumsClick,
-                    onWallClick = onWallClick,
                 ) }
         ) { innerPadding ->
 

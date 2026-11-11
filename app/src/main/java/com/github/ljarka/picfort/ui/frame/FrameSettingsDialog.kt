@@ -116,7 +116,8 @@ fun PicfortServerForm(
     val valid = normalizeFrameUrl(address) != null
     Column(modifier) {
         Text(
-            "The Picfort server on your network runs the picture frame and the Family Wall.",
+            "The Picfort server on your network keeps the family's wall, shopping lists, events and school " +
+                "timetables, and runs the picture frame.",
             style = MaterialTheme.typography.bodyMedium,
         )
         Spacer(Modifier.height(12.dp))

@@ -4,13 +4,18 @@ import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.ExperimentalSharedTransitionApi
 import androidx.compose.animation.SharedTransitionLayout
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import com.github.ljarka.picfort.ui.shell.Tab
+import com.github.ljarka.picfort.ui.shell.TabBar
+import com.github.ljarka.picfort.ui.shell.TabRoot
 import app.cash.paparazzi.DeviceConfig
 import app.cash.paparazzi.Paparazzi
 import com.github.ljarka.picfort.db.AssetType
@@ -72,30 +77,33 @@ class TimelineScreenshotTest {
                 WithSamplePhotos {
                     SharedTransitionLayout {
                         AnimatedVisibility(visible = true) {
-                            Box {
-                                Scaffold(
-                                    topBar = {
-                                        TimelineAppBar(
-                                            scrollBehavior = TopAppBarDefaults.enterAlwaysScrollBehavior(),
-                                            onSettingsClick = {}, onSearchClick = {}, onAlbumsClick = {},
+                            Box(Modifier.fillMaxSize()) {
+                                TabRoot {
+                                    Scaffold(
+                                        topBar = {
+                                            TimelineAppBar(
+                                                scrollBehavior = TopAppBarDefaults.enterAlwaysScrollBehavior(),
+                                                onSettingsClick = {}, onSearchClick = {}, onAlbumsClick = {},
+                                            )
+                                        },
+                                    ) { padding ->
+                                        TimeLineContent(
+                                            viewModel = FakeGrid(),
+                                            state = state,
+                                            listState = rememberLazyListState(),
+                                            onImageClick = { _, _, _ -> },
+                                            onExpandMenuRequest = {},
+                                            onCollapseMenuRequest = {},
+                                            sharedTransitionScope = this@SharedTransitionLayout,
+                                            animatedVisibilityScope = this@AnimatedVisibility,
+                                            modifier = Modifier.padding(padding),
+                                            account = account,
+                                            syncLines = syncLines,
                                         )
-                                    },
-                                ) { padding ->
-                                    TimeLineContent(
-                                        viewModel = FakeGrid(),
-                                        state = state,
-                                        listState = rememberLazyListState(),
-                                        onImageClick = { _, _, _ -> },
-                                        onExpandMenuRequest = {},
-                                        onCollapseMenuRequest = {},
-                                        sharedTransitionScope = this@SharedTransitionLayout,
-                                        animatedVisibilityScope = this@AnimatedVisibility,
-                                        modifier = Modifier.padding(padding),
-                                        account = account,
-                                        syncLines = syncLines,
-                                    )
+                                    }
+                                    FastScroll(state)
                                 }
-                                FastScroll(state)
+                                TabBar(Tab.PHOTOS, onSelect = {}, modifier = Modifier.align(Alignment.BottomCenter))
                             }
                         }
                     }
