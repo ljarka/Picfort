@@ -107,16 +107,14 @@ Decided by the owner (2026-11-11), as recommended:
 - **Currency:** one for the whole server (`CURRENCY=PLN`); a receipt from abroad is typed in PLN.
 - **Today panel without an event today** (T-027): "Next: …" for an event within 30 days,
   otherwise only the date.
-
-Open questions (owner); the tasks are written for the default:
-1. **"Ola finishes at 13:40" in the wall's today panel.** Default: not in T-027 or T-029;
-   recommended as a small follow-up task once both are done.
-2. **Link a child to an Immich user.** Default: no. Children are their own entries; the
-   server keeps an unused `immich_user_id` column so a later link needs no schema change.
-3. **Who may delete a child** (and its timetable). Default: anyone, after a confirmation —
-   unlike lists and events, because either parent must be able to.
-4. **Five tabs.** Default: Wall · Shopping · Events · School · Photos. It is the Material
-   maximum: a sixth section later needs a "More" tab or moving something out.
+- **"Ola finishes at 13:40" in the wall's today panel:** not in T-027 or T-029; a small
+  follow-up task once both are done.
+- **Children are not linked to Immich users;** the server keeps an unused `immich_user_id`
+  column so a later link needs no schema change.
+- **Deleting a child** (and its timetable): anyone, after a confirmation (either parent must
+  be able to).
+- **Five tabs:** Wall · Shopping · Events · School · Photos. It is the Material maximum: a sixth
+  section later needs a "More" tab or moving something out.
 
 ---
 
