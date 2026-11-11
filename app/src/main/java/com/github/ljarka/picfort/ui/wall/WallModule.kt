@@ -1,5 +1,6 @@
 package com.github.ljarka.picfort.ui.wall
 
+import com.github.ljarka.picfort.network.PicfortHttpClient
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -13,10 +14,10 @@ import javax.inject.Singleton
 class WallModule {
 
     /**
-     * The shared client: its WallAuthInterceptor adds the Immich token to `/wall` URLs on the
+     * The shared client: its PicfortAuthInterceptor adds the Immich token to `/wall` URLs on the
      * Picfort server (ADR 0006), and its AuthInterceptor leaves that host alone.
      */
-    @WallHttpClient
+    @PicfortHttpClient
     @Singleton
     @Provides
     fun wallHttpClient(shared: OkHttpClient): OkHttpClient = shared.newBuilder()

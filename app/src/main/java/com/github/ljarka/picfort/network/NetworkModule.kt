@@ -26,7 +26,7 @@ class NetworkModule {
     @Provides
     fun okhttp(
         authInterceptor: AuthInterceptor,
-        wallAuthInterceptor: WallAuthInterceptor,
+        wallAuthInterceptor: PicfortAuthInterceptor,
         picfortKeyInterceptor: PicfortKeyInterceptor,
     ): OkHttpClient {
         val builder = OkHttpClient.Builder()
