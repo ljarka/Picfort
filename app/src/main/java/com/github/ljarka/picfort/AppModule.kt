@@ -1,5 +1,6 @@
 package com.github.ljarka.picfort
 
+import com.github.ljarka.picfort.core.network.AppScope
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn

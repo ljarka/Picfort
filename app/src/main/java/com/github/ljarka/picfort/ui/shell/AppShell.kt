@@ -186,27 +186,13 @@ fun TabRoot(content: @Composable () -> Unit) {
 
 /** Settings action for every tab root's top bar. */
 @Composable
-fun SettingsAction(onClick: () -> Unit) {
-    IconButton(onClick = onClick) {
-        Icon(Icons.Default.Settings, contentDescription = "Settings")
-    }
-}
+fun SettingsAction(onClick: () -> Unit) =
+    com.github.ljarka.picfort.core.ui.component.SettingsAction(onClick)
 
 /** Shown by the family features when no Picfort server address is set. */
 @Composable
-fun ServerRequiredContent(message: String, onSetUpServer: () -> Unit, modifier: Modifier = Modifier) {
-    Column(
-        modifier
-            .fillMaxSize()
-            .padding(32.dp),
-        verticalArrangement = Arrangement.Center,
-        horizontalAlignment = Alignment.CenterHorizontally,
-    ) {
-        Text(message, textAlign = TextAlign.Center, style = MaterialTheme.typography.bodyLarge)
-        Spacer(Modifier.height(16.dp))
-        Button(onClick = onSetUpServer) { Text("Set up server") }
-    }
-}
+fun ServerRequiredContent(message: String, onSetUpServer: () -> Unit, modifier: Modifier = Modifier) =
+    com.github.ljarka.picfort.core.ui.component.ServerRequiredContent(message, onSetUpServer, modifier)
 
 @HiltViewModel
 class ServerStatusViewModel @Inject constructor(

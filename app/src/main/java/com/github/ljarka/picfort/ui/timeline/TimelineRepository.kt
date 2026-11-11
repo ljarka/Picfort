@@ -1,7 +1,7 @@
 package com.github.ljarka.picfort.ui.timeline
 
 import android.content.Context
-import com.github.ljarka.picfort.AppScope
+import com.github.ljarka.picfort.core.network.AppScope
 import com.github.ljarka.picfort.UrlProvider
 import com.github.ljarka.picfort.db.BackupDao
 import com.github.ljarka.picfort.local.ImageData

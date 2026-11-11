@@ -84,9 +84,9 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import com.github.ljarka.picfort.ui.shell.ServerRequiredContent
-import com.github.ljarka.picfort.ui.shell.SettingsAction
-import com.github.ljarka.picfort.ui.wall.FamilyMember
+import com.github.ljarka.picfort.core.ui.component.ServerRequiredContent
+import com.github.ljarka.picfort.core.ui.component.SettingsAction
+import com.github.ljarka.picfort.core.model.FamilyMember
 import com.github.ljarka.picfort.core.ui.avatar.MemberAvatar
 
 private const val PREVIEW_ITEMS = 6
