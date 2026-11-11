@@ -18,6 +18,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.ViewModel
@@ -65,6 +66,7 @@ class FrameSettingsViewModel @Inject constructor(
     val test = _test.asStateFlow()
 
     val savedAddress: String get() = store.frameUrl
+    val savedApiKey: String get() = store.apiKey
 
     fun isValid(address: String) = normalizeFrameUrl(address) != null
 
@@ -72,12 +74,12 @@ class FrameSettingsViewModel @Inject constructor(
         _test.value = ConnectionTest.Idle
     }
 
-    fun test(address: String) {
+    fun test(address: String, apiKey: String) {
         _test.value = ConnectionTest.Running
         viewModelScope.launch {
-            _test.value = when (val status = repository.testConnection(address)) {
+            _test.value = when (val status = repository.testConnection(address, apiKey)) {
                 FrameResult.Sent -> try {
-                    wallApi.posts(limit = 1, address = address)
+                    wallApi.posts(limit = 1, address = address, apiKey = apiKey)
                     wallTestResult(null)
                 } catch (e: CancellationException) {
                     throw e
@@ -90,8 +92,9 @@ class FrameSettingsViewModel @Inject constructor(
         }
     }
 
-    fun save(address: String) {
+    fun save(address: String, apiKey: String) {
         store.frameUrl = normalizeFrameUrl(address)?.toString()?.trimEnd('/') ?: ""
+        store.apiKey = apiKey
     }
 
     /** The first-run step was answered (Skip or Continue); don't show it again. */
@@ -100,11 +103,13 @@ class FrameSettingsViewModel @Inject constructor(
     }
 }
 
-/** Address field, test result and the Test button's state; shared by the dialog and the first-run step. */
+/** Address and API key fields and the test result; shared by the dialog and the first-run step. */
 @Composable
 fun PicfortServerForm(
     address: String,
     onAddressChange: (String) -> Unit,
+    apiKey: String,
+    onApiKeyChange: (String) -> Unit,
     test: ConnectionTest,
     modifier: Modifier = Modifier,
 ) {
@@ -126,6 +131,17 @@ fun PicfortServerForm(
             modifier = Modifier.fillMaxWidth(),
         )
         Spacer(Modifier.height(8.dp))
+        OutlinedTextField(
+            value = apiKey,
+            onValueChange = onApiKeyChange,
+            singleLine = true,
+            label = { Text("API key (optional)") },
+            supportingText = { Text("Only if the server has PICFORT_API_KEY set, e.g. behind a tunnel") },
+            visualTransformation = PasswordVisualTransformation(),
+            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
+            modifier = Modifier.fillMaxWidth(),
+        )
+        Spacer(Modifier.height(8.dp))
         val (message, color) = when (test) {
             ConnectionTest.Idle -> "" to MaterialTheme.colorScheme.onSurfaceVariant
             ConnectionTest.Running -> "Connecting…" to MaterialTheme.colorScheme.onSurfaceVariant
@@ -144,6 +160,7 @@ fun FrameSettingsDialog(
 ) {
     val viewModel = hiltViewModel<FrameSettingsViewModel>()
     var address by remember { mutableStateOf(viewModel.savedAddress) }
+    var apiKey by remember { mutableStateOf(viewModel.savedApiKey) }
     val test by viewModel.test.collectAsState()
     PicfortServerDialog(
         address = address,
@@ -151,10 +168,15 @@ fun FrameSettingsDialog(
             address = it
             viewModel.resetTest()
         },
+        apiKey = apiKey,
+        onApiKeyChange = {
+            apiKey = it
+            viewModel.resetTest()
+        },
         test = test,
-        onTest = { viewModel.test(address) },
+        onTest = { viewModel.test(address, apiKey) },
         onSave = {
-            viewModel.save(address)
+            viewModel.save(address, apiKey)
             onSaved()
             onDismiss()
         },
@@ -166,6 +188,8 @@ fun FrameSettingsDialog(
 fun PicfortServerDialog(
     address: String,
     onAddressChange: (String) -> Unit,
+    apiKey: String,
+    onApiKeyChange: (String) -> Unit,
     test: ConnectionTest,
     onTest: () -> Unit = {},
     onSave: () -> Unit = {},
@@ -175,7 +199,7 @@ fun PicfortServerDialog(
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text("Picfort server") },
-        text = { PicfortServerForm(address, onAddressChange, test) },
+        text = { PicfortServerForm(address, onAddressChange, apiKey, onApiKeyChange, test) },
         confirmButton = {
             TextButton(enabled = valid, onClick = onSave) { Text("Save") }
         },

@@ -10,6 +10,7 @@ import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonNull
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
+import com.github.ljarka.picfort.network.isPicfortKeyRejected
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
 import okhttp3.Request
@@ -103,7 +104,10 @@ class FrameDashboardApi @Inject constructor(
         }
 
     private fun <T> execute(request: Request, map: (Int, ByteArray) -> T): T = try {
-        client.newCall(request).execute().use { map(it.code, it.body?.bytes() ?: ByteArray(0)) }
+        client.newCall(request).execute().use {
+            if (it.isPicfortKeyRejected()) throw FrameException(WRONG_API_KEY)
+            map(it.code, it.body?.bytes() ?: ByteArray(0))
+        }
     } catch (e: CleartextNotAllowedException) {
         throw FrameException(e.message ?: "Use https:// for frames outside your network")
     } catch (e: IOException) {

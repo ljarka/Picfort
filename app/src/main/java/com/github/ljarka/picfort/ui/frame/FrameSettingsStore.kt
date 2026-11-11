@@ -9,6 +9,7 @@ import javax.inject.Inject
 import javax.inject.Singleton
 
 private const val FRAME_URL = "FRAME_URL"
+private const val PICFORT_API_KEY = "PICFORT_API_KEY"
 private const val PICFORT_SERVER_PROMPTED = "PICFORT_SERVER_PROMPTED"
 
 @Singleton
@@ -18,6 +19,11 @@ class FrameSettingsStore @Inject constructor(
     var frameUrl: String
         get() = preferences.getString(FRAME_URL, "") ?: ""
         set(value) = preferences.edit { putString(FRAME_URL, value) }
+
+    /** The server's PICFORT_API_KEY, or empty when it has none (home network only). */
+    var apiKey: String
+        get() = preferences.getString(PICFORT_API_KEY, "") ?: ""
+        set(value) = preferences.edit { putString(PICFORT_API_KEY, value.trim()) }
 
     /** Whether the one-time "Picfort server" step was shown (skipped or saved). */
     var serverPrompted: Boolean
