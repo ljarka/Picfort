@@ -59,9 +59,21 @@ import com.github.ljarka.picfort.ui.frame.FrameUi
 import com.github.ljarka.picfort.ui.frame.SlideshowState
 import com.github.ljarka.picfort.ui.image.AssetDetailsList
 import com.github.ljarka.picfort.ui.image.DetailsState
+import com.github.ljarka.picfort.ui.family.FamilyMemberEditUi
+import com.github.ljarka.picfort.ui.family.FamilyMemberSheetContent
+import com.github.ljarka.picfort.ui.family.FamilySettingsContent
+import com.github.ljarka.picfort.ui.family.FamilySettingsUi
+import com.github.ljarka.picfort.ui.family.FamilyUserUi
+import com.github.ljarka.picfort.ui.family.ImmichPersonItem
+import com.github.ljarka.picfort.ui.family.PeoplePickerSheetContent
+import com.github.ljarka.picfort.ui.family.PeoplePickerUi
 import com.github.ljarka.picfort.ui.settings.BackupSettingsUi
 import com.github.ljarka.picfort.ui.settings.SettingsContent
 import com.github.ljarka.picfort.ui.theme.PicfortTheme
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.graphics.Color
 import org.junit.Rule
 import org.junit.Test
 import java.time.ZoneId
@@ -341,6 +353,81 @@ class ScreenshotTest {
     fun picfort_server_setup() = snap {
         PicfortServerSetupContent(
             address = "192.168.0.105:5000", onAddressChange = {}, test = wallTestResult(null),
+        )
+    }
+
+    private val familyUsers = listOf(
+        FamilyUserUi("mama", name = "Mama", immichName = "Anna Kowalska", avatarUrl = "avatar-mama",
+            hasCustomPhoto = true, color = avatarColor("pink"), isMe = true),
+        FamilyUserUi("tata", name = "Tata", immichName = "Tata", avatarUrl = null, color = avatarColor("blue")),
+        FamilyUserUi("ola", name = "Ola", immichName = "Aleksandra K.", avatarUrl = "avatar-ola",
+            hasCustomPhoto = true, color = avatarColor("green")),
+        FamilyUserUi("babcia", name = "Babcia Zosia", immichName = "Zofia Nowak", avatarUrl = null, color = avatarColor("amber")),
+        FamilyUserUi("test", name = "LukaszTest", immichName = "LukaszTest", avatarUrl = null,
+            color = avatarColor("gray"), hidden = true),
+    )
+
+    @Test
+    fun family_settings() = snap {
+        FamilySettingsContent(FamilySettingsUi(users = familyUsers))
+    }
+
+    @Test
+    fun family_settings_dark() = snap(dark = true) {
+        FamilySettingsContent(FamilySettingsUi(users = familyUsers))
+    }
+
+    @Composable
+    private fun WithSheet(background: @Composable () -> Unit, sheet: @Composable () -> Unit) {
+        Box(Modifier.fillMaxSize()) {
+            background()
+            Box(Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.32f)))
+            Surface(
+                modifier = Modifier.align(Alignment.BottomCenter),
+                shape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp),
+                color = MaterialTheme.colorScheme.surfaceContainerLow,
+            ) {
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Box(
+                        Modifier
+                            .padding(vertical = 12.dp)
+                            .size(width = 32.dp, height = 4.dp)
+                            .background(
+                                MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f),
+                                RoundedCornerShape(2.dp),
+                            ),
+                    )
+                    sheet()
+                }
+            }
+        }
+    }
+
+    @Test
+    fun family_member_sheet() = snap {
+        WithSheet(
+            background = { FamilySettingsContent(FamilySettingsUi(users = familyUsers)) },
+            sheet = {
+                FamilyMemberSheetContent(
+                    FamilyMemberEditUi(
+                        user = familyUsers[2], // Ola (Aleksandra K.), so the switch is enabled
+                        displayName = "Ola",
+                        previewAvatarUrl = "avatar-ola",
+                        hasCustomPhoto = true,
+                        showInFamily = true,
+                    )
+                )
+            },
+        )
+    }
+
+    @Test
+    fun people_picker() = snap {
+        val people = listOf("Ola", "Staś", "Mama", "Tata", "Babcia Zosia", "Dziadek Jan", "Ciocia Kasia", "Wujek Marek")
+            .mapIndexed { i, name -> ImmichPersonItem(id = "p-$i", name = name, thumbnailUrl = "person-$i") }
+        WithSheet(
+            background = { FamilySettingsContent(FamilySettingsUi(users = familyUsers)) },
+            sheet = { PeoplePickerSheetContent(PeoplePickerUi(people = people)) },
         )
     }
 

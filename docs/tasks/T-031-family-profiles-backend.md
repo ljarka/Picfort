@@ -1,6 +1,6 @@
 # T-031 — Family profiles: Picfort server
 
-**Status:** ready  
+**Status:** in-progress (server code and tests done; released with the next server version)  
 **Component:** ImageFrameServer  
 **Depends on:** T-018 (`store.py`, `register_auth` prefixes), [ADR 0008](../decisions/0008-family-hub-storage.md)
 
@@ -55,9 +55,9 @@ change keeps a `.bak` and leaves the other databases alone.
 
 ## Acceptance criteria
 
-- [ ] Endpoints above with token auth and the optional Picfort key.
-- [ ] `family.db` and photos under `/data` in Docker.
-- [ ] Tests pass in CI; README (API table, backup line) updated.
+- [x] Endpoints above with token auth and the optional Picfort key.
+- [x] `family.db` and photos under `/data` in Docker.
+- [x] Tests pass in CI; README (API table, backup line) updated.
 
 ## Out of scope
 
