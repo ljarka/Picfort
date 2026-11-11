@@ -1,5 +1,9 @@
 package com.github.ljarka.picfort.ui.wall
 
+import com.github.ljarka.picfort.core.ui.avatar.UNKNOWN_MEMBER_COLOR
+import com.github.ljarka.picfort.core.ui.avatar.avatarColor
+import com.github.ljarka.picfort.core.ui.avatar.initials
+
 import com.github.ljarka.picfort.network.PicfortServerException
 import com.github.ljarka.picfort.ui.frame.ConnectionTest
 import com.github.ljarka.picfort.ui.frame.wallTestResult

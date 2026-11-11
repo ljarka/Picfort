@@ -66,7 +66,7 @@ import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.repeatOnLifecycle
 import com.github.ljarka.picfort.ui.wall.FamilyMember
-import com.github.ljarka.picfort.ui.wall.MemberAvatar
+import com.github.ljarka.picfort.core.ui.avatar.MemberAvatar
 import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneOffset

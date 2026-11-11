@@ -1,5 +1,7 @@
 package com.github.ljarka.picfort.ui.wall
 
+import com.github.ljarka.picfort.core.ui.avatar.UNKNOWN_MEMBER_COLOR
+
 import android.net.Uri
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope

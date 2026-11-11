@@ -87,7 +87,7 @@ import androidx.compose.ui.unit.dp
 import com.github.ljarka.picfort.ui.shell.ServerRequiredContent
 import com.github.ljarka.picfort.ui.shell.SettingsAction
 import com.github.ljarka.picfort.ui.wall.FamilyMember
-import com.github.ljarka.picfort.ui.wall.MemberAvatar
+import com.github.ljarka.picfort.core.ui.avatar.MemberAvatar
 
 private const val PREVIEW_ITEMS = 6
 

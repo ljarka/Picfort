@@ -8,6 +8,9 @@ import android.graphics.Matrix
 import android.media.ExifInterface
 import android.net.Uri
 import androidx.compose.ui.graphics.Color
+import com.github.ljarka.picfort.core.ui.avatar.UNKNOWN_MEMBER_COLOR
+import com.github.ljarka.picfort.core.ui.avatar.avatarColor
+import com.github.ljarka.picfort.core.ui.avatar.initials
 import com.github.ljarka.picfort.ui.login.AccessTokenStore
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
@@ -20,35 +23,6 @@ import kotlin.math.max
 
 /** A family member: an Immich user or manual member (T-002, T-034). */
 typealias FamilyMember = com.github.ljarka.picfort.core.model.FamilyMember
-
-/** Immich's avatar color names → ring colors. Unknown or missing → primary. */
-private val AVATAR_COLORS = mapOf(
-    "primary" to Color(0xFF4250AF),
-    "pink" to Color(0xFFDE7FB3),
-    "red" to Color(0xFFD04040),
-    "yellow" to Color(0xFFE0B820),
-    "blue" to Color(0xFF3B82F6),
-    "green" to Color(0xFF22A06B),
-    "purple" to Color(0xFF8B5CF6),
-    "orange" to Color(0xFFF08A24),
-    "gray" to Color(0xFF6B7280),
-    "amber" to Color(0xFFD97706),
-)
-
-/** Ring color for authors who aren't Immich users (any more). */
-val UNKNOWN_MEMBER_COLOR = Color(0xFF9E9E9E)
-
-fun avatarColor(name: String?): Color = AVATAR_COLORS[name] ?: AVATAR_COLORS.getValue("primary")
-
-/** "Anna Maria Kowalska" → "AK", "mama" → "M". */
-fun initials(name: String): String {
-    val words = name.trim().split(Regex("\\s+")).filter { it.isNotEmpty() }
-    return when {
-        words.isEmpty() -> "?"
-        words.size == 1 -> words[0].take(1).uppercase()
-        else -> (words.first().take(1) + words.last().take(1)).uppercase()
-    }
-}
 
 /**
  * Test accounts ("LukaszTest", "test-user") are Immich users that aren't family: they are left

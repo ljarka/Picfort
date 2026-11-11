@@ -1,6 +1,6 @@
 # T-044 — Modularization: :core:ui design system
 
-**Status:** ready  
+**Status:** done  
 **Component:** Android core library  
 **Depends on:** T-043 (`build-logic`, `:core:model`), [ADR 0011](../decisions/0011-modular-architecture.md)
 
