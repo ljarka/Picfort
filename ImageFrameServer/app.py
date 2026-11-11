@@ -22,6 +22,7 @@ import logging
 import math
 import os
 import re
+import sys
 import threading
 import time
 
@@ -290,6 +291,9 @@ log = logging.getLogger("server")
 if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s: %(message)s")
     config = frame.Config.from_env()
+    if not config.immich_url or not config.immich_api_key:
+        log.error("Set IMMICH_URL and IMMICH_API_KEY (in .env), then start the server again.")
+        sys.exit(1)
     immich_client = ImmichClient(config.immich_url, config.immich_api_key)
     frame_controller = FrameController(config, float(os.environ.get("FRAME_MIN_INTERVAL", "30")))
     show_slideshow = Slideshow(

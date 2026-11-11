@@ -89,3 +89,19 @@ jobs:
       - run: pip install -r requirements.txt
 
       - run: python -m unittest discover -s tests -t tests -v
+
+  server-image:
+    name: Server image
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
+      - uses: docker/setup-buildx-action@v4
+      - name: Build and smoke-test the Docker image
+        run: |
+          docker build -t picfort-server:ci ImageFrameServer
+          docker run -d --name picfort -p 5000:5000 \
+            -e IMMICH_URL=http://immich.invalid -e IMMICH_API_KEY=ci picfort-server:ci
+          for i in $(seq 1 20); do curl -fsS localhost:5000/status && exit 0; sleep 1; done
+          docker logs picfort
+          exit 1
