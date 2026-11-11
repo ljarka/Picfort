@@ -1,6 +1,6 @@
 # T-018 — Shopping lists: Picfort server API
 
-**Status:** ready  
+**Status:** in-progress (server code and tests done; released with the next server version)  
 **Component:** ImageFrameServer (Python, Flask, SQLite)  
 **Depends on:** — (decision: [ADR 0008](../decisions/0008-family-hub-storage.md); auth as
 `/wall`, ADR 0006 and 0007)
