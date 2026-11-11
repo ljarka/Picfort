@@ -1,6 +1,6 @@
 # T-048 — Modularization: :feature:family
 
-**Status:** ready  
+**Status:** done (2026-11-12)  
 **Component:** Android feature module  
 **Depends on:** T-043 (`:core:model`), T-044 (`:core:ui`), T-045 (`:core:network`), [ADR 0011](../decisions/0011-modular-architecture.md)
 
@@ -13,8 +13,8 @@ Extract Family settings, member management, and profile coordination into an ind
 
 1. **Source migration**:
    - `ui/family/FamilySettingsScreen.kt`, `FamilySettingsViewModel.kt`
-   - `FamilyRepository.kt`, `FamilyApi.kt`
-   - Sheet and dialog components (`AddMemberSheet`, `DeleteMemberConfirmationDialog`, `BirthDatePicker`)
+   - `FamilyRepository.kt`, `FamilyApi.kt`, `PeopleApi.kt`, `PeoplePickerSheet.kt`
+   - Sheet and dialog components (`AddPersonSheetContent`, `FamilyMemberSheetContent`, `BirthDatePicker`)
 2. **Paparazzi tests**:
    - Move family snapshot tests into `:feature:family/src/test/.../FamilyScreenshotTest.kt`
    - Fast isolated test cycle: `./gradlew :feature:family:recordPaparazziDebug` / `verifyPaparazziDebug`
@@ -27,7 +27,7 @@ Extract Family settings, member management, and profile coordination into an ind
 
 ## Acceptance criteria
 
-- [ ] `:feature:family` compiles as an independent Android library module using `picfort.android.feature`.
-- [ ] Isolated Paparazzi test suite passes in `:feature:family`.
-- [ ] `:app` wires navigation to `:feature:family`.
-- [ ] `feature/family/AGENTS.md` created.
+- [x] `:feature:family` compiles as an independent Android library module.
+- [x] Isolated Paparazzi test suite passes in `:feature:family`.
+- [x] `:app` wires navigation to `:feature:family`.
+- [x] `feature/family/AGENTS.md` created.

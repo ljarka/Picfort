@@ -1,18 +1,18 @@
 package com.github.ljarka.picfort.ui.family
 
 import android.content.Context
-import com.github.ljarka.picfort.db.UserEntity
-import com.github.ljarka.picfort.db.UsersDao
+import com.github.ljarka.picfort.core.database.UserEntity
+import com.github.ljarka.picfort.core.database.UsersDao
 import com.github.ljarka.picfort.core.network.PicfortServerException
-import com.github.ljarka.picfort.ui.frame.FrameSettingsStore
-import com.github.ljarka.picfort.ui.login.AccessTokenStore
-import com.github.ljarka.picfort.ui.server.ServerUrlStore
-import com.github.ljarka.picfort.ui.timeline.SyncTimelineSource
-import com.github.ljarka.picfort.ui.wall.FamilyMember
-import com.github.ljarka.picfort.core.ui.avatar.avatarColor
-import com.github.ljarka.picfort.ui.wall.isTestAccount
-import com.github.ljarka.picfort.ui.wall.meFirst
+import com.github.ljarka.picfort.core.network.FrameSettingsStore
+import com.github.ljarka.picfort.core.network.AccessTokenStore
+import com.github.ljarka.picfort.core.network.ServerUrlStore
+import com.github.ljarka.picfort.core.model.FamilyMember
+import com.github.ljarka.picfort.core.model.isTestAccount
+import com.github.ljarka.picfort.core.model.meFirst
+import com.github.ljarka.picfort.core.model.ImmichUsersSync
 import com.github.ljarka.picfort.core.model.FamilyMemberProvider
+import com.github.ljarka.picfort.core.ui.avatar.avatarColor
 import dagger.Binds
 import dagger.Module
 import dagger.hilt.InstallIn
@@ -173,7 +173,7 @@ class FamilyRepository(
         usersDao: UsersDao,
         serverUrlStore: ServerUrlStore,
         accessTokenStore: AccessTokenStore,
-        timeline: Provider<SyncTimelineSource>,
+        usersSync: ImmichUsersSync,
     ) : this(
         backend = backend,
         people = people,
@@ -181,7 +181,7 @@ class FamilyRepository(
         usersDao = usersDao,
         immichServerUrl = { serverUrlStore.serverUrl },
         currentUserId = { accessTokenStore.userId },
-        syncImmichUsers = { timeline.get().refresh() },
+        syncImmichUsers = { usersSync.sync() },
     )
 
     override val myId: String get() = currentUserId()

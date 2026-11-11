@@ -1,5 +1,8 @@
 package com.github.ljarka.picfort.ui.wall
 
+import com.github.ljarka.picfort.core.model.isTestAccount
+import com.github.ljarka.picfort.core.model.meFirst
+
 import com.github.ljarka.picfort.core.network.PicfortServerException
 import android.content.Context
 import android.graphics.Bitmap
@@ -23,16 +26,6 @@ import kotlin.math.max
 
 /** A family member: an Immich user or manual member (T-002, T-034). */
 typealias FamilyMember = com.github.ljarka.picfort.core.model.FamilyMember
-
-/**
- * Test accounts ("LukaszTest", "test-user") are Immich users that aren't family: they are left
- * out of the wall, members and posts alike. Case-insensitive; the logged-in user always counts.
- */
-fun isTestAccount(name: String): Boolean = name.contains("test", ignoreCase = true)
-
-/** The logged-in user first, then by name (the DAO already sorts by name). */
-fun List<FamilyMember>.meFirst(myId: String): List<FamilyMember> =
-    sortedBy { if (it.id == myId) 0 else 1 }
 
 @Singleton
 class WallRepository @Inject constructor(

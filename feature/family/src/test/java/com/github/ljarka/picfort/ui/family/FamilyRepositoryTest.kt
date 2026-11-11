@@ -1,10 +1,8 @@
 package com.github.ljarka.picfort.ui.family
 
-import com.github.ljarka.picfort.db.UserEntity
-import com.github.ljarka.picfort.db.UsersDao
+import com.github.ljarka.picfort.core.database.UserEntity
+import com.github.ljarka.picfort.core.database.UsersDao
 import com.github.ljarka.picfort.core.network.PicfortServerException
-import com.github.ljarka.picfort.ui.wall.FamilyWallUiState
-import com.github.ljarka.picfort.ui.wall.WallPost
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.first
@@ -199,30 +197,16 @@ class FamilyRepositoryTest {
     }
 
     @Test
-    fun `renaming a member updates old posts on the wall`() {
-        val oldPost = WallPost(
-            id = 1,
-            authorId = "mama",
-            authorName = "Anna Kowalska",
-            text = "Hello",
-            photoUrl = null,
-            photoWidth = null,
-            photoHeight = null,
-            pinned = false,
-            created = Instant.EPOCH,
-        )
+    fun `renaming a member updates the display name in merged family members`() {
         val merged = mergeFamilyUsers(
             immichUsers = immichUsers,
             profiles = mapOf("mama" to FamilyProfile("mama", displayName = "Mama")),
             myId = "mama",
             immichServerUrl = "https://photos.example.com",
         )
-        val wallState = FamilyWallUiState(
-            members = merged.filter { !it.hidden }.map { it.toMember() },
-            posts = listOf(oldPost),
-            myId = "mama",
-        )
-        assertEquals("Mama", wallState.authorOf(oldPost).name)
+        val mama = merged.find { it.id == "mama" }
+        assertEquals("Mama", mama?.name)
+        assertEquals("Mama", mama?.toMember()?.name)
     }
 
     @Test

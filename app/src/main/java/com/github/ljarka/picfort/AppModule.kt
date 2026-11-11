@@ -16,4 +16,8 @@ class AppModule {
     @Singleton
     @Provides
     fun appScope() = MainScope()
+
+    @Provides
+    fun immichUsersSync(timeline: dagger.Lazy<com.github.ljarka.picfort.ui.timeline.SyncTimelineSource>): com.github.ljarka.picfort.core.model.ImmichUsersSync =
+        com.github.ljarka.picfort.core.model.ImmichUsersSync { timeline.get().refresh() }
 }
