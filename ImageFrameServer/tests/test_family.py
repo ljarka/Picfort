@@ -65,6 +65,8 @@ class FamilyApiTest(unittest.TestCase):
             "display_name": "Mama Anna",
             "photo_url": None,
             "hidden": False,
+            "manual": False,
+            "birth_date": None,
             "updated_by": TATA,
             "updated": "2026-11-10T12:01:00Z",
         }, r.get_json())
@@ -178,6 +180,116 @@ class FamilyApiTest(unittest.TestCase):
         self.assertTrue(os.path.exists(self.db + ".v99.bak"))
         self.assertEqual(1, len(ShoppingStore(self.shopping_db).lists()))
         self.assertEqual(1, len(WallStore(self.wall_db, os.path.join(self.dir, "wall_photos")).list()))
+
+
+    # --- T-033: manual members and birth dates ---------------------------------------------
+
+    def test_add_rename_and_delete_a_manual_member(self):
+        r = self.client.post("/family/members", json={"display_name": "  Babcia Zosia ", "birth_date": "1950-03-02"})
+        self.assertEqual(201, r.status_code)
+        babcia = r.get_json()
+        self.assertTrue(babcia["manual"])
+        self.assertEqual("Babcia Zosia", babcia["display_name"])
+        self.assertEqual("1950-03-02", babcia["birth_date"])
+        self.assertRegex(babcia["user_id"], family.UUID_RE)
+        self.assertIsNone(babcia["photo_url"])
+
+        r = self.client.patch(f"/family/{babcia['user_id']}", json={"display_name": "Babcia", "birth_date": None})
+        self.assertEqual("Babcia", r.get_json()["display_name"])
+        self.assertIsNone(r.get_json()["birth_date"])
+        self.assertTrue(r.get_json()["manual"])
+
+        # A manual member keeps a name, and is not dropped when every optional field is empty.
+        r = self.client.patch(f"/family/{babcia['user_id']}", json={"display_name": None})
+        self.assertEqual(400, r.status_code)
+        self.assertEqual(1, len(self.client.get("/family").get_json()["profiles"]))
+
+        self.assertEqual(204, self.client.delete(f"/family/{babcia['user_id']}").status_code)
+        self.assertEqual([], self.client.get("/family").get_json()["profiles"])
+        self.assertEqual(404, self.client.delete(f"/family/{babcia['user_id']}").status_code)
+
+    def test_manual_member_photo_is_removed_with_the_member(self):
+        member = self.client.post("/family/members", json={"display_name": "Ola"}).get_json()
+        r = self.put_photo(member["user_id"], image_bytes("JPEG"))
+        self.assertEqual(200, r.status_code)
+        self.assertTrue(r.get_json()["manual"])
+        self.assertEqual(1, len(os.listdir(self.photos)))
+        # Removing the photo keeps the member.
+        self.assertEqual(204, self.client.delete(f"/family/{member['user_id']}/photo").status_code)
+        self.assertEqual("Ola", self.client.get("/family").get_json()["profiles"][0]["display_name"])
+        self.put_photo(member["user_id"], image_bytes("PNG"))
+        self.assertEqual(204, self.client.delete(f"/family/{member['user_id']}").status_code)
+        self.assertEqual([], os.listdir(self.photos))
+
+    def test_immich_user_row_cannot_be_deleted_only_cleared(self):
+        self.client.patch(f"/family/{MAMA}", json={"display_name": "Mama", "birth_date": "--05-17"})
+        self.assertEqual(409, self.client.delete(f"/family/{MAMA}").status_code)
+        profile = self.client.patch(f"/family/{MAMA}", json={"display_name": None, "birth_date": None}).get_json()
+        self.assertFalse(profile["manual"])
+        self.assertEqual([], self.client.get("/family").get_json()["profiles"])
+
+    def test_birth_date_on_an_immich_user_keeps_the_row_alive(self):
+        self.client.patch(f"/family/{MAMA}", json={"birth_date": "1985-05-17"})
+        profile = self.client.get("/family").get_json()["profiles"][0]
+        self.assertEqual("1985-05-17", profile["birth_date"])
+        self.assertIsNone(profile["display_name"])
+        self.assertFalse(profile["manual"])
+        # A profile photo removal doesn't drop a row that still has a birth date.
+        self.put_photo(MAMA, image_bytes("JPEG"))
+        self.client.delete(f"/family/{MAMA}/photo")
+        self.assertEqual(1, len(self.client.get("/family").get_json()["profiles"]))
+
+    def test_birth_date_validation(self):
+        # The test clock is 2026-11-10.
+        for good in ("1990-05-17", "--05-17", "--02-29", "2000-02-29", "2026-11-10", "2026-11-11", None):
+            r = self.client.patch(f"/family/{MAMA}", json={"birth_date": good})
+            self.assertEqual(200, r.status_code, good)
+        for bad in ("2026-11-12", "2030-01-01", "1850-01-01", "1990-02-30", "--02-30", "--13-01", "2001-02-29",
+                    "17-05-1990", "1990-5-17", "text", "", 19900517, True, ["1990-05-17"]):
+            r = self.client.patch(f"/family/{MAMA}", json={"birth_date": bad})
+            self.assertEqual(400, r.status_code, bad)
+        for body in ({}, {"display_name": ""}, {"display_name": "   "}, {"display_name": None},
+                     {"display_name": "x" * 51}, {"display_name": "Ola", "birth_date": "2090-01-01"}):
+            self.assertEqual(400, self.client.post("/family/members", json=body).status_code, body)
+        self.assertEqual(400, self.client.post("/family/members", json=["a"]).status_code)
+        self.assertEqual(400, self.client.delete("/family/not-a-uuid").status_code)
+
+    def test_manual_member_endpoints_require_a_token(self):
+        member = self.client.post("/family/members", json={"display_name": "Ola"}).get_json()
+        anon = {"Authorization": ""}
+        self.assertEqual(401, self.client.post("/family/members", json={"display_name": "x"}, headers=anon).status_code)
+        self.assertEqual(401, self.client.delete(f"/family/{member['user_id']}", headers=anon).status_code)
+        self.assertEqual(1, len(self.client.get("/family").get_json()["profiles"]))
+
+    def test_v1_database_is_migrated_without_losing_data(self):
+        old_db = os.path.join(self.dir, "old.db")
+        with closing(sqlite3.connect(old_db)) as conn, conn:
+            conn.executescript(
+                "CREATE TABLE profiles (user_id TEXT PRIMARY KEY, display_name TEXT, photo TEXT, hidden INTEGER,"
+                " updated_by TEXT NOT NULL, updated TEXT NOT NULL);"
+                f"INSERT INTO profiles VALUES ('{MAMA}', 'Mama Anna', 'abc.jpg', 0, '{MAMA}', '2026-11-01T10:00:00Z');"
+                f"INSERT INTO profiles VALUES ('{TATA}', NULL, NULL, 1, '{MAMA}', '2026-11-02T10:00:00Z');"
+                "PRAGMA user_version = 1;"
+            )
+        migrated = FamilyStore(old_db, self.photos)
+        profiles = {p["user_id"]: p for p in migrated.profiles()}
+        self.assertEqual("Mama Anna", profiles[MAMA]["display_name"])
+        self.assertTrue(profiles[MAMA]["photo_url"].endswith("abc.jpg"))
+        self.assertIs(False, profiles[MAMA]["hidden"])
+        self.assertIs(True, profiles[TATA]["hidden"])
+        self.assertFalse(profiles[MAMA]["manual"])
+        self.assertIsNone(profiles[MAMA]["birth_date"])
+        self.assertTrue(os.path.exists(old_db + ".v1.bak"))
+        with closing(sqlite3.connect(old_db + ".v1.bak")) as conn:
+            self.assertEqual(2, conn.execute("SELECT count(*) FROM profiles").fetchone()[0])
+            self.assertEqual(1, conn.execute("PRAGMA user_version").fetchone()[0])
+        with closing(sqlite3.connect(old_db)) as conn:
+            self.assertEqual(2, conn.execute("PRAGMA user_version").fetchone()[0])
+        # Reopening a current database changes nothing.
+        self.assertEqual(2, len(FamilyStore(old_db, self.photos).profiles()))
+        # The migrated database accepts the new features.
+        migrated.add_member(MAMA, {"display_name": "Babcia"})
+        self.assertEqual(3, len(migrated.profiles()))
 
 
 if __name__ == "__main__":

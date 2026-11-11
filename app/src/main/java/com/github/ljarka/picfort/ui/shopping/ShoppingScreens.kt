@@ -1,5 +1,9 @@
 package com.github.ljarka.picfort.ui.shopping
 
+import android.app.Activity
+import android.content.Context
+import android.content.ContextWrapper
+import android.view.WindowManager
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -7,10 +11,12 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -55,6 +61,7 @@ import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -67,14 +74,15 @@ import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.stateDescription
+import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.text.input.ImeAction
-import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.unit.dp
 import com.github.ljarka.picfort.ui.shell.ServerRequiredContent
 import com.github.ljarka.picfort.ui.shell.SettingsAction
@@ -262,6 +270,7 @@ fun ShoppingListContent(
     /** Start with the checked section open (screenshots). */
     checkedOpen: Boolean = false,
 ) {
+    ResizeForKeyboard()
     val snackbar = remember { SnackbarHostState() }
     LaunchedEffect(state.message) {
         state.message?.let {
@@ -314,7 +323,7 @@ fun ShoppingListContent(
         },
         snackbarHost = { SnackbarHost(snackbar) },
     ) { padding ->
-        Column(Modifier.fillMaxSize().padding(padding)) {
+        Column(Modifier.fillMaxSize().padding(padding).consumeWindowInsets(padding).imePadding()) {
             when {
                 list == null && state.loadError != null -> Centered {
                     Text(state.loadError, textAlign = TextAlign.Center, style = MaterialTheme.typography.bodyLarge)
@@ -332,6 +341,29 @@ fun ShoppingListContent(
 }
 
 private enum class ListDialog { Rename, DeleteChecked, DeleteList }
+
+/**
+ * The window pans by default, which pushed the top bar off screen while typing items. While
+ * this screen is shown the window resizes instead, and the list makes room with imePadding.
+ */
+@Composable
+private fun ResizeForKeyboard() {
+    val window = LocalContext.current.findActivity()?.window ?: return
+    DisposableEffect(window) {
+        val before = window.attributes.softInputMode
+        @Suppress("DEPRECATION")
+        window.setSoftInputMode(
+            (before and WindowManager.LayoutParams.SOFT_INPUT_MASK_STATE) or WindowManager.LayoutParams.SOFT_INPUT_ADJUST_RESIZE,
+        )
+        onDispose { window.setSoftInputMode(before) }
+    }
+}
+
+private tailrec fun Context.findActivity(): Activity? = when (this) {
+    is Activity -> this
+    is ContextWrapper -> baseContext.findActivity()
+    else -> null
+}
 
 @Composable
 private fun ItemList(
@@ -402,14 +434,20 @@ private fun ItemRow(
         Modifier
             .fillMaxWidth()
             .heightIn(min = 48.dp)
-            .clickable(enabled = editable, onClick = onToggle)
-            .semantics(mergeDescendants = false) {
-                stateDescription = if (item.checked) "checked" else "not checked"
-            }
             .padding(start = 4.dp, end = 4.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Checkbox(checked = item.checked, onCheckedChange = { onToggle() }, enabled = editable)
+        // The checkbox carries the item's name, so TalkBack reads "<text>, checked"; the text
+        // field next to it is only for editing.
+        Checkbox(
+            checked = item.checked,
+            onCheckedChange = { onToggle() },
+            enabled = editable,
+            modifier = Modifier.semantics {
+                contentDescription = item.text
+                stateDescription = if (item.checked) "checked" else "not checked"
+            },
+        )
         val color = if (item.checked) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.onSurface
         TextField(
             value = text,

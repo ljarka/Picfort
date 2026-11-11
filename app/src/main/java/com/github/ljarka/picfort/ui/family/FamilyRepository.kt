@@ -7,6 +7,7 @@ import com.github.ljarka.picfort.network.PicfortServerException
 import com.github.ljarka.picfort.ui.frame.FrameSettingsStore
 import com.github.ljarka.picfort.ui.login.AccessTokenStore
 import com.github.ljarka.picfort.ui.server.ServerUrlStore
+import com.github.ljarka.picfort.ui.timeline.SyncTimelineSource
 import com.github.ljarka.picfort.ui.wall.FamilyMember
 import com.github.ljarka.picfort.ui.wall.avatarColor
 import com.github.ljarka.picfort.ui.wall.isTestAccount
@@ -21,11 +22,13 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 import java.io.File
 import javax.inject.Inject
+import javax.inject.Provider
 import javax.inject.Singleton
 
 /** Last `GET /family` response saved on disk so custom names and photos survive a cold start offline (T-032). */
@@ -134,6 +137,8 @@ class FamilyRepository(
     private val usersDao: UsersDao,
     private val immichServerUrl: () -> String,
     private val currentUserId: () -> String,
+    /** Fills [UsersDao] (the timeline sync); run when it's empty, e.g. right after login. */
+    private val syncImmichUsers: suspend () -> Unit = {},
 ) {
     @Inject
     constructor(
@@ -143,6 +148,7 @@ class FamilyRepository(
         usersDao: UsersDao,
         serverUrlStore: ServerUrlStore,
         accessTokenStore: AccessTokenStore,
+        timeline: Provider<SyncTimelineSource>,
     ) : this(
         backend = backend,
         people = people,
@@ -150,6 +156,7 @@ class FamilyRepository(
         usersDao = usersDao,
         immichServerUrl = { serverUrlStore.serverUrl },
         currentUserId = { accessTokenStore.userId },
+        syncImmichUsers = { timeline.get().refresh() },
     )
 
     val myId: String get() = currentUserId()
@@ -186,6 +193,9 @@ class FamilyRepository(
 
     /** Refreshes profiles from the Picfort server; keeps the offline copy on network errors. */
     suspend fun refresh(): PicfortServerException? {
+        // Immich users come only from the sync stream. Before the Photos tab has ever synced
+        // (a fresh install) there are none, so the Wall and Shopping had no names or avatars.
+        if (usersDao.all().first().isEmpty()) runCatching { syncImmichUsers() }
         if (!backend.isConfigured) {
             _supported.value = false
             profiles.value = emptyMap()

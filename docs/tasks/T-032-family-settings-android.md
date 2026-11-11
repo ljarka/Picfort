@@ -74,4 +74,4 @@ name for known authors, so a rename applies to old posts too.
 
 - Changing Immich itself (names, profile pictures).
 - Different names per viewer.
-- Adding people who aren't Immich users (children are in T-028).
+- Adding people who aren't Immich users: T-033 / T-034 (children's timetables are in T-028).
