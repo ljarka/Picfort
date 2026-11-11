@@ -12,6 +12,7 @@ import com.github.ljarka.picfort.ui.wall.FamilyMember
 import com.github.ljarka.picfort.core.ui.avatar.avatarColor
 import com.github.ljarka.picfort.ui.wall.isTestAccount
 import com.github.ljarka.picfort.ui.wall.meFirst
+import com.github.ljarka.picfort.core.model.FamilyMemberProvider
 import dagger.Binds
 import dagger.Module
 import dagger.hilt.InstallIn
@@ -86,6 +87,9 @@ abstract class FamilyModule {
 
     @Binds
     abstract fun peopleSource(api: PeopleApi): PeopleSource
+
+    @Binds
+    abstract fun familyMemberProvider(repo: FamilyRepository): FamilyMemberProvider
 }
 
 /**
@@ -160,7 +164,7 @@ class FamilyRepository(
     private val currentUserId: () -> String,
     /** Fills [UsersDao] (the timeline sync); run when it's empty, e.g. right after login. */
     private val syncImmichUsers: suspend () -> Unit = {},
-) {
+) : FamilyMemberProvider {
     @Inject
     constructor(
         backend: FamilyBackend,
@@ -180,7 +184,7 @@ class FamilyRepository(
         syncImmichUsers = { timeline.get().refresh() },
     )
 
-    val myId: String get() = currentUserId()
+    override val myId: String get() = currentUserId()
     val isConfigured: Boolean get() = backend.isConfigured
 
     private val profiles = MutableStateFlow<Map<String, FamilyProfile>>(loadOfflineProfiles())
@@ -203,7 +207,7 @@ class FamilyRepository(
     }
 
     /** Visible Immich members for Wall avatar row (T-034: manual members don't post). */
-    val members: Flow<List<FamilyMember>> = users.map { list ->
+    override val members: Flow<List<FamilyMember>> = users.map { list ->
         list.filter { !it.hidden && it.isImmichUser }
             .sortedWith(compareBy(String.CASE_INSENSITIVE_ORDER) { it.name })
             .map { it.toMember() }
@@ -211,7 +215,7 @@ class FamilyRepository(
     }
 
     /** All visible family members (both Immich and manual) for Shopping, Events, etc. */
-    val allMembers: Flow<List<FamilyMember>> = users.map { list ->
+    override val allMembers: Flow<List<FamilyMember>> = users.map { list ->
         list.filter { !it.hidden }
             .sortedWith(compareBy(String.CASE_INSENSITIVE_ORDER) { it.name })
             .map { it.toMember() }
@@ -219,12 +223,12 @@ class FamilyRepository(
     }
 
     /** Ids of hidden users (default test accounts + explicitly hidden), whose posts the wall hides. */
-    val hiddenIds: Flow<Set<String>> = users.map { list ->
+    override val hiddenIds: Flow<Set<String>> = users.map { list ->
         list.filter { it.hidden }.mapTo(HashSet()) { it.id }
     }
 
     /** Refreshes profiles from the Picfort server; keeps the offline copy on network errors. */
-    suspend fun refresh(): PicfortServerException? {
+    override suspend fun refresh(): PicfortServerException? {
         // Immich users come only from the sync stream. Before the Photos tab has ever synced
         // (a fresh install) there are none, so the Wall and Shopping had no names or avatars.
         if (usersDao.all().first().isEmpty()) runCatching { syncImmichUsers() }

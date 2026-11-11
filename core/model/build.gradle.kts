@@ -24,6 +24,7 @@ kotlin {
 }
 
 dependencies {
+    api(libs.kotlinx.coroutines.core)
     implementation(platform(libs.androidx.compose.bom))
     implementation(libs.androidx.ui.graphics)
     implementation(libs.kotlin.serialization.json)

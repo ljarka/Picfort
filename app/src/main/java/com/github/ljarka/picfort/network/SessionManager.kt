@@ -1,6 +1,6 @@
 package com.github.ljarka.picfort.network
 
-import com.github.ljarka.picfort.AppScope
+import com.github.ljarka.picfort.core.network.AppScope
 import com.github.ljarka.picfort.sync.SyncStore
 import com.github.ljarka.picfort.ui.login.AccessTokenStore
 import kotlinx.coroutines.CoroutineScope

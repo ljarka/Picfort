@@ -15,10 +15,9 @@ import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.repeatOnLifecycle
 import androidx.lifecycle.viewModelScope
-import com.github.ljarka.picfort.network.PicfortServerClient
+import com.github.ljarka.picfort.core.network.PicfortServerClient
 import com.github.ljarka.picfort.core.network.PicfortServerException
-import com.github.ljarka.picfort.ui.family.FamilyRepository
-import com.github.ljarka.picfort.ui.frame.FrameSettingsDialog
+import com.github.ljarka.picfort.core.model.FamilyMemberProvider
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -43,7 +42,7 @@ internal fun Long.asTime(zone: ZoneId = ZoneId.systemDefault()): String =
 @HiltViewModel
 class ShoppingListsViewModel @Inject constructor(
     private val repository: ShoppingRepository,
-    private val family: FamilyRepository,
+    private val family: FamilyMemberProvider,
     private val server: PicfortServerClient,
     savedState: SavedStateHandle,
 ) : ViewModel() {
@@ -105,7 +104,7 @@ class ShoppingListsViewModel @Inject constructor(
 @HiltViewModel
 class ShoppingListViewModel @Inject constructor(
     private val repository: ShoppingRepository,
-    private val family: FamilyRepository,
+    private val family: FamilyMemberProvider,
     savedState: SavedStateHandle,
 ) : ViewModel() {
     val listId: Long = savedState.get<Long>("id") ?: 0L
@@ -175,13 +174,12 @@ fun ShoppingListsScreen(
     onArchivedClick: () -> Unit = {},
     onBack: () -> Unit = {},
     onSettingsClick: () -> Unit = {},
+    onSetUpServer: () -> Unit = onSettingsClick,
 ) {
     val viewModel = hiltViewModel<ShoppingListsViewModel>()
     val state by viewModel.state.collectAsStateWithLifecycle()
     val lifecycle = LocalLifecycleOwner.current.lifecycle
     LaunchedEffect(lifecycle) { lifecycle.repeatOnLifecycle(Lifecycle.State.STARTED) { viewModel.keepFresh() } }
-    var showServerDialog by remember { mutableStateOf(false) }
-    if (showServerDialog) FrameSettingsDialog(onDismiss = { showServerDialog = false }, onSaved = viewModel::refreshNow)
     var creating by remember { mutableStateOf<String?>(null) }
     LaunchedEffect(creating) {
         creating?.let { title -> viewModel.create(title)?.let { onOpen(it, true) }; creating = null }
@@ -195,7 +193,7 @@ fun ShoppingListsScreen(
         onBack = onBack,
         onSettingsClick = onSettingsClick,
         onRefresh = viewModel::refreshNow,
-        onSetUpServer = { showServerDialog = true },
+        onSetUpServer = onSetUpServer,
         onMessageShown = viewModel::messageShown,
     )
 }

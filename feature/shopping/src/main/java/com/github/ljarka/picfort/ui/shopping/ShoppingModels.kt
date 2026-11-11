@@ -1,6 +1,6 @@
 package com.github.ljarka.picfort.ui.shopping
 
-import com.github.ljarka.picfort.ui.wall.FamilyMember
+import com.github.ljarka.picfort.core.model.FamilyMember
 
 typealias ShoppingItem = com.github.ljarka.picfort.core.model.ShoppingItem
 typealias ShoppingList = com.github.ljarka.picfort.core.model.ShoppingList
