@@ -173,7 +173,7 @@ docker compose up -d
 
 Then in the app: **Settings → Picfort server**, enter `<this machine's IP>:5000` and tap **Test**.
 
-- The Family Wall, its photos and the slideshow settings are stored in `./data` (`DATA_LOCATION` in `.env`). Back up that folder.
+- The Family Wall and its photos, the shopping lists and the slideshow settings are stored in `./data` (`DATA_LOCATION` in `.env`). Back up that folder.
 - Update: `docker compose pull && docker compose up -d`. Pin a version with `PICFORT_VERSION=v0.3.0` in `.env`.
 - Logs: `docker compose logs -f`.
 - The image is built for `amd64` and `arm64` (64-bit Raspberry Pi OS). Any variable from the table below can go in `.env`.
@@ -264,6 +264,7 @@ The frame uses Waveshare's 13.3" E Ink Spectra 6 panel (1200×1600, 6 colours, a
 | `FRAME_STATE_PATH` | `slideshow.json` | Where slideshow settings are saved |
 | `WALL_DB_PATH` | `wall.db` | Family Wall database (SQLite) |
 | `WALL_PHOTOS_PATH` | `wall_photos` | Directory for photos attached to wall posts |
+| `SHOPPING_DB_PATH` | `shopping.db` | Shopping lists (SQLite) |
 | `FRAME_PREVIEW_PATH` | `last_frame.png` | Where the last rendered frame is saved (shown at `/current`) |
 | `PORT` | `5000` | HTTP port |
 | `PICFORT_API_KEY` | (empty) | When set, every request needs `X-Picfort-Key: <key>` (enter it in the app next to the address). Required before exposing the server outside your network (ADR 0007). |
@@ -301,6 +302,24 @@ It changes every 15 min to 24 h and can pause during quiet hours (for example 22
 | `GET /wall/photo/<file>` | The photo attached to a post (`photo_url` in the post) |
 
 A post looks like `{"id","author_id","author","text","photo_url","photo_width","photo_height","pinned","created"}`. `photo_width`/`photo_height` are the upright size, so the app can lay out photos before they load. The wall is stored in SQLite next to the server (ADR 0002). There are no migrations: if a new version changes the schema, the wall starts empty. Every `/wall` call needs `Authorization: Bearer <Immich access token>` (an API key doesn't work). The server checks it with `GET /api/users/me` on its own `IMMICH_URL` and remembers the answer for 5 minutes. No token or a rejected one gives `401`; if Immich can't be reached, `502`. The author of a post is the user of the token.
+
+#### Shopping lists
+
+Shared lists with checkable items; everyone in the family can edit every list (T-018). Auth as `/wall`.
+
+| Endpoint | Result |
+|---|---|
+| `GET /lists` | Active lists with all their items, newest first. `?archived=1` returns the archived ones. |
+| `POST /lists` | `{"title", "items"?: [text]}` → `201` with the list. |
+| `GET /lists/<id>` | The list. Sends `ETag: "<id>-<revision>"`; with a matching `If-None-Match` it answers `304`, so polling an open list is cheap. |
+| `PATCH /lists/<id>` | `{"title"?, "archived"?}`. Anyone. |
+| `DELETE /lists/<id>` | `204`. The creator only (`403`). Its items go with it. |
+| `POST /lists/<id>/uncheck-all`, `POST /lists/<id>/delete-checked` | The updated list. |
+| `POST /lists/<id>/items` | `{"text", "position"?}` → `201` with the item; without `position` it goes last. |
+| `PATCH /lists/<id>/items/<item>` | `{"text"?, "checked"?, "position"?}`. Checking records who and when (`checked_by`, `checked_at`). |
+| `DELETE /lists/<id>/items/<item>` | `204`. |
+
+A list looks like `{"id","title","archived","revision","created_by","created","updated","item_count","checked_count","items"}`; `items` are unchecked by `position`, then checked with the latest first. Every change bumps `revision`. Lists are stored in `shopping.db` (ADR 0008). There are no migrations: if a new version changes the schema, the old file is kept as `shopping.db.v<old>.bak` and the lists start empty. `400` for invalid input, `404` for an unknown list or an item of another list.
 
 Run the tests with `cd ImageFrameServer && python3 -m unittest discover -s tests -t tests`.
 
