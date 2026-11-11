@@ -22,6 +22,8 @@ data class FamilyProfileDto(
     @SerialName("display_name") val displayName: String? = null,
     @SerialName("photo_url") val photoUrl: String? = null,
     val hidden: Boolean? = null,
+    val manual: Boolean = false,
+    @SerialName("birth_date") val birthDate: String? = null,
     @SerialName("updated_by") val updatedBy: String = "",
     val updated: String = "",
 )
@@ -37,6 +39,8 @@ data class FamilyProfile(
     /** Absolute URL on the Picfort server, or null. */
     val photoUrl: String? = null,
     val hidden: Boolean? = null,
+    val manual: Boolean = false,
+    val birthDate: String? = null,
 )
 
 internal fun FamilyProfileDto.toProfile(base: HttpUrl) = FamilyProfile(
@@ -44,6 +48,8 @@ internal fun FamilyProfileDto.toProfile(base: HttpUrl) = FamilyProfile(
     displayName = displayName?.trim()?.takeIf { it.isNotEmpty() },
     photoUrl = photoUrl?.let { base.resolve(it)?.toString() },
     hidden = hidden,
+    manual = manual,
+    birthDate = birthDate,
 )
 
 interface FamilyBackend {
@@ -63,7 +69,18 @@ interface FamilyBackend {
         displayName: String?,
         hidden: Boolean? = null,
         includeHidden: Boolean = false,
+        birthDate: String? = null,
+        includeBirthDate: Boolean = false,
+        today: String? = null,
     ): FamilyProfile
+
+    suspend fun addMember(
+        displayName: String,
+        birthDate: String? = null,
+        today: String? = null,
+    ): FamilyProfile
+
+    suspend fun deleteMember(userId: String)
 
     suspend fun uploadPhoto(userId: String, photoJpeg: ByteArray): FamilyProfile
 
@@ -98,6 +115,9 @@ class FamilyApi @Inject constructor(
         displayName: String?,
         hidden: Boolean?,
         includeHidden: Boolean,
+        birthDate: String?,
+        includeBirthDate: Boolean,
+        today: String?,
     ): FamilyProfile {
         val base = server.base()
         val url = base.newBuilder().addPathSegment("family").addPathSegment(userId).build()
@@ -106,10 +126,42 @@ class FamilyApi @Inject constructor(
             if (includeHidden) {
                 put("hidden", hidden?.let(::JsonPrimitive) ?: JsonNull)
             }
+            if (includeBirthDate) {
+                put("birth_date", birthDate?.let(::JsonPrimitive) ?: JsonNull)
+            }
+            if (today != null) {
+                put("today", JsonPrimitive(today))
+            }
         }
         val body = payload.toString().toRequestBody(JSON_MEDIA_TYPE)
         val raw = execute(Request.Builder().url(url).patch(body).build())
         return json.decodeFromString<FamilyProfileDto>(raw).toProfile(base)
+    }
+
+    override suspend fun addMember(
+        displayName: String,
+        birthDate: String?,
+        today: String?,
+    ): FamilyProfile {
+        val base = server.base()
+        val url = base.newBuilder().addPathSegment("family").addPathSegment("members").build()
+        val payload = buildJsonObject {
+            put("display_name", JsonPrimitive(displayName.trim()))
+            if (birthDate != null) {
+                put("birth_date", JsonPrimitive(birthDate))
+            }
+            if (today != null) {
+                put("today", JsonPrimitive(today))
+            }
+        }
+        val body = payload.toString().toRequestBody(JSON_MEDIA_TYPE)
+        val raw = execute(Request.Builder().url(url).post(body).build())
+        return json.decodeFromString<FamilyProfileDto>(raw).toProfile(base)
+    }
+
+    override suspend fun deleteMember(userId: String) {
+        val url = server.base().newBuilder().addPathSegment("family").addPathSegment(userId).build()
+        execute(Request.Builder().url(url).delete().build())
     }
 
     override suspend fun uploadPhoto(userId: String, photoJpeg: ByteArray): FamilyProfile {

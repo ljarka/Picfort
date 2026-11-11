@@ -105,7 +105,7 @@ Android task except T-017 and T-026 starts with a mockup the owner approves.
 | [T-031](tasks/T-031-family-profiles-backend.md) | Family profiles — server (`family.db`): display name, photo, hidden, per Immich user | `done` |
 | [T-032](tasks/T-032-family-settings-android.md) | Family settings — Android: rename, photo from Immich people, hide; one source of members | `done` |
 | [T-033](tasks/T-033-family-members-birthdays-server.md) | Family members without Immich + birth dates — server (`family.db` v2) | `done` |
-| [T-034](tasks/T-034-family-add-members-birthday-android.md) | Family settings — Android: add people, Immich badge, birth date | `ready` |
+| [T-034](tasks/T-034-family-add-members-birthday-android.md) | Family settings — Android: add people, Immich badge, birth date | `done` |
 | [T-035](tasks/T-035-recurring-events-server.md) | Recurring events — server (weekly / monthly / yearly, end date; `events.db` v2) | `done` |
 | [T-036](tasks/T-036-birthday-events-server.md) | Birthdays as events — server (`events.db` v3) | `done` |
 | [T-037](tasks/T-037-events-repeat-birthdays-android.md) | Events — Android: repeat, birthdays with age | `ready` |
@@ -114,6 +114,23 @@ Android task except T-017 and T-026 starts with a mockup the owner approves.
 | [T-040](tasks/T-040-shopping-reminders-android.md) | Shopping list reminders — Android notifications | `ready` |
 | [T-041](tasks/T-041-wishlist-backend.md) | Wishlist & link preview — server API (`shopping.db` v2) | `ready` |
 | [T-042](tasks/T-042-wishlist-android.md) | Wishlist carousel & event linking — Android | `ready` |
+
+### Phase 8 — Modular Architecture (Agentic Pair Programming)
+Deconstruct monolithic `:app` into isolated feature slices and core foundations (ADR 0011).
+Enables AI agents to operate within compact, focused context windows with per-module `AGENTS.md`
+and fast isolated snapshot testing (`./gradlew :feature:<name>:verifyPaparazziDebug`).
+
+| Task | Description | Status |
+|------|-------------|--------|
+| [T-043](tasks/T-043-modularization-foundation-core-model.md) | Build-logic convention plugins & pure domain `:core:model` | `ready` |
+| [T-044](tasks/T-044-modularization-core-ui.md) | Design system & shared UI components `:core:ui` | `ready` |
+| [T-045](tasks/T-045-modularization-core-network-database.md) | Network infrastructure `:core:network` & persistence `:core:database` | `ready` |
+| [T-046](tasks/T-046-modularization-feature-shopping.md) | Feature slice `:feature:shopping` (lists, offline copy, local snapshots) | `ready` |
+| [T-047](tasks/T-047-modularization-feature-events.md) | Feature slice `:feature:events` (upcoming, form, detail, local snapshots) | `ready` |
+| [T-048](tasks/T-048-modularization-feature-family.md) | Feature slice `:feature:family` (settings, members, birth dates, local snapshots) | `ready` |
+| [T-049](tasks/T-049-modularization-feature-wall.md) | Feature slice `:feature:wall` (dashboard, today panel, member chips, local snapshots) | `ready` |
+| [T-050](tasks/T-050-modularization-feature-timeline-frame.md) | Feature slices `:feature:timeline` & `:feature:frame` | `ready` |
+| [T-051](tasks/T-051-modularization-app-shell-cleanup.md) | Thin `:app` shell, root navigation assembly & architecture boundary guard | `ready` |
 
 Decided by the owner (2026-11-11), as recommended:
 - **Schema changes** in `shopping.db` / `events.db`: no migrations; the old file is kept as
@@ -167,3 +184,5 @@ Decided by the owner (2026-11-11), as recommended:
 | [0007](decisions/0007-server-api-key.md) | Optional `PICFORT_API_KEY` for a server reachable from outside (e.g. Cloudflare Tunnel) |
 | [0008](decisions/0008-family-hub-storage.md) | Shopping lists, receipts, events, school timetables on the Picfort server, one SQLite file per feature, `.bak` on schema change (proposed) |
 | [0009](decisions/0009-receipts-gemini.md) | Receipts read by Gemini free tier on the server, opt-in (proposed) |
+| [0010](decisions/0010-family-members-birthdays-recurring.md) | Manual family members, birth dates & recurring events with additive migrations |
+| [0011](decisions/0011-modular-architecture.md) | Multi-module architecture optimized for AI Agent pair programming |

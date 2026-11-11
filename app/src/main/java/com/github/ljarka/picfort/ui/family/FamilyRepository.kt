@@ -101,7 +101,7 @@ fun mergeFamilyUsers(
     immichServerUrl: String,
 ): List<FamilyUserUi> {
     val base = immichServerUrl.trimEnd('/')
-    return immichUsers.map { u ->
+    val immichList = immichUsers.map { u ->
         val profile = profiles[u.id]
         val shownName = profile?.displayName?.trim()?.takeIf { it.isNotEmpty() } ?: u.name
         val immichAvatar = if (u.hasProfileImage && base.isNotEmpty()) {
@@ -122,8 +122,29 @@ fun mergeFamilyUsers(
             color = avatarColor(u.avatarColor),
             hidden = hidden,
             isMe = isMe,
+            isImmichUser = true,
+            birthDate = BirthDate.parse(profile?.birthDate),
         )
     }
+
+    val immichIds = immichUsers.mapTo(HashSet()) { it.id }
+    val manualList = profiles.values.filter { it.manual || !immichIds.contains(it.userId) }.map { p ->
+        FamilyUserUi(
+            id = p.userId,
+            name = p.displayName ?: "Member",
+            immichName = "",
+            avatarUrl = p.photoUrl,
+            immichAvatarUrl = null,
+            hasCustomPhoto = p.photoUrl != null,
+            color = avatarColor(null),
+            hidden = p.hidden ?: false,
+            isMe = false,
+            isImmichUser = false,
+            birthDate = BirthDate.parse(p.birthDate),
+        )
+    }
+
+    return immichList + manualList
 }
 
 /**
@@ -168,6 +189,9 @@ class FamilyRepository(
     /** False when no Picfort server is set or the server is older than T-031 (`404` on `/family`). */
     val supported: StateFlow<Boolean> = _supported.asStateFlow()
 
+    private val _canAddMembers = MutableStateFlow(backend.isConfigured)
+    val canAddMembers: StateFlow<Boolean> = _canAddMembers.asStateFlow()
+
     /** Every Immich user merged with their custom profile (visible and hidden alike). */
     val users: Flow<List<FamilyUserUi>> = combine(usersDao.all(), profiles) { immichUsers, profMap ->
         mergeFamilyUsers(
@@ -178,8 +202,16 @@ class FamilyRepository(
         )
     }
 
-    /** Visible family members, the logged-in user first, then sorted by shown name. */
+    /** Visible Immich members for Wall avatar row (T-034: manual members don't post). */
     val members: Flow<List<FamilyMember>> = users.map { list ->
+        list.filter { !it.hidden && it.isImmichUser }
+            .sortedWith(compareBy(String.CASE_INSENSITIVE_ORDER) { it.name })
+            .map { it.toMember() }
+            .meFirst(myId)
+    }
+
+    /** All visible family members (both Immich and manual) for Shopping, Events, etc. */
+    val allMembers: Flow<List<FamilyMember>> = users.map { list ->
         list.filter { !it.hidden }
             .sortedWith(compareBy(String.CASE_INSENSITIVE_ORDER) { it.name })
             .map { it.toMember() }
@@ -198,6 +230,7 @@ class FamilyRepository(
         if (usersDao.all().first().isEmpty()) runCatching { syncImmichUsers() }
         if (!backend.isConfigured) {
             _supported.value = false
+            _canAddMembers.value = false
             profiles.value = emptyMap()
             return null
         }
@@ -214,6 +247,7 @@ class FamilyRepository(
         } catch (e: PicfortServerException.Outdated) {
             // Old server without /family: fall back to Immich names/pictures and hide the Settings row.
             _supported.value = false
+            _canAddMembers.value = false
             profiles.value = emptyMap()
             offline.clear()
             e
@@ -226,31 +260,67 @@ class FamilyRepository(
     }
 
     /**
-     * Saves changes from the member sheet (T-032). Not optimistic: throws [PicfortServerException]
+     * Saves changes from the member sheet (T-032, T-034). Not optimistic: throws [PicfortServerException]
      * on failure so the sheet stays open with a snackbar.
      */
     suspend fun saveMember(
         user: FamilyUserUi,
         displayName: String,
-        pickedPersonId: String?,
-        clearPhoto: Boolean,
-        showInFamily: Boolean,
+        pickedPersonId: String? = null,
+        photoBytes: ByteArray? = null,
+        clearPhoto: Boolean = false,
+        showInFamily: Boolean = true,
+        birthDate: BirthDate? = null,
+        clearBirthDate: Boolean = false,
     ) {
         if (pickedPersonId != null) {
             val jpeg = people.faceThumbnailJpeg(pickedPersonId)
             backend.uploadPhoto(user.id, jpeg)
+        } else if (photoBytes != null) {
+            backend.uploadPhoto(user.id, photoBytes)
         } else if (clearPhoto && user.hasCustomPhoto) {
             backend.deletePhoto(user.id)
         }
-        val trimmedName = displayName.trim().takeIf { it.isNotEmpty() && it != user.immichName }
+        val trimmedName = displayName.trim().takeIf { it.isNotEmpty() && (!user.isImmichUser || it != user.immichName) }
         val newHidden = !showInFamily
         val hiddenChanged = !user.isMe && (newHidden != user.hidden || profiles.value[user.id]?.hidden != null)
+        val birthDateStr = if (clearBirthDate) null else birthDate?.toIsoString()
+        val birthDateChanged = clearBirthDate || (birthDate != user.birthDate)
+        val today = java.time.LocalDate.now().toString()
+
         backend.update(
             userId = user.id,
             displayName = trimmedName,
             hidden = if (hiddenChanged) newHidden else null,
             includeHidden = hiddenChanged,
+            birthDate = birthDateStr,
+            includeBirthDate = birthDateChanged,
+            today = today,
         )
+        refresh()
+    }
+
+    suspend fun addMember(
+        displayName: String,
+        birthDate: BirthDate? = null,
+        photoBytes: ByteArray? = null,
+    ) {
+        val today = java.time.LocalDate.now().toString()
+        val birthDateStr = birthDate?.toIsoString()
+        try {
+            val created = backend.addMember(displayName, birthDateStr, today)
+            if (photoBytes != null) {
+                backend.uploadPhoto(created.userId, photoBytes)
+            }
+            refresh()
+        } catch (e: PicfortServerException.Outdated) {
+            _canAddMembers.value = false
+            throw e
+        }
+    }
+
+    suspend fun deleteMember(userId: String) {
+        backend.deleteMember(userId)
         refresh()
     }
 
