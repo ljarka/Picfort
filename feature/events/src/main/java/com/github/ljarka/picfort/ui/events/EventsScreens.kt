@@ -79,8 +79,8 @@ import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import com.github.ljarka.picfort.ui.shell.ServerRequiredContent
-import com.github.ljarka.picfort.ui.shell.SettingsAction
+import com.github.ljarka.picfort.core.ui.component.ServerRequiredContent
+import com.github.ljarka.picfort.core.ui.component.SettingsAction
 import java.time.LocalDate
 import java.time.LocalTime
 import java.time.format.DateTimeFormatter

@@ -1,5 +1,6 @@
 package com.github.ljarka.picfort.ui.events
 
+import com.github.ljarka.picfort.core.model.FamilyEventsProvider
 import com.github.ljarka.picfort.core.network.PicfortServerException
 import dagger.Binds
 import dagger.Module
@@ -20,6 +21,9 @@ import javax.inject.Singleton
 abstract class EventsModule {
     @Binds
     abstract fun backend(api: EventsApi): EventsBackend
+
+    @Binds
+    abstract fun familyEventsProvider(impl: EventsRepository): FamilyEventsProvider
 }
 
 /**
@@ -30,7 +34,7 @@ abstract class EventsModule {
 class EventsRepository(
     private val backend: EventsBackend,
     private val todayProvider: () -> LocalDate,
-) {
+) : FamilyEventsProvider {
     @Inject
     constructor(backend: EventsBackend) : this(backend, LocalDate::now)
 
@@ -41,7 +45,7 @@ class EventsRepository(
     val today: StateFlow<LocalDate> = _today.asStateFlow()
 
     private val _upcoming = MutableStateFlow<List<FamilyEvent>>(emptyList())
-    val upcoming: StateFlow<List<FamilyEvent>> = _upcoming.asStateFlow()
+    override val upcoming: StateFlow<List<FamilyEvent>> = _upcoming.asStateFlow()
 
     private val _past = MutableStateFlow<List<FamilyEvent>>(emptyList())
     val past: StateFlow<List<FamilyEvent>> = _past.asStateFlow()
@@ -90,7 +94,9 @@ class EventsRepository(
         return currentToday
     }
 
-    suspend fun refreshUpcoming(date: LocalDate = rollOverMidnight()): PicfortServerException? = try {
+    override suspend fun refreshUpcoming(): PicfortServerException? = refreshUpcoming(rollOverMidnight())
+
+    suspend fun refreshUpcoming(date: LocalDate): PicfortServerException? = try {
         val fresh = backend.upcoming(date)
         _upcoming.value = fresh
         null

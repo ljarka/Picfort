@@ -23,10 +23,9 @@ import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.repeatOnLifecycle
 import androidx.lifecycle.viewModelScope
-import com.github.ljarka.picfort.network.PicfortServerClient
+import com.github.ljarka.picfort.core.network.PicfortServerClient
 import com.github.ljarka.picfort.core.network.PicfortServerException
-import com.github.ljarka.picfort.ui.family.FamilyRepository
-import com.github.ljarka.picfort.ui.frame.FrameSettingsDialog
+import com.github.ljarka.picfort.core.model.FamilyMemberProvider
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -45,7 +44,7 @@ private const val EVENTS_POLL_MILLIS = 60_000L
 @HiltViewModel
 class EventsListViewModel @Inject constructor(
     private val repository: EventsRepository,
-    private val family: FamilyRepository,
+    private val family: FamilyMemberProvider,
     private val server: PicfortServerClient,
 ) : ViewModel() {
 
@@ -141,7 +140,7 @@ class EventsListViewModel @Inject constructor(
 @HiltViewModel
 class EventDetailViewModel @Inject constructor(
     private val repository: EventsRepository,
-    private val family: FamilyRepository,
+    private val family: FamilyMemberProvider,
     savedState: SavedStateHandle,
 ) : ViewModel() {
 
@@ -171,7 +170,7 @@ class EventDetailViewModel @Inject constructor(
                 repository.upcoming,
                 repository.past,
                 repository.today,
-                family.users,
+                family.allMembers,
             ) { _, _, today, users ->
                 // Hidden members still have a name; only ids no longer in Immich are "Former member".
                 knownUsers = users.associate { it.id to it.name }
@@ -385,6 +384,7 @@ fun EventsListScreen(
     onOpenEvent: (Long) -> Unit,
     onAddEvent: () -> Unit,
     onSettingsClick: () -> Unit,
+    onSetUpServer: () -> Unit = onSettingsClick,
 ) {
     val viewModel = hiltViewModel<EventsListViewModel>()
     val state by viewModel.state.collectAsStateWithLifecycle()
@@ -393,13 +393,6 @@ fun EventsListScreen(
         lifecycle.repeatOnLifecycle(Lifecycle.State.STARTED) {
             viewModel.keepFresh()
         }
-    }
-    var showServerDialog by remember { mutableStateOf(false) }
-    if (showServerDialog) {
-        FrameSettingsDialog(
-            onDismiss = { showServerDialog = false },
-            onSaved = viewModel::refreshNow,
-        )
     }
     EventsListContent(
         state = state,
@@ -410,7 +403,7 @@ fun EventsListScreen(
         onLoadMorePast = viewModel::loadMorePast,
         onRefresh = viewModel::refreshNow,
         onSettingsClick = onSettingsClick,
-        onSetUpServer = { showServerDialog = true },
+        onSetUpServer = onSetUpServer,
         onMessageShown = viewModel::messageShown,
     )
 }

@@ -1,6 +1,6 @@
 # T-047 — Modularization: :feature:events
 
-**Status:** ready  
+**Status:** done (2026-11-12)  
 **Component:** Android feature module  
 **Depends on:** T-043 (`:core:model`), T-044 (`:core:ui`), T-045 (`:core:network`), [ADR 0011](../decisions/0011-modular-architecture.md)
 
@@ -19,12 +19,12 @@ into an independent `:feature:events` module.
    - `ui/events/EventsModels.kt`
    - Events snapshot tests moved from `ScreenshotTest.kt` into `EventsScreenshotTest.kt`.
 2. **Navigation Entry Point**:
-   - Exposed composables: `EventsTab(onOpenEvent: (id) -> Unit, onAddEvent: () -> Unit, ...)`.
+   - Exposed composables: `EventsListScreen(...)`, `EventDetailScreen(...)`, `EventFormScreen(...)`.
 3. **Module `AGENTS.md`**:
    - `feature/events/AGENTS.md` specifying internal files, API endpoints, test commands, and birthday integration.
 
 ## Acceptance criteria
 
-- [ ] `./gradlew :feature:events:testDebugUnitTest` passes isolated from `:app`.
-- [ ] `./gradlew :feature:events:verifyPaparazziDebug` passes.
-- [ ] `feature/events/AGENTS.md` created (< 80 lines).
+- [x] `./gradlew :feature:events:testDebugUnitTest` passes isolated from `:app`.
+- [x] `./gradlew :feature:events:verifyPaparazziDebug` passes.
+- [x] `feature/events/AGENTS.md` created (< 80 lines).
