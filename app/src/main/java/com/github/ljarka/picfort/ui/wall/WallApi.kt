@@ -1,32 +1,20 @@
 package com.github.ljarka.picfort.ui.wall
 
-import com.github.ljarka.picfort.network.CleartextNotAllowedException
-import com.github.ljarka.picfort.network.isPicfortKeyRejected
+import com.github.ljarka.picfort.network.PicfortServerClient
+import com.github.ljarka.picfort.network.PicfortServerException
 import com.github.ljarka.picfort.network.picfortKey
-import com.github.ljarka.picfort.ui.frame.WRONG_API_KEY
 import com.github.ljarka.picfort.ui.frame.FrameSettingsStore
-import com.github.ljarka.picfort.ui.frame.normalizeFrameUrl
-import com.github.ljarka.picfort.ui.login.AccessTokenStore
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.withContext
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 import okhttp3.HttpUrl
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.MultipartBody
-import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.RequestBody.Companion.toRequestBody
-import java.io.IOException
 import java.time.Instant
 import javax.inject.Inject
-import javax.inject.Qualifier
 import javax.inject.Singleton
-
-@Qualifier
-@Retention(AnnotationRetention.BINARY)
-annotation class WallHttpClient
 
 /** A post as ImageFrameServer returns it (T-001). */
 @Serializable
@@ -74,34 +62,14 @@ internal fun WallPostDto.toPost(base: HttpUrl) = WallPost(
     created = runCatching { Instant.parse(created) }.getOrDefault(Instant.EPOCH),
 )
 
-/** Why a wall call failed, as the UI tells it. */
-sealed class WallException(message: String) : Exception(message) {
-    class NotConfigured : WallException("Connect your Picfort server to use the Family Wall")
-    class Unreachable(host: String) : WallException("Can't reach the Picfort server at $host")
-    /** 401: the server didn't accept our Immich login (e.g. it uses another Immich). */
-    class NotAccepted : WallException("The Picfort server didn't accept your Immich login")
-    /** 404 on `/wall`: an ImageFrameServer without the wall. */
-    class NoWall : WallException("This Picfort server has no Family Wall yet, update ImageFrameServer")
-    /** 502: the server can't ask Immich who we are. */
-    class ImmichUnreachable : WallException("The Picfort server can't reach Immich")
-    class Forbidden : WallException("Only the author can change this post")
-    /** 401 from the server's own PICFORT_API_KEY check, not from Immich. */
-    class WrongApiKey : WallException(WRONG_API_KEY)
-    class Other(message: String) : WallException(message)
-}
-
-@Serializable
-private data class ErrorBody(val message: String? = null)
-
 /** Family Wall calls to the Picfort server (ImageFrameServer, T-001). */
 @Singleton
 class WallApi @Inject constructor(
-    @WallHttpClient private val client: OkHttpClient,
+    private val server: PicfortServerClient,
     private val settings: FrameSettingsStore,
-    private val tokens: AccessTokenStore,
     private val json: Json,
 ) {
-    val isConfigured: Boolean get() = normalizeFrameUrl(settings.frameUrl) != null
+    val isConfigured: Boolean get() = server.isConfigured
 
     /** [address] and [apiKey] other than the saved ones are for testing a server before saving it. */
     suspend fun posts(limit: Int = 100, address: String = settings.frameUrl, apiKey: String? = null): List<WallPost> {
@@ -133,34 +101,10 @@ class WallApi @Inject constructor(
         return json.decodeFromString<WallPostDto>(execute(request)).toPost(base)
     }
 
-    private fun base(address: String = settings.frameUrl) =
-        normalizeFrameUrl(address) ?: throw WallException.NotConfigured()
+    private fun base(address: String = settings.frameUrl) = server.base(address)
 
-    private suspend fun execute(unsigned: Request): String = withContext(Dispatchers.IO) {
-        // Signed here too (not only by WallAuthInterceptor), so an address that isn't saved yet
-        // can be tested. Only ever for /wall calls (ADR 0006).
-        val request = unsigned.newBuilder().header("Authorization", "Bearer ${tokens.accessToken}").build()
-        try {
-            client.newCall(request).execute().use { response ->
-                val text = response.body?.string().orEmpty()
-                if (response.isPicfortKeyRejected()) throw WallException.WrongApiKey()
-                when (response.code) {
-                    in 200..299 -> text
-                    401 -> throw WallException.NotAccepted()
-                    403 -> throw WallException.Forbidden()
-                    404 -> throw if (request.url.pathSegments.last() == "wall") WallException.NoWall()
-                    else WallException.Other("This post no longer exists")
-                    502 -> throw WallException.ImmichUnreachable()
-                    else -> throw WallException.Other(
-                        runCatching { json.decodeFromString<ErrorBody>(text).message }.getOrNull()
-                            ?: "The Picfort server returned HTTP ${response.code}"
-                    )
-                }
-            }
-        } catch (e: CleartextNotAllowedException) {
-            throw WallException.Other(e.message ?: "Use https:// for servers outside your network")
-        } catch (e: IOException) {
-            throw WallException.Unreachable(request.url.host)
-        }
-    }
+    private suspend fun execute(request: Request): String = server.execute(request) {
+        if (request.url.pathSegments.last() == "wall") PicfortServerException.NoWall()
+        else PicfortServerException.Other("This post no longer exists")
+    }.body
 }

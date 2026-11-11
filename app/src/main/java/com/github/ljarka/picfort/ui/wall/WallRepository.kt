@@ -1,5 +1,6 @@
 package com.github.ljarka.picfort.ui.wall
 
+import com.github.ljarka.picfort.network.PicfortServerException
 import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
@@ -114,12 +115,12 @@ class WallRepository @Inject constructor(
         val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
         resolver.openInputStream(uri)?.use { BitmapFactory.decodeStream(it, null, bounds) }
         val longest = max(bounds.outWidth, bounds.outHeight)
-        if (longest <= 0) throw WallException.Other("Couldn't read the photo")
+        if (longest <= 0) throw PicfortServerException.Other("Couldn't read the photo")
         var sample = 1
         while (longest / (sample * 2) >= MAX_EDGE) sample *= 2
         val decoded = resolver.openInputStream(uri)?.use {
             BitmapFactory.decodeStream(it, null, BitmapFactory.Options().apply { inSampleSize = sample })
-        } ?: throw WallException.Other("Couldn't read the photo")
+        } ?: throw PicfortServerException.Other("Couldn't read the photo")
         val orientation = runCatching {
             resolver.openInputStream(uri)?.use {
                 ExifInterface(it).getAttributeInt(ExifInterface.TAG_ORIENTATION, ExifInterface.ORIENTATION_NORMAL)

@@ -24,7 +24,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.github.ljarka.picfort.ui.wall.WallApi
-import com.github.ljarka.picfort.ui.wall.WallException
+import com.github.ljarka.picfort.network.PicfortServerException
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -46,12 +46,12 @@ sealed interface ConnectionTest {
 /** What to say once `/status` answered, given how `/wall` went (null = it worked). */
 fun wallTestResult(error: Exception?): ConnectionTest = when (error) {
     null -> ConnectionTest.Ok("Connected: frame and Family Wall")
-    is WallException.NotAccepted -> ConnectionTest.Partial(
+    is PicfortServerException.NotAccepted -> ConnectionTest.Partial(
         "Connected, but the server didn't accept your Immich login. " +
             "Check that it uses the same Immich server (IMMICH_URL)."
     )
-    is WallException.NoWall -> ConnectionTest.Partial("Connected. This server has no Family Wall yet, update ImageFrameServer.")
-    is WallException.ImmichUnreachable -> ConnectionTest.Partial("Connected, but the server can't reach Immich.")
+    is PicfortServerException.NoWall -> ConnectionTest.Partial("Connected. This server has no Family Wall yet, update ImageFrameServer.")
+    is PicfortServerException.ImmichUnreachable -> ConnectionTest.Partial("Connected, but the server can't reach Immich.")
     else -> ConnectionTest.Partial("Connected, but the Family Wall didn't answer: ${error.message}")
 }
 
