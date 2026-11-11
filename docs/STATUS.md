@@ -73,13 +73,15 @@ Receipts can be read by Google Gemini (ADR 0009): opt-in on the server, the one 
 Delivery order (each milestone is usable on its own):
 - **M1 shell:** T-017.
 - **M2 lists:** T-018 → T-019.
+- **M2b family profiles:** T-031 → T-032 (names, photos from Immich people, hidden accounts;
+  after T-018). Small, and the wall is the home screen, so it goes early.
 - **M3 events:** T-022 → T-023 → T-026 (albums), T-027 (today panel on the wall).
 - **M4 school timetable:** T-028 → T-029 → T-030 (children from Immich people).
 - **M5 receipts & spending:** T-020 → T-024 (Gemini) → T-021 → T-025.
 
 Events and school before receipts: no external dependency, daily use, and receipts are the
 largest block. M3 and M4 are independent of each other and can swap. Server tasks T-020,
-T-022 and T-028 need T-018's foundations (`store.py`, token auth for the new paths). Every
+T-022, T-028 and T-031 need T-018's foundations (`store.py`, token auth for the new paths). Every
 Android task except T-017 and T-026 starts with a mockup the owner approves.
 
 | Task | Description | Status |
@@ -98,6 +100,8 @@ Android task except T-017 and T-026 starts with a mockup the owner approves.
 | [T-028](tasks/T-028-school-timetable-backend.md) | School timetable — server API (`school.db`): children, bell schedule, lessons, activities | `ready` |
 | [T-029](tasks/T-029-school-timetable-android.md) | School timetable — Android: child chips, "finishes at", week by day, editing | `ready` |
 | [T-030](tasks/T-030-children-immich-people.md) | Children from Immich people: face photo, per-parent link, "Photos of Ola" | `ready` |
+| [T-031](tasks/T-031-family-profiles-backend.md) | Family profiles — server (`family.db`): display name, photo, hidden, per Immich user | `ready` |
+| [T-032](tasks/T-032-family-settings-android.md) | Family settings — Android: rename, photo from Immich people, hide; one source of members | `ready` |
 
 Decided by the owner (2026-11-11), as recommended:
 - **Schema changes** in `shopping.db` / `events.db`: no migrations; the old file is kept as
@@ -115,6 +119,9 @@ Decided by the owner (2026-11-11), as recommended:
 - **Children can be chosen from Immich people** (face recognition), with the face as their
   photo, and each parent can browse the child's photos from their own library (T-030). The
   link is per parent, because Immich people are per user.
+- **Family members can be renamed, get a photo from Immich people, and be hidden** (T-031,
+  T-032). It is family-wide configuration: anyone can change it for any member. The "test" in
+  the name rule (PR #37) stays as the default for members without a setting.
 - **Deleting a child** (and its timetable): anyone, after a confirmation (either parent must
   be able to).
 - **Five tabs:** Wall · Shopping · Events · School · Photos. It is the Material maximum: a sixth

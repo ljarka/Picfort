@@ -20,7 +20,7 @@ server tasks reuse.
 - Token auth for more than `/wall`: the `before_request` check in `register_wall` (`app.py`)
   tests `request.path.startswith("/wall")` today. Move it to `register_auth(app, auth,
   prefixes)` with `AUTH_PREFIXES = ("/wall", "/lists", "/receipts", "/spending", "/events",
-  "/school")`.
+  "/school", "/family")`.
   The Picfort key check (`require_api_key`) already covers every route.
 - `Dockerfile`: add `SHOPPING_DB_PATH=/data/shopping.db` to the `ENV` block. `app.py` reads
   `SHOPPING_DB_PATH` (default `shopping.db`) like `WALL_DB_PATH`.

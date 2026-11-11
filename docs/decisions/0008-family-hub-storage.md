@@ -19,15 +19,16 @@ posts but painful for a year of receipts.
 
 ### Storage
 
-- Shopping lists, items, receipts, events and school timetables are stored on the Picfort
+- Shopping lists, items, receipts, events, school timetables and family profiles are stored on the Picfort
   server, in SQLite,
   next to the wall. Every phone and (later) the frame see the same data.
 - **One SQLite file per feature:** `wall.db` (existing), `shopping.db` (lists, items,
-  receipts), `events.db`, `school.db` (children, bell schedules, timetables).
+  receipts), `events.db`, `school.db` (children, bell schedules, timetables), `family.db` (display
+  name, photo and hidden flag per Immich user, T-031).
   Each has its own `SCHEMA_VERSION` (`PRAGMA user_version`, as
   `wall.py`), so a schema change in one feature never touches another.
 - Paths come from the environment, as the wall's do: `SHOPPING_DB_PATH` (default
-  `shopping.db`), `EVENTS_DB_PATH` (`events.db`), `SCHOOL_DB_PATH` (`school.db`),
+  `shopping.db`), `EVENTS_DB_PATH` (`events.db`), `SCHOOL_DB_PATH` (`school.db`), `FAMILY_DB_PATH` (`family.db`),
   `RECEIPTS_PATH` (`receipts`, the receipt
   photos). The Docker image sets them to `/data/…` in the `Dockerfile` `ENV` block, next to
   `WALL_DB_PATH`; `/data` is the volume that `DATA_LOCATION` maps in `docker-compose.yml`.
