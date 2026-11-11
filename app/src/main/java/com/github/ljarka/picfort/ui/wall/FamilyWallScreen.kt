@@ -34,7 +34,6 @@ import androidx.compose.foundation.lazy.staggeredgrid.itemsIndexed
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material3.AlertDialog
@@ -91,6 +90,8 @@ import androidx.lifecycle.repeatOnLifecycle
 import coil3.compose.AsyncImage
 import com.github.ljarka.picfort.R
 import com.github.ljarka.picfort.ui.frame.FrameSettingsDialog
+import com.github.ljarka.picfort.ui.shell.ServerRequiredContent
+import com.github.ljarka.picfort.ui.shell.SettingsAction
 import java.io.File
 import java.util.UUID
 
@@ -103,7 +104,7 @@ private val GRID_GUTTER = 12.dp
 private val SPACING = 4.dp
 
 @Composable
-fun FamilyWallScreen(onBack: () -> Unit) {
+fun FamilyWallScreen(onSettingsClick: () -> Unit) {
     val viewModel = hiltViewModel<FamilyWallViewModel>()
     val state by viewModel.state.collectAsStateWithLifecycle()
     val lifecycle = LocalLifecycleOwner.current.lifecycle
@@ -116,7 +117,7 @@ fun FamilyWallScreen(onBack: () -> Unit) {
     }
     FamilyWallContent(
         state = state,
-        onBack = onBack,
+        onSettingsClick = onSettingsClick,
         onRefresh = viewModel::refreshNow,
         onSelect = viewModel::select,
         onPost = viewModel::post,
@@ -131,7 +132,7 @@ fun FamilyWallScreen(onBack: () -> Unit) {
 @Composable
 fun FamilyWallContent(
     state: FamilyWallUiState,
-    onBack: () -> Unit = {},
+    onSettingsClick: () -> Unit = {},
     onRefresh: () -> Unit = {},
     onSelect: (String?) -> Unit = {},
     onPost: (String, Uri?) -> Unit = { _, _ -> },
@@ -192,11 +193,7 @@ fun FamilyWallContent(
         topBar = {
             TopAppBar(
                 title = { Text("Family Wall") },
-                navigationIcon = {
-                    IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
-                    }
-                },
+                actions = { SettingsAction(onSettingsClick) },
             )
         },
         floatingActionButton = {
@@ -214,9 +211,8 @@ fun FamilyWallContent(
                 .padding(padding)
         ) {
             when {
-                !state.configured -> Centered(
-                    "Connect your Picfort server to use the Family Wall.",
-                    "Set up server", onSetUpServer,
+                !state.configured -> ServerRequiredContent(
+                    "Connect your Picfort server to use the Family Wall.", onSetUpServer,
                 )
                 state.isLoading && state.posts.isEmpty() -> Box(Modifier.fillMaxSize(), Alignment.Center) {
                     CircularProgressIndicator()
