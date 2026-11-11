@@ -2,7 +2,7 @@ package com.github.ljarka.picfort.ui.server
 
 import android.content.SharedPreferences
 import androidx.core.content.edit
-import com.github.ljarka.picfort.ui.preferences.EncryptedPreferences
+import com.github.ljarka.picfort.core.network.EncryptedPreferences
 import com.github.ljarka.picfort.ui.preferences.PreferencesStore
 import javax.inject.Inject
 import javax.inject.Singleton

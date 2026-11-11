@@ -50,7 +50,7 @@ import com.github.ljarka.picfort.ui.frame.wallTestResult
 import com.github.ljarka.picfort.ui.wall.FamilyMember
 import com.github.ljarka.picfort.ui.wall.FamilyWallContent
 import com.github.ljarka.picfort.ui.wall.FamilyWallUiState
-import com.github.ljarka.picfort.network.PicfortServerException
+import com.github.ljarka.picfort.core.network.PicfortServerException
 import com.github.ljarka.picfort.ui.wall.WallPost
 import com.github.ljarka.picfort.ui.wall.todayPanel
 import com.github.ljarka.picfort.core.ui.avatar.avatarColor

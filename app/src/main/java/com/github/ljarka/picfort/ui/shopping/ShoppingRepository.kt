@@ -2,7 +2,7 @@ package com.github.ljarka.picfort.ui.shopping
 
 import android.content.Context
 import com.github.ljarka.picfort.AppScope
-import com.github.ljarka.picfort.network.PicfortServerException
+import com.github.ljarka.picfort.core.network.PicfortServerException
 import com.github.ljarka.picfort.ui.frame.FrameSettingsStore
 import com.github.ljarka.picfort.ui.login.AccessTokenStore
 import dagger.Binds

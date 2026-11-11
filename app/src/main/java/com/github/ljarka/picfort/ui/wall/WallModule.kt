@@ -1,6 +1,6 @@
 package com.github.ljarka.picfort.ui.wall
 
-import com.github.ljarka.picfort.network.PicfortHttpClient
+import com.github.ljarka.picfort.core.network.PicfortHttpClient
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn

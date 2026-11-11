@@ -1,6 +1,6 @@
 package com.github.ljarka.picfort.ui.wall
 
-import com.github.ljarka.picfort.network.PicfortServerException
+import com.github.ljarka.picfort.core.network.PicfortServerException
 import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory

@@ -2,7 +2,7 @@ package com.github.ljarka.picfort.ui.family
 
 import com.github.ljarka.picfort.db.UserEntity
 import com.github.ljarka.picfort.db.UsersDao
-import com.github.ljarka.picfort.network.PicfortServerException
+import com.github.ljarka.picfort.core.network.PicfortServerException
 import com.github.ljarka.picfort.ui.wall.FamilyWallUiState
 import com.github.ljarka.picfort.ui.wall.WallPost
 import kotlinx.coroutines.flow.Flow

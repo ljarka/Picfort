@@ -1,6 +1,6 @@
 package com.github.ljarka.picfort.ui.events
 
-import com.github.ljarka.picfort.network.PicfortServerException
+import com.github.ljarka.picfort.core.network.PicfortServerException
 import dagger.Binds
 import dagger.Module
 import dagger.hilt.InstallIn

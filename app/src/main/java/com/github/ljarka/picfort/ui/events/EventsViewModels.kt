@@ -24,7 +24,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.repeatOnLifecycle
 import androidx.lifecycle.viewModelScope
 import com.github.ljarka.picfort.network.PicfortServerClient
-import com.github.ljarka.picfort.network.PicfortServerException
+import com.github.ljarka.picfort.core.network.PicfortServerException
 import com.github.ljarka.picfort.ui.family.FamilyRepository
 import com.github.ljarka.picfort.ui.frame.FrameSettingsDialog
 import dagger.hilt.android.lifecycle.HiltViewModel

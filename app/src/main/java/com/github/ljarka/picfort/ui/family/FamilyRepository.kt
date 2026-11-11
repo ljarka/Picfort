@@ -3,7 +3,7 @@ package com.github.ljarka.picfort.ui.family
 import android.content.Context
 import com.github.ljarka.picfort.db.UserEntity
 import com.github.ljarka.picfort.db.UsersDao
-import com.github.ljarka.picfort.network.PicfortServerException
+import com.github.ljarka.picfort.core.network.PicfortServerException
 import com.github.ljarka.picfort.ui.frame.FrameSettingsStore
 import com.github.ljarka.picfort.ui.login.AccessTokenStore
 import com.github.ljarka.picfort.ui.server.ServerUrlStore

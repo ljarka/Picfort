@@ -72,6 +72,7 @@ dependencies {
     api(project(":core:model"))
     api(project(":core:ui"))
     api(project(":core:database"))
+    api(project(":core:network"))
     ksp(libs.hilt.android.compiler)
     ksp(libs.room.compiler)
     ksp(libs.hilt.androidx.compiler)

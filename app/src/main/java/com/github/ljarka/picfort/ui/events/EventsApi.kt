@@ -1,7 +1,7 @@
 package com.github.ljarka.picfort.ui.events
 
 import com.github.ljarka.picfort.network.PicfortServerClient
-import com.github.ljarka.picfort.network.PicfortServerException
+import com.github.ljarka.picfort.core.network.PicfortServerException
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json

@@ -1,7 +1,7 @@
 package com.github.ljarka.picfort.ui.wall
 
 import com.github.ljarka.picfort.network.PicfortServerClient
-import com.github.ljarka.picfort.network.PicfortServerException
+import com.github.ljarka.picfort.core.network.PicfortServerException
 import com.github.ljarka.picfort.network.picfortKey
 import com.github.ljarka.picfort.ui.frame.FrameSettingsStore
 import kotlinx.serialization.SerialName
