@@ -1,6 +1,6 @@
 # T-045 — Modularization: :core:network and :core:database
 
-**Status:** ready  
+**Status:** done  
 **Component:** Android core libraries  
 **Depends on:** T-043 (`:core:model`), [ADR 0011](../decisions/0011-modular-architecture.md)
 

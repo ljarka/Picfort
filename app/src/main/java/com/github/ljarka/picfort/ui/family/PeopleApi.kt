@@ -2,7 +2,7 @@ package com.github.ljarka.picfort.ui.family
 
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
-import com.github.ljarka.picfort.network.PicfortServerException
+import com.github.ljarka.picfort.core.network.PicfortServerException
 import com.github.ljarka.picfort.ui.server.ServerUrlStore
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
