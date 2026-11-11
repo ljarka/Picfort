@@ -19,6 +19,18 @@ the author is the Immich user of that token.
     DELETE /wall/<id>           -> 204 (own posts only)
     PUT    /wall/<id>/pin       -> the post with pinned toggled (own posts only)
     GET    /wall/photo/<file>   -> the photo attached to a post
+
+Shopping lists (see shopping.py, T-018), same token auth; everyone can edit every list.
+    GET    /lists[?archived=1]               -> active (or archived) lists with all items
+    POST   /lists                            -> 201 new list ({title, items?: [text]})
+    GET    /lists/<id>                       -> the list; ETag "<id>-<revision>", 304 on If-None-Match
+    PATCH  /lists/<id>                       -> {title?, archived?}
+    DELETE /lists/<id>                       -> 204 (creator only)
+    POST   /lists/<id>/uncheck-all           -> the list
+    POST   /lists/<id>/delete-checked        -> the list
+    POST   /lists/<id>/items                 -> 201 new item ({text, position?})
+    PATCH  /lists/<id>/items/<item>          -> {text?, checked?, position?}
+    DELETE /lists/<id>/items/<item>          -> 204
 """
 
 import hmac
@@ -36,7 +48,9 @@ from werkzeug.exceptions import RequestEntityTooLarge
 import frame
 from auth import Authenticator, AuthError, AuthUnavailable, immich_lookup
 from immich import ImmichClient
+from shopping import ShoppingStore
 from slideshow import INTERVALS, MODES, Picker, SettingsStore, Slideshow, SlideshowSettings
+from store import StoreError
 from wall import DEFAULT_LIMIT, MAX_LIMIT, MAX_PHOTO_BYTES, WallError, WallStore
 
 PHOTO_MIME_TYPES = {"jpg": "image/jpeg", "png": "image/png", "heic": "image/heic"}
@@ -132,7 +146,8 @@ def settings_json(slideshow: Slideshow):
 
 
 def create_app(controller: FrameController, slideshow: Slideshow, immich: ImmichClient,
-               wall: WallStore = None, auth: Authenticator = None, api_key: str = "") -> Flask:
+               wall: WallStore = None, auth: Authenticator = None, api_key: str = "",
+               shopping: ShoppingStore = None) -> Flask:
     app = Flask(__name__)
     if api_key:
         require_api_key(app, api_key)
@@ -209,8 +224,12 @@ def create_app(controller: FrameController, slideshow: Slideshow, immich: Immich
         except Exception as e:
             return error(f"Could not load albums from Immich: {e}", 502)
 
+    if auth is not None:
+        register_auth(app, auth)
     if wall is not None:
-        register_wall(app, wall, auth)
+        register_wall(app, wall)
+    if shopping is not None:
+        register_shopping(app, shopping)
     return app
 
 
@@ -239,14 +258,19 @@ def require_api_key(app: Flask, api_key: str):
         return resp
 
 
-def register_wall(app: Flask, wall: WallStore, auth: Authenticator):
-    @app.errorhandler(RequestEntityTooLarge)
-    def too_large(_):
-        return error("The photo is larger than 10 MB", 413)
+# Family features: every call carries the caller's Immich token (ADR 0006, 0008). The frame
+# endpoints stay open on the home network (ADR 0004).
+AUTH_PREFIXES = ("/wall", "/lists", "/receipts", "/spending", "/events", "/school", "/family")
 
+
+def needs_token(path: str) -> bool:
+    return any(path == p or path.startswith(p + "/") for p in AUTH_PREFIXES)
+
+
+def register_auth(app: Flask, auth: Authenticator):
     @app.before_request
     def authenticate():
-        if not request.path.startswith("/wall"):
+        if not needs_token(request.path):
             return None
         try:
             g.user = auth.user(request.headers.get("Authorization"))
@@ -255,9 +279,78 @@ def register_wall(app: Flask, wall: WallStore, auth: Authenticator):
             resp.headers["WWW-Authenticate"] = "Bearer"
             return resp, status
         except AuthUnavailable as e:
-            log.warning("Wall auth: %s", e)
+            log.warning("Auth: %s", e)
             return error(str(e), 502)
         return None
+
+
+def json_body() -> dict:
+    body = request.get_json(silent=True)
+    if not isinstance(body, dict):
+        raise StoreError("The body must be a JSON object")
+    return body
+
+
+def register_shopping(app: Flask, shopping: ShoppingStore):
+    @app.errorhandler(StoreError)
+    def store_error(e):
+        return error(str(e), e.status)
+
+    @app.route("/lists", methods=["GET"])
+    def get_lists():
+        return jsonify(shopping.lists(archived=request.args.get("archived") == "1"))
+
+    @app.route("/lists", methods=["POST"])
+    def create_list():
+        body = json_body()
+        return jsonify(shopping.create(g.user.id, body.get("title"), body.get("items"))), 201
+
+    @app.route("/lists/<int:list_id>", methods=["GET"])
+    def get_list(list_id):
+        lst = shopping.get(list_id)
+        etag = f"{lst['id']}-{lst['revision']}"
+        if request.if_none_match.contains(etag):
+            resp = app.response_class(status=304)
+        else:
+            resp = jsonify(lst)
+        resp.set_etag(etag)
+        return resp
+
+    @app.route("/lists/<int:list_id>", methods=["PATCH"])
+    def update_list(list_id):
+        return jsonify(shopping.update(list_id, json_body()))
+
+    @app.route("/lists/<int:list_id>", methods=["DELETE"])
+    def delete_list(list_id):
+        shopping.delete(list_id, g.user.id)
+        return "", 204
+
+    @app.route("/lists/<int:list_id>/uncheck-all", methods=["POST"])
+    def uncheck_all(list_id):
+        return jsonify(shopping.uncheck_all(list_id))
+
+    @app.route("/lists/<int:list_id>/delete-checked", methods=["POST"])
+    def delete_checked(list_id):
+        return jsonify(shopping.delete_checked(list_id))
+
+    @app.route("/lists/<int:list_id>/items", methods=["POST"])
+    def add_item(list_id):
+        return jsonify(shopping.add_item(list_id, g.user.id, json_body())), 201
+
+    @app.route("/lists/<int:list_id>/items/<int:item_id>", methods=["PATCH"])
+    def update_item(list_id, item_id):
+        return jsonify(shopping.update_item(list_id, item_id, g.user.id, json_body()))
+
+    @app.route("/lists/<int:list_id>/items/<int:item_id>", methods=["DELETE"])
+    def delete_item(list_id, item_id):
+        shopping.delete_item(list_id, item_id)
+        return "", 204
+
+
+def register_wall(app: Flask, wall: WallStore):
+    @app.errorhandler(RequestEntityTooLarge)
+    def too_large(_):
+        return error("The photo is larger than 10 MB", 413)
 
     def own_post(post_id):
         """(post, None) if it exists and belongs to the caller, else (None, error response)."""
@@ -335,10 +428,12 @@ if __name__ == "__main__":
     show_slideshow.start()
     family_wall = WallStore(os.environ.get("WALL_DB_PATH", "wall.db"),
                             os.environ.get("WALL_PHOTOS_PATH", "wall_photos"))
+    shopping_store = ShoppingStore(os.environ.get("SHOPPING_DB_PATH", "shopping.db"))
     wall_auth = Authenticator(immich_lookup(config.immich_url))
     api_key = os.environ.get("PICFORT_API_KEY", "").strip()
     if not api_key:
         log.info("PICFORT_API_KEY is not set: anyone who can reach this server can use it.")
-    create_app(frame_controller, show_slideshow, immich_client, family_wall, wall_auth, api_key).run(
+    create_app(frame_controller, show_slideshow, immich_client, family_wall, wall_auth, api_key,
+               shopping_store).run(
         host="0.0.0.0", port=int(os.environ.get("PORT", "5000")), threaded=True
     )

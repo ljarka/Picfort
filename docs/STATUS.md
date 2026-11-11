@@ -87,7 +87,7 @@ Android task except T-017 and T-026 starts with a mockup the owner approves.
 | Task | Description | Status |
 |------|-------------|--------|
 | [T-017](tasks/T-017-app-shell-bottom-nav.md) | App shell: Wall as home, bottom navigation (5 tabs) | `done` |
-| [T-018](tasks/T-018-shopping-lists-backend.md) | Shopping lists — server API, `shopping.db`, shared store/auth foundations | `ready` |
+| [T-018](tasks/T-018-shopping-lists-backend.md) | Shopping lists — server API, `shopping.db`, shared store/auth foundations | `in-progress` |
 | [T-019](tasks/T-019-shopping-lists-android.md) | Shopping lists — Android, Keep-like checklist, read-only offline copy | `ready` |
 | [T-020](tasks/T-020-receipts-backend.md) | Receipts + `/spending` — server, totals typed by hand | `ready` |
 | [T-021](tasks/T-021-receipts-android.md) | Receipts — Android: add to a list, check, correct | `ready` |
