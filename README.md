@@ -64,6 +64,9 @@ ImageFrameServer/        Python service for the picture frame
   immich.py              Immich API client used by the slideshow
   tests/                 unittest suite (no hardware or Immich needed)
   frame.py               Fetches from Immich, renders for the panel, drives the display
+  wall.py, auth.py       Family Wall storage and Immich token check
+  Dockerfile             Server image (ghcr.io/ljarka/picfort-server)
+docker/                  docker-compose.yml and example.env for installing the server
 ```
 
 ## Architecture
@@ -121,13 +124,13 @@ After an intended UI change, re-record the screenshots and commit the updated im
 
 Every pull request and push to `main` runs [CI](.github/workflows/ci.yml):
 - **Android:** unit tests, screenshot comparison, lint and a debug APK (downloadable from the run). When screenshots differ, the diffs are uploaded as an artifact.
-- **Frame server:** the Python tests on 3.11 (Raspberry Pi OS Bookworm) and 3.13.
+- **Frame server:** the Python tests on 3.11 (Raspberry Pi OS Bookworm) and 3.13, and a build and smoke test of the Docker image.
 
 Dependabot opens weekly update PRs for Gradle and pip, and monthly ones for GitHub Actions.
 
 ### Releasing
 
-Push a version tag and the [release workflow](.github/workflows/release.yml) tests the app, builds a signed APK and publishes it as a GitHub release:
+Push a version tag and the [release workflow](.github/workflows/release.yml) tests the app, builds a signed APK and publishes it as a GitHub release, together with `docker-compose.yml` and `example.env`. It also pushes the server image to `ghcr.io/ljarka/picfort-server` (tagged with the version and `latest`):
 
 ```bash
 git tag v1.0.0 && git push origin v1.0.0
@@ -151,7 +154,27 @@ A small Flask service that puts Immich photos on a picture frame. It is meant to
 
 **Don't expose ImageFrameServer to the internet** (no port forwarding, no public tunnel). The frame endpoints have no authentication (ADR 0004). Use it on your home network or over a VPN such as Tailscale.
 
-### Setup
+### Install with Docker (recommended)
+
+Like Immich: two files and `docker compose up -d`. Run it on any always-on machine on your home network, for example the one that runs Immich.
+
+```bash
+mkdir picfort && cd picfort
+wget -O docker-compose.yml https://github.com/ljarka/Picfort/releases/latest/download/docker-compose.yml
+wget -O .env https://github.com/ljarka/Picfort/releases/latest/download/example.env
+nano .env                         # fill in IMMICH_URL and IMMICH_API_KEY
+docker compose up -d
+```
+
+Then in the app: **Settings → Picfort server**, enter `<this machine's IP>:5000` and tap **Test**.
+
+- The Family Wall, its photos and the slideshow settings are stored in `./data` (`DATA_LOCATION` in `.env`). Back up that folder.
+- Update: `docker compose pull && docker compose up -d`. Pin a version with `PICFORT_VERSION=v0.3.0` in `.env`.
+- Logs: `docker compose logs -f`.
+- The image is built for `amd64` and `arm64` (64-bit Raspberry Pi OS). Any variable from the table below can go in `.env`.
+- In Docker the server runs in **preview mode** (no e-paper panel), which is all the Family Wall and the app need. To drive a Waveshare panel, install it directly on the Raspberry Pi (below).
+
+### Install without Docker
 
 ```bash
 cd ImageFrameServer
@@ -208,6 +231,7 @@ The frame uses Waveshare's 13.3" E Ink Spectra 6 panel (1200×1600, 6 colours, a
 | `FRAME_STATE_PATH` | `slideshow.json` | Where slideshow settings are saved |
 | `WALL_DB_PATH` | `wall.db` | Family Wall database (SQLite) |
 | `WALL_PHOTOS_PATH` | `wall_photos` | Directory for photos attached to wall posts |
+| `FRAME_PREVIEW_PATH` | `last_frame.png` | Where the last rendered frame is saved (shown at `/current`) |
 | `PORT` | `5000` | HTTP port |
 
 HEIC originals need `pip install pillow-heif`. Otherwise the server falls back to Immich's preview image.
