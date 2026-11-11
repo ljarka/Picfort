@@ -1,7 +1,6 @@
 # T-027 — Family Wall: today panel (date and the day's event)
 
-**Status:** in-progress (mockup approved 2026-11-11; code, unit tests and Paparazzi done; the device checks
-below are left)  
+**Status:** done (merged in PR #44, commit `155d10e`)  
 **Component:** Android app  
 **Depends on:** T-017 (wall as a tab), T-022 (`GET /events`), T-023 (`EventsRepository`, event
 detail)

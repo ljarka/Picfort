@@ -98,7 +98,7 @@ Android task except T-017 and T-026 starts with a mockup the owner approves.
 | [T-024](tasks/T-024-receipt-reading-gemini.md) | Receipts — read shop, date, total with Gemini (server, opt-in) | `ready` |
 | [T-025](tasks/T-025-spending-summary-android.md) | Spending summary — Android: month, 6-month bars, by shop and person | `ready` |
 | [T-026](tasks/T-026-event-albums-android.md) | Events — link or create a family-shared Immich album (Android) | `ready` |
-| [T-027](tasks/T-027-wall-today-panel.md) | Family Wall — today panel: date and the day's event | `in-progress` |
+| [T-027](tasks/T-027-wall-today-panel.md) | Family Wall — today panel: date and the day's event | `done` |
 | [T-028](tasks/T-028-school-timetable-backend.md) | School timetable — server API (`school.db`): children, bell schedule, lessons, activities | `ready` |
 | [T-029](tasks/T-029-school-timetable-android.md) | School timetable — Android: child chips, "finishes at", week by day, editing | `ready` |
 | [T-030](tasks/T-030-children-immich-people.md) | Children from Immich people: face photo, per-parent link, "Photos of Ola" | `ready` |
