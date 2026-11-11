@@ -73,5 +73,36 @@ class AppTest(unittest.TestCase):
         self.assertEqual([{"id": "a", "name": "Album a"}], self.client.get("/albums").get_json())
 
 
+class ApiKeyTest(unittest.TestCase):
+    """PICFORT_API_KEY: every endpoint needs X-Picfort-Key; unset, nothing changes (ADR 0004)."""
+
+    def make_client(self, api_key):
+        d = tempfile.mkdtemp()
+        cfg = frame.Config(immich_url="http://immich", immich_api_key="k", preview_path=os.path.join(d, "p.png"))
+        controller = FrameController(cfg, min_interval=30, display=lambda _: None, prepare=lambda a: a)
+        slideshow = Slideshow(SettingsStore(os.path.join(d, "s.json")), Picker(FakeImmich(album={})),
+                              controller.try_show)
+        return create_app(controller, slideshow, FakeImmich(album={}), api_key=api_key).test_client()
+
+    def test_key_required(self):
+        client = self.make_client("s3cret")
+        for path in ["/status", "/albums", "/current", "/wall"]:
+            for headers in [{}, {"X-Picfort-Key": "wrong"}, {"X-Picfort-Key": ""}]:
+                r = client.get(path, headers=headers)
+                self.assertEqual(401, r.status_code, (path, headers))
+                self.assertEqual("Picfort-Key", r.headers["WWW-Authenticate"])
+        self.assertEqual(200, client.get("/status", headers={"X-Picfort-Key": "s3cret"}).status_code)
+
+    def test_responses_are_private(self):
+        # Wall photos are served with a long max-age; a proxy must not share them.
+        client = self.make_client("s3cret")
+        cc = client.get("/status", headers={"X-Picfort-Key": "s3cret"}).headers["Cache-Control"]
+        self.assertIn("private", cc)
+        self.assertNotIn("public", cc)
+
+    def test_no_key_configured(self):
+        self.assertEqual(200, self.make_client("").get("/status").status_code)
+
+
 if __name__ == "__main__":
     unittest.main()

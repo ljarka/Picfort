@@ -28,6 +28,7 @@ import com.github.ljarka.picfort.collections.SearchUi
 import com.github.ljarka.picfort.ui.frame.ConnectionTest
 import com.github.ljarka.picfort.ui.frame.FrameAlbum
 import com.github.ljarka.picfort.ui.frame.PicfortServerForm
+import com.github.ljarka.picfort.ui.frame.WRONG_API_KEY
 import com.github.ljarka.picfort.ui.frame.PicfortServerSetupContent
 import com.github.ljarka.picfort.ui.frame.wallTestResult
 import com.github.ljarka.picfort.ui.wall.FamilyMember
@@ -223,8 +224,12 @@ class ScreenshotTest {
                     wallTestResult(WallException.NotAccepted()),
                     wallTestResult(WallException.NoWall()),
                     ConnectionTest.Failed("Can't reach the Picfort server at 192.168.0.105"),
+                    ConnectionTest.Failed(WRONG_API_KEY),
                 ).forEach { test ->
-                    PicfortServerForm(address = "192.168.0.105:5000", onAddressChange = {}, test = test)
+                    PicfortServerForm(
+                        address = "192.168.0.105:5000", onAddressChange = {},
+                        apiKey = "", onApiKeyChange = {}, test = test,
+                    )
                     Spacer(Modifier.height(24.dp))
                 }
             }

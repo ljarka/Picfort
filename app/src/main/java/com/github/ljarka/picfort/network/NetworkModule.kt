@@ -24,12 +24,17 @@ class NetworkModule {
 
     @Singleton
     @Provides
-    fun okhttp(authInterceptor: AuthInterceptor, wallAuthInterceptor: WallAuthInterceptor): OkHttpClient {
+    fun okhttp(
+        authInterceptor: AuthInterceptor,
+        wallAuthInterceptor: WallAuthInterceptor,
+        picfortKeyInterceptor: PicfortKeyInterceptor,
+    ): OkHttpClient {
         val builder = OkHttpClient.Builder()
             .addInterceptor(CleartextPolicyInterceptor())
             .addInterceptor(authInterceptor)
             // Coil loads Family Wall photos with this client too.
             .addInterceptor(wallAuthInterceptor)
+            .addInterceptor(picfortKeyInterceptor)
         if (BuildConfig.DEBUG) {
             // Debug only: bodies include the login password. Added last so it
             // sees the final request, with credentials redacted.
@@ -38,6 +43,7 @@ class NetworkModule {
                     level = HttpLoggingInterceptor.Level.BODY
                     redactHeader("Authorization")
                     redactHeader("x-api-key")
+                    redactHeader(PICFORT_KEY_HEADER)
                 }
             )
         }

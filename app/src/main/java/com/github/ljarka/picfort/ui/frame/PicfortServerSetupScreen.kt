@@ -32,6 +32,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 fun PicfortServerSetupScreen(onDone: () -> Unit) {
     val viewModel = hiltViewModel<FrameSettingsViewModel>()
     var address by remember { mutableStateOf(viewModel.savedAddress) }
+    var apiKey by remember { mutableStateOf(viewModel.savedApiKey) }
     val test by viewModel.test.collectAsState()
     PicfortServerSetupContent(
         address = address,
@@ -39,14 +40,19 @@ fun PicfortServerSetupScreen(onDone: () -> Unit) {
             address = it
             viewModel.resetTest()
         },
+        apiKey = apiKey,
+        onApiKeyChange = {
+            apiKey = it
+            viewModel.resetTest()
+        },
         test = test,
-        onTest = { viewModel.test(address) },
+        onTest = { viewModel.test(address, apiKey) },
         onSkip = {
             viewModel.markPrompted()
             onDone()
         },
         onContinue = {
-            viewModel.save(address)
+            viewModel.save(address, apiKey)
             viewModel.markPrompted()
             onDone()
         },
@@ -59,6 +65,8 @@ fun PicfortServerSetupContent(
     address: String,
     onAddressChange: (String) -> Unit,
     test: ConnectionTest,
+    apiKey: String = "",
+    onApiKeyChange: (String) -> Unit = {},
     onTest: () -> Unit = {},
     onSkip: () -> Unit = {},
     onContinue: () -> Unit = {},
@@ -78,7 +86,7 @@ fun PicfortServerSetupContent(
                 style = MaterialTheme.typography.bodyLarge,
             )
             Spacer(Modifier.padding(top = 16.dp))
-            PicfortServerForm(address, onAddressChange, test)
+            PicfortServerForm(address, onAddressChange, apiKey, onApiKeyChange, test)
             Spacer(Modifier.padding(top = 16.dp))
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 OutlinedButton(enabled = valid && test != ConnectionTest.Running, onClick = onTest) { Text("Test") }
