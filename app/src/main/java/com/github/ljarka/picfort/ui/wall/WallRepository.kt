@@ -59,6 +59,12 @@ fun initials(name: String): String {
     }
 }
 
+/**
+ * Test accounts ("LukaszTest", "test-user") are Immich users that aren't family: they are left
+ * out of the wall, members and posts alike. Case-insensitive; the logged-in user always counts.
+ */
+fun isTestAccount(name: String): Boolean = name.contains("test", ignoreCase = true)
+
 /** The logged-in user first, then by name (the DAO already sorts by name). */
 fun List<FamilyMember>.meFirst(myId: String): List<FamilyMember> =
     sortedBy { if (it.id == myId) 0 else 1 }
@@ -75,7 +81,12 @@ class WallRepository @Inject constructor(
     val myId: String get() = accessTokenStore.userId
 
     val members: Flow<List<FamilyMember>> = usersDao.all().map { users ->
-        users.map { it.toMember() }.meFirst(myId)
+        users.filter { it.id == myId || !isTestAccount(it.name) }.map { it.toMember() }.meFirst(myId)
+    }
+
+    /** Ids of test accounts (see [isTestAccount]), whose posts the wall hides. */
+    val testAccountIds: Flow<Set<String>> = usersDao.all().map { users ->
+        users.filter { it.id != myId && isTestAccount(it.name) }.mapTo(HashSet()) { it.id }
     }
 
     suspend fun posts(): List<WallPost> = api.posts()
