@@ -253,6 +253,16 @@ def prepare(cfg: Config, asset_id: str) -> Image.Image:
     return render(cfg, fetch_image(cfg, asset_id))
 
 
+def prepare_from_bytes(cfg: Config, data: bytes) -> Image.Image:
+    """Render an image from raw bytes (e.g. uploaded directly from the phone)."""
+    try:
+        img = Image.open(BytesIO(data))
+        img.load()
+    except Exception as e:
+        raise FrameError(f"Could not decode image: {e}", 415)
+    return render(cfg, img)
+
+
 if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO)
     if len(sys.argv) != 2:

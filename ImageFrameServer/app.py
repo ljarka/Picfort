@@ -1,6 +1,8 @@
 """HTTP API used by the Picfort app to control the frame.
 
     GET  /status                -> {"status": "ok", "busy": bool, "currentAsset": …, "slideshow": {…}}
+    POST /run-local             -> 202 {"status": "accepted"} renders multipart JPEG bytes directly
+                                   (no Immich ID needed; use field name 'photo').
     GET  /run?assetId=<uuid>    -> 202 {"status": "accepted"} once the photo is fetched and rendered;
                                    the (slow) e-paper refresh continues in the background.
     GET  /current               -> PNG preview of the last rendered frame
@@ -131,6 +133,26 @@ class FrameController:
             with self.lock:
                 self.busy = False
 
+    def show_local(self, data: bytes):
+        """Render raw image bytes from the phone without fetching from Immich."""
+        with self.lock:
+            if self.busy:
+                raise Rejected("The frame is still refreshing", 409)
+            wait = self.min_interval - (self.clock() - self.last_run)
+            if wait > 0:
+                raise Rejected("Too soon, please wait", 429, retry_after=math.ceil(wait))
+            self.busy = True
+        try:
+            img = frame.prepare_from_bytes(self.config, data)
+        except Exception:
+            with self.lock:
+                self.busy = False
+            raise
+        with self.lock:
+            self.last_run = self.clock()
+        threading.Thread(target=self._refresh, args=(img, "local"), daemon=True).start()
+        self.on_shown()
+
     def try_show(self, asset_id: str) -> bool:
         """For the slideshow: True if accepted, False if busy/too soon (errors propagate)."""
         try:
@@ -233,6 +255,26 @@ def create_app(controller: FrameController, slideshow: Slideshow, immich: Immich
         if slideshow.settings.mode == "off":
             return error("The slideshow is off", 409)
         slideshow.skip()
+        return jsonify(status="accepted"), 202
+
+    @app.route("/run-local", methods=["POST"])
+    def run_local():
+        file = request.files.get("photo")
+        if file is None:
+            return error("Missing 'photo' field", 400)
+        data = file.read()
+        if not data:
+            return error("Empty file", 400)
+        try:
+            controller.show_local(data)
+        except Rejected as e:
+            return error(str(e), e.status, **e.extra)
+        except frame.FrameError as e:
+            log.warning("run-local rejected: %s", e)
+            return error(str(e), e.status)
+        except Exception as e:
+            log.exception("run-local rendering failed")
+            return error(f"Rendering failed: {e}", 500)
         return jsonify(status="accepted"), 202
 
     @app.route("/albums")

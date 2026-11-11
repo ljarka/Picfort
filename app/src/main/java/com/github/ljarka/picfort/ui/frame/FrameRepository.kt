@@ -1,16 +1,22 @@
 package com.github.ljarka.picfort.ui.frame
 
+import android.content.Context
+import com.github.ljarka.picfort.local.localImageUri
+import com.github.ljarka.picfort.network.CleartextNotAllowedException
+import com.github.ljarka.picfort.network.isPicfortKeyRejected
+import com.github.ljarka.picfort.network.picfortKey
+import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
-import com.github.ljarka.picfort.network.CleartextNotAllowedException
-import com.github.ljarka.picfort.network.isPicfortKeyRejected
-import com.github.ljarka.picfort.network.picfortKey
 import okhttp3.HttpUrl
+import okhttp3.MediaType.Companion.toMediaType
+import okhttp3.MultipartBody
 import okhttp3.OkHttpClient
 import okhttp3.Request
+import okhttp3.RequestBody.Companion.toRequestBody
 import java.io.IOException
 import javax.inject.Inject
 import javax.inject.Qualifier
@@ -46,6 +52,7 @@ class FrameRepository @Inject constructor(
     @FrameHttpClient private val client: OkHttpClient,
     private val settings: FrameSettingsStore,
     private val json: Json,
+    @ApplicationContext private val context: Context,
 ) {
 
     suspend fun send(assetId: String): FrameResult {
@@ -61,6 +68,42 @@ class FrameRepository @Inject constructor(
                 409 -> FrameResult.Busy
                 429 -> FrameResult.TooSoon(body?.retryAfter)
                 else -> FrameResult.Error(body?.message ?: "Frame returned HTTP $code")
+            }
+        }
+    }
+
+    /**
+     * Sends a phone-only (LOCAL) photo directly to the frame via multipart POST.
+     * Does not require the photo to be on Immich.
+     */
+    suspend fun sendLocal(assetId: String): FrameResult {
+        val base = normalizeFrameUrl(settings.frameUrl) ?: return FrameResult.NotConfigured
+        val url = base.newBuilder().addPathSegment("run-local").build()
+        val uri = localImageUri(assetId.toLong())
+        val bytes = withContext(Dispatchers.IO) {
+            context.contentResolver.openInputStream(uri)?.use { it.readBytes() }
+        } ?: return FrameResult.Error("Could not read photo from storage")
+        val body = MultipartBody.Builder()
+            .setType(MultipartBody.FORM)
+            .addFormDataPart("photo", "photo.jpg", bytes.toRequestBody("image/jpeg".toMediaType()))
+            .build()
+        return withContext(Dispatchers.IO) {
+            try {
+                client.newCall(Request.Builder().url(url).post(body).build()).execute().use { response ->
+                    val respBody = response.body?.string()?.let {
+                        runCatching { json.decodeFromString<FrameResponse>(it) }.getOrNull()
+                    }
+                    when (response.code) {
+                        200, 202 -> FrameResult.Sent
+                        409 -> FrameResult.Busy
+                        429 -> FrameResult.TooSoon(respBody?.retryAfter)
+                        else -> FrameResult.Error(respBody?.message ?: "Frame returned HTTP ${response.code}")
+                    }
+                }
+            } catch (e: CleartextNotAllowedException) {
+                FrameResult.Error(e.message ?: "Use https:// for frames outside your network")
+            } catch (e: IOException) {
+                FrameResult.Error("Can't reach the frame at ${url.host}")
             }
         }
     }

@@ -99,16 +99,14 @@ class ImageDetailsViewModel @Inject constructor(
 
     fun sendToImageFrame(assetId: String, assetType: AssetType) {
         if (_isSendingToFrame.value) return
-        if (assetType == AssetType.LOCAL) {
-            // The frame pulls the photo from Immich, so it must be on the server.
-            _frameEvents.trySend(
-                FrameEvent.Message("Only photos backed up to Immich can be shown on the frame")
-            )
-            return
-        }
         viewModelScope.launch {
             _isSendingToFrame.value = true
-            val event = when (val result = frameRepository.send(assetId)) {
+            val result = if (assetType == AssetType.LOCAL) {
+                frameRepository.sendLocal(assetId)
+            } else {
+                frameRepository.send(assetId)
+            }
+            val event = when (result) {
                 FrameResult.Sent -> FrameEvent.Message("Sent to frame")
                 FrameResult.NotConfigured -> FrameEvent.OpenSettings
                 FrameResult.Busy -> FrameEvent.Message("The frame is still refreshing, try again shortly")

@@ -72,6 +72,37 @@ class AppTest(unittest.TestCase):
     def test_albums(self):
         self.assertEqual([{"id": "a", "name": "Album a"}], self.client.get("/albums").get_json())
 
+    def test_run_local(self):
+        from io import BytesIO
+        from PIL import Image
+        buf = BytesIO()
+        Image.new("RGB", (100, 100), color=(128, 128, 128)).save(buf, format="JPEG")
+        jpeg = buf.getvalue()
+
+        r = self.client.post("/run-local", data={"photo": (BytesIO(jpeg), "photo.jpg")},
+                             content_type="multipart/form-data")
+        self.assertEqual(202, r.status_code)
+        self.wait_idle()
+        self.assertEqual(1, len(self.displayed))
+        self.assertEqual("local", self.client.get("/status").get_json()["currentAsset"])
+
+    def test_run_local_missing_field(self):
+        r = self.client.post("/run-local", data={}, content_type="multipart/form-data")
+        self.assertEqual(400, r.status_code)
+
+    def test_run_local_busy(self):
+        from io import BytesIO
+        from PIL import Image
+        buf = BytesIO()
+        Image.new("RGB", (10, 10)).save(buf, format="JPEG")
+        jpeg = buf.getvalue()
+
+        self.controller.busy = True
+        r = self.client.post("/run-local", data={"photo": (BytesIO(jpeg), "photo.jpg")},
+                             content_type="multipart/form-data")
+        self.assertEqual(409, r.status_code)
+        self.controller.busy = False
+
 
 class ApiKeyTest(unittest.TestCase):
     """PICFORT_API_KEY: every endpoint needs X-Picfort-Key; unset, nothing changes (ADR 0004)."""
