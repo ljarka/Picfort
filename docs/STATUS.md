@@ -1,6 +1,6 @@
 # Picfort — Roadmap & Status
 
-Last updated: 2026-11-10
+Last updated: 2026-11-11
 
 ## Vision
 
@@ -38,7 +38,7 @@ Surface more of what Immich already knows.
 | [T-007](tasks/T-007-memories-screen.md) | Memories screen ("On This Day") | `ready` |
 | [T-008](tasks/T-008-people-screen.md) | People screen (browse by face) | `ready` |
 | [T-009](tasks/T-009-map-view.md) | Map view (photos by location) | `ready` |
-| [T-015](tasks/T-015-timeline-sync-stream.md) | Timeline from Immich's sync stream (local copy, offline) | `draft` |
+| [T-015](tasks/T-015-timeline-sync-stream.md) | Timeline from Immich's sync stream (local copy, offline; code merged, check on a device) | `in-progress` |
 | [T-016](tasks/T-016-justified-timeline-layout.md) | Justified timeline layout from known aspect ratios (after T-015) | `done` |
 
 ### Phase 4 — Frame enhancements
@@ -64,6 +64,69 @@ Automated checks and architecture guardrails.
 |------|-------------|--------|
 | [T-014](tasks/T-014-ci-github-actions.md) | GitHub Actions: build + screenshot tests | `done` |
 
+### Phase 7 — Family hub
+The app opens on the Family Wall; bottom tabs Wall · Shopping · Events · School · Photos.
+Shared shopping lists with receipts and spending, a family events timeline linked to
+Immich albums, and a school timetable per child. Data on the Picfort server (ADR 0008).
+Receipts can be read by Google Gemini (ADR 0009): opt-in on the server, the one exception to "without any cloud service".
+
+Delivery order (each milestone is usable on its own):
+- **M1 shell:** T-017.
+- **M2 lists:** T-018 → T-019.
+- **M2b family profiles:** T-031 → T-032 (names, photos from Immich people, hidden accounts;
+  after T-018). Small, and the wall is the home screen, so it goes early.
+- **M3 events:** T-022 → T-023 → T-026 (albums), T-027 (today panel on the wall).
+- **M4 school timetable:** T-028 → T-029 → T-030 (children from Immich people).
+- **M5 receipts & spending:** T-020 → T-024 (Gemini) → T-021 → T-025.
+
+Events and school before receipts: no external dependency, daily use, and receipts are the
+largest block. M3 and M4 are independent of each other and can swap. Server tasks T-020,
+T-022, T-028 and T-031 need T-018's foundations (`store.py`, token auth for the new paths). Every
+Android task except T-017 and T-026 starts with a mockup the owner approves.
+
+| Task | Description | Status |
+|------|-------------|--------|
+| [T-017](tasks/T-017-app-shell-bottom-nav.md) | App shell: Wall as home, bottom navigation (5 tabs) | `ready` |
+| [T-018](tasks/T-018-shopping-lists-backend.md) | Shopping lists — server API, `shopping.db`, shared store/auth foundations | `ready` |
+| [T-019](tasks/T-019-shopping-lists-android.md) | Shopping lists — Android, Keep-like checklist, read-only offline copy | `ready` |
+| [T-020](tasks/T-020-receipts-backend.md) | Receipts + `/spending` — server, totals typed by hand | `ready` |
+| [T-021](tasks/T-021-receipts-android.md) | Receipts — Android: add to a list, check, correct | `ready` |
+| [T-022](tasks/T-022-events-backend.md) | Events — server API (`events.db`) | `ready` |
+| [T-023](tasks/T-023-events-android.md) | Events — Android: upcoming / past, add, edit | `ready` |
+| [T-024](tasks/T-024-receipt-reading-gemini.md) | Receipts — read shop, date, total with Gemini (server, opt-in) | `ready` |
+| [T-025](tasks/T-025-spending-summary-android.md) | Spending summary — Android: month, 6-month bars, by shop and person | `ready` |
+| [T-026](tasks/T-026-event-albums-android.md) | Events — link or create a family-shared Immich album (Android) | `ready` |
+| [T-027](tasks/T-027-wall-today-panel.md) | Family Wall — today panel: date and the day's event | `ready` |
+| [T-028](tasks/T-028-school-timetable-backend.md) | School timetable — server API (`school.db`): children, bell schedule, lessons, activities | `ready` |
+| [T-029](tasks/T-029-school-timetable-android.md) | School timetable — Android: child chips, "finishes at", week by day, editing | `ready` |
+| [T-030](tasks/T-030-children-immich-people.md) | Children from Immich people: face photo, per-parent link, "Photos of Ola" | `ready` |
+| [T-031](tasks/T-031-family-profiles-backend.md) | Family profiles — server (`family.db`): display name, photo, hidden, per Immich user | `ready` |
+| [T-032](tasks/T-032-family-settings-android.md) | Family settings — Android: rename, photo from Immich people, hide; one source of members | `ready` |
+
+Decided by the owner (2026-11-11), as recommended:
+- **Schema changes** in `shopping.db` / `events.db`: no migrations; the old file is kept as
+  `.bak` and the feature starts empty (ADR 0008).
+- **Shopping away from home:** a connection is not assumed; T-019 keeps a read-only copy of
+  the lists on the phone; checking items off offline is v2.
+- **Deleting** a list, event or receipt: the creator only; anyone can edit, and archive a list.
+- **Currency:** one for the whole server (`CURRENCY=PLN`); a receipt from abroad is typed in PLN.
+- **Today panel without an event today** (T-027): "Next: …" for an event within 30 days,
+  otherwise only the date.
+- **"Ola finishes at 13:40" in the wall's today panel:** not in T-027 or T-029; a small
+  follow-up task once both are done.
+- **Children are not linked to Immich users;** the server keeps an unused `immich_user_id`
+  column so a later link needs no schema change.
+- **Children can be chosen from Immich people** (face recognition), with the face as their
+  photo, and each parent can browse the child's photos from their own library (T-030). The
+  link is per parent, because Immich people are per user.
+- **Family members can be renamed, get a photo from Immich people, and be hidden** (T-031,
+  T-032). It is family-wide configuration: anyone can change it for any member. The "test" in
+  the name rule (PR #37) stays as the default for members without a setting.
+- **Deleting a child** (and its timetable): anyone, after a confirmation (either parent must
+  be able to).
+- **Five tabs:** Wall · Shopping · Events · School · Photos. It is the Material maximum: a sixth
+  section later needs a "More" tab or moving something out.
+
 ---
 
 ## Task statuses
@@ -82,7 +145,9 @@ Automated checks and architecture guardrails.
 | [0001](decisions/0001-architecture-overview.md) | Three-tier architecture: Immich + Android + ImageFrameServer |
 | [0002](decisions/0002-family-wall-storage.md) | Family Wall lives in ImageFrameServer SQLite |
 | [0003](decisions/0003-display-strategy.md) | Tablet as primary display target; e-paper as secondary |
-| [0004](decisions/0004-network-auth.md) | No auth on ImageFrameServer (trusted local network) |
-| [0005](decisions/0005-timeline-sync-stream.md) | Timeline from a local copy synced with Immich's sync stream (proposed) |
+| [0004](decisions/0004-network-auth.md) | No auth on the frame endpoints (trusted local network; see 0006, 0007) |
+| [0005](decisions/0005-timeline-sync-stream.md) | Timeline from a local copy synced with Immich's sync stream |
 | [0006](decisions/0006-family-wall-auth.md) | Family Wall checks the caller's Immich token (supersedes 0004 for `/wall`) |
 | [0007](decisions/0007-server-api-key.md) | Optional `PICFORT_API_KEY` for a server reachable from outside (e.g. Cloudflare Tunnel) |
+| [0008](decisions/0008-family-hub-storage.md) | Shopping lists, receipts, events, school timetables on the Picfort server, one SQLite file per feature, `.bak` on schema change (proposed) |
+| [0009](decisions/0009-receipts-gemini.md) | Receipts read by Gemini free tier on the server, opt-in (proposed) |

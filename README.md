@@ -176,6 +176,19 @@ Then in the app: **Settings → Picfort server**, enter `<this machine's IP>:500
 - If Immich runs in Docker on the same machine, `IMMICH_URL=http://host.docker.internal:2283` works on Docker Desktop.
 - In Docker the server runs in **preview mode** (no e-paper panel), which is all the Family Wall and the app need. To drive a Waveshare panel, install it directly on the Raspberry Pi (below).
 
+### Immich API key
+
+Create it in Immich under **Account settings → API keys**, logged in as the user whose photos the frame should show: the key only sees that user's photos and albums (their own and those shared with them). Give it only these permissions:
+
+| Permission | Used for |
+|---|---|
+| `asset.read` | Picking photos for the slideshow (random, album, "On this day") |
+| `asset.view` | Preview image, the fallback when the original can't be decoded (e.g. HEIC) |
+| `asset.download` | Downloading the original photo for the frame |
+| `album.read` | Listing albums for the slideshow settings |
+
+The key is read-only. The Family Wall doesn't use it: it checks each user's own Immich login.
+
 ### Reaching the server from outside
 
 With [Cloudflare Tunnel](https://developers.cloudflare.com/cloudflare-one/connections/connect-networks/) the server gets an `https://` address without opening a port on your router.
@@ -200,7 +213,7 @@ set -a; . ./.env; set +a
 python3 app.py                    # listens on 0.0.0.0:5000
 ```
 
-Create the API key in Immich under **Account settings → API keys**. It needs to be able to read assets.
+Create the API key in Immich under **Account settings → API keys** (see [Immich API key](#immich-api-key) for its permissions).
 
 Without `FRAME_DRIVER` the server runs in **preview mode**: every frame is dithered and saved to `last_frame.png`, which you can view at `/current`. That way you can try it on any computer.
 
