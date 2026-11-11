@@ -3,6 +3,7 @@ package com.github.ljarka.picfort.ui.wall
 import android.net.Uri
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.github.ljarka.picfort.ui.events.EventsRepository
 import com.github.ljarka.picfort.ui.family.FamilyRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.CancellationException
@@ -14,6 +15,8 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import java.time.Instant
+import java.time.LocalDate
+import java.time.LocalTime
 import javax.inject.Inject
 
 /** How often the open wall asks for new posts. */
@@ -33,6 +36,8 @@ data class FamilyWallUiState(
     val loadError: String? = null,
     /** One-off snackbar text. */
     val message: String? = null,
+    /** Today panel (T-027); null when there is no server address. */
+    val panel: TodayPanelState? = null,
 ) {
     private val visible: List<WallPost>
         get() = posts.filter { it.authorId !in hiddenAuthorIds }
@@ -59,6 +64,7 @@ private fun List<WallPost>.ordered() =
 class FamilyWallViewModel @Inject constructor(
     private val repository: WallRepository,
     private val family: FamilyRepository,
+    private val events: EventsRepository,
 ) : ViewModel() {
 
     private val _state = MutableStateFlow(FamilyWallUiState(myId = repository.myId))
@@ -77,6 +83,9 @@ class FamilyWallViewModel @Inject constructor(
             }
         }
         viewModelScope.launch {
+            events.upcoming.collect { updatePanel() }
+        }
+        viewModelScope.launch {
             family.hiddenIds.collect { ids -> _state.update { it.copy(hiddenAuthorIds = ids) } }
         }
     }
@@ -93,12 +102,25 @@ class FamilyWallViewModel @Inject constructor(
         viewModelScope.launch { refresh() }
     }
 
+    /** Recomputes the today panel from the cached events and the current date and time. */
+    private fun updatePanel() {
+        _state.update { s ->
+            val panel = if (s.configured) todayPanel(events.upcoming.value, LocalDate.now(), LocalTime.now()) else null
+            s.copy(panel = panel)
+        }
+    }
+
     private suspend fun refresh() {
         if (!repository.isConfigured) {
-            _state.update { it.copy(configured = false, isLoading = false, posts = emptyList(), loadError = null) }
+            _state.update {
+                it.copy(configured = false, isLoading = false, posts = emptyList(), loadError = null, panel = null)
+            }
             return
         }
         _state.update { it.copy(configured = true, isLoading = it.posts.isEmpty()) }
+        updatePanel()
+        // Independent of the posts: a slow or failing /events must not delay or break the wall.
+        viewModelScope.launch { refreshEvents() }
         try {
             val posts = coroutineScope {
                 launch { family.refresh() }
@@ -115,6 +137,17 @@ class FamilyWallViewModel @Inject constructor(
                 else s.copy(isLoading = false, message = e.message)
             }
         }
+    }
+
+    /** An events failure (old server, offline) never reaches the wall: the panel just keeps what it has. */
+    private suspend fun refreshEvents() {
+        try {
+            events.refreshUpcoming()
+        } catch (e: CancellationException) {
+            throw e
+        } catch (_: Exception) {
+        }
+        updatePanel()
     }
 
     fun select(memberId: String?) {

@@ -40,8 +40,11 @@ class TimelineScrollBenchmark {
             // Fresh process each time: thumbnails come from Coil's disk cache, not memory.
             killProcess()
             startActivityAndWait()
-            check(device.wait(Until.hasObject(By.scrollable(true)), 15_000)) {
-                "Timeline not shown: is the app logged in?"
+            // The app opens on the Family Wall; the timeline is the Photos tab.
+            val photosTab = device.wait(Until.findObject(By.text("Photos")), 15_000)
+            checkNotNull(photosTab) { "Bottom bar not shown: is the app logged in?" }.click()
+            check(device.wait(Until.hasObject(By.text("Timeline")), 15_000) && device.wait(Until.hasObject(By.scrollable(true)), 15_000)) {
+                "Timeline not shown after opening the Photos tab"
             }
         },
     ) {

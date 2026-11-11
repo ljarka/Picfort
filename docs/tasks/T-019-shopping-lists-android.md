@@ -1,6 +1,6 @@
 # T-019 — Shopping lists: Android screens (Keep-like)
 
-**Status:** in-progress (code done; check on a device). Mockup: the Paparazzi screenshots `ScreenshotTest_shopping_*`, approved by the owner 2026-11-11.  
+**Status:** done (all criteria checked on the emulator 2026-11-11). Mockup: the Paparazzi screenshots `ScreenshotTest_shopping_*`, approved by the owner 2026-11-11.  
 **Component:** Android app  
 **Depends on:** T-017 (Shopping tab), T-018 (API)
 
@@ -96,26 +96,30 @@ fix the content, not the look.
 
 ## Acceptance criteria
 
-- [ ] Create, rename, archive, unarchive, delete (own) a list; delete is not offered on
+- [x] Create, rename, archive, unarchive, delete (own) a list; delete is not offered on
       someone else's list.
-- [ ] Add, edit, check, uncheck, delete (with Undo) items; uncheck all; delete checked items;
+- [x] Add, edit, check, uncheck, delete (with Undo) items; uncheck all; delete checked items;
       the checked section collapses and expands and shows who checked each item.
-- [ ] Adding ten items in a row needs no tap outside the keyboard.
-- [ ] A second phone sees a checked item within 10 s while the list is open; checking
+      _Fixed 2026-11-11: with no Immich users yet (fresh install), `FamilyRepository.refresh` runs the sync, so the checker avatars show before the Photos tab is opened._
+- [x] Adding ten items in a row needs no tap outside the keyboard.
+- [x] A second phone sees a checked item within 10 s while the list is open; checking
       different items on two phones at once loses neither.
-- [ ] Typing in an item is not interrupted or overwritten by a poll.
-- [ ] Server unreachable: the last loaded lists are shown read-only with the offline banner;
+      _Polls now start every 10 s including the request time (was 10 s + request)._
+- [x] Typing in an item is not interrupted or overwritten by a poll.
+- [x] Server unreachable: the last loaded lists are shown read-only with the offline banner;
       they also show after the app was killed. Back online, editing works again without
       leaving the screen.
-- [ ] A failed action rolls back with a snackbar.
-- [ ] No server address → the shared empty state from T-017.
-- [ ] TalkBack: a row is read as "<text>, checked / not checked"; ✕ as "Delete <text>"; touch
+      _Fixed 2026-11-11: the offline copy is also saved after each poll of the open list and each saved change; checked on the emulator after a kill offline._
+- [x] A failed action rolls back with a snackbar.
+- [x] No server address → the shared empty state from T-017.
+- [x] TalkBack: a row is read as "<text>, checked / not checked"; ✕ as "Delete <text>"; touch
       targets are at least 48 dp.
-- [ ] Unit tests for `ShoppingRepository`: optimistic add/check/delete, rollback, poll merge
+      _Fixed 2026-11-11: the `Checkbox` carries the item text and the checked state. Checked in the accessibility tree, not by ear (adb taps bypass TalkBack)._
+- [x] Unit tests for `ShoppingRepository`: optimistic add/check/delete, rollback, poll merge
       during in-flight requests and while editing, offline copy.
-- [ ] Paparazzi: lists grid, empty, archived, list detail with the checked section closed and
+- [x] Paparazzi: lists grid, empty, archived, list detail with the checked section closed and
       open, offline banner, one dark.
-- [ ] README: Features and screenshots. CI passes.
+- [x] README: Features and screenshots. CI passes.
 
 ## Out of scope
 

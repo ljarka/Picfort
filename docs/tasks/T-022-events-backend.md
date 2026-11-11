@@ -74,6 +74,6 @@ version change keeps a `.bak` and leaves `wall.db` and `shopping.db` alone.
 
 ## Out of scope
 
-- Recurring events (birthdays every year): v2 candidate.
+- Recurring events and birthdays: T-035, T-036 (ADR 0010).
 - Reminders (owner decision 2026-11-11: not in v1), iCal feed.
 - Events on the frame or the wall.

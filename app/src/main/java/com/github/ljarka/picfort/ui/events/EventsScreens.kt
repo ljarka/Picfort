@@ -69,9 +69,11 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
-import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.onClick
+import androidx.compose.ui.semantics.role
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.style.TextAlign
@@ -322,10 +324,14 @@ private fun EventRow(
     Surface(
         modifier = Modifier
             .fillMaxWidth()
-            .semantics(mergeDescendants = true) {
+            .clickable(onClick = onClick)
+            // One stop for TalkBack: "<title>, <dates>, <relative label>", without the
+            // title and label Texts inside being read again.
+            .clearAndSetSemantics {
                 contentDescription = talkBackDesc
-            }
-            .clickable(onClick = onClick),
+                role = Role.Button
+                onClick { onClick(); true }
+            },
         shape = RoundedCornerShape(16.dp),
         color = if (isNow) {
             MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.45f)

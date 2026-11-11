@@ -225,6 +225,14 @@ class MainActivity : ComponentActivity() {
                                         FamilyWallScreen(
                                             onSettingsClick = openSettings,
                                             onEditMember = { userId -> navController.navigate(Screen.FamilySettings(userId)) },
+                                            onOpenEvent = { id -> navController.navigate(Screen.EventDetail(id)) },
+                                            onOpenEvents = {
+                                                navController.navigate(TabGraph.Events) {
+                                                    popUpTo(Screen.FamilyWall) { saveState = true }
+                                                    launchSingleTop = true
+                                                    restoreState = true
+                                                }
+                                            },
                                         )
                                     }
                                 }

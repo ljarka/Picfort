@@ -10,7 +10,9 @@ from test_wall import MAMA, TATA, Clock, FakeImmichAuth
 import frame
 from app import FrameController, create_app
 from auth import Authenticator
-from events import EventStore, MAX_LOCATION, MAX_NOTE, MAX_TITLE
+from datetime import date
+
+from events import EventStore, MAX_LOCATION, MAX_NOTE, MAX_TITLE, last_occurrence, next_occurrence, occurrence_start
 from shopping import ShoppingStore
 from slideshow import Picker, SettingsStore, Slideshow
 from wall import WallStore
@@ -287,6 +289,168 @@ class EventsApiTest(unittest.TestCase):
         self.assertTrue(os.path.exists(self.db + ".v99.bak"))
         self.assertEqual(1, len(WallStore(self.wall_db, os.path.join(self.dir, "wall_photos")).list()))
         self.assertEqual(1, len(ShoppingStore(self.shopping_db).lists()))
+
+
+    # --- T-035: recurring events -----------------------------------------------------------
+
+    def upcoming(self, after):
+        return self.client.get(f"/events?after={after}").get_json()
+
+    def past(self, before, **params):
+        query = "".join(f"&{k}={v}" for k, v in params.items())
+        return self.client.get(f"/events?before={before}{query}").get_json()
+
+    def test_non_repeating_events_report_their_own_dates_as_occurrence(self):
+        one_day = self.new_event(start_date="2026-11-20")
+        trip = self.new_event(start_date="2026-11-10", end_date="2026-11-14")
+        self.assertIsNone(one_day["repeat"])
+        self.assertEqual(("2026-11-20", None), (one_day["occurrence_start"], one_day["occurrence_end"]))
+        self.assertEqual(("2026-11-10", "2026-11-14"), (trip["occurrence_start"], trip["occurrence_end"]))
+
+    def test_weekly_series_lists_its_next_occurrence_and_moves_on(self):
+        ev = self.new_event(start_date="2026-11-02", repeat="weekly")
+        self.assertEqual("weekly", ev["repeat"])
+        self.assertEqual("2026-11-02", ev["start_date"])  # the form edits the first occurrence
+        entry = self.upcoming("2026-11-11")[0]
+        self.assertEqual("2026-11-16", entry["occurrence_start"])
+        self.assertEqual("2026-11-02", entry["start_date"])
+        self.assertEqual("2026-11-16", self.upcoming("2026-11-16")[0]["occurrence_start"])  # today counts
+        self.assertEqual("2026-11-23", self.upcoming("2026-11-17")[0]["occurrence_start"])
+        self.assertEqual([], self.past("2026-12-31"))  # repeats forever: never past
+
+    def test_series_in_the_future_starts_at_its_first_occurrence(self):
+        self.new_event(start_date="2027-03-01", repeat="yearly")
+        self.assertEqual("2027-03-01", self.upcoming("2026-11-11")[0]["occurrence_start"])
+
+    def test_monthly_31st_uses_the_last_day_of_shorter_months_without_drifting(self):
+        row = {"start_date": "2026-01-31", "end_date": None, "repeat": "monthly", "repeat_until": None}
+        starts = [occurrence_start(date(2026, 1, 31), "monthly", n).isoformat() for n in range(5)]
+        self.assertEqual(["2026-01-31", "2026-02-28", "2026-03-31", "2026-04-30", "2026-05-31"], starts)
+        self.assertEqual((date(2026, 4, 30), date(2026, 4, 30)), next_occurrence(row, date(2026, 4, 1)))
+        self.assertEqual((date(2026, 5, 31), date(2026, 5, 31)), next_occurrence(row, date(2026, 5, 1)))
+        self.assertEqual((date(2028, 2, 29), date(2028, 2, 29)), next_occurrence(row, date(2028, 2, 1)))
+
+    def test_yearly_29_february_falls_back_to_28_in_other_years(self):
+        row = {"start_date": "2024-02-29", "end_date": None, "repeat": "yearly", "repeat_until": None}
+        self.assertEqual((date(2025, 2, 28), date(2025, 2, 28)), next_occurrence(row, date(2024, 3, 1)))
+        self.assertEqual((date(2028, 2, 29), date(2028, 2, 29)), next_occurrence(row, date(2027, 3, 1)))
+        self.assertEqual((date(2026, 2, 28), date(2026, 2, 28)), next_occurrence(row, date(2026, 2, 28)))
+
+    def test_multi_day_series_keeps_its_length_and_is_ongoing_during_an_occurrence(self):
+        self.new_event(title="Camp", start_date="2026-07-30", end_date="2026-08-02", repeat="yearly")
+        during = self.upcoming("2027-08-01")[0]
+        self.assertEqual(("2027-07-30", "2027-08-02"), (during["occurrence_start"], during["occurrence_end"]))
+        after = self.upcoming("2027-08-03")[0]
+        self.assertEqual(("2028-07-30", "2028-08-02"), (after["occurrence_start"], after["occurrence_end"]))
+        # A monthly series whose multi-day length crosses a month end.
+        row = {"start_date": "2026-01-30", "end_date": "2026-02-02", "repeat": "monthly", "repeat_until": None}
+        self.assertEqual((date(2026, 2, 28), date(2026, 3, 3)), next_occurrence(row, date(2026, 2, 3)))
+
+    def test_repeat_until_is_inclusive_and_the_ended_series_moves_to_past(self):
+        ev = self.new_event(title="Swimming", start_date="2026-11-02", repeat="weekly", repeat_until="2026-11-16")
+        self.assertEqual("2026-11-16", self.upcoming("2026-11-16")[0]["occurrence_start"])  # last one, inclusive
+        self.assertEqual([], self.past("2026-11-16"))  # still running today
+        self.assertEqual([], self.upcoming("2026-11-17"))
+        past = self.past("2026-11-17")
+        self.assertEqual([ev["id"]], [e["id"] for e in past])
+        self.assertEqual("2026-11-16", past[0]["occurrence_start"])  # its last occurrence
+        # An end date between occurrences ends the series at the previous occurrence.
+        self.new_event(title="Choir", start_date="2026-09-01", repeat="monthly", repeat_until="2026-11-30")
+        self.assertEqual("2026-11-16", self.past("2026-12-01")[0]["occurrence_start"])
+        self.assertEqual("2026-11-01", self.past("2026-12-01")[1]["occurrence_start"])
+
+    def test_past_sorts_series_and_single_events_by_end_and_pages(self):
+        a = self.new_event(title="a", start_date="2026-05-01")
+        b = self.new_event(title="b", start_date="2026-03-01", repeat="monthly", repeat_until="2026-06-15")
+        c = self.new_event(title="c", start_date="2026-01-01")
+        ids = [e["id"] for e in self.past("2026-12-01")]
+        self.assertEqual([b["id"], a["id"], c["id"]], ids)  # series' last occurrence is 2026-06-01
+        self.assertEqual([a["id"]], [e["id"] for e in self.past("2026-12-01", limit=1, offset=1)])
+
+    def test_upcoming_orders_series_and_single_events_together(self):
+        late = self.new_event(title="late", start_date="2026-11-30")
+        weekly = self.new_event(title="weekly", start_date="2026-11-01", repeat="weekly")  # next: 11-15
+        timed = self.new_event(title="timed", start_date="2026-11-15", start_time="09:00")
+        untimed = self.new_event(title="untimed", start_date="2026-11-15")
+        ids = [e["id"] for e in self.upcoming("2026-11-11")]
+        self.assertEqual([weekly["id"], untimed["id"], timed["id"], late["id"]], ids)
+        self.assertEqual(weekly["id"], ids[0])
+
+    def test_get_one_event_for_an_occurrence_date(self):
+        ev = self.new_event(start_date="2026-11-02", repeat="weekly", repeat_until="2026-11-30")
+        base = f"/events/{ev['id']}"
+        self.assertEqual("2026-11-02", self.client.get(base).get_json()["occurrence_start"])
+        self.assertEqual("2026-11-16", self.client.get(base + "?on=2026-11-11").get_json()["occurrence_start"])
+        self.assertEqual("2026-11-30", self.client.get(base + "?on=2027-05-01").get_json()["occurrence_start"])
+        self.assertEqual(400, self.client.get(base + "?on=yesterday").status_code)
+
+    def test_repeat_validation_and_patch_rules(self):
+        def post(**kw):
+            return self.client.post("/events", json={"title": "x", "start_date": "2026-11-10", **kw})
+        for bad in ({"repeat": "daily"}, {"repeat": 1}, {"repeat": ""}, {"repeat_until": "2026-12-01"},
+                    {"repeat": "weekly", "repeat_until": "2026-11-09"},
+                    {"repeat": "weekly", "repeat_until": "nope"}, {"repeat": "weekly", "repeat_until": "2026-02-30"}):
+            self.assertEqual(400, post(**bad).status_code, bad)
+        self.assertEqual(201, post(repeat="weekly", repeat_until="2026-11-10").status_code)  # same day is fine
+
+        ev = self.new_event(repeat="monthly", repeat_until="2027-01-10")
+        url = f"/events/{ev['id']}"
+        # Moving the first date past the end of the series is refused.
+        self.assertEqual(400, self.client.patch(url, json={"start_date": "2027-02-01"}).status_code)
+        # Clearing repeat clears its end date too.
+        r = self.client.patch(url, json={"repeat": None})
+        self.assertEqual(200, r.status_code)
+        self.assertIsNone(r.get_json()["repeat"])
+        self.assertIsNone(r.get_json()["repeat_until"])
+        # An end date with no repeat is refused, also together with a null repeat.
+        self.assertEqual(400, self.client.patch(url, json={"repeat_until": "2027-01-10"}).status_code)
+        self.assertEqual(400, self.client.patch(url, json={"repeat": None, "repeat_until": "2027-01-10"}).status_code)
+        # Turning repeat on and off again keeps other fields.
+        r = self.client.patch(url, json={"repeat": "yearly", "repeat_until": None})
+        self.assertEqual("yearly", r.get_json()["repeat"])
+        self.assertEqual("Mazury trip", r.get_json()["title"])
+
+    def test_deleting_a_series_removes_it_and_creator_rule_still_applies(self):
+        ev = self.new_event(repeat="weekly")
+        self.assertEqual(403, self.client.delete(f"/events/{ev['id']}", headers=self.as_tata()).status_code)
+        self.assertEqual(204, self.client.delete(f"/events/{ev['id']}").status_code)
+        self.assertEqual([], self.upcoming("2026-11-11"))
+
+    def test_v1_database_is_migrated_without_losing_events(self):
+        old_db = os.path.join(self.dir, "old-events.db")
+        with closing(sqlite3.connect(old_db)) as conn, conn:
+            conn.executescript(
+                "CREATE TABLE events (id INTEGER PRIMARY KEY AUTOINCREMENT, title TEXT NOT NULL,"
+                " start_date TEXT NOT NULL, end_date TEXT, start_time TEXT, location TEXT, note TEXT,"
+                " album_id TEXT, created_by TEXT NOT NULL, created TEXT NOT NULL, updated TEXT NOT NULL);"
+                "CREATE INDEX events_start ON events(start_date);"
+                f"INSERT INTO events (title, start_date, end_date, created_by, created, updated)"
+                f" VALUES ('Mazury', '2026-11-10', '2026-11-14', '{MAMA}', '2026-11-01T10:00:00Z', '2026-11-01T10:00:00Z');"
+                "PRAGMA user_version = 1;"
+            )
+        store = EventStore(old_db)
+        events = store.upcoming("2026-11-11")
+        self.assertEqual(["Mazury"], [e["title"] for e in events])
+        self.assertIsNone(events[0]["repeat"])
+        self.assertEqual(("2026-11-10", "2026-11-14"), (events[0]["occurrence_start"], events[0]["occurrence_end"]))
+        self.assertTrue(os.path.exists(old_db + ".v1.bak"))
+        with closing(sqlite3.connect(old_db + ".v1.bak")) as conn:
+            self.assertEqual(1, conn.execute("PRAGMA user_version").fetchone()[0])
+        with closing(sqlite3.connect(old_db)) as conn:
+            self.assertEqual(2, conn.execute("PRAGMA user_version").fetchone()[0])
+        created = store.create(MAMA, {"title": "Weekly", "start_date": "2026-11-12", "repeat": "weekly"})
+        self.assertEqual("weekly", created["repeat"])
+        self.assertEqual(2, len(store.upcoming("2026-11-11")))
+
+    def test_series_helpers_agree_with_each_other(self):
+        row = {"start_date": "2026-01-31", "end_date": "2026-02-01", "repeat": "monthly", "repeat_until": "2026-12-15"}
+        self.assertEqual((date(2026, 11, 30), date(2026, 12, 1)), last_occurrence(row))
+        for day in range(0, 400, 7):
+            on = date(2026, 1, 1) + __import__("datetime").timedelta(days=day)
+            found = next_occurrence(row, on)
+            if found is not None:
+                self.assertGreaterEqual(found[1], on)
+                self.assertLessEqual(found[0], date(2026, 12, 15))
 
 
 if __name__ == "__main__":
