@@ -1,0 +1,22 @@
+# Picfort server: the Family Wall and the picture frame.
+#
+#   mkdir picfort && cd picfort
+#   wget -O docker-compose.yml https://github.com/ljarka/Picfort/releases/latest/download/docker-compose.yml
+#   wget -O .env https://github.com/ljarka/Picfort/releases/latest/download/example.env
+#   (fill in IMMICH_URL and IMMICH_API_KEY in .env)
+#   docker compose up -d
+#
+# Don't expose this port to the internet (README: Picfort server).
+
+name: picfort
+
+services:
+  picfort-server:
+    container_name: picfort_server
+    image: ghcr.io/ljarka/picfort-server:${PICFORT_VERSION:-latest}
+    env_file: .env
+    ports:
+      - "${PICFORT_PORT:-5000}:5000"
+    volumes:
+      - ${DATA_LOCATION:-./data}:/data
+    restart: always
