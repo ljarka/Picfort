@@ -1,6 +1,6 @@
 # T-043 — Modularization foundation: build-logic & :core:model
 
-**Status:** ready  
+**Status:** done  
 **Component:** Android build & architecture  
 **Depends on:** [ADR 0011](../decisions/0011-modular-architecture.md)
 

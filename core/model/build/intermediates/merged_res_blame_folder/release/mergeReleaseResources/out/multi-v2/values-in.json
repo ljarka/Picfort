@@ -1,0 +1,34 @@
+{
+    "logs": [
+        {
+            "outputFile": "com.github.ljarka.picfort.core.model-release-7:/values-in/values-in.xml",
+            "map": [
+                {
+                    "source": "/Users/lukaszjarka/.gradle/caches/9.8.2/transforms/00e359e8e03cc2b77981a9336be7b015/transformed/core-1.12.0/res/values-in/values-in.xml",
+                    "from": {
+                        "startLines": "2,3,4,5,6,7,8,9",
+                        "startColumns": "4,4,4,4,4,4,4,4",
+                        "startOffsets": "55,150,252,349,446,552,670,785",
+                        "endColumns": "94,101,96,96,105,117,114,100",
+                        "endOffsets": "145,247,344,441,547,665,780,881"
+                    }
+                }
+            ]
+        },
+        {
+            "outputFile": "com.github.ljarka.picfort.core.model-mergeReleaseResources-5:/values-in/values-in.xml",
+            "map": [
+                {
+                    "source": "/Users/lukaszjarka/.gradle/caches/9.8.2/transforms/00e359e8e03cc2b77981a9336be7b015/transformed/core-1.12.0/res/values-in/values-in.xml",
+                    "from": {
+                        "startLines": "2,3,4,5,6,7,8,9",
+                        "startColumns": "4,4,4,4,4,4,4,4",
+                        "startOffsets": "55,150,252,349,446,552,670,785",
+                        "endColumns": "94,101,96,96,105,117,114,100",
+                        "endOffsets": "145,247,344,441,547,665,780,881"
+                    }
+                }
+            ]
+        }
+    ]
+}

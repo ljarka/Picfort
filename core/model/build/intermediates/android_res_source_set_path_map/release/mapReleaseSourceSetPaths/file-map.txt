@@ -1,0 +1,9 @@
+com.github.ljarka.picfort.core.model-pngs-0 /Users/lukaszjarka/Picfort/core/model/build/generated/res/pngs/release
+com.github.ljarka.picfort.core.model-updated_navigation_xml-1 /Users/lukaszjarka/Picfort/core/model/build/generated/updated_navigation_xml/release
+com.github.ljarka.picfort.core.model-mergeReleaseResources-2 /Users/lukaszjarka/Picfort/core/model/build/intermediates/incremental/release/mergeReleaseResources/merged.dir
+com.github.ljarka.picfort.core.model-mergeReleaseResources-3 /Users/lukaszjarka/Picfort/core/model/build/intermediates/incremental/release/mergeReleaseResources/stripped.dir
+com.github.ljarka.picfort.core.model-release-4 /Users/lukaszjarka/Picfort/core/model/build/intermediates/merged_res/release/mergeReleaseResources
+com.github.ljarka.picfort.core.model-release-5 /Users/lukaszjarka/Picfort/core/model/build/intermediates/packaged_res/release/packageReleaseResources
+com.github.ljarka.picfort.core.model-main-6 /Users/lukaszjarka/Picfort/core/model/src/main/res
+com.github.ljarka.picfort.core.model-release-7 /Users/lukaszjarka/Picfort/core/model/src/release/res
+gradleHome-0 /Users/lukaszjarka/.gradle

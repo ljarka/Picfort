@@ -1,0 +1,18 @@
+[
+    {
+        "merged": "com.github.ljarka.picfort.core.model-release-7:/drawable/notification_tile_bg.xml",
+        "source": "com.github.ljarka.picfort.core.model-core-1.12.0-0:/drawable/notification_tile_bg.xml"
+    },
+    {
+        "merged": "com.github.ljarka.picfort.core.model-release-7:/drawable/notification_bg.xml",
+        "source": "com.github.ljarka.picfort.core.model-core-1.12.0-0:/drawable/notification_bg.xml"
+    },
+    {
+        "merged": "com.github.ljarka.picfort.core.model-release-7:/drawable/notification_bg_low.xml",
+        "source": "com.github.ljarka.picfort.core.model-core-1.12.0-0:/drawable/notification_bg_low.xml"
+    },
+    {
+        "merged": "com.github.ljarka.picfort.core.model-release-7:/drawable/notification_icon_background.xml",
+        "source": "com.github.ljarka.picfort.core.model-core-1.12.0-0:/drawable/notification_icon_background.xml"
+    }
+]
