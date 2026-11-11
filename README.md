@@ -152,7 +152,7 @@ Builds made before release signing used the debug key, so moving to a release AP
 
 A small Flask service that puts Immich photos on a picture frame. It is meant to run on the device that drives the display, a Raspberry Pi with a Waveshare 13.3" e-Paper HAT+ (E). The frame downloads photos from Immich with its own API key, so controlling the frame never needs your login token. Only the Family Wall does: the app sends its Immich token on `/wall` calls, and the server asks Immich who you are (ADR 0006).
 
-**Don't expose ImageFrameServer to the internet** (no port forwarding, no public tunnel). The frame endpoints have no authentication (ADR 0004). Use it on your home network or over a VPN such as Tailscale.
+**Don't expose ImageFrameServer to the internet without an API key.** By default the frame endpoints have no authentication (ADR 0004): use it on your home network or over a VPN such as Tailscale. To reach it from outside through a tunnel, set `PICFORT_API_KEY` first (see [Reaching the server from outside](#reaching-the-server-from-outside), ADR 0007).
 
 ### Install with Docker (recommended)
 
@@ -172,7 +172,22 @@ Then in the app: **Settings → Picfort server**, enter `<this machine's IP>:500
 - Update: `docker compose pull && docker compose up -d`. Pin a version with `PICFORT_VERSION=v0.3.0` in `.env`.
 - Logs: `docker compose logs -f`.
 - The image is built for `amd64` and `arm64` (64-bit Raspberry Pi OS). Any variable from the table below can go in `.env`.
+- On macOS, port 5000 is taken by AirPlay Receiver: set another `PICFORT_PORT` (e.g. `5050`) in `.env`.
+- If Immich runs in Docker on the same machine, `IMMICH_URL=http://host.docker.internal:2283` works on Docker Desktop.
 - In Docker the server runs in **preview mode** (no e-paper panel), which is all the Family Wall and the app need. To drive a Waveshare panel, install it directly on the Raspberry Pi (below).
+
+### Reaching the server from outside
+
+With [Cloudflare Tunnel](https://developers.cloudflare.com/cloudflare-one/connections/connect-networks/) the server gets an `https://` address without opening a port on your router.
+
+1. Generate a key and put it in `.env`, then restart (`docker compose up -d`):
+   ```bash
+   echo "PICFORT_API_KEY=$(openssl rand -hex 32)" >> .env
+   ```
+2. In Cloudflare Zero Trust → **Networks → Tunnels**, create a tunnel, run the `cloudflared` command it shows on the server machine, and add a public hostname (for example `picfort.example.com`) pointing to `http://localhost:5000` (your `PICFORT_PORT`).
+3. In the app: **Settings → Picfort server**, enter `https://picfort.example.com` and the key, tap **Test**, then **Save**.
+
+Every request needs the key; the Family Wall also still needs your Immich login. With a key set the server marks all responses `Cache-Control: private`, so Cloudflare doesn't keep wall photos at its edge.
 
 ### Install without Docker
 
@@ -233,6 +248,7 @@ The frame uses Waveshare's 13.3" E Ink Spectra 6 panel (1200×1600, 6 colours, a
 | `WALL_PHOTOS_PATH` | `wall_photos` | Directory for photos attached to wall posts |
 | `FRAME_PREVIEW_PATH` | `last_frame.png` | Where the last rendered frame is saved (shown at `/current`) |
 | `PORT` | `5000` | HTTP port |
+| `PICFORT_API_KEY` | (empty) | When set, every request needs `X-Picfort-Key: <key>` (enter it in the app next to the address). Required before exposing the server outside your network (ADR 0007). |
 
 HEIC originals need `pip install pillow-heif`. Otherwise the server falls back to Immich's preview image.
 
@@ -274,7 +290,7 @@ You can also run it from the command line: `python3 frame.py <assetId>`.
 
 ### Using it from the app
 
-The app calls ImageFrameServer the **Picfort server**: one address for the frame and the Family Wall. After the first login the app asks for it once (you can skip). Later, set it under **Settings → Picfort server**, with **⚙** in the photo viewer, or from the Family Wall. Enter the address (for example `192.168.0.105:5000`) and tap **Test**: it says whether the frame and the Family Wall both work, or what's wrong (for example a server that uses another Immich). Then tap **Save**. After that, the **Send** button puts the photo you're viewing on the frame. Only photos on the Immich server can be sent, not photos that exist only on the phone.
+The app calls ImageFrameServer the **Picfort server**: one address for the frame and the Family Wall. After the first login the app asks for it once (you can skip). Later, set it under **Settings → Picfort server**, with **⚙** in the photo viewer, or from the Family Wall. Enter the address (for example `192.168.0.105:5000`), and the API key if the server has `PICFORT_API_KEY` set, then tap **Test**: it says whether the frame and the Family Wall both work, or what's wrong (for example a server that uses another Immich). Then tap **Save**. After that, the **Send** button puts the photo you're viewing on the frame. Only photos on the Immich server can be sent, not photos that exist only on the phone.
 
 ## Security notes
 

@@ -19,5 +19,5 @@ COPY *.py ./
 VOLUME /data
 EXPOSE 5000
 HEALTHCHECK --interval=30s --timeout=5s --start-period=10s \
-    CMD python -c "import os, urllib.request; urllib.request.urlopen('http://127.0.0.1:%s/status' % os.environ.get('PORT', '5000'), timeout=4)"
+    CMD python -c "import os, urllib.request as u; u.urlopen(u.Request('http://127.0.0.1:%s/status' % os.environ.get('PORT', '5000'), headers={'X-Picfort-Key': os.environ.get('PICFORT_API_KEY', '')}), timeout=4)"
 CMD ["python", "app.py"]
