@@ -75,6 +75,7 @@ dependencies {
     api(project(":core:network"))
     implementation(project(":feature:shopping"))
     implementation(project(":feature:events"))
+    implementation(project(":feature:family"))
     ksp(libs.hilt.android.compiler)
     ksp(libs.room.compiler)
     ksp(libs.hilt.androidx.compiler)
