@@ -20,6 +20,8 @@ private const val POLL_MILLIS = 60_000L
 data class FamilyWallUiState(
     val configured: Boolean = true,
     val members: List<FamilyMember> = emptyList(),
+    /** Authors whose posts are hidden: test accounts ([isTestAccount]). */
+    val hiddenAuthorIds: Set<String> = emptySet(),
     val selectedMemberId: String? = null,
     /** All posts as last loaded (plus optimistic ones), server order. */
     val posts: List<WallPost> = emptyList(),
@@ -31,7 +33,8 @@ data class FamilyWallUiState(
     val message: String? = null,
 ) {
     private val visible: List<WallPost>
-        get() = if (selectedMemberId == null) posts else posts.filter { it.authorId == selectedMemberId }
+        get() = posts.filter { it.authorId !in hiddenAuthorIds }
+            .let { all -> if (selectedMemberId == null) all else all.filter { it.authorId == selectedMemberId } }
 
     /** Text posts for the carousel: pinned first, then newest. */
     val messages: List<WallPost> get() = visible.filter { it.photoUrl == null }.ordered()
@@ -64,6 +67,9 @@ class FamilyWallViewModel @Inject constructor(
     init {
         viewModelScope.launch {
             repository.members.collect { members -> _state.update { it.copy(members = members) } }
+        }
+        viewModelScope.launch {
+            repository.testAccountIds.collect { ids -> _state.update { it.copy(hiddenAuthorIds = ids) } }
         }
     }
 

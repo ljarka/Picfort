@@ -5,6 +5,7 @@ import com.github.ljarka.picfort.ui.frame.wallTestResult
 import kotlinx.serialization.json.Json
 import okhttp3.HttpUrl.Companion.toHttpUrl
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -63,6 +64,26 @@ class FamilyWallTest {
         assertTrue(state.isMine(post(1, "mama", 1)))
         assertEquals(false, state.isMine(post(-1, "mama", 1))) // still sending
         assertEquals(false, state.isMine(post(2, "tata", 1)))
+    }
+
+    @Test
+    fun `test accounts are recognised by name`() {
+        assertTrue(isTestAccount("LukaszTest"))
+        assertTrue(isTestAccount("test-user"))
+        assertTrue(isTestAccount("TEST"))
+        assertFalse(isTestAccount("Mama"))
+        assertFalse(isTestAccount("Łukasz"))
+    }
+
+    @Test
+    fun `posts by hidden authors are left out, also when filtering`() {
+        val state = FamilyWallUiState(
+            posts = listOf(post(1, "mama", 1), post(2, "tester", 2), post(3, "tester", 3, photo = true)),
+            hiddenAuthorIds = setOf("tester"),
+        )
+        assertEquals(listOf(1), state.messages.map { it.id })
+        assertTrue(state.photos.isEmpty())
+        assertTrue(state.copy(selectedMemberId = "tester").messages.isEmpty())
     }
 
     @Test
