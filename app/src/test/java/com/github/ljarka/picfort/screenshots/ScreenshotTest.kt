@@ -1,6 +1,16 @@
 package com.github.ljarka.picfort.screenshots
 
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.width
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.unit.Density
+import com.github.ljarka.picfort.ui.shell.ComingSoonContent
+import com.github.ljarka.picfort.ui.shell.Tab
+import com.github.ljarka.picfort.ui.shell.TabBar
+import com.github.ljarka.picfort.ui.shell.TabRoot
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -182,16 +192,16 @@ class ScreenshotTest {
 
     @Test
     fun wall() = snap {
-        FamilyWallContent(
+        WithTabBar(Tab.WALL) { FamilyWallContent(
             FamilyWallUiState(members = members, posts = wallPosts, myId = "mama", isLoading = false), now = NOW,
-        )
+        ) }
     }
 
     @Test
     fun wall_dark() = snap(dark = true) {
-        FamilyWallContent(
+        WithTabBar(Tab.WALL) { FamilyWallContent(
             FamilyWallUiState(members = members, posts = wallPosts, myId = "mama", isLoading = false), now = NOW,
-        )
+        ) }
     }
 
     @Test
@@ -211,7 +221,49 @@ class ScreenshotTest {
 
     @Test
     fun wall_no_server() = snap {
-        FamilyWallContent(FamilyWallUiState(configured = false, isLoading = false), now = NOW)
+        WithTabBar(Tab.WALL) { FamilyWallContent(FamilyWallUiState(configured = false, isLoading = false), now = NOW) }
+    }
+
+    @Test
+    fun shopping_coming_soon() = snap {
+        WithTabBar(Tab.SHOPPING) {
+            ComingSoonContent("Shopping", configured = true, message = "Shopping lists are coming soon.",
+                serverMessage = "")
+        }
+    }
+
+    @Test
+    fun events_no_server() = snap {
+        WithTabBar(Tab.EVENTS) {
+            ComingSoonContent("Events", configured = false, message = "",
+                serverMessage = "Connect your Picfort server to use events.")
+        }
+    }
+
+    @Test
+    fun school_coming_soon_dark() = snap(dark = true) {
+        WithTabBar(Tab.SCHOOL) {
+            ComingSoonContent("School", configured = true, message = "School timetables are coming soon.",
+                serverMessage = "")
+        }
+    }
+
+    /** T-017: the five labels on one line each at 360 dp and font scale 1.3. */
+    @Test
+    fun tab_bar_narrow_large_font() = snap {
+        val density = LocalDensity.current
+        CompositionLocalProvider(LocalDensity provides Density(density.density, fontScale = 1.3f)) {
+            Box(Modifier.width(360.dp)) { TabBar(selected = Tab.SHOPPING, onSelect = {}) }
+        }
+    }
+
+    /** A tab root with the bottom bar over it, as in the app. */
+    @Composable
+    private fun WithTabBar(tab: Tab, content: @Composable () -> Unit) {
+        Box(Modifier.fillMaxSize()) {
+            TabRoot(content)
+            TabBar(selected = tab, onSelect = {}, modifier = Modifier.align(Alignment.BottomCenter))
+        }
     }
 
     @Test
