@@ -42,7 +42,7 @@ No migrations (project rule), but no silent loss either. When `user_version` dif
 `SCHEMA_VERSION`, the store **renames the old file** to `<name>.v<old>.bak` (replacing an older
 backup of that version), logs a warning and starts empty. Receipt photos are left in place.
 The release notes call out every version bump. The old data stays readable with `sqlite3`.
-(Open question in STATUS: is that enough for spending history?)
+(Owner decision 2026-11-11: enough, including for spending history; no migrations.)
 
 ### Auth and permissions
 

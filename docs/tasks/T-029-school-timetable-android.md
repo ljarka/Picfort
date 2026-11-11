@@ -139,6 +139,6 @@ changed by accident.
 - Import from Librus / Vulcan (v2 candidate).
 - Notifications and a home-screen widget (T-012 could show the summary later).
 - The summary in the Family Wall today panel (T-027): recommended as a small follow-up once
-  both tasks are done, one line per child ("Ola 13:40 · Staś 14:35"); open question in STATUS.
+  both tasks are done, one line per child ("Ola 13:40 · Staś 14:35"); owner decision 2026-11-11.
 - Linking a child to an Immich user (the column exists on the server; no UI).
 - Children seeing only their own timetable.

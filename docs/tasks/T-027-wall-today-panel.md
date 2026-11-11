@@ -58,7 +58,7 @@ Ties: earliest `created`, then lowest `id`. The others today are the "+N more".
 ### No event today
 
 The next upcoming event, if it starts within 30 days: "Next: Christmas Eve · in 12 days"
-("tomorrow" for 1), tap → its detail. Otherwise only the date. (Open question in STATUS: the
+("tomorrow" for 1), tap → its detail. Otherwise only the date. (Owner decision 2026-11-11: the
 30-day window.)
 
 ### States without events data
@@ -103,4 +103,4 @@ panel.
 - Weather, name days, birthdays from Immich people.
 - Shopping or spending information in the panel.
 - School finish times per child ("Ola 13:40"): a follow-up after T-029, which provides the
-  `schoolDay` function; open question in STATUS.
+  `schoolDay` function (owner decision 2026-11-11).
