@@ -1,6 +1,6 @@
 # T-017 — App shell: Family Wall as home, bottom navigation
 
-**Status:** in-progress (code done; check the navigation criteria on a device)  
+**Status:** done (v0.3.0, PR #38; checked on the owner's phone 2026-11-11)  
 **Component:** Android app (Compose Navigation)  
 **Depends on:** T-002 (Family Wall screen; its code is merged). Supersedes T-002's "the app
 has no bottom navigation", its back arrow and its entry point in the Timeline top bar.
