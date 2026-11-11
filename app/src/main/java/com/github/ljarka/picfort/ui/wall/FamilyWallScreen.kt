@@ -1,5 +1,8 @@
 package com.github.ljarka.picfort.ui.wall
 
+import com.github.ljarka.picfort.core.ui.avatar.MemberAvatar
+import com.github.ljarka.picfort.core.ui.avatar.initials
+
 import android.net.Uri
 import android.text.format.DateUtils
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -384,34 +387,6 @@ private fun AvatarRow(
                     )
                 }
             }
-        }
-    }
-}
-
-/** Profile picture over initials: if the picture can't load, the initials stay visible. */
-@Composable
-fun MemberAvatar(member: FamilyMember, size: Dp, ring: Dp = 2.dp) {
-    Box(
-        contentAlignment = Alignment.Center,
-        modifier = Modifier
-            .size(size)
-            .border(ring, member.color, CircleShape)
-            .padding(ring + 1.dp)
-            .clip(CircleShape)
-            .background(member.color.copy(alpha = 0.25f)),
-    ) {
-        Text(
-            initials(member.name),
-            style = if (size >= 48.dp) MaterialTheme.typography.titleMedium else MaterialTheme.typography.labelMedium,
-            color = MaterialTheme.colorScheme.onSurface,
-        )
-        if (member.avatarUrl != null) {
-            AsyncImage(
-                model = member.avatarUrl,
-                contentDescription = null,
-                contentScale = ContentScale.Crop,
-                modifier = Modifier.fillMaxSize(),
-            )
         }
     }
 }

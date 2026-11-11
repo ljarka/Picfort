@@ -9,7 +9,7 @@ import com.github.ljarka.picfort.ui.login.AccessTokenStore
 import com.github.ljarka.picfort.ui.server.ServerUrlStore
 import com.github.ljarka.picfort.ui.timeline.SyncTimelineSource
 import com.github.ljarka.picfort.ui.wall.FamilyMember
-import com.github.ljarka.picfort.ui.wall.avatarColor
+import com.github.ljarka.picfort.core.ui.avatar.avatarColor
 import com.github.ljarka.picfort.ui.wall.isTestAccount
 import com.github.ljarka.picfort.ui.wall.meFirst
 import dagger.Binds

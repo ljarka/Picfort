@@ -53,7 +53,7 @@ import com.github.ljarka.picfort.ui.wall.FamilyWallUiState
 import com.github.ljarka.picfort.network.PicfortServerException
 import com.github.ljarka.picfort.ui.wall.WallPost
 import com.github.ljarka.picfort.ui.wall.todayPanel
-import com.github.ljarka.picfort.ui.wall.avatarColor
+import com.github.ljarka.picfort.core.ui.avatar.avatarColor
 import java.time.Instant
 import com.github.ljarka.picfort.ui.frame.FrameContent
 import com.github.ljarka.picfort.ui.frame.FrameUi

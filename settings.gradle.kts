@@ -23,3 +23,4 @@ rootProject.name = "Picfort"
 include(":app")
 include(":benchmark")
 include(":core:model")
+include(":core:ui")
