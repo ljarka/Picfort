@@ -31,6 +31,13 @@ Shopping lists (see shopping.py, T-018), same token auth; everyone can edit ever
     POST   /lists/<id>/items                 -> 201 new item ({text, position?})
     PATCH  /lists/<id>/items/<item>          -> {text?, checked?, position?}
     DELETE /lists/<id>/items/<item>          -> 204
+
+Family profiles (see family.py, T-031), same token auth; anyone can edit any member's profile.
+    GET    /family                           -> {"profiles": [profile, …]}
+    PATCH  /family/<user_id>                 -> {display_name?, hidden?} (null clears)
+    PUT    /family/<user_id>/photo           -> multipart photo (JPEG/PNG <= 2 MB)
+    DELETE /family/<user_id>/photo           -> 204
+    GET    /family/photo/<file>              -> the profile photo
 """
 
 import hmac
@@ -47,6 +54,7 @@ from werkzeug.exceptions import RequestEntityTooLarge
 
 import frame
 from auth import Authenticator, AuthError, AuthUnavailable, immich_lookup
+from family import FamilyStore
 from immich import ImmichClient
 from shopping import ShoppingStore
 from slideshow import INTERVALS, MODES, Picker, SettingsStore, Slideshow, SlideshowSettings
@@ -147,7 +155,7 @@ def settings_json(slideshow: Slideshow):
 
 def create_app(controller: FrameController, slideshow: Slideshow, immich: ImmichClient,
                wall: WallStore = None, auth: Authenticator = None, api_key: str = "",
-               shopping: ShoppingStore = None) -> Flask:
+               shopping: ShoppingStore = None, family: FamilyStore = None) -> Flask:
     app = Flask(__name__)
     if api_key:
         require_api_key(app, api_key)
@@ -224,12 +232,18 @@ def create_app(controller: FrameController, slideshow: Slideshow, immich: Immich
         except Exception as e:
             return error(f"Could not load albums from Immich: {e}", 502)
 
+    @app.errorhandler(StoreError)
+    def store_error(e):
+        return error(str(e), e.status)
+
     if auth is not None:
         register_auth(app, auth)
     if wall is not None:
         register_wall(app, wall)
     if shopping is not None:
         register_shopping(app, shopping)
+    if family is not None:
+        register_family(app, family)
     return app
 
 
@@ -292,10 +306,6 @@ def json_body() -> dict:
 
 
 def register_shopping(app: Flask, shopping: ShoppingStore):
-    @app.errorhandler(StoreError)
-    def store_error(e):
-        return error(str(e), e.status)
-
     @app.route("/lists", methods=["GET"])
     def get_lists():
         return jsonify(shopping.lists(archived=request.args.get("archived") == "1"))
@@ -345,6 +355,38 @@ def register_shopping(app: Flask, shopping: ShoppingStore):
     def delete_item(list_id, item_id):
         shopping.delete_item(list_id, item_id)
         return "", 204
+
+
+def register_family(app: Flask, family: FamilyStore):
+    @app.route("/family", methods=["GET"])
+    def get_family():
+        return jsonify(profiles=family.profiles())
+
+    @app.route("/family/<user_id>", methods=["PATCH"])
+    def update_family_member(user_id):
+        return jsonify(family.update(user_id, g.user.id, json_body()))
+
+    @app.route("/family/<user_id>/photo", methods=["PUT"])
+    def put_family_photo(user_id):
+        upload = request.files.get("photo")
+        data = upload.read() if upload and upload.filename else b""
+        return jsonify(family.set_photo(user_id, g.user.id, data))
+
+    @app.route("/family/<user_id>/photo", methods=["DELETE"])
+    def delete_family_photo(user_id):
+        family.delete_photo(user_id, g.user.id)
+        return "", 204
+
+    @app.route("/family/photo/<filename>")
+    def family_photo(filename):
+        path = family.photo_path(filename)
+        if path is None:
+            return error("Photo not found", 404)
+        mimetype = PHOTO_MIME_TYPES[filename.rsplit(".", 1)[1]]
+        resp = send_file(os.path.abspath(path), mimetype=mimetype, max_age=365 * 24 * 3600)
+        resp.cache_control.private = True
+        resp.cache_control.public = False
+        return resp
 
 
 def register_wall(app: Flask, wall: WallStore):
@@ -429,11 +471,13 @@ if __name__ == "__main__":
     family_wall = WallStore(os.environ.get("WALL_DB_PATH", "wall.db"),
                             os.environ.get("WALL_PHOTOS_PATH", "wall_photos"))
     shopping_store = ShoppingStore(os.environ.get("SHOPPING_DB_PATH", "shopping.db"))
+    family_store = FamilyStore(os.environ.get("FAMILY_DB_PATH", "family.db"),
+                               os.environ.get("PROFILE_PHOTOS_PATH", "profile_photos"))
     wall_auth = Authenticator(immich_lookup(config.immich_url))
     api_key = os.environ.get("PICFORT_API_KEY", "").strip()
     if not api_key:
         log.info("PICFORT_API_KEY is not set: anyone who can reach this server can use it.")
     create_app(frame_controller, show_slideshow, immich_client, family_wall, wall_auth, api_key,
-               shopping_store).run(
+               shopping_store, family_store).run(
         host="0.0.0.0", port=int(os.environ.get("PORT", "5000")), threaded=True
     )
