@@ -1,4 +1,4 @@
-package com.github.ljarka.picfort.db
+package com.github.ljarka.picfort.core.database
 
 import androidx.annotation.Keep
 import kotlinx.serialization.Serializable

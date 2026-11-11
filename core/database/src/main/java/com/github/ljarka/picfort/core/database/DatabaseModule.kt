@@ -1,4 +1,4 @@
-package com.github.ljarka.picfort.db
+package com.github.ljarka.picfort.core.database
 
 import android.content.Context
 import androidx.room.Room
@@ -18,13 +18,17 @@ class DatabaseModule {
     fun database(@ApplicationContext context: Context): ImagesDatabase {
         return Room.databaseBuilder(
             context = context,
-            klass = ImagesDatabase::class.java, "images"
+            klass = ImagesDatabase::class.java,
+            name = "images",
         ).fallbackToDestructiveMigration(dropAllTables = true)
             .build()
     }
 
     @Provides
     fun backupDao(database: ImagesDatabase): BackupDao = database.backupDao()
+
+    @Provides
+    fun remoteAssetsDao(database: ImagesDatabase): RemoteAssetsDao = database.remoteAssetsDao()
 
     @Provides
     fun usersDao(database: ImagesDatabase): UsersDao = database.usersDao()

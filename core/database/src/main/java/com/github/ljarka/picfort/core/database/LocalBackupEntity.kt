@@ -1,4 +1,4 @@
-package com.github.ljarka.picfort.db
+package com.github.ljarka.picfort.core.database
 
 import androidx.room.ColumnInfo
 import androidx.room.Dao
@@ -41,6 +41,9 @@ interface BackupDao {
 
     @Query("UPDATE local_backup SET rejected = :reason WHERE localId = :localId")
     suspend fun setRejected(localId: Long, reason: String)
+
+    @Query("SELECT * FROM local_backup WHERE remoteId = :remoteId LIMIT 1")
+    suspend fun findByRemoteId(remoteId: String): LocalBackupEntity?
 
     @Query("DELETE FROM local_backup WHERE localId IN (:ids)")
     suspend fun delete(ids: List<Long>)

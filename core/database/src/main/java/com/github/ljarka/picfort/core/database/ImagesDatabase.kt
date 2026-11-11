@@ -1,4 +1,4 @@
-package com.github.ljarka.picfort.db
+package com.github.ljarka.picfort.core.database
 
 import androidx.room.Database
 import androidx.room.RoomDatabase
@@ -14,6 +14,7 @@ import androidx.room.RoomDatabase
         UserEntity::class,
     ],
     version = 22,
+    exportSchema = false,
 )
 abstract class ImagesDatabase : RoomDatabase() {
     abstract fun backupDao(): BackupDao
