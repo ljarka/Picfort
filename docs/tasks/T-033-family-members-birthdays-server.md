@@ -1,6 +1,6 @@
 # T-033 — Family members without Immich, birth dates: Picfort server
 
-**Status:** in-progress (server code and tests done; released with the next server version)  
+**Status:** done  
 **Component:** ImageFrameServer  
 **Depends on:** T-031 (`family.db`), [ADR 0010](../decisions/0010-family-members-birthdays-recurring-events.md) (additive migration)
 

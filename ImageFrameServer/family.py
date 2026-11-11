@@ -18,6 +18,7 @@ PHOTO_URL_PREFIX = "/family/photo/"
 PHOTO_FORMATS = {"JPEG": "jpg", "PNG": "png"}
 PHOTO_NAME_RE = re.compile(r"^[0-9a-f]{32}\.(jpg|png)$")
 UUID_RE = re.compile(r"^[0-9a-fA-F-]{36}$")
+DATE_RE = re.compile(r"^\d{4}-\d{2}-\d{2}$")
 BIRTH_DATE_RE = re.compile(r"^(\d{4})-(\d{2})-(\d{2})$")
 BIRTH_DAY_RE = re.compile(r"^--(\d{2})-(\d{2})$")
 MIN_BIRTH_YEAR = 1900
@@ -104,6 +105,19 @@ def _inspect_photo(data: bytes) -> str:
     return PHOTO_FORMATS[fmt]
 
 
+def _parse_today(today_arg, body: dict = None) -> str | None:
+    val = today_arg if today_arg is not None else (body.get("today") if body else None)
+    if val is None:
+        return None
+    if not isinstance(val, str) or not DATE_RE.match(val):
+        raise StoreError("today must be a YYYY-MM-DD date")
+    try:
+        date.fromisoformat(val)
+    except ValueError:
+        raise StoreError("today is not a valid calendar date")
+    return val
+
+
 class FamilyStore(SqliteStore):
     SCHEMA_VERSION = 2
     SCHEMA = SCHEMA
@@ -115,10 +129,16 @@ class FamilyStore(SqliteStore):
     }
     NAME = "Family"
 
-    def __init__(self, db_path: str, photo_dir: str, clock=utc_now):
+    def __init__(self, db_path: str, photo_dir: str, clock=utc_now, events=None):
         self.photo_dir = photo_dir
+        self.events = events
         os.makedirs(photo_dir, exist_ok=True)
         super().__init__(db_path, clock=clock)
+
+    def get_birth_date(self, user_id: str) -> str | None:
+        with closing(self.connect()) as conn:
+            row = conn.execute("SELECT birth_date FROM profiles WHERE user_id = ?", (user_id,)).fetchone()
+            return row["birth_date"] if row else None
 
     def profiles(self) -> list:
         with closing(self.connect()) as conn:
@@ -128,31 +148,40 @@ class FamilyStore(SqliteStore):
     def _today(self) -> date:
         return date.fromisoformat(self.clock()[:10])
 
-    def add_member(self, actor_id: str, body: dict) -> dict:
+    def add_member(self, actor_id: str, body: dict, today: str = None) -> dict:
         """A member who isn't an Immich user: the server makes the id."""
+        today_str = _parse_today(today, body)
+        now = self.clock()
+        ref_today = date.fromisoformat(today_str) if today_str else date.fromisoformat(now[:10])
         display_name = _display_name(body.get("display_name"))
         if display_name is None:
             raise StoreError("display_name is required")
-        birth_date = _birth_date(body.get("birth_date"), self._today())
+        birth_date = _birth_date(body.get("birth_date"), ref_today)
         user_id = str(uuid.uuid4())
         with closing(self.connect()) as conn, conn:
             conn.execute(
                 "INSERT INTO profiles (user_id, display_name, manual, birth_date, updated_by, updated)"
                 " VALUES (?, ?, 1, ?, ?, ?)",
-                (user_id, display_name, birth_date, actor_id, self.clock()),
+                (user_id, display_name, birth_date, actor_id, now),
             )
-            return self._json(conn.execute("SELECT * FROM profiles WHERE user_id = ?", (user_id,)).fetchone())
+            created = self._json(conn.execute("SELECT * FROM profiles WHERE user_id = ?", (user_id,)).fetchone())
+        if self.events is not None and birth_date is not None:
+            self.events.sync_birthday(user_id, display_name, birth_date, actor_id, today=today_str)
+        return created
 
-    def update(self, user_id: str, actor_id: str, body: dict) -> dict:
+    def update(self, user_id: str, actor_id: str, body: dict, today: str = None) -> dict:
         user_id = _user_id(user_id)
+        today_str = _parse_today(today, body)
+        now = self.clock()
         changes = {}
         if "display_name" in body:
             changes["display_name"] = _display_name(body["display_name"])
         if "hidden" in body:
             changes["hidden"] = _hidden(body["hidden"])
         if "birth_date" in body:
-            changes["birth_date"] = _birth_date(body["birth_date"], self._today())
-        now = self.clock()
+            ref_today = date.fromisoformat(today_str) if today_str else date.fromisoformat(now[:10])
+            changes["birth_date"] = _birth_date(body["birth_date"], ref_today)
+        deleted = False
         with closing(self.connect()) as conn, conn:
             row = conn.execute("SELECT * FROM profiles WHERE user_id = ?", (user_id,)).fetchone()
             manual = bool(row["manual"]) if row else False
@@ -164,7 +193,8 @@ class FamilyStore(SqliteStore):
             if not manual and photo is None and all(v is None for v in current.values()):
                 if row is not None:
                     conn.execute("DELETE FROM profiles WHERE user_id = ?", (user_id,))
-                return {
+                deleted = True
+                res = {
                     "user_id": user_id,
                     "display_name": None,
                     "photo_url": None,
@@ -174,19 +204,28 @@ class FamilyStore(SqliteStore):
                     "updated_by": actor_id,
                     "updated": now,
                 }
-            if row is None:
+            elif row is None:
                 conn.execute(
                     "INSERT INTO profiles (user_id, display_name, photo, hidden, birth_date, updated_by, updated)"
                     " VALUES (?, ?, ?, ?, ?, ?, ?)",
                     (user_id, current["display_name"], photo, current["hidden"], current["birth_date"], actor_id, now),
                 )
-            elif changes:
-                conn.execute(
-                    "UPDATE profiles SET display_name = ?, hidden = ?, birth_date = ?, updated_by = ?, updated = ?"
-                    " WHERE user_id = ?",
-                    (current["display_name"], current["hidden"], current["birth_date"], actor_id, now, user_id),
-                )
-            return self._json(conn.execute("SELECT * FROM profiles WHERE user_id = ?", (user_id,)).fetchone())
+                res = self._json(conn.execute("SELECT * FROM profiles WHERE user_id = ?", (user_id,)).fetchone())
+            else:
+                if changes:
+                    conn.execute(
+                        "UPDATE profiles SET display_name = ?, hidden = ?, birth_date = ?, updated_by = ?, updated = ?"
+                        " WHERE user_id = ?",
+                        (current["display_name"], current["hidden"], current["birth_date"], actor_id, now, user_id),
+                    )
+                res = self._json(conn.execute("SELECT * FROM profiles WHERE user_id = ?", (user_id,)).fetchone())
+
+        if self.events is not None:
+            if deleted or current["birth_date"] is None:
+                self.events.delete_birthday(user_id)
+            elif "birth_date" in body or "display_name" in body:
+                self.events.sync_birthday(user_id, current["display_name"], current["birth_date"], actor_id, today=today_str)
+        return res
 
     def delete_member(self, user_id: str):
         """Only manual members are deleted (with their photo); an Immich user's row is cleared via PATCH."""
@@ -198,6 +237,10 @@ class FamilyStore(SqliteStore):
             if not row["manual"]:
                 raise StoreError("Only members who aren't Immich users can be deleted; clear the fields instead", 409)
             conn.execute("DELETE FROM profiles WHERE user_id = ?", (user_id,))
+        if row["photo"]:
+            self._remove_file(row["photo"])
+        if self.events is not None:
+            self.events.delete_birthday(user_id)
         if row["photo"]:
             self._remove_file(row["photo"])
 

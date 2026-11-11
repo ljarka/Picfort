@@ -349,18 +349,18 @@ A profile looks like `{"user_id","display_name","photo_url","hidden","manual","b
 
 #### Events
 
-Family events (trips, holidays, birthdays) with plain calendar dates and an optional Immich album; anyone in the family can add and edit, only the creator deletes (T-022, ADR 0008). Auth as `/wall`.
+Family events (trips, holidays, birthdays) with plain calendar dates, recurrence, birthdays and an optional Immich album; anyone in the family can add and edit, only the creator deletes (T-022, T-035, T-036, ADR 0008, ADR 0010). Auth as `/wall`.
 
 | Endpoint | Result |
 |---|---|
-| `GET /events?after=2026-11-11` | Upcoming and ongoing events (`coalesce(end_date, start_date) >= after`), ordered by `start_date`, then `start_time` (untimed first), then `id`. |
-| `GET /events?before=2026-11-11&limit=50&offset=0` | Past events (`coalesce(end_date, start_date) < before`), latest end first (`limit` 1–100, default 50). |
-| `POST /events` | `{"title", "start_date", "end_date"?, "start_time"?, "location"?, "note"?, "album_id"?}` → `201` with the event. |
-| `GET /events/<id>` | One event. |
-| `PATCH /events/<id>` | Any of those fields (`null` clears an optional one). Anyone. Returns the event. |
-| `DELETE /events/<id>` | `204`. The creator only (`403`). Does not touch the Immich album. |
+| `GET /events?after=2026-11-11` | Upcoming and ongoing events, ordered by occurrence date, then `start_time` (untimed first), then `id`. Includes repeating events and birthdays. |
+| `GET /events?before=2026-11-11&limit=50&offset=0` | Past events, latest end first (`limit` 1–100, default 50). |
+| `POST /events` | `{"title", "start_date", "end_date"?, "start_time"?, "location"?, "note"?, "album_id"?, "repeat"?, "repeat_until"?}` → `201` with the event. |
+| `GET /events/<id>[?on=2026-11-11]` | One event. For repeating events, `on` returns the ongoing or next occurrence. |
+| `PATCH /events/<id>` | Any of those fields (`null` clears an optional one). Anyone. On a birthday event (`kind: "birthday"`), `title`, `start_date`, `end_date`, `repeat`, `repeat_until` return `409` (edit in Family settings). Returns the event. |
+| `DELETE /events/<id>` | `204`. The creator only (`403`). `409` on birthday events. Does not touch the Immich album. |
 
-An event looks like `{"id","title","start_date","end_date","start_time","location","note","album_id","created_by","created","updated"}` (unset fields are `null`; an `end_date` equal to `start_date` is stored as `null`). Events are stored in `events.db` (ADR 0008); a schema version change keeps `events.db.v<old>.bak`.
+An event looks like `{"id","title","start_date","end_date","start_time","location","note","album_id","repeat","repeat_until","kind","member_id","occurrence_start","occurrence_end","turns","created_by","created","updated"}` (unset fields are `null`; an `end_date` equal to `start_date` is stored as `null`). Events are stored in `events.db` (ADR 0008, ADR 0010); additive migrations keep `events.db.v<old>.bak`.
 
 Run the tests with `cd ImageFrameServer && python3 -m unittest discover -s tests -t tests`.
 

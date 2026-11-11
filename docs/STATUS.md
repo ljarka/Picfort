@@ -104,10 +104,10 @@ Android task except T-017 and T-026 starts with a mockup the owner approves.
 | [T-030](tasks/T-030-children-immich-people.md) | Children from Immich people: face photo, per-parent link, "Photos of Ola" | `ready` |
 | [T-031](tasks/T-031-family-profiles-backend.md) | Family profiles — server (`family.db`): display name, photo, hidden, per Immich user | `done` |
 | [T-032](tasks/T-032-family-settings-android.md) | Family settings — Android: rename, photo from Immich people, hide; one source of members | `done` |
-| [T-033](tasks/T-033-family-members-birthdays-server.md) | Family members without Immich + birth dates — server (`family.db` v2) | `in-progress` |
+| [T-033](tasks/T-033-family-members-birthdays-server.md) | Family members without Immich + birth dates — server (`family.db` v2) | `done` |
 | [T-034](tasks/T-034-family-add-members-birthday-android.md) | Family settings — Android: add people, Immich badge, birth date | `ready` |
-| [T-035](tasks/T-035-recurring-events-server.md) | Recurring events — server (weekly / monthly / yearly, end date; `events.db` v2) | `ready` |
-| [T-036](tasks/T-036-birthday-events-server.md) | Birthdays as events — server (`events.db` v3) | `ready` |
+| [T-035](tasks/T-035-recurring-events-server.md) | Recurring events — server (weekly / monthly / yearly, end date; `events.db` v2) | `done` |
+| [T-036](tasks/T-036-birthday-events-server.md) | Birthdays as events — server (`events.db` v3) | `done` |
 | [T-037](tasks/T-037-events-repeat-birthdays-android.md) | Events — Android: repeat, birthdays with age | `ready` |
 | [T-038](tasks/T-038-visual-rebranding-and-icon.md) | Visual rebranding — app icon, warm palette & floating nav bar | `done` |
 | [T-039](tasks/T-039-event-reminders-android.md) | Event & birthday reminders — Android notifications | `ready` |

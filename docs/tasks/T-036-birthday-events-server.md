@@ -1,6 +1,6 @@
 # T-036 — Birthdays as events: Picfort server
 
-**Status:** ready  
+**Status:** done  
 **Component:** ImageFrameServer  
 **Depends on:** T-033 (`birth_date` on members), T-035 (recurring events), [ADR 0010](../decisions/0010-family-members-birthdays-recurring-events.md)
 
