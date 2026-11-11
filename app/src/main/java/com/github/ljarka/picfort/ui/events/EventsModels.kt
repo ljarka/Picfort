@@ -9,27 +9,8 @@ import java.time.format.DateTimeFormatter
 import java.time.temporal.ChronoUnit
 import java.util.Locale
 
-data class FamilyEvent(
-    val id: Long,
-    val title: String,
-    val startDate: LocalDate,
-    val endDate: LocalDate? = null,
-    val startTime: LocalTime? = null,
-    val location: String? = null,
-    val note: String? = null,
-    val albumId: String? = null,
-    val createdBy: String = "",
-    val created: String = "",
-    val updated: String = "",
-) {
-    val effectiveEndDate: LocalDate get() = endDate ?: startDate
-    val isMultiDay: Boolean get() = endDate != null && endDate.isAfter(startDate)
-
-    fun isOngoingOn(today: LocalDate): Boolean =
-        isMultiDay && !startDate.isAfter(today) && !effectiveEndDate.isBefore(today)
-}
-
-enum class EventsSegment { UPCOMING, PAST }
+typealias FamilyEvent = com.github.ljarka.picfort.core.model.FamilyEvent
+typealias EventsSegment = com.github.ljarka.picfort.core.model.EventsSegment
 
 data class EventSection(
     val title: String,

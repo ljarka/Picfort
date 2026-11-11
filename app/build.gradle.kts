@@ -69,6 +69,7 @@ android {
 }
 
 dependencies {
+    api(project(":core:model"))
     ksp(libs.hilt.android.compiler)
     ksp(libs.room.compiler)
     ksp(libs.hilt.androidx.compiler)

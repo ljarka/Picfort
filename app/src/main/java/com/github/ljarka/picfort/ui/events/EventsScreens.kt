@@ -406,7 +406,8 @@ private fun EventRow(
                         overflow = TextOverflow.Ellipsis,
                     )
                 }
-                if (!event.location.isNullOrBlank()) {
+                val location = event.location
+                if (!location.isNullOrBlank()) {
                     Spacer(Modifier.height(2.dp))
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Icon(
@@ -417,7 +418,7 @@ private fun EventRow(
                         )
                         Spacer(Modifier.width(4.dp))
                         Text(
-                            text = event.location,
+                            text = location,
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                             maxLines = 1,
@@ -549,12 +550,13 @@ fun EventDetailContent(
                         )
                     }
 
-                    if (!event.location.isNullOrBlank()) {
+                    val location = event.location
+                    if (!location.isNullOrBlank()) {
                         Spacer(Modifier.height(14.dp))
                         Row(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .clickable { onLocationClick(event.location) }
+                                .clickable { onLocationClick(location) }
                                 .padding(vertical = 4.dp),
                             verticalAlignment = Alignment.CenterVertically,
                         ) {
@@ -565,14 +567,15 @@ fun EventDetailContent(
                             )
                             Spacer(Modifier.width(12.dp))
                             Text(
-                                text = event.location,
+                                text = location,
                                 style = MaterialTheme.typography.bodyLarge,
                                 color = MaterialTheme.colorScheme.primary,
                             )
                         }
                     }
 
-                    if (!event.note.isNullOrBlank()) {
+                    val note = event.note
+                    if (!note.isNullOrBlank()) {
                         Spacer(Modifier.height(20.dp))
                         Surface(
                             modifier = Modifier.fillMaxWidth(),
@@ -580,7 +583,7 @@ fun EventDetailContent(
                             color = MaterialTheme.colorScheme.surfaceContainerLow,
                         ) {
                             Text(
-                                text = event.note,
+                                text = note,
                                 style = MaterialTheme.typography.bodyLarge,
                                 modifier = Modifier.padding(16.dp),
                             )

@@ -19,15 +19,7 @@ import javax.inject.Singleton
 import kotlin.math.max
 
 /** A family member: an Immich user or manual member (T-002, T-034). */
-data class FamilyMember(
-    val id: String,
-    val name: String,
-    /** Profile picture URL on Immich or Picfort server, or null to show initials. */
-    val avatarUrl: String?,
-    val color: Color,
-    val isImmichUser: Boolean = true,
-    val birthDate: BirthDate? = null,
-)
+typealias FamilyMember = com.github.ljarka.picfort.core.model.FamilyMember
 
 /** Immich's avatar color names → ring colors. Unknown or missing → primary. */
 private val AVATAR_COLORS = mapOf(
