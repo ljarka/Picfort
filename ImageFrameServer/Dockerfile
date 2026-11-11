@@ -9,7 +9,9 @@ ENV PYTHONUNBUFFERED=1 \
     FRAME_PREVIEW_PATH=/data/last_frame.png \
     WALL_DB_PATH=/data/wall.db \
     WALL_PHOTOS_PATH=/data/wall_photos \
-    SHOPPING_DB_PATH=/data/shopping.db
+    SHOPPING_DB_PATH=/data/shopping.db \
+    FAMILY_DB_PATH=/data/family.db \
+    PROFILE_PHOTOS_PATH=/data/profile_photos
 
 WORKDIR /app
 COPY requirements.txt .

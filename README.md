@@ -174,7 +174,7 @@ docker compose up -d
 
 Then in the app: **Settings → Picfort server**, enter `<this machine's IP>:5000` and tap **Test**.
 
-- The Family Wall and its photos, the shopping lists and the slideshow settings are stored in `./data` (`DATA_LOCATION` in `.env`). Back up that folder.
+- The Family Wall and its photos, the shopping lists, the family profiles and the slideshow settings are stored in `./data` (`DATA_LOCATION` in `.env`). Back up that folder.
 - Update: `docker compose pull && docker compose up -d`. Pin a version with `PICFORT_VERSION=v0.3.0` in `.env`.
 - Logs: `docker compose logs -f`.
 - The image is built for `amd64` and `arm64` (64-bit Raspberry Pi OS). Any variable from the table below can go in `.env`.
@@ -266,6 +266,8 @@ The frame uses Waveshare's 13.3" E Ink Spectra 6 panel (1200×1600, 6 colours, a
 | `WALL_DB_PATH` | `wall.db` | Family Wall database (SQLite) |
 | `WALL_PHOTOS_PATH` | `wall_photos` | Directory for photos attached to wall posts |
 | `SHOPPING_DB_PATH` | `shopping.db` | Shopping lists (SQLite) |
+| `FAMILY_DB_PATH` | `family.db` | Family member profiles (SQLite) |
+| `PROFILE_PHOTOS_PATH` | `profile_photos` | Directory for family profile photos |
 | `FRAME_PREVIEW_PATH` | `last_frame.png` | Where the last rendered frame is saved (shown at `/current`) |
 | `PORT` | `5000` | HTTP port |
 | `PICFORT_API_KEY` | (empty) | When set, every request needs `X-Picfort-Key: <key>` (enter it in the app next to the address). Required before exposing the server outside your network (ADR 0007). |
@@ -321,6 +323,20 @@ Shared lists with checkable items; everyone in the family can edit every list (T
 | `DELETE /lists/<id>/items/<item>` | `204`. |
 
 A list looks like `{"id","title","archived","revision","created_by","created","updated","item_count","checked_count","items"}`; `items` are unchecked by `position`, then checked with the latest first. Every change bumps `revision`. Lists are stored in `shopping.db` (ADR 0008). There are no migrations: if a new version changes the schema, the old file is kept as `shopping.db.v<old>.bak` and the lists start empty. `400` for invalid input, `404` for an unknown list or an item of another list.
+
+#### Family profiles
+
+Shared display name, profile photo and hidden flag for each Immich user; anyone in the family can update any member's profile (T-031, ADR 0008). Auth as `/wall`.
+
+| Endpoint | Result |
+|---|---|
+| `GET /family` | `{"profiles": [profile, …]}`: only users that have a custom profile. |
+| `PATCH /family/<user_id>` | `{"display_name"?, "hidden"?}` (`null` clears a field; when every field is `null` the row is deleted). Returns the profile. |
+| `PUT /family/<user_id>/photo` | `multipart/form-data` `photo` (JPEG or PNG, max 2 MB). Replaces and deletes any previous photo. Returns the profile. |
+| `DELETE /family/<user_id>/photo` | `204`; reverts to the Immich profile picture. |
+| `GET /family/photo/<file>` | The profile photo (`photo_url` in the profile), `Cache-Control: private`. |
+
+A profile looks like `{"user_id","display_name","photo_url","hidden","updated_by","updated"}` (unset fields are `null`). Profiles are stored in `family.db` and photos in `profile_photos/` (ADR 0008).
 
 Run the tests with `cd ImageFrameServer && python3 -m unittest discover -s tests -t tests`.
 
