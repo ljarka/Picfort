@@ -22,6 +22,10 @@ Mockup: [`docs/wireframes/family-wall-approved-v4.png`](../wireframes/family-wal
 mockup's bottom bar and status bar are not part of the design (the app has no bottom
 navigation).
 
+Later changes to this screen, not in the mockup: T-017 makes the wall a tab (bottom
+navigation, no back arrow, ⚙ in the top bar); T-027 adds a "today" panel above the message
+carousel and needs its own mockup (`wall-today-panel-v1.png`) before coding.
+
 ```
 ┌─────────────────────────────┐
 │ ←  Family Wall              │  TopAppBar

@@ -57,6 +57,8 @@ directory. Files are named `<uuid>.<ext>`. The database stores the filename only
 ## Consequences
 
 - Posts are stored only on the ImageFrameServer host; they are not backed up to Immich.
-- If ImageFrameServer is unavailable, the Wall tab in the app shows a cached copy of the last fetch.
+- If ImageFrameServer is unavailable, the wall keeps showing the posts already loaded in this
+  session (in memory only; T-002 v1). A copy on disk is a planned improvement, needed once the
+  wall is the home screen (T-017).
 - Family members are the Immich users of the server (2026-11-10). A post carries the
   author's Immich user id and name, taken from the caller's Immich token (ADR 0006).
