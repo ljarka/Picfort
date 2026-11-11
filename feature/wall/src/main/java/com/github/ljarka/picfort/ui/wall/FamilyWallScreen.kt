@@ -91,10 +91,9 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.repeatOnLifecycle
 import coil3.compose.AsyncImage
-import com.github.ljarka.picfort.R
-import com.github.ljarka.picfort.ui.frame.FrameSettingsDialog
-import com.github.ljarka.picfort.ui.shell.ServerRequiredContent
-import com.github.ljarka.picfort.ui.shell.SettingsAction
+import com.github.ljarka.picfort.core.ui.R
+import com.github.ljarka.picfort.core.ui.component.ServerRequiredContent
+import com.github.ljarka.picfort.core.ui.component.SettingsAction
 import java.io.File
 import java.util.UUID
 
@@ -112,16 +111,13 @@ fun FamilyWallScreen(
     onEditMember: (String) -> Unit = {},
     onOpenEvent: (Long) -> Unit = {},
     onOpenEvents: () -> Unit = {},
+    onSetUpServer: () -> Unit = onSettingsClick,
 ) {
     val viewModel = hiltViewModel<FamilyWallViewModel>()
     val state by viewModel.state.collectAsStateWithLifecycle()
     val lifecycle = LocalLifecycleOwner.current.lifecycle
     LaunchedEffect(lifecycle) {
         lifecycle.repeatOnLifecycle(Lifecycle.State.STARTED) { viewModel.keepFresh() }
-    }
-    var showServerDialog by remember { mutableStateOf(false) }
-    if (showServerDialog) {
-        FrameSettingsDialog(onDismiss = { showServerDialog = false }, onSaved = viewModel::refreshNow)
     }
     FamilyWallContent(
         state = state,
@@ -134,7 +130,7 @@ fun FamilyWallScreen(
         onPost = viewModel::post,
         onDelete = viewModel::delete,
         onTogglePin = viewModel::togglePin,
-        onSetUpServer = { showServerDialog = true },
+        onSetUpServer = onSetUpServer,
         onMessageShown = viewModel::messageShown,
     )
 }

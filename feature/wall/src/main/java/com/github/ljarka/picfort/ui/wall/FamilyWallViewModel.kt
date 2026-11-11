@@ -5,8 +5,8 @@ import com.github.ljarka.picfort.core.ui.avatar.UNKNOWN_MEMBER_COLOR
 import android.net.Uri
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.github.ljarka.picfort.ui.events.EventsRepository
-import com.github.ljarka.picfort.ui.family.FamilyRepository
+import com.github.ljarka.picfort.core.model.FamilyEventsProvider
+import com.github.ljarka.picfort.core.model.FamilyMemberProvider
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.coroutineScope
@@ -65,8 +65,8 @@ private fun List<WallPost>.ordered() =
 @HiltViewModel
 class FamilyWallViewModel @Inject constructor(
     private val repository: WallRepository,
-    private val family: FamilyRepository,
-    private val events: EventsRepository,
+    private val family: FamilyMemberProvider,
+    private val events: FamilyEventsProvider,
 ) : ViewModel() {
 
     private val _state = MutableStateFlow(FamilyWallUiState(myId = repository.myId))

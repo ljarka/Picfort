@@ -1,6 +1,6 @@
 package com.github.ljarka.picfort.ui.wall
 
-import com.github.ljarka.picfort.ui.events.FamilyEvent
+import com.github.ljarka.picfort.core.model.FamilyEvent
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Test

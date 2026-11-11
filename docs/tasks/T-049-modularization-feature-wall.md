@@ -1,6 +1,6 @@
 # T-049 — Modularization: :feature:wall
 
-**Status:** ready  
+**Status:** done  
 **Component:** Android feature module  
 **Depends on:** T-043 (`:core:model`), T-044 (`:core:ui`), T-045 (`:core:network`), [ADR 0011](../decisions/0011-modular-architecture.md)
 
@@ -12,19 +12,16 @@ into an independent `:feature:wall` module.
 ## Scope
 
 1. **Source migration**:
-   - `ui/wall/WallScreen.kt`, `WallViewModel.kt`, `WallRepository.kt`
-   - `TodaySummaryPanel.kt`, quick actions, member selection chips
+   - `ui/wall/FamilyWallScreen.kt`, `FamilyWallViewModel.kt`, `WallRepository.kt`, `WallApi.kt`
+   - `TodayPanel.kt`, quick actions, member selection chips
 2. **Paparazzi tests**:
-   - Move wall snapshot tests into `:feature:wall/src/test/.../WallScreenshotTest.kt`
+   - Moved wall snapshot tests into `:feature:wall/src/test/.../WallScreenshotTest.kt`
    - Fast isolated test cycle: `./gradlew :feature:wall:recordPaparazziDebug` / `verifyPaparazziDebug`
 3. **Module `AGENTS.md`**:
-   - Create `feature/wall/AGENTS.md` specifying:
-     - Scope (Family Wall home dashboard, today's glance)
-     - Clean data flow from repositories without tight coupling to sibling feature UI
-     - Fast test commands
+   - Created `feature/wall/AGENTS.md` specifying scope, public contracts, dependencies, and verification.
 
 ## Acceptance criteria
 
-- [ ] `:feature:wall` compiles cleanly using `picfort.android.feature`.
-- [ ] `./gradlew :feature:wall:testDebugUnitTest :feature:wall:verifyPaparazziDebug` green.
-- [ ] `feature/wall/AGENTS.md` created.
+- [x] `:feature:wall` compiles cleanly using `picfort.android.feature`.
+- [x] `./gradlew :feature:wall:testDebugUnitTest :feature:wall:verifyPaparazziDebug` green.
+- [x] `feature/wall/AGENTS.md` created.

@@ -76,6 +76,7 @@ dependencies {
     implementation(project(":feature:shopping"))
     implementation(project(":feature:events"))
     implementation(project(":feature:family"))
+    implementation(project(":feature:wall"))
     ksp(libs.hilt.android.compiler)
     ksp(libs.room.compiler)
     ksp(libs.hilt.androidx.compiler)

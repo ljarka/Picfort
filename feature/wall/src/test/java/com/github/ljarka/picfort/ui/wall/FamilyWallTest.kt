@@ -7,8 +7,6 @@ import com.github.ljarka.picfort.core.ui.avatar.avatarColor
 import com.github.ljarka.picfort.core.ui.avatar.initials
 
 import com.github.ljarka.picfort.core.network.PicfortServerException
-import com.github.ljarka.picfort.ui.frame.ConnectionTest
-import com.github.ljarka.picfort.ui.frame.wallTestResult
 import kotlinx.serialization.json.Json
 import okhttp3.HttpUrl.Companion.toHttpUrl
 import org.junit.Assert.assertEquals
@@ -99,19 +97,5 @@ class FamilyWallTest {
         val members = listOf("a", "b", "c").map { FamilyMember(it, it, null, avatarColor(null)) }
         assertEquals(listOf("b", "a", "c"), members.meFirst("b").map { it.id })
         assertEquals(avatarColor("primary"), avatarColor("no-such-color"))
-    }
-
-    @Test
-    fun `connection test messages`() {
-        assertTrue(wallTestResult(null) is ConnectionTest.Ok)
-        listOf(
-            PicfortServerException.NotAccepted() to "didn't accept your Immich login",
-            PicfortServerException.NoWall() to "no Family Wall yet",
-            PicfortServerException.ImmichUnreachable() to "can't reach Immich",
-            PicfortServerException.Unreachable("x") to "didn't answer",
-        ).forEach { (error, expected) ->
-            val result = wallTestResult(error)
-            assertTrue("$error", result is ConnectionTest.Partial && expected in result.message)
-        }
     }
 }
