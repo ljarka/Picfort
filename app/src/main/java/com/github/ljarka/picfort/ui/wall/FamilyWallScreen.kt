@@ -104,7 +104,12 @@ private val GRID_GUTTER = 12.dp
 private val SPACING = 4.dp
 
 @Composable
-fun FamilyWallScreen(onSettingsClick: () -> Unit, onEditMember: (String) -> Unit = {}) {
+fun FamilyWallScreen(
+    onSettingsClick: () -> Unit,
+    onEditMember: (String) -> Unit = {},
+    onOpenEvent: (Long) -> Unit = {},
+    onOpenEvents: () -> Unit = {},
+) {
     val viewModel = hiltViewModel<FamilyWallViewModel>()
     val state by viewModel.state.collectAsStateWithLifecycle()
     val lifecycle = LocalLifecycleOwner.current.lifecycle
@@ -121,6 +126,8 @@ fun FamilyWallScreen(onSettingsClick: () -> Unit, onEditMember: (String) -> Unit
         onRefresh = viewModel::refreshNow,
         onSelect = viewModel::select,
         onEditMember = onEditMember,
+        onOpenEvent = onOpenEvent,
+        onOpenEvents = onOpenEvents,
         onPost = viewModel::post,
         onDelete = viewModel::delete,
         onTogglePin = viewModel::togglePin,
@@ -137,6 +144,8 @@ fun FamilyWallContent(
     onRefresh: () -> Unit = {},
     onSelect: (String?) -> Unit = {},
     onEditMember: (String) -> Unit = {},
+    onOpenEvent: (Long) -> Unit = {},
+    onOpenEvents: () -> Unit = {},
     onPost: (String, Uri?) -> Unit = { _, _ -> },
     onDelete: (WallPost) -> Unit = {},
     onTogglePin: (WallPost) -> Unit = {},
@@ -228,6 +237,8 @@ fun FamilyWallContent(
                         WallGrid(
                             state = state,
                             now = now,
+                            onOpenEvent = onOpenEvent,
+                            onOpenEvents = onOpenEvents,
                             onMessageClick = { openMessage = it },
                             onPhotoClick = { openPhoto = it },
                             onDelete = { confirmDelete = it },
@@ -244,6 +255,8 @@ fun FamilyWallContent(
 private fun WallGrid(
     state: FamilyWallUiState,
     now: Long,
+    onOpenEvent: (Long) -> Unit,
+    onOpenEvents: () -> Unit,
     onMessageClick: (WallPost) -> Unit,
     onPhotoClick: (WallPost) -> Unit,
     onDelete: (WallPost) -> Unit,
@@ -259,6 +272,16 @@ private fun WallGrid(
         verticalItemSpacing = SPACING,
         horizontalArrangement = Arrangement.spacedBy(SPACING),
     ) {
+        state.panel?.let { panel ->
+            item(key = "today", span = StaggeredGridItemSpan.FullLine) {
+                TodayPanel(
+                    panel = panel,
+                    onEventClick = onOpenEvent,
+                    onMoreClick = onOpenEvents,
+                    modifier = Modifier.padding(bottom = 12.dp),
+                )
+            }
+        }
         if (messages.isNotEmpty()) {
             item(key = "messages", span = StaggeredGridItemSpan.FullLine) {
                 MessageCarousel(

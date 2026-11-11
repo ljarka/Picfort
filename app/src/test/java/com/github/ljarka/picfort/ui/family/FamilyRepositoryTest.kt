@@ -199,6 +199,24 @@ class FamilyRepositoryTest {
     }
 
     @Test
+    fun `with no Immich users yet, refresh runs the sync that brings them`(): Unit = runBlocking {
+        val dao = FakeUsersDao(emptyList())
+        var syncs = 0
+        val repo = FamilyRepository(
+            FakeFamilyBackend(), FakePeopleSource(), FakeOfflineCopy(), dao,
+            { "https://photos.example.com" }, { "mama" },
+            syncImmichUsers = { syncs++; dao.upsert(immichUsers) },
+        )
+        repo.refresh()
+        assertEquals(1, syncs)
+        assertEquals(setOf("mama", "tata"), repo.members.first().map { it.id }.toSet())
+
+        // Once the users are known, a refresh leaves the sync to the Photos tab.
+        repo.refresh()
+        assertEquals(1, syncs)
+    }
+
+    @Test
     fun `offline cold start keeps saved names and photos, and saveMember updates photo and fields`(): Unit = runBlocking {
         val backend = FakeFamilyBackend()
         val offline = FakeOfflineCopy()

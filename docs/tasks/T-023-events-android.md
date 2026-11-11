@@ -1,6 +1,6 @@
 # T-023 — Events: Android screens
 
-**Status:** in-progress (code, tests and screenshots done; the device checks below are left)  
+**Status:** done (all criteria checked on the emulator 2026-11-11)  
 **Component:** Android app  
 **Depends on:** T-017 (Events tab), T-022 (API), T-019 (`PicfortServerClient`,
 `PicfortAuthInterceptor`; extract them here if T-019 hasn't landed)
@@ -85,12 +85,13 @@ with a title and a start date.
 - [x] Upcoming: ongoing first, then nearest first; an event that ended yesterday is only in
       Past; an event ending today is still in Upcoming.
 - [x] Past shows the latest first and loads more on scroll.
-- [ ] With the screen open over midnight, yesterday's event moves to Past within a minute.
-- [ ] An event added on another phone appears within 60 s while the tab is open.
-- [ ] The date picked is the date saved (check with the phone set to a zone west of UTC).
+- [x] With the screen open over midnight, yesterday's event moves to Past within a minute.
+- [x] An event added on another phone appears within 60 s while the tab is open.
+- [x] The date picked is the date saved (check with the phone set to a zone west of UTC).
 - [x] No server address → the shared empty state from T-017.
-- [ ] TalkBack: a row is read as "<title>, <dates>, <relative label>"; the date badge is not
+- [x] TalkBack: a row is read as "<title>, <dates>, <relative label>"; the date badge is not
       read separately.
+      _Fixed 2026-11-11: the row uses `clearAndSetSemantics`, so it is one button with "<title>, <dates>, <relative label>". Checked in the accessibility tree, not by ear._
 - [x] Unit tests: upcoming/now/past grouping, relative labels, date range formatting, picker
       millis → `LocalDate`.
 - [x] Paparazzi: upcoming (with Now), past, both empty states, detail, form, one dark.
@@ -100,4 +101,4 @@ with a title and a start date.
 
 - Albums on events (T-026).
 - Reminders/notifications and calendar export (owner decision 2026-11-11: not in v1).
-- Recurring events, events on the Family Wall or the frame (v2 candidates).
+- Recurring events and birthdays: T-035 to T-037. Events on the frame (v2 candidate).

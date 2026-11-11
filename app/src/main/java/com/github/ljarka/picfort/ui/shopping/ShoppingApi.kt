@@ -41,6 +41,10 @@ data class ShoppingListDto(
     fun toList() = ShoppingList(id, title, archived, revision, createdBy, created, items.map { it.toItem() })
 }
 
+private fun ShoppingItem.toDto() = ShoppingItemDto(id, text, checked, position, checkedBy, checkedAt, createdBy)
+
+private fun ShoppingList.toDto() = ShoppingListDto(id, title, archived, revision, createdBy, created, items.map { it.toDto() })
+
 /** A list fetched with If-None-Match: null when it hasn't changed (304). */
 data class ListFetch(val list: ShoppingList?)
 
@@ -58,6 +62,7 @@ interface ShoppingBackend {
     suspend fun updateItem(listId: Long, itemId: Long, text: String? = null, checked: Boolean? = null): ShoppingItem
     suspend fun deleteItem(listId: Long, itemId: Long)
     fun decodeLists(raw: String): List<ShoppingList>
+    fun encodeLists(lists: List<ShoppingList>): String
 }
 
 /** Shopping lists on the Picfort server (T-018). */
@@ -75,6 +80,9 @@ class ShoppingApi @Inject constructor(
 
     override fun decodeLists(raw: String): List<ShoppingList> =
         json.decodeFromString<List<ShoppingListDto>>(raw).map { it.toList() }
+
+    override fun encodeLists(lists: List<ShoppingList>): String =
+        json.encodeToString(lists.map { it.toDto() })
 
     override suspend fun list(id: Long, knownRevision: Long?): ListFetch {
         val request = Request.Builder().url(list(id).build())

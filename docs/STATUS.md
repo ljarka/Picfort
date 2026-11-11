@@ -18,7 +18,7 @@ A shared digital board for the family: notes, photos, fridge-magnet-style messag
 | Task | Description | Status |
 |------|-------------|--------|
 | [T-001](tasks/T-001-family-wall-backend.md) | Family Wall — ImageFrameServer backend | `done` |
-| [T-002](tasks/T-002-family-wall-android.md) | Family Wall — Android screen (approved mockup, members = Immich users) | `in-progress` |
+| [T-002](tasks/T-002-family-wall-android.md) | Family Wall — Android screen (approved mockup, members = Immich users) | `done` |
 | [T-003](tasks/T-003-frame-mode-tablet.md) | Frame mode on Android tablet (parent's account, settings from the Picfort server) | `ready` |
 
 ### Phase 2 — Fix known limitations
@@ -76,6 +76,8 @@ Delivery order (each milestone is usable on its own):
 - **M2b family profiles:** T-031 → T-032 (names, photos from Immich people, hidden accounts;
   after T-018). Small, and the wall is the home screen, so it goes early.
 - **M3 events:** T-022 → T-023 → T-026 (albums), T-027 (today panel on the wall).
+- **M3b members, birthdays, recurring events** (ADR 0010): T-033 → T-034 (add people, birth dates),
+  T-035 (recurring, server) → T-036 (birthday events, server) → T-037 (Android). T-026 (albums) is independent.
 - **M4 school timetable:** T-028 → T-029 → T-030 (children from Immich people).
 - **M5 receipts & spending:** T-020 → T-024 (Gemini) → T-021 → T-025.
 
@@ -88,20 +90,25 @@ Android task except T-017 and T-026 starts with a mockup the owner approves.
 |------|-------------|--------|
 | [T-017](tasks/T-017-app-shell-bottom-nav.md) | App shell: Wall as home, bottom navigation (5 tabs) | `done` |
 | [T-018](tasks/T-018-shopping-lists-backend.md) | Shopping lists — server API, `shopping.db`, shared store/auth foundations | `done` |
-| [T-019](tasks/T-019-shopping-lists-android.md) | Shopping lists — Android, Keep-like checklist, read-only offline copy | `in-progress` |
+| [T-019](tasks/T-019-shopping-lists-android.md) | Shopping lists — Android, Keep-like checklist, read-only offline copy | `done` |
 | [T-020](tasks/T-020-receipts-backend.md) | Receipts + `/spending` — server, totals typed by hand | `ready` |
 | [T-021](tasks/T-021-receipts-android.md) | Receipts — Android: add to a list, check, correct | `ready` |
 | [T-022](tasks/T-022-events-backend.md) | Events — server API (`events.db`) | `done` |
-| [T-023](tasks/T-023-events-android.md) | Events — Android: upcoming / past, add, edit | `in-progress` |
+| [T-023](tasks/T-023-events-android.md) | Events — Android: upcoming / past, add, edit | `done` |
 | [T-024](tasks/T-024-receipt-reading-gemini.md) | Receipts — read shop, date, total with Gemini (server, opt-in) | `ready` |
 | [T-025](tasks/T-025-spending-summary-android.md) | Spending summary — Android: month, 6-month bars, by shop and person | `ready` |
 | [T-026](tasks/T-026-event-albums-android.md) | Events — link or create a family-shared Immich album (Android) | `ready` |
-| [T-027](tasks/T-027-wall-today-panel.md) | Family Wall — today panel: date and the day's event | `ready` |
+| [T-027](tasks/T-027-wall-today-panel.md) | Family Wall — today panel: date and the day's event | `in-progress` |
 | [T-028](tasks/T-028-school-timetable-backend.md) | School timetable — server API (`school.db`): children, bell schedule, lessons, activities | `ready` |
 | [T-029](tasks/T-029-school-timetable-android.md) | School timetable — Android: child chips, "finishes at", week by day, editing | `ready` |
 | [T-030](tasks/T-030-children-immich-people.md) | Children from Immich people: face photo, per-parent link, "Photos of Ola" | `ready` |
 | [T-031](tasks/T-031-family-profiles-backend.md) | Family profiles — server (`family.db`): display name, photo, hidden, per Immich user | `done` |
 | [T-032](tasks/T-032-family-settings-android.md) | Family settings — Android: rename, photo from Immich people, hide; one source of members | `done` |
+| [T-033](tasks/T-033-family-members-birthdays-server.md) | Family members without Immich + birth dates — server (`family.db` v2) | `in-progress` |
+| [T-034](tasks/T-034-family-add-members-birthday-android.md) | Family settings — Android: add people, Immich badge, birth date | `ready` |
+| [T-035](tasks/T-035-recurring-events-server.md) | Recurring events — server (weekly / monthly / yearly, end date; `events.db` v2) | `ready` |
+| [T-036](tasks/T-036-birthday-events-server.md) | Birthdays as events — server (`events.db` v3) | `ready` |
+| [T-037](tasks/T-037-events-repeat-birthdays-android.md) | Events — Android: repeat, birthdays with age | `ready` |
 
 Decided by the owner (2026-11-11), as recommended:
 - **Schema changes** in `shopping.db` / `events.db`: no migrations; the old file is kept as
@@ -114,6 +121,10 @@ Decided by the owner (2026-11-11), as recommended:
   otherwise only the date.
 - **"Ola finishes at 13:40" in the wall's today panel:** not in T-027 or T-029; a small
   follow-up task once both are done.
+- **Family members beyond Immich, birthdays, recurring events** (ADR 0010, owner request 2026-11-11): manual
+  members live in `family.db`; a birth date creates a yearly birthday event; events repeat weekly, monthly
+  or yearly with an optional end date; `family.db` and `events.db` get additive migrations (ADR 0008's
+  "no migrations" no longer applies to them).
 - **Children are not linked to Immich users;** the server keeps an unused `immich_user_id`
   column so a later link needs no schema change.
 - **Children can be chosen from Immich people** (face recognition), with the face as their
