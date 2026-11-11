@@ -14,11 +14,11 @@ import androidx.compose.ui.graphics.Color
 import com.github.ljarka.picfort.core.ui.avatar.UNKNOWN_MEMBER_COLOR
 import com.github.ljarka.picfort.core.ui.avatar.avatarColor
 import com.github.ljarka.picfort.core.ui.avatar.initials
-import com.github.ljarka.picfort.ui.login.AccessTokenStore
+import com.github.ljarka.picfort.core.network.AccessTokenStore
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
-import com.github.ljarka.picfort.ui.family.BirthDate
+import com.github.ljarka.picfort.core.model.BirthDate
 import java.io.ByteArrayOutputStream
 import javax.inject.Inject
 import javax.inject.Singleton

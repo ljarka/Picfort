@@ -1,9 +1,9 @@
 package com.github.ljarka.picfort.ui.wall
 
-import com.github.ljarka.picfort.network.PicfortServerClient
+import com.github.ljarka.picfort.core.network.PicfortServerClient
 import com.github.ljarka.picfort.core.network.PicfortServerException
-import com.github.ljarka.picfort.network.picfortKey
-import com.github.ljarka.picfort.ui.frame.FrameSettingsStore
+import com.github.ljarka.picfort.core.network.picfortKey
+import com.github.ljarka.picfort.core.network.FrameSettingsStore
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json

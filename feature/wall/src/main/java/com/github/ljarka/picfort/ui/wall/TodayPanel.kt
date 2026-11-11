@@ -22,7 +22,7 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import com.github.ljarka.picfort.ui.events.FamilyEvent
+import com.github.ljarka.picfort.core.model.FamilyEvent
 import java.time.LocalDate
 import java.time.LocalTime
 import java.time.format.DateTimeFormatter
