@@ -112,6 +112,8 @@ Android task except T-017 and T-026 starts with a mockup the owner approves.
 | [T-038](tasks/T-038-visual-rebranding-and-icon.md) | Visual rebranding — app icon, warm palette & floating nav bar | `done` |
 | [T-039](tasks/T-039-event-reminders-android.md) | Event & birthday reminders — Android notifications | `ready` |
 | [T-040](tasks/T-040-shopping-reminders-android.md) | Shopping list reminders — Android notifications | `ready` |
+| [T-041](tasks/T-041-wishlist-backend.md) | Wishlist & link preview — server API (`shopping.db` v2) | `ready` |
+| [T-042](tasks/T-042-wishlist-android.md) | Wishlist carousel & event linking — Android | `ready` |
 
 Decided by the owner (2026-11-11), as recommended:
 - **Schema changes** in `shopping.db` / `events.db`: no migrations; the old file is kept as
