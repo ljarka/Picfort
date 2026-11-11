@@ -156,13 +156,13 @@ A small Flask service that puts Immich photos on a picture frame. It is meant to
 
 ### Install with Docker (recommended)
 
-Like Immich: two files and `docker compose up -d`. Run it on any always-on machine on your home network, for example the one that runs Immich.
+Like Immich: two files ([`docker-compose.yml`](docker/docker-compose.yml) and the example [`.env`](docker/example.env), with every setting explained) and `docker compose up -d`. Run it on any always-on machine on your home network, for example the one that runs Immich.
 
 ```bash
 mkdir picfort && cd picfort
 wget -O docker-compose.yml https://github.com/ljarka/Picfort/releases/latest/download/docker-compose.yml
 wget -O .env https://github.com/ljarka/Picfort/releases/latest/download/example.env
-nano .env                         # fill in IMMICH_URL and IMMICH_API_KEY
+vim .env                          # fill in IMMICH_URL and IMMICH_API_KEY
 docker compose up -d
 ```
 
