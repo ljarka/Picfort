@@ -6,7 +6,7 @@
 #   (fill in IMMICH_URL and IMMICH_API_KEY in .env)
 #   docker compose up -d
 #
-# Don't expose this port to the internet (README: Picfort server).
+# Don't expose this port to the internet without PICFORT_API_KEY (README: Picfort server).
 
 name: picfort
 

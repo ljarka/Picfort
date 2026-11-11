@@ -1,6 +1,9 @@
 package com.github.ljarka.picfort.ui.wall
 
 import com.github.ljarka.picfort.network.CleartextNotAllowedException
+import com.github.ljarka.picfort.network.isPicfortKeyRejected
+import com.github.ljarka.picfort.network.picfortKey
+import com.github.ljarka.picfort.ui.frame.WRONG_API_KEY
 import com.github.ljarka.picfort.ui.frame.FrameSettingsStore
 import com.github.ljarka.picfort.ui.frame.normalizeFrameUrl
 import com.github.ljarka.picfort.ui.login.AccessTokenStore
@@ -82,6 +85,8 @@ sealed class WallException(message: String) : Exception(message) {
     /** 502: the server can't ask Immich who we are. */
     class ImmichUnreachable : WallException("The Picfort server can't reach Immich")
     class Forbidden : WallException("Only the author can change this post")
+    /** 401 from the server's own PICFORT_API_KEY check, not from Immich. */
+    class WrongApiKey : WallException(WRONG_API_KEY)
     class Other(message: String) : WallException(message)
 }
 
@@ -98,11 +103,11 @@ class WallApi @Inject constructor(
 ) {
     val isConfigured: Boolean get() = normalizeFrameUrl(settings.frameUrl) != null
 
-    /** [address] other than the saved one is for testing a server before saving it. */
-    suspend fun posts(limit: Int = 100, address: String = settings.frameUrl): List<WallPost> {
+    /** [address] and [apiKey] other than the saved ones are for testing a server before saving it. */
+    suspend fun posts(limit: Int = 100, address: String = settings.frameUrl, apiKey: String? = null): List<WallPost> {
         val base = base(address)
         val url = base.newBuilder().addPathSegment("wall").addQueryParameter("limit", "$limit").build()
-        val text = execute(Request.Builder().url(url).build())
+        val text = execute(Request.Builder().url(url).apply { apiKey?.let { picfortKey(it) } }.build())
         return json.decodeFromString<List<WallPostDto>>(text).map { it.toPost(base) }
     }
 
@@ -138,6 +143,7 @@ class WallApi @Inject constructor(
         try {
             client.newCall(request).execute().use { response ->
                 val text = response.body?.string().orEmpty()
+                if (response.isPicfortKeyRejected()) throw WallException.WrongApiKey()
                 when (response.code) {
                     in 200..299 -> text
                     401 -> throw WallException.NotAccepted()

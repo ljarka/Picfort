@@ -9,6 +9,9 @@
     POST /next                  -> show the next slideshow photo now
     GET  /albums                -> [{"id", "name"}] for choosing a slideshow album
 
+With PICFORT_API_KEY set, every call also needs `X-Picfort-Key: <key>`; without it: 401 with
+`WWW-Authenticate: Picfort-Key` (so the app can tell it from a rejected Immich token).
+
 Family Wall (see wall.py). Every call needs `Authorization: Bearer <Immich token>` (auth.py);
 the author is the Immich user of that token.
     GET    /wall?limit=20       -> posts, pinned first, then newest first
@@ -18,6 +21,7 @@ the author is the Immich user of that token.
     GET    /wall/photo/<file>   -> the photo attached to a post
 """
 
+import hmac
 import logging
 import math
 import os
@@ -128,8 +132,10 @@ def settings_json(slideshow: Slideshow):
 
 
 def create_app(controller: FrameController, slideshow: Slideshow, immich: ImmichClient,
-               wall: WallStore = None, auth: Authenticator = None) -> Flask:
+               wall: WallStore = None, auth: Authenticator = None, api_key: str = "") -> Flask:
     app = Flask(__name__)
+    if api_key:
+        require_api_key(app, api_key)
     # The photo plus a little room for the text fields; larger requests get 413.
     app.config["MAX_CONTENT_LENGTH"] = MAX_PHOTO_BYTES + 64 * 1024
     controller.on_shown = slideshow.photo_changed
@@ -206,6 +212,31 @@ def create_app(controller: FrameController, slideshow: Slideshow, immich: Immich
     if wall is not None:
         register_wall(app, wall, auth)
     return app
+
+
+API_KEY_HEADER = "X-Picfort-Key"
+
+
+def require_api_key(app: Flask, api_key: str):
+    """Every request needs the server's key (for a server reachable from outside, e.g. a tunnel)."""
+    expected = api_key.encode()
+
+    @app.before_request
+    def check_api_key():
+        given = (request.headers.get(API_KEY_HEADER) or "").strip().encode()
+        if given and hmac.compare_digest(given, expected):
+            return None
+        resp, status = error("Missing or wrong Picfort server API key", 401)
+        resp.headers["WWW-Authenticate"] = "Picfort-Key"
+        return resp, status
+
+    @app.after_request
+    def private_cache(resp):
+        # Behind a proxy such as Cloudflare: a public response (wall photos are cached for a
+        # year) would be kept at the edge and served to anyone, without the key.
+        resp.cache_control.public = False
+        resp.cache_control.private = True
+        return resp
 
 
 def register_wall(app: Flask, wall: WallStore, auth: Authenticator):
@@ -305,6 +336,9 @@ if __name__ == "__main__":
     family_wall = WallStore(os.environ.get("WALL_DB_PATH", "wall.db"),
                             os.environ.get("WALL_PHOTOS_PATH", "wall_photos"))
     wall_auth = Authenticator(immich_lookup(config.immich_url))
-    create_app(frame_controller, show_slideshow, immich_client, family_wall, wall_auth).run(
+    api_key = os.environ.get("PICFORT_API_KEY", "").strip()
+    if not api_key:
+        log.info("PICFORT_API_KEY is not set: anyone who can reach this server can use it.")
+    create_app(frame_controller, show_slideshow, immich_client, family_wall, wall_auth, api_key).run(
         host="0.0.0.0", port=int(os.environ.get("PORT", "5000")), threaded=True
     )

@@ -6,6 +6,8 @@ import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 import com.github.ljarka.picfort.network.CleartextNotAllowedException
+import com.github.ljarka.picfort.network.isPicfortKeyRejected
+import com.github.ljarka.picfort.network.picfortKey
 import okhttp3.HttpUrl
 import okhttp3.OkHttpClient
 import okhttp3.Request
@@ -63,11 +65,11 @@ class FrameRepository @Inject constructor(
         }
     }
 
-    /** Checks that [address] points at a running frame server. */
-    suspend fun testConnection(address: String): FrameResult {
+    /** Checks that [address] points at a running frame server that accepts [apiKey]. */
+    suspend fun testConnection(address: String, apiKey: String): FrameResult {
         val base = normalizeFrameUrl(address) ?: return FrameResult.Error("Invalid address")
         val url = base.newBuilder().addPathSegment("status").build()
-        return request(url) { code, body ->
+        return request(url, apiKey) { code, body ->
             if (code == 200 && body?.status == "ok") FrameResult.Sent
             else FrameResult.Error("Not a Picfort server (HTTP $code)")
         }
@@ -75,10 +77,16 @@ class FrameRepository @Inject constructor(
 
     private suspend fun request(
         url: HttpUrl,
+        apiKey: String? = null,
         map: (code: Int, body: FrameResponse?) -> FrameResult,
     ): FrameResult = withContext(Dispatchers.IO) {
+        // null: the saved key, added by PicfortKeyInterceptor.
+        val request = Request.Builder().url(url).apply { apiKey?.let { picfortKey(it) } }.build()
         try {
-            client.newCall(Request.Builder().url(url).build()).execute().use { response ->
+            client.newCall(request).execute().use { response ->
+                if (response.isPicfortKeyRejected()) {
+                    return@use FrameResult.Error(WRONG_API_KEY)
+                }
                 val body = response.body?.string()?.let {
                     runCatching { json.decodeFromString<FrameResponse>(it) }.getOrNull()
                 }
@@ -91,3 +99,6 @@ class FrameRepository @Inject constructor(
         }
     }
 }
+
+/** What the UI says when the Picfort server rejects (or wants) its API key. */
+const val WRONG_API_KEY = "The Picfort server needs an API key, or the key is wrong"
