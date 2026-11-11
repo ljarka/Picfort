@@ -72,7 +72,7 @@ fun PicfortServerSetupContent(
     onContinue: () -> Unit = {},
 ) {
     val valid = normalizeFrameUrl(address) != null
-    Scaffold(topBar = { TopAppBar(title = { Text("Picfort server (optional)") }) }) { padding ->
+    Scaffold(topBar = { TopAppBar(title = { Text("Picfort server") }) }) { padding ->
         Column(
             Modifier
                 .fillMaxSize()
@@ -81,8 +81,7 @@ fun PicfortServerSetupContent(
                 .padding(horizontal = 24.dp, vertical = 16.dp),
         ) {
             Text(
-                "Do you have a picture frame or the Family Wall at home? Enter the server address. " +
-                    "You can also do this later in Settings.",
+                "Enter your Picfort server's address. You can also set it later in Settings.",
                 style = MaterialTheme.typography.bodyLarge,
             )
             Spacer(Modifier.padding(top = 16.dp))

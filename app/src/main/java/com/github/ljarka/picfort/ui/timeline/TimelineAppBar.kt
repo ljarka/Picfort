@@ -27,7 +27,6 @@ fun TimelineAppBar(
     onSettingsClick: () -> Unit,
     onSearchClick: () -> Unit,
     onAlbumsClick: () -> Unit,
-    onWallClick: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     TopAppBar(
@@ -47,9 +46,6 @@ fun TimelineAppBar(
         actions = {
             IconButton(onClick = onSearchClick) {
                 Icon(Icons.Default.Search, contentDescription = "Search")
-            }
-            IconButton(onClick = onWallClick) {
-                Icon(ImageVector.vectorResource(R.drawable.ic_forum), contentDescription = "Family Wall")
             }
             IconButton(onClick = onAlbumsClick) {
                 Icon(ImageVector.vectorResource(R.drawable.ic_album), contentDescription = "Albums")
