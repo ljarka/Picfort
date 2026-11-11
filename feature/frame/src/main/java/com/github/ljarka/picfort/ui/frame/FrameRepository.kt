@@ -1,10 +1,14 @@
 package com.github.ljarka.picfort.ui.frame
 
 import android.content.Context
-import com.github.ljarka.picfort.local.localImageUri
-import com.github.ljarka.picfort.network.CleartextNotAllowedException
-import com.github.ljarka.picfort.network.isPicfortKeyRejected
-import com.github.ljarka.picfort.network.picfortKey
+import com.github.ljarka.picfort.core.model.FrameResult
+import com.github.ljarka.picfort.core.model.FrameSender
+import com.github.ljarka.picfort.core.model.localImageUri
+import com.github.ljarka.picfort.core.network.CleartextNotAllowedException
+import com.github.ljarka.picfort.core.network.FrameSettingsStore
+import com.github.ljarka.picfort.core.network.isPicfortKeyRejected
+import com.github.ljarka.picfort.core.network.normalizeFrameUrl
+import com.github.ljarka.picfort.core.network.picfortKey
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -26,13 +30,7 @@ import javax.inject.Singleton
 @Retention(AnnotationRetention.BINARY)
 annotation class FrameHttpClient
 
-sealed interface FrameResult {
-    data object Sent : FrameResult
-    data object NotConfigured : FrameResult
-    data object Busy : FrameResult
-    data class TooSoon(val retryAfterSeconds: Int?) : FrameResult
-    data class Error(val message: String) : FrameResult
-}
+typealias FrameResult = com.github.ljarka.picfort.core.model.FrameResult
 
 @Serializable
 private data class FrameResponse(
@@ -53,9 +51,9 @@ class FrameRepository @Inject constructor(
     private val settings: FrameSettingsStore,
     private val json: Json,
     @ApplicationContext private val context: Context,
-) {
+) : FrameSender {
 
-    suspend fun send(assetId: String): FrameResult {
+    override suspend fun send(assetId: String): FrameResult {
         val base = normalizeFrameUrl(settings.frameUrl) ?: return FrameResult.NotConfigured
         val url = base.newBuilder()
             .addPathSegment("run")
@@ -76,7 +74,7 @@ class FrameRepository @Inject constructor(
      * Sends a phone-only (LOCAL) photo directly to the frame via multipart POST.
      * Does not require the photo to be on Immich.
      */
-    suspend fun sendLocal(assetId: String): FrameResult {
+    override suspend fun sendLocal(assetId: String): FrameResult {
         val base = normalizeFrameUrl(settings.frameUrl) ?: return FrameResult.NotConfigured
         val url = base.newBuilder().addPathSegment("run-local").build()
         val uri = localImageUri(assetId.toLong())

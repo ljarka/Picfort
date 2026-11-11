@@ -35,21 +35,9 @@ import com.github.ljarka.picfort.collections.GridAsset
 import com.github.ljarka.picfort.collections.LoadState
 import com.github.ljarka.picfort.collections.SearchContent
 import com.github.ljarka.picfort.collections.SearchUi
-import com.github.ljarka.picfort.ui.frame.ConnectionTest
-import com.github.ljarka.picfort.ui.frame.FrameAlbum
-import com.github.ljarka.picfort.ui.frame.PicfortServerForm
-import com.github.ljarka.picfort.ui.frame.WRONG_API_KEY
-import com.github.ljarka.picfort.ui.frame.PicfortServerSetupContent
-import com.github.ljarka.picfort.ui.frame.wallTestResult
-import com.github.ljarka.picfort.core.network.PicfortServerException
-import com.github.ljarka.picfort.core.ui.avatar.avatarColor
 import java.time.Instant
-import com.github.ljarka.picfort.ui.frame.FrameContent
-import com.github.ljarka.picfort.ui.frame.FrameUi
-import com.github.ljarka.picfort.ui.frame.SlideshowState
 import com.github.ljarka.picfort.ui.image.AssetDetailsList
 import com.github.ljarka.picfort.ui.image.DetailsState
-import com.github.ljarka.picfort.core.model.FamilyEvent
 import com.github.ljarka.picfort.ui.settings.BackupSettingsUi
 import com.github.ljarka.picfort.ui.settings.SettingsContent
 import com.github.ljarka.picfort.ui.theme.PicfortTheme
@@ -146,26 +134,7 @@ class ScreenshotTest {
         SettingsContent(backup = backup, status = BackupStatus.Idle, serverUrl = "https://photos.example.com", now = NOW)
     }
 
-    @Test
-    fun frame() = snap {
-        FrameContent(
-            FrameUi(
-                address = "http://192.168.0.105:5000",
-                loading = false,
-                image = samplePhotoImage(seed = 2, width = 450, height = 600),
-                slideshow = SlideshowState(
-                    mode = "album", albumId = "a1", intervalMinutes = 360,
-                    quietStart = 22, quietEnd = 7, nextChangeAt = null,
-                ),
-                albums = listOf(FrameAlbum("a1", "Frame favourites"), FrameAlbum("a2", "Family")),
-            )
-        )
-    }
 
-    @Test
-    fun frame_not_configured() = snap {
-        FrameContent(FrameUi(configured = false, loading = false))
-    }
 
 
 
@@ -196,34 +165,7 @@ class ScreenshotTest {
         }
     }
 
-    @Test
-    fun picfort_server_form() = snap {
-        // The dialog's content for each kind of test result (dialogs don't render in Paparazzi).
-        Surface(Modifier.fillMaxSize()) {
-            Column(Modifier.padding(24.dp)) {
-                listOf(
-                    wallTestResult(null),
-                    wallTestResult(PicfortServerException.NotAccepted()),
-                    wallTestResult(PicfortServerException.NoWall()),
-                    ConnectionTest.Failed("Can't reach the Picfort server at 192.168.0.105"),
-                    ConnectionTest.Failed(WRONG_API_KEY),
-                ).forEach { test ->
-                    PicfortServerForm(
-                        address = "192.168.0.105:5000", onAddressChange = {},
-                        apiKey = "", onApiKeyChange = {}, test = test,
-                    )
-                    Spacer(Modifier.height(24.dp))
-                }
-            }
-        }
-    }
 
-    @Test
-    fun picfort_server_setup() = snap {
-        PicfortServerSetupContent(
-            address = "192.168.0.105:5000", onAddressChange = {}, test = wallTestResult(null),
-        )
-    }
 
     private companion object {
         const val NOW = 1_752_500_000_000L

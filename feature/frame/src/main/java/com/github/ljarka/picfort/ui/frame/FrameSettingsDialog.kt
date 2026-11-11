@@ -23,7 +23,8 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.github.ljarka.picfort.ui.wall.WallApi
+import com.github.ljarka.picfort.core.model.FrameResult
+import com.github.ljarka.picfort.core.network.PicfortServerClient
 import com.github.ljarka.picfort.core.network.PicfortServerException
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.CancellationException
@@ -59,7 +60,7 @@ fun wallTestResult(error: Exception?): ConnectionTest = when (error) {
 class FrameSettingsViewModel @Inject constructor(
     private val store: FrameSettingsStore,
     private val repository: FrameRepository,
-    private val wallApi: WallApi,
+    private val serverClient: PicfortServerClient,
 ) : ViewModel() {
 
     private val _test = MutableStateFlow<ConnectionTest>(ConnectionTest.Idle)
@@ -79,7 +80,7 @@ class FrameSettingsViewModel @Inject constructor(
         viewModelScope.launch {
             _test.value = when (val status = repository.testConnection(address, apiKey)) {
                 FrameResult.Sent -> try {
-                    wallApi.posts(limit = 1, address = address, apiKey = apiKey)
+                    serverClient.pingWall(address = address, apiKey = apiKey)
                     wallTestResult(null)
                 } catch (e: CancellationException) {
                     throw e

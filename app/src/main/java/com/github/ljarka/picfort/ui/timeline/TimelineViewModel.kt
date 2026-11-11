@@ -8,8 +8,8 @@ import com.github.ljarka.picfort.assets.AssetActions
 import com.github.ljarka.picfort.assets.SelectedAsset
 import com.github.ljarka.picfort.collections.CollectionsRepository
 import com.github.ljarka.picfort.db.AssetType
-import com.github.ljarka.picfort.ui.frame.FrameRepository
-import com.github.ljarka.picfort.ui.frame.FrameResult
+import com.github.ljarka.picfort.core.model.FrameResult
+import com.github.ljarka.picfort.core.model.FrameSender
 import com.github.ljarka.picfort.sync.SyncEngine
 import com.github.ljarka.picfort.ui.login.AccessTokenStore
 import com.github.ljarka.picfort.ui.server.ServerUrlStore
@@ -56,7 +56,7 @@ sealed interface TimelineEvent {
 class TimelineViewModel @Inject constructor(
     val timelineRepository: TimelineRepository,
     private val assetActions: AssetActions,
-    private val frameRepository: FrameRepository,
+    private val frameRepository: FrameSender,
     private val collections: CollectionsRepository,
     private val accessTokenStore: AccessTokenStore,
     private val serverUrlStore: ServerUrlStore,
