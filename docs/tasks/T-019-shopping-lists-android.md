@@ -1,6 +1,6 @@
 # T-019 — Shopping lists: Android screens (Keep-like)
 
-**Status:** ready (first step: mockup for the owner to approve)  
+**Status:** in-progress (code done; check on a device). Mockup: the Paparazzi screenshots `ScreenshotTest_shopping_*`, approved by the owner 2026-11-11.  
 **Component:** Android app  
 **Depends on:** T-017 (Shopping tab), T-018 (API)
 
