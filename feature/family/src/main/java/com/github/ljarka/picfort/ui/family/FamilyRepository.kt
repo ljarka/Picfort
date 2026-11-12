@@ -14,6 +14,7 @@ import com.github.ljarka.picfort.core.model.meFirst
 import com.github.ljarka.picfort.core.model.ImmichUsersSync
 import com.github.ljarka.picfort.core.model.FamilyMemberProvider
 import com.github.ljarka.picfort.core.ui.avatar.avatarColor
+import com.github.ljarka.picfort.core.ui.avatar.isChosenAvatarColor
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -86,6 +87,11 @@ fun mergeFamilyUsers(
     immichServerUrl: String,
 ): List<FamilyUserUi> {
     val base = immichServerUrl.trimEnd('/')
+    val immichIds = immichUsers.mapTo(HashSet()) { it.id }
+    val manualProfiles = profiles.values.filter { it.manual || !immichIds.contains(it.userId) }
+    // Members without a picked color get aperture colors in id order: distinct and the same on every phone.
+    val fallbackIndex = (immichUsers.filterNot { isChosenAvatarColor(it.avatarColor) }.map { it.id } +
+        manualProfiles.map { it.userId }).sorted().withIndex().associate { (i, id) -> id to i }
     val immichList = immichUsers.map { u ->
         val profile = profiles[u.id]
         val shownName = profile?.displayName?.trim()?.takeIf { it.isNotEmpty() } ?: u.name
@@ -104,7 +110,7 @@ fun mergeFamilyUsers(
             avatarUrl = avatarUrl,
             immichAvatarUrl = immichAvatar,
             hasCustomPhoto = profile?.photoUrl != null,
-            color = avatarColor(u.avatarColor),
+            color = avatarColor(u.avatarColor, fallbackIndex[u.id] ?: 0),
             hidden = hidden,
             isMe = isMe,
             isImmichUser = true,
@@ -112,8 +118,7 @@ fun mergeFamilyUsers(
         )
     }
 
-    val immichIds = immichUsers.mapTo(HashSet()) { it.id }
-    val manualList = profiles.values.filter { it.manual || !immichIds.contains(it.userId) }.map { p ->
+    val manualList = manualProfiles.map { p ->
         FamilyUserUi(
             id = p.userId,
             name = p.displayName ?: "Member",
@@ -121,7 +126,7 @@ fun mergeFamilyUsers(
             avatarUrl = p.photoUrl,
             immichAvatarUrl = null,
             hasCustomPhoto = p.photoUrl != null,
-            color = avatarColor(null),
+            color = avatarColor(null, fallbackIndex[p.userId] ?: 0),
             hidden = p.hidden ?: false,
             isMe = false,
             isImmichUser = false,

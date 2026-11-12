@@ -20,24 +20,47 @@ import androidx.compose.ui.unit.dp
 import coil3.compose.AsyncImage
 import com.github.ljarka.picfort.core.model.FamilyMember
 
-/** Immich's avatar color names → ring colors. Unknown or missing → primary. */
+// Ring colors from the app icon's aperture blades; mid tones so rings read on cream and on night.
+private val Coral = Color(0xFFE8604F)
+private val Amber = Color(0xFFE0A030)
+private val Mint = Color(0xFF3DAE78)
+private val Sky = Color(0xFF3A9CC8)
+private val Blue = Color(0xFF4F86D6)
+private val Periwinkle = Color(0xFF6676E0)
+
+/** Immich's avatar color names → ring colors, tuned to the aperture palette. */
 val AVATAR_COLORS = mapOf(
-    "primary" to Color(0xFF4250AF),
-    "pink" to Color(0xFFDE7FB3),
-    "red" to Color(0xFFD04040),
-    "yellow" to Color(0xFFE0B820),
-    "blue" to Color(0xFF3B82F6),
-    "green" to Color(0xFF22A06B),
-    "purple" to Color(0xFF8B5CF6),
-    "orange" to Color(0xFFF08A24),
-    "gray" to Color(0xFF6B7280),
-    "amber" to Color(0xFFD97706),
+    "pink" to Color(0xFFD9709E),
+    "red" to Coral,
+    "orange" to Color(0xFFEE7F3A),
+    "yellow" to Amber,
+    "amber" to Amber,
+    "green" to Mint,
+    "teal" to Sky,
+    "blue" to Blue,
+    "purple" to Periwinkle,
+    "gray" to Color(0xFF7A808A),
 )
+
+/**
+ * Colors handed out, in order, to members with no color of their own ("primary" is Immich's
+ * default, so nobody chose it): five clearly different aperture blades.
+ */
+private val APERTURE = listOf(Coral, Mint, Periwinkle, Amber, Sky)
+
+/** Whether [name] is a color the member picked in Immich (not the default "primary"). */
+fun isChosenAvatarColor(name: String?): Boolean = name in AVATAR_COLORS
 
 /** Ring color for authors who aren't Immich users (any more). */
 val UNKNOWN_MEMBER_COLOR = Color(0xFF9E9E9E)
 
-fun avatarColor(name: String?): Color = AVATAR_COLORS[name] ?: AVATAR_COLORS.getValue("primary")
+/**
+ * The member's ring color: the Immich color they picked, else aperture blade number
+ * [fallbackIndex] (the member's place among those without a color), so up to five members
+ * who never picked a color all look different.
+ */
+fun avatarColor(name: String?, fallbackIndex: Int = 0): Color =
+    AVATAR_COLORS[name] ?: APERTURE[Math.floorMod(fallbackIndex, APERTURE.size)]
 
 /** "Anna Maria Kowalska" → "AK", "mama" → "M". */
 fun initials(name: String): String {
