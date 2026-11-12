@@ -192,7 +192,7 @@ class FamilyRepository(
         )
     }
 
-    /** Visible Immich members for Wall avatar row (T-034: manual members don't post). */
+    /** Visible Immich members (people who can post or write). */
     override val members: Flow<List<FamilyMember>> = users.map { list ->
         list.filter { !it.hidden && it.isImmichUser }
             .sortedWith(compareBy(String.CASE_INSENSITIVE_ORDER) { it.name })
@@ -200,7 +200,7 @@ class FamilyRepository(
             .meFirst(myId)
     }
 
-    /** All visible family members (both Immich and manual) for Shopping, Events, etc. */
+    /** All visible family members (Immich and manual): Wall avatar row, Shopping, Events, pickers. */
     override val allMembers: Flow<List<FamilyMember>> = users.map { list ->
         list.filter { !it.hidden }
             .sortedWith(compareBy(String.CASE_INSENSITIVE_ORDER) { it.name })

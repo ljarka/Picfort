@@ -78,7 +78,7 @@ class FamilyWallViewModel @Inject constructor(
 
     init {
         viewModelScope.launch {
-            family.members.collect { members ->
+            family.allMembers.collect { members ->
                 _state.update { s ->
                     val selected = s.selectedMemberId?.takeIf { id -> members.any { it.id == id } }
                     s.copy(members = members, selectedMemberId = selected)
