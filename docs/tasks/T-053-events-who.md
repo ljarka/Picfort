@@ -1,6 +1,6 @@
 # T-053 — Events: who the event is for
 
-**Status:** done (COMMIT; mockup `docs/wireframes/events-who-v1.png` approved 2026-11-13; checked on the emulator)  
+**Status:** done (606eca1; mockup `docs/wireframes/events-who-v1.png` approved 2026-11-13; checked on the emulator)  
 **Component:** Android app + server (`events.db` v4)  
 **Depends on:** T-022/T-023 (events), T-034 (members, manual members), ADR 0010
 
