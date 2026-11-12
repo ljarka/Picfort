@@ -177,7 +177,11 @@ class TimelineViewModel @Inject constructor(
             collections.createAlbum(newAlbumName, ids)
             "Created \"${newAlbumName.trim()}\" with ${ids.size}"
         } else {
-            val added = collections.addToAlbum(albumId!!, ids)
+            val targetAlbumId = albumId ?: run {
+                _messages.send("Choose an album first")
+                return@runAction
+            }
+            val added = collections.addToAlbum(targetAlbumId, ids)
             if (added == 0) "Already in \"$albumName\"" else "Added $added to \"$albumName\""
         }
         clearSelection()

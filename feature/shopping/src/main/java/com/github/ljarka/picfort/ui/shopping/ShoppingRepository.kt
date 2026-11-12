@@ -255,7 +255,11 @@ class ShoppingRepository @Inject constructor(
         if (error is PicfortServerException.Gone) {
             // Someone else deleted the item or the list: show the server's version quietly.
             runCatching { backend.list(listId).list }.onSuccess { fresh ->
-                all.update { it + (listId to fresh!!) }
+                if (fresh != null) {
+                    all.update { it + (listId to fresh) }
+                } else {
+                    all.update { it - listId }
+                }
             }.onFailure { all.update { it - listId } }
             return
         }

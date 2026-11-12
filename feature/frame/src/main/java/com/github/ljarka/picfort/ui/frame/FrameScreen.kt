@@ -55,7 +55,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 
 @Composable
@@ -255,23 +255,25 @@ private fun Dashboard(
                     }
             }
         }
-        val quiet = slideshow.quietStart != null && slideshow.quietEnd != null
+        val quietStart = slideshow.quietStart
+        val quietEnd = slideshow.quietEnd
+        val quiet = quietStart != null && quietEnd != null
+        val quietText = if (quietStart != null && quietEnd != null) {
+            "No changes ${hourLabel(quietStart)}–${hourLabel(quietEnd)}"
+        } else {
+            "Change photos around the clock"
+        }
         ListItem(
             headlineContent = { Text("Quiet hours") },
-            supportingContent = {
-                Text(
-                    if (quiet) "No changes ${hourLabel(slideshow.quietStart!!)}–${hourLabel(slideshow.quietEnd!!)}"
-                    else "Change photos around the clock"
-                )
-            },
+            supportingContent = { Text(quietText) },
             trailingContent = {
                 Switch(checked = quiet, onCheckedChange = { on -> if (on) onQuietHours(22, 7) else onQuietHours(null, null) })
             },
         )
-        if (quiet) {
+        if (quietStart != null && quietEnd != null) {
             Row(Modifier.padding(horizontal = 16.dp), verticalAlignment = Alignment.CenterVertically) {
-                HourPicker("From", slideshow.quietStart!!) { onQuietHours(it, slideshow.quietEnd) }
-                HourPicker("to", slideshow.quietEnd!!) { onQuietHours(slideshow.quietStart, it) }
+                HourPicker("From", quietStart) { onQuietHours(it, quietEnd) }
+                HourPicker("to", quietEnd) { onQuietHours(quietStart, it) }
             }
         }
     }

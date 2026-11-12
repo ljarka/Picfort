@@ -120,7 +120,8 @@ class AssetActions @Inject constructor(
             }
             val uri = resolver.insert(collection, values) ?: throw IOException("Couldn't create file")
             try {
-                resolver.openOutputStream(uri)!!.use { download(asset.id, it) }
+                resolver.openOutputStream(uri)?.use { download(asset.id, it) }
+                    ?: throw IOException("Couldn't open file for writing")
                 resolver.update(uri, ContentValues().apply { put(MediaStore.MediaColumns.IS_PENDING, 0) }, null, null)
                 true
             } catch (e: Exception) {
@@ -153,7 +154,7 @@ class AssetActions @Inject constructor(
             .build()
         okHttpClient.newCall(request).execute().use { response ->
             if (!response.isSuccessful) throw IOException("Download failed (HTTP ${response.code})")
-            response.body!!.byteStream().use { it.copyTo(out) }
+            response.body.byteStream().use { it.copyTo(out) }
         }
     }
 

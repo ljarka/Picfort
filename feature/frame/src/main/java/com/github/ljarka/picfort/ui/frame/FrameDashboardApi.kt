@@ -4,6 +4,7 @@ import com.github.ljarka.picfort.core.network.CleartextNotAllowedException
 import com.github.ljarka.picfort.core.network.FrameSettingsStore
 import com.github.ljarka.picfort.core.network.isPicfortKeyRejected
 import com.github.ljarka.picfort.core.network.normalizeFrameUrl
+import com.github.ljarka.picfort.core.network.readParsedBody
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.SerialName
@@ -16,6 +17,7 @@ import kotlinx.serialization.json.JsonPrimitive
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
 import okhttp3.Request
+import okhttp3.Response
 import okhttp3.RequestBody.Companion.toRequestBody
 import java.io.IOException
 import javax.inject.Inject
@@ -80,11 +82,11 @@ class FrameDashboardApi @Inject constructor(
     /** PNG of what the panel shows (dithered preview), or null if nothing yet. */
     suspend fun currentImage(): ByteArray? = withContext(Dispatchers.IO) {
         val url = base().newBuilder().addPathSegment("current").build()
-        execute(Request.Builder().url(url).build()) { code, bytes ->
-            when (code) {
-                200 -> bytes
+        execute(Request.Builder().url(url).build()) { response ->
+            when (response.code) {
+                200 -> response.body.bytes()
                 404 -> null
-                else -> throw FrameException("Frame returned HTTP $code")
+                else -> throw FrameException("Frame returned HTTP ${response.code}")
             }
         }
     }
@@ -95,20 +97,17 @@ class FrameDashboardApi @Inject constructor(
         withContext(Dispatchers.IO) {
             val url = base().newBuilder().addPathSegment(path).build()
             val body = jsonBody?.toRequestBody("application/json".toMediaType())
-            execute(Request.Builder().url(url).method(method, body).build()) { code, bytes ->
-                val text = bytes.decodeToString()
-                if (code in 200..299) text
-                else throw FrameException(
-                    runCatching { json.decodeFromString<ErrorBody>(text).message }.getOrNull()
-                        ?: "Frame returned HTTP $code"
-                )
+            execute(Request.Builder().url(url).method(method, body).build()) { response ->
+                val payload = response.readParsedBody<ErrorBody>(json)
+                if (response.code in 200..299) payload.text
+                else throw FrameException(payload.value?.message ?: "Frame returned HTTP ${response.code}")
             }
         }
 
-    private fun <T> execute(request: Request, map: (Int, ByteArray) -> T): T = try {
-        client.newCall(request).execute().use {
-            if (it.isPicfortKeyRejected()) throw FrameException(WRONG_API_KEY)
-            map(it.code, it.body?.bytes() ?: ByteArray(0))
+    private fun <T> execute(request: Request, map: (Response) -> T): T = try {
+        client.newCall(request).execute().use { response ->
+            if (response.isPicfortKeyRejected()) throw FrameException(WRONG_API_KEY)
+            map(response)
         }
     } catch (e: CleartextNotAllowedException) {
         throw FrameException(e.message ?: "Use https:// for frames outside your network")

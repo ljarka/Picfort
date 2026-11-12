@@ -86,7 +86,7 @@ class BackupEngine @Inject constructor(
             row != null && row.dateModified == m.dateModified && row.size == m.size
         val todo = media.filter { m ->
             val row = known[m.id]
-            !isUnchanged(m, row) || (row!!.remoteId == null && row.rejected == null)
+            !isUnchanged(m, row) || (row?.remoteId == null && row?.rejected == null)
         }
         val alreadyBackedUp = media.size - todo.size
         onProgress(BackupProgress(alreadyBackedUp, media.size))
