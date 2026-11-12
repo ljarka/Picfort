@@ -1,0 +1,53 @@
+# Device smoke test: log in on a clean install and open every tab and the main sub-screens.
+# Run with ./scripts/maestro-smoke.sh (test account + test server only, see AGENTS.md).
+appId: com.github.ljarka.immich.android2
+name: Smoke — login and all tabs
+---
+- launchApp:
+    clearState: true
+    permissions:
+      all: allow
+- runFlow: subflows/login.yaml
+
+# Wall (home)
+- extendedWaitUntil:
+    visible: "Family Wall"
+    timeout: 20000
+- assertVisible: "New post"
+
+# Shopping
+- tapOn: "Shopping"
+- assertVisible:
+    text: "Shopping"
+    index: 0
+
+# Events
+- tapOn: "Events"
+- assertVisible: "Upcoming"
+- assertVisible: "Add event"
+
+# School (placeholder until T-029)
+- tapOn: "School"
+- assertVisible: "School timetables are coming soon."
+
+# Photos: timeline, no logo in the app bar
+- tapOn: "Photos"
+- extendedWaitUntil:
+    visible: "Timeline"
+    timeout: 20000
+- assertVisible: "Search"
+- assertVisible: "Albums"
+
+# Settings → Family, Settings → Picture frame
+- tapOn: "Settings"
+- assertVisible: "Backup"
+- tapOn: "Names, photos and hidden accounts"
+- assertVisible: "Add person"
+- back
+- tapOn: "Picture frame, slideshow and the Family Wall"
+- assertVisible: "Picture frame"
+- back
+- back
+
+- tapOn: "Wall"
+- assertVisible: "Family Wall"
