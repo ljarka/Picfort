@@ -20,7 +20,7 @@ dependencies {
     implementation(libs.retrofit)
     implementation(libs.converter.kotlinx.serialization)
     implementation(libs.kotlin.serialization.json)
-    implementation(libs.security.crypto)
+    implementation(libs.datastore.preferences)
 
     testImplementation(libs.junit)
 }
