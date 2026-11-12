@@ -167,21 +167,11 @@ fun TabBar(selected: Tab?, onSelect: (Tab) -> Unit, modifier: Modifier = Modifie
 }
 
 /**
- * Wraps a tab root. The bar is drawn over the screens, so a tab root leaves room for it: its
- * FAB, snackbars and last row stay above the bar, and the bar's insets are consumed so inner
- * Scaffolds don't add the navigation bar a second time. The room is kept while the bar is
- * hidden (photo viewer), so the timeline doesn't resize during the shared-element transition.
+ * Wraps a tab root. Content draws edge-to-edge behind the floating navigation bar.
  */
 @Composable
 fun TabRoot(content: @Composable () -> Unit) {
-    val systemBar = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
-    val room = PaddingValues(bottom = TAB_BAR_TOTAL_HEIGHT + systemBar)
-    Box(
-        Modifier
-            .fillMaxSize()
-            .padding(room)
-            .consumeWindowInsets(room)
-    ) { content() }
+    Box(Modifier.fillMaxSize()) { content() }
 }
 
 /** Settings action for every tab root's top bar. */
