@@ -331,7 +331,8 @@ private fun FamilyUserRow(user: FamilyUserUi, onClick: () -> Unit) {
 /** State of the member-edit bottom sheet (T-032, T-034). */
 data class FamilyMemberEditUi(
     val user: FamilyUserUi,
-    val displayName: String = if (user.name != user.immichName && user.immichName.isNotEmpty()) user.name else "",
+    /** Prefilled with the shown name; saving the Immich name unchanged stores no override. */
+    val displayName: String = user.name,
     val previewAvatarUrl: String? = user.avatarUrl,
     val hasCustomPhoto: Boolean = user.hasCustomPhoto,
     val pickedPersonId: String? = null,
@@ -503,7 +504,7 @@ fun FamilyMemberSheetContent(
                 Text("Cancel")
             }
             Spacer(Modifier.width(8.dp))
-            Button(onClick = onSave, enabled = !state.saving) {
+            Button(onClick = onSave, enabled = !state.saving && (state.user.isImmichUser || state.displayName.isNotBlank())) {
                 Text(if (state.saving) "Saving…" else "Save")
             }
         }
