@@ -320,6 +320,12 @@ class MainActivity : ComponentActivity() {
                                             onSearchClick = { navController.navigate(Screen.Search) },
                                             onAlbumsClick = { navController.navigate(Screen.Albums) },
                                             scrollToTop = photosScrollToTop,
+                                            onPersonAssetClick = { asset, index, source ->
+                                                navController.navigate(
+                                                    ImageDetailsRoute(asset.id, AssetType.REMOTE, index, source)
+                                                )
+                                            },
+                                            onEditMember = { id -> navController.navigate(Screen.FamilySettings(id)) },
                                         )
                                     }
                                 }

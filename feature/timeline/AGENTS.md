@@ -16,11 +16,12 @@ Immich photo timeline, gallery, full-screen viewer, collections, and media sync 
 | `collections/CollectionsScreens.kt` | Albums list, album view, search screen |
 | `sync/SyncEngine.kt` | Immich delta sync engine |
 | `local/LocalImagesProvider.kt` | Device MediaStore photo reader |
-| `ui/timeline/TimelineScreenshotTest.kt` | Paparazzi snapshots: timeline layouts, empty state, album, search, details |
+| `ui/people/PeopleFilterViewModel.kt`, `PersonPhotosContent.kt` | Family carousel on Photos, photos of one person via `search/metadata` (T-052) |
+| `ui/timeline/TimelineScreenshotTest.kt` | Paparazzi snapshots: timeline layouts, empty state, album, search, details, family carousel |
 
 ## Public Contract / Navigation Entry Points
 
-- `TimelineScreen(onImageClick, onSearchClick, onAlbumsClick, onSettingsClick)`
+- `TimelineScreen(onImageClick, onSearchClick, onAlbumsClick, onSettingsClick, onPersonAssetClick, onEditMember)`
 - `ImageDetailsScreen(sharedTransitionScope, animatedVisibilityScope, onDismissRequest, assetId, assetType, imageIndex, frameSettingsDialog)`
 - `AlbumsScreen(onAlbumClick, onBack)`
 - `AlbumScreen(onBack, onAssetClick)`
@@ -28,8 +29,8 @@ Immich photo timeline, gallery, full-screen viewer, collections, and media sync 
 
 ## Dependencies & Boundaries
 
-- Depends on `:core:model` (`FrameSender`, `FrameResult`, `localImageUri`).
-- Depends on `:core:ui` (`PicfortTheme`).
+- Depends on `:core:model` (`FrameSender`, `FrameResult`, `localImageUri`, `FamilyMemberProvider` with `myPersonIds`).
+- Depends on `:core:ui` (`PicfortTheme`, `MemberCarousel`, `aboveFloatingTabBar`).
 - Depends on `:core:database` (`ImagesDatabase`, `RemoteAssetEntity`, `BackupDao`).
 - Depends on `:core:network` (`AccessTokenStore`, `ServerUrlStore`).
 - **NEVER** depends directly on other feature modules (`:feature:frame`, `:feature:wall`, `:feature:shopping`).

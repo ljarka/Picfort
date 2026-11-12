@@ -27,6 +27,15 @@ import com.github.ljarka.picfort.collections.LoadState
 import com.github.ljarka.picfort.collections.SearchContent
 import com.github.ljarka.picfort.collections.SearchUi
 import com.github.ljarka.picfort.core.ui.theme.PicfortTheme
+import com.github.ljarka.picfort.core.model.FamilyMember
+import com.github.ljarka.picfort.core.ui.avatar.avatarColor
+import com.github.ljarka.picfort.ui.people.PeopleFilterRow
+import com.github.ljarka.picfort.ui.people.PeopleFilterUi
+import com.github.ljarka.picfort.ui.people.PersonPhotosContent
+import androidx.compose.foundation.layout.BoxScope
+import androidx.compose.material3.Snackbar
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import com.github.ljarka.picfort.core.database.AssetType
 import com.github.ljarka.picfort.ui.image.AssetDetailsList
 import com.github.ljarka.picfort.ui.image.DetailsState
@@ -85,7 +94,13 @@ class TimelineScreenshotTest {
     }
 
     @OptIn(ExperimentalSharedTransitionApi::class, ExperimentalMaterial3Api::class)
-    private fun snapshot(state: TimelineState, syncLines: Int? = null, account: TimelineAccount? = null) {
+    private fun snapshot(
+        state: TimelineState,
+        syncLines: Int? = null,
+        account: TimelineAccount? = null,
+        header: (@Composable () -> Unit)? = null,
+        overlay: @Composable BoxScope.() -> Unit = {},
+    ) {
         paparazzi.snapshot {
             PicfortTheme(dynamicColor = false) {
                 WithSamplePhotos {
@@ -112,9 +127,11 @@ class TimelineScreenshotTest {
                                         modifier = Modifier.padding(padding),
                                         account = account,
                                         syncLines = syncLines,
+                                        header = header,
                                     )
                                 }
-                                FastScroll(state)
+                                FastScroll(state, withHeader = header != null)
+                                overlay()
                             }
                         }
                     }
@@ -124,9 +141,16 @@ class TimelineScreenshotTest {
     }
 
     @Composable
-    private fun FastScroll(state: TimelineState) {
+    private fun FastScroll(state: TimelineState, withHeader: Boolean = false) {
         val months = state.layout?.months.orEmpty()
-        if (months.isNotEmpty()) FastScrollComponent(months = months, listState = rememberLazyListState())
+        if (months.isNotEmpty()) {
+            FastScrollComponent(
+                months = months,
+                listState = rememberLazyListState(),
+                firstRowIndex = if (withHeader) 1 else 0,
+                extraTop = if (withHeader) 104.dp else 0.dp,
+            )
+        }
     }
 
     private fun snap(content: @Composable () -> Unit) {
@@ -191,6 +215,65 @@ class TimelineScreenshotTest {
             month(1L, start = 20, seed = 40, count = 8),
         )
         snapshot(TimelineState(LoadingState.LOADED, layout))
+    }
+
+    // --- T-052: family carousel on Photos -------------------------------------------------
+
+    private val family = listOf(
+        FamilyMember("mama", "Mama", null, avatarColor("pink")),
+        FamilyMember("tata", "Tata", null, avatarColor("blue")),
+        FamilyMember("ola", "Ola", null, avatarColor("green")),
+        FamilyMember("stas", "Staś", null, avatarColor("orange"), isImmichUser = false),
+        FamilyMember("kuba", "Kuba", null, avatarColor("purple"), isImmichUser = false),
+    )
+    private val linked = mapOf("mama" to "p1", "tata" to "p2", "ola" to "p3", "stas" to "p4")
+
+    private fun timelineLayout() = layoutOf(
+        month(3L, start = 0, seed = 0, count = 11),
+        month(2L, start = 11, seed = 20, count = 9),
+        month(1L, start = 20, seed = 40, count = 8),
+    )
+
+    @Test
+    fun timeline_people() {
+        snapshot(
+            TimelineState(LoadingState.LOADED, timelineLayout()),
+            header = { PeopleFilterRow(PeopleFilterUi(family, linked), onSelect = {}) },
+        )
+    }
+
+    @Test
+    fun timeline_people_not_linked() {
+        snapshot(
+            TimelineState(LoadingState.LOADED, timelineLayout()),
+            header = { PeopleFilterRow(PeopleFilterUi(family, linked), onSelect = {}) },
+            overlay = {
+                Snackbar(
+                    action = { TextButton(onClick = {}) { Text("Link", color = MaterialTheme.colorScheme.inversePrimary) } },
+                    modifier = Modifier.align(Alignment.BottomCenter).padding(12.dp),
+                ) { Text("Kuba isn't linked to your Immich people") }
+            },
+        )
+    }
+
+    @OptIn(ExperimentalMaterial3Api::class)
+    @Test
+    fun person_photos() = snap {
+        Scaffold(
+            topBar = {
+                TimelineAppBar(
+                    scrollBehavior = TopAppBarDefaults.enterAlwaysScrollBehavior(),
+                    onSettingsClick = {}, onSearchClick = {}, onAlbumsClick = {},
+                )
+            },
+        ) { padding ->
+            PersonPhotosContent(
+                people = PeopleFilterUi(family, linked, selectedId = "ola"),
+                photos = LoadState.Loaded(photos.drop(3)),
+                thumbnail = { it.id },
+                modifier = Modifier.padding(padding),
+            )
+        }
     }
 
     @Test

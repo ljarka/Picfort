@@ -60,6 +60,13 @@ private class FakeFamilyBackend(
     val map = mutableMapOf<String, FamilyProfile>()
     val uploadedPhotos = mutableMapOf<String, ByteArray>()
     val deletedPhotos = mutableListOf<String>()
+    val links = mutableMapOf<String, String>()
+
+    override suspend fun myPeople(): Map<String, String> = links.toMap()
+
+    override suspend fun linkPerson(memberId: String, personId: String) {
+        links[memberId] = personId
+    }
 
     override suspend fun profiles(): Pair<List<FamilyProfile>, String> {
         failWith?.let { throw it }
@@ -481,8 +488,12 @@ class FamilyRepositoryTest {
         assertTrue(kuba.hasCustomPhoto)
         assertFalse(kuba.isImmichUser)
 
+        assertEquals(mapOf(kuba.id to "person-kuba"), repo.myPersonIds.first())
+
         repo.saveMember(kuba, displayName = "Kuba", pickedPersonId = "person-kuba-2")
         assertEquals("person-kuba-2", people.lastThumbPersonId)
+        // Choosing a face links the member to that person in my photos (T-052).
+        assertEquals(mapOf(kuba.id to "person-kuba-2"), repo.myPersonIds.first())
     }
 
     @Test

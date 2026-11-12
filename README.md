@@ -34,7 +34,7 @@ These are rendered from the app's UI code with sample photos by the [screenshot 
 
 - **Family hub.** The app opens on the Family Wall. A bottom bar switches between Wall, Shopping, Events, School and Photos; each tab keeps its place. School is coming (Phase 7 in [docs/STATUS.md](docs/STATUS.md)).
 - **Shopping lists.** Shared lists for the family, like Google Keep: check items off, checked ones fold away with the avatar of who checked them, add item after item without closing the keyboard, delete with Undo, archive. An open list updates every 10 seconds. Without a connection (in the shop) the last loaded lists stay readable. Lists live on the Picfort server.
-- **One timeline.** Photos from Immich and from the phone's MediaStore (the last 24 months) are merged and grouped by month, newest first. A cloud icon shows where each image comes from.
+- **One timeline.** Photos from Immich and from the phone's MediaStore (the last 24 months) are merged and grouped by month, newest first. A cloud icon shows where each image comes from. The family's avatar row sits on top: tap a member to see only the photos with them (their face is chosen in Family settings).
 - **Aspect-ratio grid.** A 4-column grid where wide photos take more columns. The number of rows per month is cached so the scrollbar is right before the images load.
 - **Fast scroll.** A draggable scrollbar that shows the month you're scrolling to.
 - **Offline-first cache.** Months and assets are stored in Room. Cached data is shown at once and refreshed in the background. Pull down to refresh.

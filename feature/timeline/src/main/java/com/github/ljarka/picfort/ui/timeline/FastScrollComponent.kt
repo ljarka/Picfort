@@ -24,6 +24,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -38,12 +39,16 @@ import kotlin.math.roundToInt
 fun FastScrollComponent(
     months: List<MonthMarker>,
     listState: LazyListState,
+    /** List items before the first row (the family carousel). */
+    firstRowIndex: Int = 0,
+    /** Room above the month pill (the family carousel's height). */
+    extraTop: Dp = 0.dp,
 ) {
     BoxWithConstraints(
         modifier = Modifier.fillMaxSize()
     ) {
         var numberOfItems = months.size
-        var maxOffset = with(LocalDensity.current) { (maxHeight - 208.dp).toPx() }
+        var maxOffset = with(LocalDensity.current) { (maxHeight - 208.dp - extraTop).toPx() }
         var minDelta = maxOffset / numberOfItems
         var offsetY by rememberSaveable { mutableStateOf(0) }
         var index by rememberSaveable { mutableStateOf(0) }
@@ -61,7 +66,7 @@ fun FastScrollComponent(
             currentJob?.cancel()
             currentJob = coroutineScope.launch {
                 // Rows are laid out ahead of time, so the header row is exactly where it will be.
-                listState.scrollToItem(months[index].rowIndex)
+                listState.scrollToItem(months[index].rowIndex + firstRowIndex)
                 text = months[index].title
             }
         })
@@ -70,7 +75,7 @@ fun FastScrollComponent(
                 .collect { firstItemIndex ->
                     if (!isDragging) {
                         withContext(Dispatchers.Default) {
-                            val month = months.lastOrNull { it.rowIndex <= firstItemIndex }
+                            val month = months.lastOrNull { it.rowIndex + firstRowIndex <= firstItemIndex }
                             if (month != null) {
                                 text = month.title
                                 if (listState.isScrollInProgress) {
@@ -83,7 +88,7 @@ fun FastScrollComponent(
         }
         Button(
             modifier = Modifier
-                .padding(top = 112.dp)
+                .padding(top = 112.dp + extraTop)
                 .graphicsLayer {
                     translationY = max(min(offsetY, maxOffset.toInt()).toFloat(), 0f)
                 }

@@ -28,6 +28,15 @@ data class BulkIdResult(val id: String, val success: Boolean = false, val error:
 @Serializable
 data class SmartSearchRequest(val query: String, val page: Int = 1, val size: Int = 100)
 
+/** Photos with a person (T-052). No default values: the app's Json doesn't encode defaults. */
+@Serializable
+data class MetadataSearchRequest(
+    val personIds: List<String>,
+    val page: Int,
+    val size: Int,
+    val order: String,
+)
+
 @Serializable
 data class SearchAssetDto(
     val id: String,
@@ -59,4 +68,7 @@ interface CollectionsService {
     /** CLIP "smart" search: natural-language queries like "dog on the beach". */
     @POST("/api/search/smart")
     suspend fun smartSearch(@Body body: SmartSearchRequest): SearchResponse
+
+    @POST("/api/search/metadata")
+    suspend fun metadataSearch(@Body body: MetadataSearchRequest): SearchResponse
 }
