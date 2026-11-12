@@ -90,6 +90,7 @@ import com.github.ljarka.picfort.core.ui.component.ServerRequiredContent
 import com.github.ljarka.picfort.core.ui.component.SettingsAction
 import com.github.ljarka.picfort.core.model.FamilyMember
 import com.github.ljarka.picfort.core.ui.avatar.MemberAvatar
+import com.github.ljarka.picfort.core.ui.component.aboveFloatingTabBar
 
 private const val PREVIEW_ITEMS = 6
 
@@ -144,6 +145,7 @@ fun ShoppingListsContent(
                     onClick = { creating = true },
                     icon = { Icon(Icons.Default.Add, null) },
                     text = { Text("List") },
+                    modifier = Modifier.aboveFloatingTabBar(),
                 )
             }
         },

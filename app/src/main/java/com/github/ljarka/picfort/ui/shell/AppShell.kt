@@ -61,6 +61,7 @@ import androidx.lifecycle.compose.LifecycleEventEffect
 import com.github.ljarka.picfort.R
 import com.github.ljarka.picfort.core.network.FrameSettingsStore
 import com.github.ljarka.picfort.core.network.normalizeFrameUrl
+import com.github.ljarka.picfort.core.ui.component.FloatingTabBar
 import com.github.ljarka.picfort.ui.frame.FrameSettingsDialog
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
@@ -73,11 +74,6 @@ enum class Tab(val label: String, @param:DrawableRes val icon: Int) {
     SCHOOL("School", R.drawable.ic_school),
     PHOTOS("Photos", R.drawable.ic_photo_library),
 }
-
-/** Floating navigation bar height and outer vertical spacing. */
-private val FLOATING_BAR_HEIGHT = 64.dp
-private val FLOATING_BAR_MARGIN_BOTTOM = 8.dp
-private val TAB_BAR_TOTAL_HEIGHT = FLOATING_BAR_HEIGHT + (FLOATING_BAR_MARGIN_BOTTOM * 2)
 
 /**
  * The floating bottom navigation bar.
@@ -95,9 +91,9 @@ fun TabBar(selected: Tab?, onSelect: (Tab) -> Unit, modifier: Modifier = Modifie
         border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f)),
         modifier = modifier
             .navigationBarsPadding()
-            .padding(horizontal = 16.dp, vertical = FLOATING_BAR_MARGIN_BOTTOM)
+            .padding(horizontal = 16.dp, vertical = FloatingTabBar.MarginVertical)
             .fillMaxWidth()
-            .height(FLOATING_BAR_HEIGHT)
+            .height(FloatingTabBar.Height)
             .semantics { collectionInfo = CollectionInfo(rowCount = 1, columnCount = Tab.entries.size) },
     ) {
         Row(

@@ -83,6 +83,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.github.ljarka.picfort.core.ui.component.ServerRequiredContent
 import com.github.ljarka.picfort.core.ui.component.SettingsAction
+import com.github.ljarka.picfort.core.ui.component.aboveFloatingTabBar
 import java.time.LocalDate
 import java.time.LocalTime
 import java.time.format.DateTimeFormatter
@@ -167,7 +168,7 @@ fun EventsListContent(
             if (state.configured && state.loadError == null) {
                 FloatingActionButton(
                     onClick = onAddClick,
-                    modifier = Modifier.padding(bottom = 80.dp),
+                    modifier = Modifier.aboveFloatingTabBar(),
                 ) {
                     Icon(Icons.Default.Add, contentDescription = "Add event")
                 }

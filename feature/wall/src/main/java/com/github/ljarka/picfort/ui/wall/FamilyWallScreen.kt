@@ -94,6 +94,7 @@ import coil3.compose.AsyncImage
 import com.github.ljarka.picfort.core.ui.R
 import com.github.ljarka.picfort.core.ui.component.ServerRequiredContent
 import com.github.ljarka.picfort.core.ui.component.SettingsAction
+import com.github.ljarka.picfort.core.ui.component.aboveFloatingTabBar
 import java.io.File
 import java.util.UUID
 
@@ -208,7 +209,10 @@ fun FamilyWallContent(
         },
         floatingActionButton = {
             if (state.configured) {
-                FloatingActionButton(onClick = { composing = true }) {
+                FloatingActionButton(
+                    onClick = { composing = true },
+                    modifier = Modifier.aboveFloatingTabBar(),
+                ) {
                     Icon(Icons.Default.Add, contentDescription = "New post")
                 }
             }
