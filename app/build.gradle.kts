@@ -92,7 +92,6 @@ dependencies {
     implementation(libs.kotlin.serialization.json)
     implementation(libs.navigation.compose)
     implementation(libs.androidx.core.ktx)
-    implementation(libs.security.crypto)
     implementation(libs.logging.interceptor)
     implementation(libs.androidx.lifecycle.runtime.ktx)
     implementation(libs.androidx.activity.compose)
