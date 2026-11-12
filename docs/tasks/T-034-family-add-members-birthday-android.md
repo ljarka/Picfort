@@ -32,8 +32,9 @@ the member sheet with the birth date row; the add-person sheet. It extends `fami
 
 - `FamilyMember` gains `isImmichUser` and `birthDate` (`MonthDay` + optional year). Manual members
   have `isImmichUser = false`, `avatarUrl` from the profile photo.
-- The wall's avatar row and posts use only Immich users (manual members can't post); Shopping, Events
-  and the pickers get everyone via a `FamilyRepository.allMembers` flow.
+- Posts come only from Immich users (manual members can't post). The wall's avatar row, Shopping, Events
+  and the pickers show everyone via a `FamilyRepository.allMembers` flow (avatar row changed 2026-11-12
+  at the owner's request: a manual member there just has no posts).
 - The last copy is kept on disk (as T-032), so birthdays show offline.
 
 ## Acceptance criteria
@@ -41,7 +42,7 @@ the member sheet with the birth date row; the add-person sheet. It extends `fami
 - [ ] Adding "Babcia" with a birth date makes her appear on the other phone within 60 s.
 - [ ] Immich users are marked; manual ones are not; manual ones can be deleted after a confirmation.
 - [ ] The birth date can be set without a year, changed and removed, for both kinds of member.
-- [ ] A manual member doesn't show on the wall's avatar row or as a post author.
+- [ ] A manual member never shows as a post author (since 2026-11-12 it does show on the avatar row).
 - [ ] Old server (`404` on `/family/members`): no "Add person" action.
 - [ ] Unit tests: member merge (Immich + manual, birth date with and without year, age).
 - [ ] Paparazzi: list with badges, add sheet, member sheet with birthday, dark.

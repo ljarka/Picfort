@@ -23,7 +23,7 @@ Family wall vertical slice: posts stream, today panel (events/trips/birthdays), 
 - Depends on `:core:ui` (`PicfortTheme`, `MemberAvatar`, `SettingsAction`, `ServerRequiredContent`).
 - Depends on `:core:network` (`PicfortServerClient`, `PicfortServerException`).
 - **NEVER** depends directly on other feature modules (`:feature:events`, `:feature:shopping`, `:feature:family`).
-- Consumes family members via `FamilyMemberProvider` interface (bound in `:app` from `:feature:family`).
+- Consumes family members via `FamilyMemberProvider.allMembers` (bound in `:app` from `:feature:family`): the avatar row shows manual members too; they just have no posts.
 - Consumes upcoming events for `TodayPanel` via `FamilyEventsProvider` interface (bound in `:app` from `:feature:events`).
 - `todayPanel`: timed events first, then ongoing trips, then one-day events (birthdays before others).
 
