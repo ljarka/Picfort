@@ -21,6 +21,8 @@ Family management vertical slice: member profiles, Immich users syncing, custom 
   named Immich people from the logged-in user's library) and "Clear" (initials; `no_photo` on the
   server for Immich users). Manual members can take a face too. ADR 0010 amendment 2026-11-12.
 - `addMember(pickedPersonId)` fetches the face before creating the member.
+- A picked face also saves my link member → my Immich person (`/family/<id>/person`, per viewer);
+  `myPersonIds` feeds the Photos carousel (T-052).
 
 ## Public Contract / Navigation Entry Points
 

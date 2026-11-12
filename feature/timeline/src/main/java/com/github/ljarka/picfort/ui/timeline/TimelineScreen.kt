@@ -1,5 +1,14 @@
 package com.github.ljarka.picfort.ui.timeline
 
+import androidx.compose.material3.SnackbarHost
+import com.github.ljarka.picfort.core.ui.component.aboveFloatingTabBar
+import androidx.activity.compose.BackHandler
+import androidx.compose.material3.SnackbarDuration
+import androidx.compose.material3.SnackbarResult
+import com.github.ljarka.picfort.collections.GridAsset
+import com.github.ljarka.picfort.ui.people.PeopleFilterRow
+import com.github.ljarka.picfort.ui.people.PeopleFilterViewModel
+import com.github.ljarka.picfort.ui.people.PersonPhotosContent
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.items
@@ -107,6 +116,10 @@ fun TimelineScreen(
     modifier: Modifier = Modifier,
     /** Bumped when the Photos tab is reselected: scroll back to the newest photos. */
     scrollToTop: Int = 0,
+    /** A photo in "Photos of Ola" (T-052): the viewer pages through [source]. */
+    onPersonAssetClick: (asset: GridAsset, index: Int, source: String) -> Unit = { _, _, _ -> },
+    /** "Link" on a member who isn't linked yet: their sheet in Family settings. */
+    onEditMember: (String) -> Unit = {},
 ) {
     Box(modifier = modifier.fillMaxSize()) {
         val viewModel: TimelineViewModel = hiltViewModel()
@@ -115,9 +128,16 @@ fun TimelineScreen(
         // Back from the background (another app, the Immich web UI…): sync again.
         LifecycleEventEffect(Lifecycle.Event.ON_START) { viewModel.onForeground() }
         val listState = rememberLazyListState()
+        val peopleViewModel: PeopleFilterViewModel = hiltViewModel()
+        val people by peopleViewModel.people.collectAsStateWithLifecycle()
+        val personPhotos by peopleViewModel.photos.collectAsStateWithLifecycle()
         LaunchedEffect(scrollToTop) {
-            if (scrollToTop > 0) listState.animateScrollToItem(0)
+            if (scrollToTop > 0) {
+                peopleViewModel.clear()
+                listState.animateScrollToItem(0)
+            }
         }
+        BackHandler(enabled = people.selectedId != null) { peopleViewModel.clear() }
         val scaffoldState = rememberBottomSheetScaffoldState(
             bottomSheetState = rememberStandardBottomSheetState(
                 initialValue = SheetValue.Hidden,
@@ -127,6 +147,19 @@ fun TimelineScreen(
 
         LaunchedEffect(viewModel) {
             viewModel.messages.collect { scaffoldState.snackbarHostState.showSnackbar(it) }
+        }
+        LaunchedEffect(peopleViewModel) {
+            peopleViewModel.notLinked.collect { member ->
+                val result = scaffoldState.snackbarHostState.showSnackbar(
+                    message = "${member.name} isn't linked to your Immich people",
+                    actionLabel = "Link",
+                    duration = SnackbarDuration.Short,
+                )
+                if (result == SnackbarResult.ActionPerformed) onEditMember(member.id)
+            }
+        }
+        val header: (@Composable () -> Unit)? = if (people.members.isEmpty()) null else {
+            { PeopleFilterRow(people, peopleViewModel::select, onEditMember) }
         }
 
         val context = LocalContext.current
@@ -198,6 +231,8 @@ fun TimelineScreen(
         val scrollBehavior = enterAlwaysScrollBehavior()
         BottomSheetScaffold(
             sheetPeekHeight = 0.dp,
+            // Messages sit above the floating tab bar, not under it.
+            snackbarHost = { SnackbarHost(it, Modifier.aboveFloatingTabBar()) },
             modifier = Modifier
                 .fillMaxSize()
                 .nestedScroll(scrollBehavior.nestedScrollConnection),
@@ -222,7 +257,19 @@ fun TimelineScreen(
                 ) }
         ) { innerPadding ->
 
-            run {
+            if (people.selectedId != null) {
+                PersonPhotosContent(
+                    people = people,
+                    photos = personPhotos,
+                    thumbnail = peopleViewModel::thumbnail,
+                    modifier = Modifier.padding(innerPadding),
+                    onSelect = peopleViewModel::select,
+                    onEditMember = onEditMember,
+                    onRetry = { peopleViewModel.retry() },
+                    onLoadMore = peopleViewModel::loadMore,
+                    onAssetClick = { asset, index -> onPersonAssetClick(asset, index, peopleViewModel.source) },
+                )
+            } else run {
                 val coroutineScope = rememberCoroutineScope()
                 TimeLineContent(
                     state = state,
@@ -248,20 +295,26 @@ fun TimelineScreen(
                         coroutineScope.launch {
                             scaffoldState.bottomSheetState.hide()
                         }
-                    }
+                    },
+                    header = header,
                 )
             }
         }
 
         val months = state.layout?.months.orEmpty()
-        if (months.isNotEmpty()) {
+        if (months.isNotEmpty() && people.selectedId == null) {
             FastScrollComponent(
                 months = months,
                 listState = listState,
+                firstRowIndex = if (header != null) 1 else 0,
+                extraTop = if (header != null) CAROUSEL_HEIGHT else 0.dp,
             )
         }
     }
 }
+
+/** The family carousel above the timeline (T-052): the month pill starts below it. */
+private val CAROUSEL_HEIGHT = 104.dp
 
 /** Gap between tiles and rows, and the list's side margin. */
 private val SPACING = 4.dp
@@ -281,6 +334,8 @@ internal fun TimeLineContent(
     account: TimelineAccount? = null,
     onSetUpBackupClick: () -> Unit = {},
     syncLines: Int? = null,
+    /** Scrolls with the timeline as its first item (the family carousel, T-052). */
+    header: (@Composable () -> Unit)? = null,
 ) {
     val pullToRefreshState = rememberPullToRefreshState()
     PullToRefreshBox(
@@ -320,6 +375,7 @@ internal fun TimeLineContent(
                     animatedVisibilityScope = animatedVisibilityScope,
                     onExpandMenuRequest = onExpandMenuRequest,
                     onCollapseMenuRequest = onCollapseMenuRequest,
+                    header = header,
                 )
             }
         }
@@ -341,6 +397,7 @@ private fun TimelineList(
     animatedVisibilityScope: AnimatedVisibilityScope,
     onExpandMenuRequest: () -> Unit,
     onCollapseMenuRequest: () -> Unit,
+    header: (@Composable () -> Unit)? = null,
 ) {
     // Collected once for the list, not per tile; tiles get plain booleans so they can skip.
     val selectedAssets by viewModel.selectedAssets.collectAsStateWithLifecycle()
@@ -352,6 +409,9 @@ private fun TimelineList(
         contentPadding = PaddingValues(SPACING),
         verticalArrangement = Arrangement.spacedBy(SPACING),
     ) {
+        if (header != null) {
+            item(key = "header", contentType = "header") { header() }
+        }
         items(
             items = layout.rows,
             key = { it.key },

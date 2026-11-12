@@ -421,6 +421,19 @@ def register_family(app: Flask, family: FamilyStore):
     def get_family():
         return jsonify(profiles=family.profiles())
 
+    @app.route("/family/people", methods=["GET"])
+    def get_my_family_people():
+        return jsonify(people=family.my_people(g.user.id))
+
+    @app.route("/family/<user_id>/person", methods=["PUT"])
+    def link_family_person(user_id):
+        return jsonify(family.link_person(user_id, g.user.id, json_body()))
+
+    @app.route("/family/<user_id>/person", methods=["DELETE"])
+    def unlink_family_person(user_id):
+        family.unlink_person(user_id, g.user.id)
+        return "", 204
+
     @app.route("/family/members", methods=["POST"])
     def add_family_member():
         return jsonify(family.add_member(g.user.id, json_body())), 201

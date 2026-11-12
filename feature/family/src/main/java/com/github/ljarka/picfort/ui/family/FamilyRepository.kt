@@ -182,6 +182,9 @@ class FamilyRepository(
     val supported: StateFlow<Boolean> = _supported.asStateFlow()
 
     private val _canAddMembers = MutableStateFlow(backend.isConfigured)
+
+    private val _myPersonIds = MutableStateFlow<Map<String, String>>(emptyMap())
+    override val myPersonIds: Flow<Map<String, String>> = _myPersonIds
     val canAddMembers: StateFlow<Boolean> = _canAddMembers.asStateFlow()
 
     /** Every Immich user merged with their custom profile (visible and hidden alike). */
@@ -234,6 +237,8 @@ class FamilyRepository(
             val (fresh, raw) = backend.profiles()
             profiles.value = fresh.associateBy { it.userId }
             offline.save(raw)
+            // Optional: a server before T-052 has no /family/people; keep what we had.
+            runCatching { backend.myPeople() }.onSuccess { _myPersonIds.value = it }
             _supported.value = true
             null
         } catch (e: PicfortServerException.Outdated) {
@@ -270,6 +275,8 @@ class FamilyRepository(
         if (pickedPersonId != null) {
             val jpeg = people.faceThumbnailJpeg(pickedPersonId)
             backend.uploadPhoto(user.id, jpeg)
+            // The chosen face is who this member is in my photos (T-052).
+            backend.linkPerson(user.id, pickedPersonId)
         } else if (photoBytes != null) {
             backend.uploadPhoto(user.id, photoBytes)
         } else if (clearPhoto && user.hasCustomPhoto) {
@@ -311,6 +318,7 @@ class FamilyRepository(
             if (photo != null) {
                 backend.uploadPhoto(created.userId, photo)
             }
+            if (pickedPersonId != null) backend.linkPerson(created.userId, pickedPersonId)
             refresh()
         } catch (e: PicfortServerException.Outdated) {
             _canAddMembers.value = false

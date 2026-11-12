@@ -85,3 +85,10 @@ regression.
 - **Clear** shows initials, even for an Immich user who has an account picture. The server keeps it as
   `profiles.no_photo` (family schema v3, migrated from v2): `PATCH /family/<id> {no_photo: true|false}`;
   uploading a photo resets it. "Profile picture" deletes the custom photo and sets `no_photo: false`.
+
+## Amendment 2026-11-12: a member in my photos (T-052)
+
+- Immich person ids belong to one library, so the server keeps one link per (member, viewer) in
+  `member_people` (family schema v4) and returns only the caller's (`GET /family/people`).
+- The link is set by choosing the member's face with "Choose from Immich" (no separate control, no
+  matching by name). Photos filters the timeline by it, one member at a time.

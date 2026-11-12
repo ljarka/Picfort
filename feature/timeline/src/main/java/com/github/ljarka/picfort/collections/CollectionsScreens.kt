@@ -70,7 +70,7 @@ private fun BackScaffold(title: String, onBack: () -> Unit, content: @Composable
 }
 
 @Composable
-private fun <T> LoadStateContent(
+internal fun <T> LoadStateContent(
     state: LoadState<T>,
     onRetry: () -> Unit,
     modifier: Modifier,
@@ -86,7 +86,7 @@ private fun <T> LoadStateContent(
 }
 
 @Composable
-private fun Message(text: String, modifier: Modifier, onRetry: (() -> Unit)? = null) {
+internal fun Message(text: String, modifier: Modifier, onRetry: (() -> Unit)? = null) {
     Column(
         modifier.fillMaxSize().padding(24.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp, Alignment.CenterVertically),

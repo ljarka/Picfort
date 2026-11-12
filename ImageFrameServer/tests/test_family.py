@@ -157,6 +157,29 @@ class FamilyApiTest(unittest.TestCase):
         self.assertEqual({"profiles": []}, self.client.get("/family").get_json())
         self.assertEqual(400, self.client.patch(f"/family/{MAMA}", json={"no_photo": "yes"}).status_code)
 
+    def test_people_links_are_per_viewer(self):
+        ola_mama, ola_tata = "aaaaaaaa-0000-0000-0000-000000000001", "bbbbbbbb-0000-0000-0000-000000000002"
+        r = self.client.put(f"/family/{OLA}/person", json={"person_id": ola_mama})
+        self.assertEqual(200, r.status_code, r.get_json())
+        self.client.put(f"/family/{OLA}/person", json={"person_id": ola_tata}, headers=self.as_tata())
+        self.assertEqual({"people": {OLA: ola_mama}}, self.client.get("/family/people").get_json())
+        self.assertEqual({"people": {OLA: ola_tata}},
+                         self.client.get("/family/people", headers=self.as_tata()).get_json())
+        # Linking again replaces my link only.
+        self.client.put(f"/family/{OLA}/person", json={"person_id": ola_tata})
+        self.assertEqual({OLA: ola_tata}, self.client.get("/family/people").get_json()["people"])
+        self.assertEqual(204, self.client.delete(f"/family/{OLA}/person").status_code)
+        self.assertEqual({}, self.client.get("/family/people").get_json()["people"])
+        self.assertEqual({OLA: ola_tata}, self.client.get("/family/people", headers=self.as_tata()).get_json()["people"])
+        self.assertEqual(400, self.client.put(f"/family/{OLA}/person", json={"person_id": "x"}).status_code)
+        self.assertEqual(400, self.client.put("/family/nope/person", json={"person_id": ola_mama}).status_code)
+
+    def test_deleting_a_manual_member_removes_their_people_links(self):
+        kuba = self.client.post("/family/members", json={"display_name": "Kuba"}).get_json()["user_id"]
+        self.client.put(f"/family/{kuba}/person", json={"person_id": "aaaaaaaa-0000-0000-0000-000000000003"})
+        self.client.delete(f"/family/{kuba}")
+        self.assertEqual({}, self.client.get("/family/people").get_json()["people"])
+
     def test_validation(self):
         for bad_id in ("not-a-uuid", "123", "11111111-1111-1111-1111-11111111111z"):
             self.assertEqual(400, self.client.patch(f"/family/{bad_id}", json={"display_name": "x"}).status_code, bad_id)
@@ -310,7 +333,7 @@ class FamilyApiTest(unittest.TestCase):
             self.assertEqual(2, conn.execute("SELECT count(*) FROM profiles").fetchone()[0])
             self.assertEqual(1, conn.execute("PRAGMA user_version").fetchone()[0])
         with closing(sqlite3.connect(old_db)) as conn:
-            self.assertEqual(3, conn.execute("PRAGMA user_version").fetchone()[0])
+            self.assertEqual(4, conn.execute("PRAGMA user_version").fetchone()[0])
         # Reopening a current database changes nothing.
         self.assertEqual(2, len(FamilyStore(old_db, self.photos).profiles()))
         # The migrated database accepts the new features.

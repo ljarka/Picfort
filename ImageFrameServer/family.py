@@ -35,6 +35,14 @@ CREATE TABLE profiles (
   updated_by    TEXT NOT NULL,
   updated       TEXT NOT NULL
 );
+-- Who a member is in each viewer's Immich people (person ids are per Immich library), T-052.
+CREATE TABLE member_people (
+  member_id  TEXT NOT NULL,
+  viewer_id  TEXT NOT NULL,
+  person_id  TEXT NOT NULL,
+  updated    TEXT NOT NULL,
+  PRIMARY KEY (member_id, viewer_id)
+);
 """
 
 
@@ -129,7 +137,7 @@ def _parse_today(today_arg, body: dict = None) -> str | None:
 
 
 class FamilyStore(SqliteStore):
-    SCHEMA_VERSION = 3
+    SCHEMA_VERSION = 4
     SCHEMA = SCHEMA
     MIGRATIONS = {
         1: [
@@ -138,6 +146,10 @@ class FamilyStore(SqliteStore):
         ],
         2: [
             "ALTER TABLE profiles ADD COLUMN no_photo INTEGER",
+        ],
+        3: [
+            "CREATE TABLE member_people (member_id TEXT NOT NULL, viewer_id TEXT NOT NULL,"
+            " person_id TEXT NOT NULL, updated TEXT NOT NULL, PRIMARY KEY (member_id, viewer_id))",
         ],
     }
     NAME = "Family"
@@ -255,12 +267,11 @@ class FamilyStore(SqliteStore):
             if not row["manual"]:
                 raise StoreError("Only members who aren't Immich users can be deleted; clear the fields instead", 409)
             conn.execute("DELETE FROM profiles WHERE user_id = ?", (user_id,))
+            conn.execute("DELETE FROM member_people WHERE member_id = ?", (user_id,))
         if row["photo"]:
             self._remove_file(row["photo"])
         if self.events is not None:
             self.events.delete_birthday(user_id)
-        if row["photo"]:
-            self._remove_file(row["photo"])
 
     def set_photo(self, user_id: str, actor_id: str, data: bytes) -> dict:
         user_id = _user_id(user_id)
@@ -312,6 +323,35 @@ class FamilyStore(SqliteStore):
                 )
         if old_photo:
             self._remove_file(old_photo)
+
+    # --- T-052: each viewer's link from a member to a person in their own Immich library ---
+
+    def my_people(self, viewer_id: str) -> dict:
+        """{member_id: person_id} for this viewer only (person ids mean nothing in other libraries)."""
+        with closing(self.connect()) as conn:
+            rows = conn.execute(
+                "SELECT member_id, person_id FROM member_people WHERE viewer_id = ? ORDER BY member_id", (viewer_id,)
+            ).fetchall()
+        return {r["member_id"]: r["person_id"] for r in rows}
+
+    def link_person(self, member_id: str, viewer_id: str, body: dict) -> dict:
+        member_id = _user_id(member_id)
+        person_id = body.get("person_id")
+        if not isinstance(person_id, str) or not UUID_RE.match(person_id):
+            raise StoreError("person_id must be a UUID")
+        with closing(self.connect()) as conn, conn:
+            conn.execute(
+                "INSERT INTO member_people (member_id, viewer_id, person_id, updated) VALUES (?, ?, ?, ?)"
+                " ON CONFLICT (member_id, viewer_id) DO UPDATE SET person_id = excluded.person_id,"
+                " updated = excluded.updated",
+                (member_id, viewer_id, person_id, self.clock()),
+            )
+        return {"member_id": member_id, "person_id": person_id}
+
+    def unlink_person(self, member_id: str, viewer_id: str):
+        member_id = _user_id(member_id)
+        with closing(self.connect()) as conn, conn:
+            conn.execute("DELETE FROM member_people WHERE member_id = ? AND viewer_id = ?", (member_id, viewer_id))
 
     def photo_path(self, filename: str):
         if not PHOTO_NAME_RE.match(filename):

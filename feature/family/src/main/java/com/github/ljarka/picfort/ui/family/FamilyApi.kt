@@ -30,6 +30,9 @@ data class FamilyProfileDto(
 )
 
 @Serializable
+data class MyPeopleDto(val people: Map<String, String> = emptyMap())
+
+@Serializable
 data class FamilyProfilesResponseDto(
     val profiles: List<FamilyProfileDto> = emptyList(),
 )
@@ -91,6 +94,11 @@ interface FamilyBackend {
     suspend fun uploadPhoto(userId: String, photoJpeg: ByteArray): FamilyProfile
 
     suspend fun deletePhoto(userId: String)
+
+    /** My links from members to my Immich people (T-052): member id → person id. */
+    suspend fun myPeople(): Map<String, String> = emptyMap()
+
+    suspend fun linkPerson(memberId: String, personId: String) = Unit
 }
 
 @Singleton
@@ -188,6 +196,18 @@ class FamilyApi @Inject constructor(
     override suspend fun deletePhoto(userId: String) {
         val url = server.base().newBuilder().addPathSegment("family").addPathSegment(userId).addPathSegment("photo").build()
         execute(Request.Builder().url(url).delete().build())
+    }
+
+    override suspend fun myPeople(): Map<String, String> {
+        val url = server.base().newBuilder().addPathSegment("family").addPathSegment("people").build()
+        return json.decodeFromString<MyPeopleDto>(execute(Request.Builder().url(url).get().build())).people
+    }
+
+    override suspend fun linkPerson(memberId: String, personId: String) {
+        val url = server.base().newBuilder().addPathSegment("family").addPathSegment(memberId)
+            .addPathSegment("person").build()
+        val body = buildJsonObject { put("person_id", JsonPrimitive(personId)) }.toString().toRequestBody(JSON_MEDIA_TYPE)
+        execute(Request.Builder().url(url).put(body).build())
     }
 
     private suspend fun execute(request: Request): String = server.execute(request) {

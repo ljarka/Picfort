@@ -82,6 +82,18 @@ class CollectionsRepository @Inject constructor(
         )
     }
 
+    /** Photos of one person in my Immich library, newest first (T-052). */
+    suspend fun personAssets(personId: String, page: Int): SearchPage {
+        val response = service.get()
+            .metadataSearch(MetadataSearchRequest(listOf(personId), page = page, size = 100, order = "desc")).assets
+        return SearchPage(
+            assets = response.items.map { item ->
+                GridAsset(item.id, isVideo = item.type == "VIDEO", durationMs = parseSearchDuration(item.duration))
+            },
+            nextPage = response.nextPage?.toIntOrNull(),
+        )
+    }
+
     suspend fun createAlbum(name: String, assetIds: List<String>): AlbumDto =
         service.get().createAlbum(CreateAlbumRequest(name.trim(), assetIds))
 

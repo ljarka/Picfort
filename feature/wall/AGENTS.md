@@ -20,7 +20,7 @@ Family wall vertical slice: posts stream, today panel (events/trips/birthdays), 
 ## Dependencies & Boundaries
 
 - Depends on `:core:model` (`FamilyMember`, `FamilyMemberProvider`, `FamilyEventsProvider`).
-- Depends on `:core:ui` (`PicfortTheme`, `MemberAvatar`, `SettingsAction`, `ServerRequiredContent`).
+- Depends on `:core:ui` (`PicfortTheme`, `MemberAvatar`, `MemberCarousel`, `SettingsAction`, `ServerRequiredContent`).
 - Depends on `:core:network` (`PicfortServerClient`, `PicfortServerException`).
 - **NEVER** depends directly on other feature modules (`:feature:events`, `:feature:shopping`, `:feature:family`).
 - Consumes family members via `FamilyMemberProvider.allMembers` (bound in `:app` from `:feature:family`): the avatar row shows manual members too; they just have no posts.

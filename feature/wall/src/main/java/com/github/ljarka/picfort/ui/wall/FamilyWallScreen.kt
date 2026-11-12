@@ -2,6 +2,7 @@ package com.github.ljarka.picfort.ui.wall
 
 import com.github.ljarka.picfort.core.model.FamilyMember
 import com.github.ljarka.picfort.core.ui.avatar.MemberAvatar
+import com.github.ljarka.picfort.core.ui.avatar.MemberCarousel
 
 import android.net.Uri
 import android.text.format.DateUtils
@@ -98,7 +99,6 @@ import com.github.ljarka.picfort.core.ui.component.aboveFloatingTabBar
 import java.io.File
 import java.util.UUID
 
-private val AVATAR_SIZE = 56.dp
 private val CARD_WIDTH = 200.dp
 /** Room for the header and two lines of text (90 dp from the spec fits only one). */
 private val CARD_HEIGHT = 104.dp
@@ -234,7 +234,7 @@ fun FamilyWallContent(
                 state.loadError != null && state.posts.isEmpty() -> Centered(state.loadError, "Retry", onRefresh)
                 else -> {
                     if (state.members.isNotEmpty()) {
-                        AvatarRow(state.members, state.selectedMemberId, onSelect, onEditMember)
+                        MemberCarousel(state.members, state.selectedMemberId, onSelect, onEditMember = onEditMember)
                     }
                     PullToRefreshBox(isRefreshing = false, onRefresh = onRefresh, modifier = Modifier.weight(1f)) {
                         WallGrid(
@@ -338,58 +338,6 @@ private fun Modifier.bleed(horizontal: Dp) = layout { measurable, constraints ->
     val width = constraints.maxWidth + extra
     val placeable = measurable.measure(constraints.copy(minWidth = width, maxWidth = width))
     layout(constraints.maxWidth, placeable.height) { placeable.place(-extra / 2, 0) }
-}
-
-@OptIn(ExperimentalFoundationApi::class)
-@Composable
-private fun AvatarRow(
-    members: List<FamilyMember>,
-    selectedId: String?,
-    onSelect: (String?) -> Unit,
-    onEditMember: (String) -> Unit = {},
-) {
-    LazyRow(
-        contentPadding = PaddingValues(horizontal = 8.dp, vertical = 8.dp),
-        modifier = Modifier.fillMaxWidth(),
-    ) {
-        items(members, key = { it.id }) { member ->
-            val selected = member.id == selectedId
-            var menu by remember { mutableStateOf(false) }
-            Box {
-                Column(
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    modifier = Modifier
-                        .padding(horizontal = 4.dp)
-                        .clip(RoundedCornerShape(16.dp))
-                        .background(if (selected) member.color.copy(alpha = 0.18f) else Color.Transparent)
-                        .combinedClickable(
-                            onClick = { onSelect(member.id) },
-                            onLongClick = { menu = true },
-                        )
-                        .padding(horizontal = 4.dp, vertical = 6.dp),
-                ) {
-                    MemberAvatar(member, size = AVATAR_SIZE, ring = if (selected) 3.dp else 2.dp)
-                    Text(
-                        member.name,
-                        style = MaterialTheme.typography.labelSmall,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                        textAlign = TextAlign.Center,
-                        fontWeight = if (selected) FontWeight.Bold else null,
-                        modifier = Modifier
-                            .width(AVATAR_SIZE + 8.dp)
-                            .padding(top = 4.dp),
-                    )
-                }
-                DropdownMenu(expanded = menu, onDismissRequest = { menu = false }) {
-                    DropdownMenuItem(
-                        text = { Text("Edit") },
-                        onClick = { menu = false; onEditMember(member.id) },
-                    )
-                }
-            }
-        }
-    }
 }
 
 @Composable
