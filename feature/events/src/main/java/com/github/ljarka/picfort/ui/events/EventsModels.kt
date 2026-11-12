@@ -169,3 +169,14 @@ fun groupPastEvents(
     }
     return sections
 }
+
+/** "turns 9" for a birthday whose birth year is known; null otherwise. */
+fun turnsLabel(event: FamilyEvent): String? = event.turns?.takeIf { event.isBirthday && it > 0 }?.let { "turns $it" }
+
+/** "Every week", or "Every week · until 20 Dec 2026"; null for an event that doesn't repeat. */
+fun repeatSummary(event: FamilyEvent, today: LocalDate, locale: Locale = Locale.ENGLISH): String? {
+    val repeat = event.repeat ?: return null
+    val until = event.repeatUntil ?: return repeat.label
+    val pattern = if (until.year != today.year) "d MMM yyyy" else "d MMM"
+    return "${repeat.label} · until ${until.format(DateTimeFormatter.ofPattern(pattern, locale))}"
+}

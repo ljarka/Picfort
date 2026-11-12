@@ -1,6 +1,6 @@
 # T-037 — Events: repeat and birthdays (Android)
 
-**Status:** ready (first step: mockup for the owner to approve)  
+**Status:** in-progress (mockup approved 2026-11-12: `docs/wireframes/events-repeat-v2.png`; code merged, device check pending)  
 **Component:** Android app  
 **Depends on:** T-023 (event screens), T-035, T-036 (API), T-034 (members with names). Album linking is T-026 and
 works for these events too (a series has one album).
@@ -38,3 +38,9 @@ event and a birthday ("Ola's birthday · turns 9"), the detail of a birthday. It
 - [ ] Today panel shows a birthday on the day, with the age.
 - [ ] Unit tests: occurrence-based grouping and labels, birthday text; Paparazzi: form with repeat, list, birthday detail, dark.
 - [ ] README Features; CI passes.
+
+## Implementation notes (2026-11-12)
+
+- Old-server fallback (hiding Repeat) left out: one user, one server, always current.
+- Birthday cake sits in the date badge; a repeating event gets a "⟳ Every week" line under its place.
+- Detail of a birthday: "Turns 9", the date, and "Edit in Family settings" (no Edit, no Delete).

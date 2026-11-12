@@ -121,4 +121,17 @@ class TodayPanelTest {
         )
         assertNull(panel(event(1)).eventTimeAndDay())
     }
+
+    @Test
+    fun `birthday shows the member's name and age, today and as next`() {
+        val birthday = FamilyEvent(id = 9, title = "Ola's birthday", startDate = today, birthdayOf = "ola", turns = 9)
+        val names = mapOf("ola" to "Aleksandra")
+
+        val onTheDay = panel(birthday)
+        assertEquals("Aleksandra's birthday", onTheDay.event?.displayTitle(names::get))
+        assertEquals("turns 9", onTheDay.eventTimeAndDay())
+
+        val ahead = panel(birthday.copy(startDate = today.plusDays(5)))
+        assertEquals("Next: Aleksandra's birthday, turns 9 · in 5 days", ahead.nextLine(names::get))
+    }
 }

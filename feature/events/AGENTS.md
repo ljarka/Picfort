@@ -10,13 +10,20 @@ Family events vertical slice: upcoming and past events, details, form, recurrenc
 | `ui/events/EventsViewModels.kt` | ViewModels: `EventsListViewModel`, `EventDetailViewModel`, `EventFormViewModel` |
 | `ui/events/EventsRepository.kt` | Repository: polling, pagination of past events, midnight rollover |
 | `ui/events/EventsApi.kt` | Server HTTP client: `/events` endpoints |
-| `ui/events/EventsModels.kt` | UI state: `EventsListUi`, `EventDetailUi`, `EventFormUi`, relative labels |
-| `ui/events/EventsScreenshotTest.kt` | Paparazzi snapshots: upcoming, past, dark theme, details, form |
+| `ui/events/EventsModels.kt` | Grouping, relative labels, `turnsLabel`, `repeatSummary` |
+| `ui/events/EventsScreenshotTest.kt` | Paparazzi snapshots: upcoming, past, dark theme, details, form, repeat & birthdays |
+
+## Repeat & birthdays (T-037)
+
+- `FamilyEvent.startDate/endDate` = the server's occurrence (`occurrence_start/end`); `seriesStartDate/End` = first occurrence, edited by the form. Lists, labels and the Wall's today panel need no repeat logic.
+- `birthdayOf` (member id) + `turns`: title from the member's current name (`displayTitle`), no Edit/Delete, "Edit in Family settings" (`onEditBirthday`).
+- Midnight: a series whose occurrence ended is dropped from Upcoming (not moved to Past); the refresh brings its next occurrence.
+- `EventDto` must not declare a companion object (it would replace the kotlinx serializer's).
 
 ## Public Contract / Navigation Entry Points
 
 - `EventsListScreen(onOpenEvent: (Long) -> Unit, onAddEvent: () -> Unit, onSettingsClick: () -> Unit, onSetUpServer: () -> Unit)`
-- `EventDetailScreen(onBack: () -> Unit, onEdit: (Long) -> Unit)`
+- `EventDetailScreen(onBack: () -> Unit, onEdit: (Long) -> Unit, onEditBirthday: () -> Unit)`
 - `EventFormScreen(onBack: () -> Unit, onSaved: (Long) -> Unit, onGone: () -> Unit)`
 
 ## Dependencies & Boundaries

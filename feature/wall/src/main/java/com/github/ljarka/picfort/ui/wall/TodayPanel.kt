@@ -92,19 +92,24 @@ fun todayPanel(events: List<FamilyEvent>, today: LocalDate, now: LocalTime): Tod
 
 private val TIME_FORMAT = DateTimeFormatter.ofPattern("HH:mm")
 
-/** "18:00" (only on the start day) and "Day 2 of 5", joined with " · ". */
+/** "turns 9" on a birthday whose birth year is known (T-037). */
+private fun FamilyEvent.turnsText(): String? = turns?.takeIf { isBirthday && it > 0 }?.let { "turns $it" }
+
+/** "18:00" (only on the start day), "Day 2 of 5" and a birthday's "turns 9", joined with " · ". */
 internal fun TodayPanelState.eventTimeAndDay(): String? {
     val event = event ?: return null
     return listOfNotNull(
         event.startTime?.takeIf { event.startDate == date }?.format(TIME_FORMAT),
         dayOfTrip?.let { (day, total) -> "Day $day of $total" },
+        event.turnsText(),
     ).joinToString(" · ").ifEmpty { null }
 }
 
-internal fun TodayPanelState.nextLine(): String? {
+internal fun TodayPanelState.nextLine(memberName: (String) -> String? = { null }): String? {
     val next = next ?: return null
     val days = nextInDays ?: return null
-    return "Next: ${next.title} · ${if (days == 1) "tomorrow" else "in $days days"}"
+    val title = listOfNotNull(next.displayTitle(memberName), next.turnsText()).joinToString(", ")
+    return "Next: $title · ${if (days == 1) "tomorrow" else "in $days days"}"
 }
 
 /** Today in full for [locale], without the year: "Wednesday, 11 November". */
@@ -120,11 +125,13 @@ fun TodayPanel(
     onEventClick: (Long) -> Unit,
     onMoreClick: () -> Unit,
     modifier: Modifier = Modifier,
+    /** Member id → current name, for "Ola's birthday". */
+    memberNames: Map<String, String> = emptyMap(),
 ) {
     val locale = LocalLocale.current.platformLocale
     val dateText = remember(panel.date, locale) { formatPanelDate(panel.date, locale) }
     val event = panel.event ?: panel.next
-    val title = panel.event?.title ?: panel.nextLine()
+    val title = panel.event?.displayTitle(memberNames::get) ?: panel.nextLine(memberNames::get)
     val detail = listOfNotNull(panel.eventTimeAndDay(), panel.event?.location?.takeIf { it.isNotBlank() })
         .joinToString(" · ").ifEmpty { null }
     val more = panel.moreToday

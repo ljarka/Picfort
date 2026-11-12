@@ -108,7 +108,7 @@ Android task except T-017 and T-026 starts with a mockup the owner approves.
 | [T-034](tasks/T-034-family-add-members-birthday-android.md) | Family settings — Android: add people, Immich badge, birth date | `done` |
 | [T-035](tasks/T-035-recurring-events-server.md) | Recurring events — server (weekly / monthly / yearly, end date; `events.db` v2) | `done` |
 | [T-036](tasks/T-036-birthday-events-server.md) | Birthdays as events — server (`events.db` v3) | `done` |
-| [T-037](tasks/T-037-events-repeat-birthdays-android.md) | Events — Android: repeat, birthdays with age | `ready` |
+| [T-037](tasks/T-037-events-repeat-birthdays-android.md) | Events — Android: repeat, birthdays with age (code merged; device check needs the test server on the current image) | `in-progress` |
 | [T-038](tasks/T-038-visual-rebranding-and-icon.md) | Visual rebranding — app icon, warm palette & floating nav bar | `done` |
 | [T-039](tasks/T-039-event-reminders-android.md) | Event & birthday reminders — Android notifications | `ready` |
 | [T-040](tasks/T-040-shopping-reminders-android.md) | Shopping list reminders — Android notifications | `ready` |

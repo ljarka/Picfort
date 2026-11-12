@@ -2,6 +2,7 @@ package com.github.ljarka.picfort.ui.events
 
 import android.text.format.DateFormat
 import com.github.ljarka.picfort.core.model.EventsSegment
+import com.github.ljarka.picfort.core.model.EventRepeat
 import com.github.ljarka.picfort.core.model.FamilyEvent
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.clickable
@@ -81,6 +82,12 @@ import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.FilledTonalButton
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.res.vectorResource
+import com.github.ljarka.picfort.core.ui.R
 import com.github.ljarka.picfort.core.ui.component.ServerRequiredContent
 import com.github.ljarka.picfort.core.ui.component.SettingsAction
 import com.github.ljarka.picfort.core.ui.component.aboveFloatingTabBar
@@ -102,6 +109,8 @@ data class EventsListUi(
     val hasMorePast: Boolean = false,
     val loadError: String? = null,
     val message: String? = null,
+    /** Member id → current name, for "Ola's birthday". */
+    val memberNames: Map<String, String> = emptyMap(),
 )
 
 data class EventDetailUi(
@@ -112,6 +121,7 @@ data class EventDetailUi(
     val isLoading: Boolean = false,
     val loadError: String? = null,
     val message: String? = null,
+    val memberNames: Map<String, String> = emptyMap(),
 )
 
 data class EventFormUi(
@@ -122,6 +132,11 @@ data class EventFormUi(
     val startTime: LocalTime? = null,
     val location: String = "",
     val note: String = "",
+    val repeat: EventRepeat? = null,
+    /** Last day an occurrence may start; null = never ends. Only used with [repeat]. */
+    val repeatUntil: LocalDate? = null,
+    /** Editing an event that already repeats: the change applies to the whole series. */
+    val editsSeries: Boolean = false,
     val today: LocalDate = LocalDate.of(2026, 11, 11),
     val hasUnsavedChanges: Boolean = false,
     val isSaving: Boolean = false,
@@ -269,6 +284,7 @@ fun EventsListContent(
                                     items(section.events, key = { it.id }) { event ->
                                         EventRow(
                                             event = event,
+                                            title = event.displayTitle(state.memberNames::get),
                                             today = state.today,
                                             isUpcoming = state.segment == EventsSegment.UPCOMING,
                                             isNow = section.isNow,
@@ -301,6 +317,7 @@ fun EventsListContent(
 @Composable
 private fun EventRow(
     event: FamilyEvent,
+    title: String,
     today: LocalDate,
     isUpcoming: Boolean,
     isNow: Boolean,
@@ -317,11 +334,14 @@ private fun EventRow(
         if (isUpcoming) relativeEventLabel(event, today) else null
     }
     val timeStr = remember(event.startTime) { event.startTime?.format(TIME_FMT) }
-    val subtitle = remember(relLabel, timeStr) {
-        listOfNotNull(relLabel, timeStr).joinToString(" · ").ifEmpty { null }
+    val turns = turnsLabel(event)
+    val subtitle = remember(relLabel, timeStr, turns) {
+        listOfNotNull(relLabel, timeStr, turns).joinToString(" · ").ifEmpty { null }
     }
-    val talkBackDesc = remember(event.title, formattedDates, relLabel) {
-        listOfNotNull(event.title, formattedDates, relLabel).joinToString(", ")
+    // Birthdays repeat yearly by nature: the cake says it, no "Every year" line.
+    val repeatLabel = event.repeat?.takeUnless { event.isBirthday }?.label
+    val talkBackDesc = remember(title, formattedDates, relLabel, turns, repeatLabel) {
+        listOfNotNull(title, formattedDates, relLabel, turns, repeatLabel).joinToString(", ")
     }
 
     Surface(
@@ -366,6 +386,18 @@ private fun EventRow(
                     modifier = Modifier.padding(horizontal = 8.dp, vertical = 10.dp),
                     horizontalAlignment = Alignment.CenterHorizontally,
                 ) {
+                    if (event.isBirthday) {
+                        Icon(
+                            imageVector = ImageVector.vectorResource(R.drawable.ic_cake),
+                            contentDescription = null,
+                            modifier = Modifier.size(16.dp).padding(bottom = 2.dp),
+                            tint = if (isNow) {
+                                MaterialTheme.colorScheme.onPrimaryContainer
+                            } else {
+                                MaterialTheme.colorScheme.onSecondaryContainer
+                            },
+                        )
+                    }
                     Text(
                         text = badge.top,
                         style = MaterialTheme.typography.labelLarge,
@@ -393,7 +425,7 @@ private fun EventRow(
             Spacer(Modifier.width(14.dp))
             Column(modifier = Modifier.weight(1f)) {
                 Text(
-                    text = event.title,
+                    text = title,
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Medium,
                     maxLines = 1,
@@ -429,6 +461,24 @@ private fun EventRow(
                         )
                     }
                 }
+                if (repeatLabel != null) {
+                    Spacer(Modifier.height(2.dp))
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(
+                            imageVector = ImageVector.vectorResource(R.drawable.ic_repeat),
+                            contentDescription = null,
+                            modifier = Modifier.size(14.dp),
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                        Spacer(Modifier.width(4.dp))
+                        Text(
+                            text = repeatLabel,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            maxLines = 1,
+                        )
+                    }
+                }
             }
         }
     }
@@ -445,6 +495,8 @@ fun EventDetailContent(
     onLocationClick: (String) -> Unit = {},
     onRetry: () -> Unit = {},
     onMessageShown: () -> Unit = {},
+    /** Birthdays live in Family settings (T-036): their only action opens it. */
+    onEditBirthday: () -> Unit = {},
     albumSlot: @Composable () -> Unit = {},
 ) {
     val snackbar = remember { SnackbarHostState() }
@@ -478,7 +530,7 @@ fun EventDetailContent(
                     }
                 },
                 actions = {
-                    if (state.event != null) {
+                    if (state.event != null && !state.event.isBirthday) {
                         IconButton(onClick = onEdit) {
                             Icon(Icons.Default.Edit, contentDescription = "Edit")
                         }
@@ -534,11 +586,17 @@ fun EventDetailContent(
                         Spacer(Modifier.height(10.dp))
                     }
                     Text(
-                        text = event.title,
+                        text = event.displayTitle(state.memberNames::get),
                         style = MaterialTheme.typography.headlineSmall,
                         fontWeight = FontWeight.SemiBold,
                     )
                     Spacer(Modifier.height(16.dp))
+
+                    val turns = turnsLabel(event)
+                    if (event.isBirthday && turns != null) {
+                        DetailLine(R.drawable.ic_cake, turns.replaceFirstChar { it.uppercase() })
+                        Spacer(Modifier.height(14.dp))
+                    }
 
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Icon(
@@ -551,6 +609,12 @@ fun EventDetailContent(
                             text = if (timeStr != null) "$dateRange · $timeStr" else dateRange,
                             style = MaterialTheme.typography.bodyLarge,
                         )
+                    }
+
+                    val repeatText = remember(event, state.today, locale) { repeatSummary(event, state.today, locale) }
+                    if (repeatText != null && !event.isBirthday) {
+                        Spacer(Modifier.height(14.dp))
+                        DetailLine(R.drawable.ic_repeat, repeatText)
                     }
 
                     val location = event.location
@@ -598,11 +662,23 @@ fun EventDetailContent(
                     Spacer(Modifier.height(24.dp))
                     HorizontalDivider()
                     Spacer(Modifier.height(12.dp))
-                    Text(
-                        text = "Added by ${state.authorName}",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
+                    if (event.isBirthday) {
+                        Text(
+                            text = "Birthdays come from the birth dates in Family settings.",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                        Spacer(Modifier.height(12.dp))
+                        FilledTonalButton(onClick = onEditBirthday) {
+                            Text("Edit in Family settings")
+                        }
+                    } else {
+                        Text(
+                            text = "Added by ${state.authorName}",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
                 }
             }
         }
@@ -620,6 +696,8 @@ fun EventFormContent(
     onStartTimeChange: (LocalTime?) -> Unit = {},
     onLocationChange: (String) -> Unit = {},
     onNoteChange: (String) -> Unit = {},
+    onRepeatChange: (EventRepeat?) -> Unit = {},
+    onRepeatUntilChange: (LocalDate?) -> Unit = {},
     onSave: () -> Unit = {},
     onClose: () -> Unit = {},
     onMessageShown: () -> Unit = {},
@@ -633,6 +711,34 @@ fun EventFormContent(
     var pickingStartDate by remember { mutableStateOf(false) }
     var pickingEndDate by remember { mutableStateOf(false) }
     var pickingTime by remember { mutableStateOf(false) }
+    var pickingRepeatUntil by remember { mutableStateOf(false) }
+
+    if (pickingRepeatUntil) {
+        val minDate = state.startDate ?: state.today
+        val minMillis = localDateToPickerMillis(minDate)
+        val pickerState = rememberDatePickerState(
+            initialSelectedDateMillis = localDateToPickerMillis(state.repeatUntil ?: minDate.plusMonths(3)),
+            selectableDates = object : SelectableDates {
+                override fun isSelectableDate(utcTimeMillis: Long): Boolean = utcTimeMillis >= minMillis
+            },
+        )
+        DatePickerDialog(
+            onDismissRequest = { pickingRepeatUntil = false },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        pickerState.selectedDateMillis?.let { onRepeatUntilChange(pickerMillisToLocalDate(it)) }
+                        pickingRepeatUntil = false
+                    },
+                ) { Text("OK") }
+            },
+            dismissButton = {
+                TextButton(onClick = { pickingRepeatUntil = false }) { Text("Cancel") }
+            },
+        ) {
+            DatePicker(state = pickerState)
+        }
+    }
 
     val handleClose = {
         if (state.hasUnsavedChanges && !state.isSaving) {
@@ -789,6 +895,28 @@ fun EventFormContent(
                 .padding(horizontal = 16.dp, vertical = 8.dp),
             verticalArrangement = Arrangement.spacedBy(14.dp),
         ) {
+            if (state.editsSeries) {
+                Surface(
+                    shape = RoundedCornerShape(12.dp),
+                    color = MaterialTheme.colorScheme.secondaryContainer,
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                    Row(Modifier.padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
+                        Icon(
+                            imageVector = ImageVector.vectorResource(R.drawable.ic_repeat),
+                            contentDescription = null,
+                            modifier = Modifier.size(18.dp),
+                            tint = MaterialTheme.colorScheme.onSecondaryContainer,
+                        )
+                        Spacer(Modifier.width(10.dp))
+                        Text(
+                            "Changes all events in the series.",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSecondaryContainer,
+                        )
+                    }
+                }
+            }
             OutlinedTextField(
                 value = state.title,
                 onValueChange = onTitleChange,
@@ -827,6 +955,30 @@ fun EventFormContent(
                 onClear = if (state.startTime != null) ({ onStartTimeChange(null) }) else null,
                 modifier = Modifier.fillMaxWidth(),
             )
+
+            RepeatField(state.repeat, onRepeatChange)
+
+            if (state.repeat != null) {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text(
+                        "Ends",
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                    SingleChoiceSegmentedButtonRow(Modifier.fillMaxWidth()) {
+                        SegmentedButton(
+                            selected = state.repeatUntil == null,
+                            onClick = { onRepeatUntilChange(null) },
+                            shape = SegmentedButtonDefaults.itemShape(index = 0, count = 2),
+                        ) { Text("Never") }
+                        SegmentedButton(
+                            selected = state.repeatUntil != null,
+                            onClick = { pickingRepeatUntil = true },
+                            shape = SegmentedButtonDefaults.itemShape(index = 1, count = 2),
+                        ) { Text(state.repeatUntil?.let { "On ${it.format(dateFmt)}" } ?: "On a date") }
+                    }
+                }
+            }
 
             OutlinedTextField(
                 value = state.location,
@@ -900,6 +1052,42 @@ private fun PickerField(
                 }
             }
         }
+    }
+}
+
+/** "Repeat" picker: one of [EventRepeat] or "Doesn't repeat". */
+@Composable
+private fun RepeatField(repeat: EventRepeat?, onChange: (EventRepeat?) -> Unit) {
+    var open by remember { mutableStateOf(false) }
+    Box {
+        PickerField(
+            label = "Repeat",
+            value = repeat?.label ?: "Doesn't repeat",
+            hasValue = repeat != null,
+            onClick = { open = true },
+            modifier = Modifier.fillMaxWidth(),
+        )
+        DropdownMenu(expanded = open, onDismissRequest = { open = false }) {
+            (listOf<EventRepeat?>(null) + EventRepeat.entries).forEach { option ->
+                DropdownMenuItem(
+                    text = { Text(option?.label ?: "Doesn't repeat") },
+                    onClick = { open = false; onChange(option) },
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun DetailLine(icon: Int, text: String) {
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        Icon(
+            imageVector = ImageVector.vectorResource(icon),
+            contentDescription = null,
+            tint = MaterialTheme.colorScheme.primary,
+        )
+        Spacer(Modifier.width(12.dp))
+        Text(text = text, style = MaterialTheme.typography.bodyLarge)
     }
 }
 

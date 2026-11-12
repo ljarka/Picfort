@@ -3,6 +3,7 @@ package com.github.ljarka.picfort.ui.events
 import android.content.ActivityNotFoundException
 import android.content.Intent
 import android.net.Uri
+import com.github.ljarka.picfort.core.model.EventRepeat
 import com.github.ljarka.picfort.core.model.EventsSegment
 import com.github.ljarka.picfort.core.model.FamilyEvent
 import androidx.activity.compose.BackHandler
@@ -55,6 +56,7 @@ class EventsListViewModel @Inject constructor(
         val isLoading: Boolean = true,
         val loadError: String? = null,
         val message: String? = null,
+        val memberNames: Map<String, String> = emptyMap(),
     )
 
     private val extra = MutableStateFlow(Extra(configured = server.isConfigured, isLoading = true))
@@ -82,8 +84,14 @@ class EventsListViewModel @Inject constructor(
                     hasMorePast = hasMore,
                     loadError = ext.loadError?.takeIf { activeEmpty },
                     message = ext.message,
+                    memberNames = ext.memberNames,
                 )
             }.collect { _state.value = it }
+        }
+        viewModelScope.launch {
+            family.allMembers.collect { members ->
+                extra.update { it.copy(memberNames = members.associate { m -> m.id to m.name }) }
+            }
         }
         viewModelScope.launch {
             repository.messages.collect { msg ->
@@ -164,7 +172,7 @@ class EventDetailViewModel @Inject constructor(
         event?.let { knownUsers[it.createdBy] } ?: "Former member"
 
     private fun canDelete(event: FamilyEvent?): Boolean =
-        event != null && event.createdBy.isNotEmpty() && event.createdBy == family.myId
+        event != null && !event.isBirthday && event.createdBy.isNotEmpty() && event.createdBy == family.myId
 
     init {
         viewModelScope.launch {
@@ -182,6 +190,7 @@ class EventDetailViewModel @Inject constructor(
                     today = today,
                     authorName = authorName(ev),
                     canDelete = canDelete(ev),
+                    memberNames = knownUsers,
                 )
             }.collect { _state.value = it }
         }
@@ -294,6 +303,16 @@ class EventFormViewModel @Inject constructor(
         updateDraft { copy(note = note.take(2000)) }
     }
 
+    fun onRepeatChange(repeat: EventRepeat?) {
+        updateDraft { copy(repeat = repeat, repeatUntil = repeatUntil.takeIf { repeat != null }) }
+    }
+
+    fun onRepeatUntilChange(date: LocalDate?) {
+        updateDraft {
+            copy(repeatUntil = date?.takeIf { repeat != null && (startDate == null || !it.isBefore(startDate)) })
+        }
+    }
+
     fun save(onSaved: (Long) -> Unit, onGone: () -> Unit) {
         val current = _state.value
         val start = current.startDate ?: return
@@ -306,6 +325,8 @@ class EventFormViewModel @Inject constructor(
             location = current.location,
             note = current.note,
             albumId = originalEvent?.albumId,
+            repeat = current.repeat,
+            repeatUntil = current.repeatUntil,
         )
         _state.update { it.copy(isSaving = true, message = null) }
         viewModelScope.launch {
@@ -346,11 +367,15 @@ class EventFormViewModel @Inject constructor(
                 EventFormUi(
                     isEditing = true,
                     title = event.title,
-                    startDate = event.startDate,
-                    endDate = event.endDate,
+                    // The form edits the series, so it starts from the first occurrence.
+                    startDate = event.seriesStartDate,
+                    endDate = event.seriesEndDate,
                     startTime = event.startTime,
                     location = event.location.orEmpty(),
                     note = event.note.orEmpty(),
+                    repeat = event.repeat,
+                    repeatUntil = event.repeatUntil,
+                    editsSeries = event.repeats,
                     today = today,
                     hasUnsavedChanges = false,
                 )
@@ -366,14 +391,17 @@ class EventFormViewModel @Inject constructor(
         fun hasChanges(ui: EventFormUi, original: FamilyEvent?): Boolean {
             if (original == null) {
                 return ui.title.isNotBlank() ||
+                    ui.repeat != null ||
                     ui.endDate != null ||
                     ui.startTime != null ||
                     ui.location.isNotBlank() ||
                     ui.note.isNotBlank()
             }
             return ui.title.trim() != original.title ||
-                ui.startDate != original.startDate ||
-                ui.endDate != original.endDate ||
+                ui.startDate != original.seriesStartDate ||
+                ui.endDate != original.seriesEndDate ||
+                ui.repeat != original.repeat ||
+                ui.repeatUntil != original.repeatUntil ||
                 ui.startTime != original.startTime ||
                 ui.location.trim().ifEmpty { null } != original.location ||
                 ui.note.trim().ifEmpty { null } != original.note
@@ -414,6 +442,7 @@ fun EventsListScreen(
 fun EventDetailScreen(
     onBack: () -> Unit,
     onEdit: (Long) -> Unit,
+    onEditBirthday: () -> Unit = {},
 ) {
     val viewModel = hiltViewModel<EventDetailViewModel>()
     val state by viewModel.state.collectAsStateWithLifecycle()
@@ -442,6 +471,7 @@ fun EventDetailScreen(
         },
         onRetry = viewModel::load,
         onMessageShown = viewModel::messageShown,
+        onEditBirthday = onEditBirthday,
     )
 }
 
@@ -486,6 +516,8 @@ fun EventFormScreen(
         onStartTimeChange = viewModel::onStartTimeChange,
         onLocationChange = viewModel::onLocationChange,
         onNoteChange = viewModel::onNoteChange,
+        onRepeatChange = viewModel::onRepeatChange,
+        onRepeatUntilChange = viewModel::onRepeatUntilChange,
         onSave = { viewModel.save(onSaved = onSaved, onGone = onEventGone) },
         onClose = onBack,
         onMessageShown = viewModel::messageShown,
