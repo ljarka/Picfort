@@ -192,14 +192,6 @@ class FamilySettingsViewModel @Inject constructor(
         _state.update { s -> s.copy(addingPerson = s.addingPerson?.copy(birthDate = date)) }
     }
 
-    fun updateAddPersonHideYear(hide: Boolean) {
-        _state.update { s ->
-            val add = s.addingPerson ?: return@update s
-            val newBirthDate = if (hide) add.birthDate?.copy(year = null) else add.birthDate
-            s.copy(addingPerson = add.copy(hideBirthYear = hide, birthDate = newBirthDate))
-        }
-    }
-
     fun updateAddPersonPhoto(bytes: ByteArray?) {
         _state.update { s -> s.copy(addingPerson = s.addingPerson?.copy(photoBytes = bytes)) }
     }
@@ -216,10 +208,9 @@ class FamilySettingsViewModel @Inject constructor(
         _state.update { it.copy(addingPerson = add.copy(saving = true)) }
         viewModelScope.launch {
             try {
-                val effectiveBirthDate = if (add.hideBirthYear) add.birthDate?.copy(year = null) else add.birthDate
                 repository.addMember(
                     displayName = add.name.trim(),
-                    birthDate = effectiveBirthDate,
+                    birthDate = add.birthDate,
                     photoBytes = add.photoBytes,
                     pickedPersonId = add.pickedPersonId,
                 )
@@ -240,16 +231,7 @@ class FamilySettingsViewModel @Inject constructor(
     fun updateMemberBirthDate(date: BirthDate?) {
         _state.update { s ->
             val edit = s.editing ?: return@update s
-            val newDate = if (edit.hideBirthYear) date?.copy(year = null) else date
-            s.copy(editing = edit.copy(birthDate = newDate, clearBirthDate = date == null))
-        }
-    }
-
-    fun updateMemberHideYear(hide: Boolean) {
-        _state.update { s ->
-            val edit = s.editing ?: return@update s
-            val newDate = if (hide) edit.birthDate?.copy(year = null) else edit.birthDate
-            s.copy(editing = edit.copy(hideBirthYear = hide, birthDate = newDate))
+            s.copy(editing = edit.copy(birthDate = date, clearBirthDate = date == null))
         }
     }
 
@@ -295,7 +277,6 @@ class FamilySettingsViewModel @Inject constructor(
         _state.update { it.copy(editing = edit.copy(saving = true)) }
         viewModelScope.launch {
             try {
-                val effectiveBirthDate = if (edit.hideBirthYear) edit.birthDate?.copy(year = null) else edit.birthDate
                 repository.saveMember(
                     user = edit.user,
                     displayName = edit.displayName,
@@ -303,7 +284,7 @@ class FamilySettingsViewModel @Inject constructor(
                     photoBytes = edit.pickedPhotoBytes,
                     clearPhoto = edit.clearPhoto,
                     showInFamily = edit.showInFamily,
-                    birthDate = effectiveBirthDate,
+                    birthDate = edit.birthDate,
                     clearBirthDate = edit.clearBirthDate,
                     noPhoto = edit.noPhoto,
                 )

@@ -22,7 +22,7 @@ the member sheet with the birth date row; the add-person sheet. It extends `fami
 - **Add person:** an "Add person" action (top bar or FAB) opens a sheet: name (required), birth date
   (optional), photo from the phone (gallery or camera; Immich people aren't available, there is no
   account). Save → `POST /family/members`.
-- **Member sheet** (T-032) gains **Birthday**: a date picker with a "Don't show the year" switch
+- **Member sheet** (T-032) gains **Birthday**: a date picker (the year is always saved; the switch to hide it was removed 2026-11-12)
   (sends `--MM-DD`) and "Remove". Same sheet for Immich and manual members.
 - **Delete** (manual members only): in the member sheet, with a confirmation: "Delete Babcia? Her
   birthday event is deleted too." Immich users have no delete.
