@@ -20,6 +20,7 @@ import com.github.ljarka.picfort.core.model.FamilyMember
 import com.github.ljarka.picfort.core.model.ShoppingItem
 import com.github.ljarka.picfort.core.model.ShoppingList
 import com.github.ljarka.picfort.core.ui.avatar.avatarColor
+import com.github.ljarka.picfort.core.ui.theme.AccentTheme
 import com.github.ljarka.picfort.core.ui.theme.PicfortTheme
 import com.github.ljarka.picfort.ui.events.EventsListContent
 import com.github.ljarka.picfort.ui.events.EventsListUi
@@ -307,9 +308,11 @@ class ScreenshotTest {
     /** A tab root with the bottom bar over it, as in the app. */
     @Composable
     private fun WithTabBar(tab: Tab, content: @Composable () -> Unit) {
-        Box(Modifier.fillMaxSize()) {
-            TabRoot(content)
-            TabBar(selected = tab, onSelect = {}, modifier = Modifier.align(Alignment.BottomCenter))
+        AccentTheme(tab.accent) {
+            Box(Modifier.fillMaxSize()) {
+                TabRoot(content)
+                TabBar(selected = tab, onSelect = {}, modifier = Modifier.align(Alignment.BottomCenter))
+            }
         }
     }
 

@@ -39,6 +39,7 @@ import com.github.ljarka.picfort.core.database.AssetType
 import com.github.ljarka.picfort.network.SessionManager
 import com.github.ljarka.picfort.ui.image.ImageDetailsScreen
 import com.github.ljarka.picfort.ui.init.InitScreen
+import com.github.ljarka.picfort.core.ui.theme.AccentTheme
 import com.github.ljarka.picfort.core.ui.theme.PicfortTheme
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.github.ljarka.picfort.ui.settings.AppearanceSettingsStore
@@ -206,6 +207,8 @@ class MainActivity : ComponentActivity() {
                     modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colorScheme.background,
                 ) {
+                    // Each tab and its screens wear the tab's aperture color; Settings and login stay navy.
+                    AccentTheme(currentTab?.accent) {
                     SharedTransitionLayout {
                         Box(Modifier.fillMaxSize()) {
                         NavHost(
@@ -408,6 +411,7 @@ class MainActivity : ComponentActivity() {
                                 modifier = Modifier.align(Alignment.BottomCenter),
                             )
                         }
+                    }
                     }
                 }
             }
