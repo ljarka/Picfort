@@ -28,6 +28,7 @@ import androidx.lifecycle.repeatOnLifecycle
 import androidx.lifecycle.viewModelScope
 import com.github.ljarka.picfort.core.network.PicfortServerClient
 import com.github.ljarka.picfort.core.network.PicfortServerException
+import com.github.ljarka.picfort.core.model.FamilyMember
 import com.github.ljarka.picfort.core.model.FamilyMemberProvider
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.delay
@@ -57,6 +58,7 @@ class EventsListViewModel @Inject constructor(
         val loadError: String? = null,
         val message: String? = null,
         val memberNames: Map<String, String> = emptyMap(),
+        val members: List<FamilyMember> = emptyList(),
     )
 
     private val extra = MutableStateFlow(Extra(configured = server.isConfigured, isLoading = true))
@@ -85,12 +87,13 @@ class EventsListViewModel @Inject constructor(
                     loadError = ext.loadError?.takeIf { activeEmpty },
                     message = ext.message,
                     memberNames = ext.memberNames,
+                    members = ext.members,
                 )
             }.collect { _state.value = it }
         }
         viewModelScope.launch {
             family.allMembers.collect { members ->
-                extra.update { it.copy(memberNames = members.associate { m -> m.id to m.name }) }
+                extra.update { it.copy(memberNames = members.associate { m -> m.id to m.name }, members = members) }
             }
         }
         viewModelScope.launch {
@@ -191,6 +194,7 @@ class EventDetailViewModel @Inject constructor(
                     authorName = authorName(ev),
                     canDelete = canDelete(ev),
                     memberNames = knownUsers,
+                    members = users,
                 )
             }.collect { _state.value = it }
         }
@@ -250,6 +254,7 @@ class EventDetailViewModel @Inject constructor(
 @HiltViewModel
 class EventFormViewModel @Inject constructor(
     private val repository: EventsRepository,
+    private val family: FamilyMemberProvider,
     savedState: SavedStateHandle,
 ) : ViewModel() {
 
@@ -266,6 +271,7 @@ class EventFormViewModel @Inject constructor(
                     val fetched = repository.fetchEvent(editEventId)
                     originalEvent = fetched
                     _state.value = initialUi(fetched, repository.rollOverMidnight(), isEditing = true)
+                        .copy(members = _state.value.members)
                 } catch (e: PicfortServerException) {
                     _state.update { it.copy(message = e.message) }
                 }
@@ -313,6 +319,17 @@ class EventFormViewModel @Inject constructor(
         }
     }
 
+    init {
+        viewModelScope.launch {
+            family.allMembers.collect { members -> _state.update { it.copy(members = members) } }
+        }
+    }
+
+    /** "Who is it for": adds or removes a member, keeping the order they were chosen in (T-053). */
+    fun onToggleMember(id: String) {
+        updateDraft { copy(memberIds = if (id in memberIds) memberIds - id else memberIds + id) }
+    }
+
     fun save(onSaved: (Long) -> Unit, onGone: () -> Unit) {
         val current = _state.value
         val start = current.startDate ?: return
@@ -327,6 +344,7 @@ class EventFormViewModel @Inject constructor(
             albumId = originalEvent?.albumId,
             repeat = current.repeat,
             repeatUntil = current.repeatUntil,
+            memberIds = current.memberIds,
         )
         _state.update { it.copy(isSaving = true, message = null) }
         viewModelScope.launch {
@@ -376,6 +394,7 @@ class EventFormViewModel @Inject constructor(
                     repeat = event.repeat,
                     repeatUntil = event.repeatUntil,
                     editsSeries = event.repeats,
+                    memberIds = event.memberIds,
                     today = today,
                     hasUnsavedChanges = false,
                 )
@@ -395,7 +414,8 @@ class EventFormViewModel @Inject constructor(
                     ui.endDate != null ||
                     ui.startTime != null ||
                     ui.location.isNotBlank() ||
-                    ui.note.isNotBlank()
+                    ui.note.isNotBlank() ||
+                    ui.memberIds.isNotEmpty()
             }
             return ui.title.trim() != original.title ||
                 ui.startDate != original.seriesStartDate ||
@@ -404,7 +424,8 @@ class EventFormViewModel @Inject constructor(
                 ui.repeatUntil != original.repeatUntil ||
                 ui.startTime != original.startTime ||
                 ui.location.trim().ifEmpty { null } != original.location ||
-                ui.note.trim().ifEmpty { null } != original.note
+                ui.note.trim().ifEmpty { null } != original.note ||
+                ui.memberIds != original.memberIds
         }
     }
 }
@@ -519,6 +540,7 @@ fun EventFormScreen(
         onNoteChange = viewModel::onNoteChange,
         onRepeatChange = viewModel::onRepeatChange,
         onRepeatUntilChange = viewModel::onRepeatUntilChange,
+        onToggleMember = viewModel::onToggleMember,
         onSave = { viewModel.save(onSaved = onSaved, onGone = onEventGone) },
         onClose = onBack,
         onMessageShown = viewModel::messageShown,

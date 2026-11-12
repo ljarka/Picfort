@@ -4,6 +4,7 @@ import android.text.format.DateFormat
 import com.github.ljarka.picfort.core.model.EventsSegment
 import com.github.ljarka.picfort.core.model.EventRepeat
 import com.github.ljarka.picfort.core.model.FamilyEvent
+import com.github.ljarka.picfort.core.model.FamilyMember
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -111,6 +112,8 @@ data class EventsListUi(
     val message: String? = null,
     /** Member id → current name, for "Ola's birthday". */
     val memberNames: Map<String, String> = emptyMap(),
+    /** All family members, for the avatars of who an event is for (T-053). */
+    val members: List<FamilyMember> = emptyList(),
 )
 
 data class EventDetailUi(
@@ -122,6 +125,7 @@ data class EventDetailUi(
     val loadError: String? = null,
     val message: String? = null,
     val memberNames: Map<String, String> = emptyMap(),
+    val members: List<FamilyMember> = emptyList(),
 )
 
 data class EventFormUi(
@@ -137,6 +141,9 @@ data class EventFormUi(
     val repeatUntil: LocalDate? = null,
     /** Editing an event that already repeats: the change applies to the whole series. */
     val editsSeries: Boolean = false,
+    /** Who the event is for (T-053), chosen from [members]. */
+    val memberIds: List<String> = emptyList(),
+    val members: List<FamilyMember> = emptyList(),
     val today: LocalDate = LocalDate.of(2026, 11, 11),
     val hasUnsavedChanges: Boolean = false,
     val isSaving: Boolean = false,
@@ -289,6 +296,7 @@ fun EventsListContent(
                                             isUpcoming = state.segment == EventsSegment.UPCOMING,
                                             isNow = section.isNow,
                                             locale = locale,
+                                            who = membersOf(event.who, state.members),
                                             onClick = { onOpenEvent(event) },
                                         )
                                     }
@@ -323,6 +331,7 @@ private fun EventRow(
     isNow: Boolean,
     locale: Locale,
     onClick: () -> Unit,
+    who: List<FamilyMember> = emptyList(),
 ) {
     val badge = remember(event.startDate, event.endDate, locale) {
         formatEventDateBadge(event.startDate, event.endDate, locale)
@@ -340,8 +349,9 @@ private fun EventRow(
     }
     // Birthdays repeat yearly by nature: the cake says it, no "Every year" line.
     val repeatLabel = event.repeat?.takeUnless { event.isBirthday }?.label
-    val talkBackDesc = remember(title, formattedDates, relLabel, turns, repeatLabel) {
-        listOfNotNull(title, formattedDates, relLabel, turns, repeatLabel).joinToString(", ")
+    val whoNames = who.joinToString(", ") { it.name }.ifEmpty { null }
+    val talkBackDesc = remember(title, formattedDates, relLabel, turns, repeatLabel, whoNames) {
+        listOfNotNull(title, formattedDates, relLabel, turns, repeatLabel, whoNames).joinToString(", ")
     }
 
     Surface(
@@ -480,6 +490,10 @@ private fun EventRow(
                     }
                 }
             }
+            if (who.isNotEmpty()) {
+                Spacer(Modifier.width(8.dp))
+                MemberStack(who)
+            }
         }
     }
 }
@@ -611,6 +625,12 @@ fun EventDetailContent(
                         )
                     }
 
+                    val who = membersOf(event.who, state.members)
+                    if (who.isNotEmpty()) {
+                        Spacer(Modifier.height(14.dp))
+                        WhoLine(who)
+                    }
+
                     val repeatText = remember(event, state.today, locale) { repeatSummary(event, state.today, locale) }
                     if (repeatText != null && !event.isBirthday) {
                         Spacer(Modifier.height(14.dp))
@@ -698,6 +718,7 @@ fun EventFormContent(
     onNoteChange: (String) -> Unit = {},
     onRepeatChange: (EventRepeat?) -> Unit = {},
     onRepeatUntilChange: (LocalDate?) -> Unit = {},
+    onToggleMember: (String) -> Unit = {},
     onSave: () -> Unit = {},
     onClose: () -> Unit = {},
     onMessageShown: () -> Unit = {},
@@ -925,6 +946,8 @@ fun EventFormContent(
                 keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Sentences),
                 modifier = Modifier.fillMaxWidth(),
             )
+
+            WhoField(state.members, state.memberIds, onToggleMember)
 
             Row(
                 modifier = Modifier.fillMaxWidth(),

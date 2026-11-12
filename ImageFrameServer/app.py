@@ -50,6 +50,7 @@ Events (see events.py, T-022), same token auth; anyone can edit, only the creato
     GET    /events/<id>                      -> the event
     PATCH  /events/<id>                      -> update any field (null clears optional ones)
     DELETE /events/<id>                      -> 204 (creator only)
+    Every event has `members`: the family member ids it is for (T-053), settable on POST and PATCH.
 """
 
 import hmac

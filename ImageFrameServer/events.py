@@ -2,6 +2,7 @@
 (T-022, T-035, ADR 0008, ADR 0010)."""
 
 import calendar
+import json
 import re
 from contextlib import closing
 from datetime import date, timedelta
@@ -17,6 +18,8 @@ MAX_LIMIT = 100
 DATE_RE = re.compile(r"^\d{4}-\d{2}-\d{2}$")
 TIME_RE = re.compile(r"^([01]\d|2[0-3]):[0-5]\d$")
 UUID_RE = re.compile(r"^[0-9a-fA-F-]{36}$")
+MEMBER_ID_RE = re.compile(r"^[A-Za-z0-9_-]{1,64}$")
+MAX_MEMBERS = 30
 
 FIELDS = ("title", "start_date", "end_date", "start_time", "location", "note", "album_id", "repeat", "repeat_until")
 REPEATS = ("weekly", "monthly", "yearly")
@@ -35,6 +38,7 @@ CREATE TABLE events (
   repeat_until TEXT,
   kind         TEXT,
   member_id    TEXT,
+  members      TEXT,
   created_by   TEXT NOT NULL,
   created      TEXT NOT NULL,
   updated      TEXT NOT NULL
@@ -102,6 +106,28 @@ def _repeat(value):
     if value not in REPEATS:
         raise StoreError("repeat must be one of " + ", ".join(REPEATS) + " or null")
     return value
+
+
+def _members(value) -> list:
+    """Who the event is for (T-053): family member ids, in the order chosen, without repeats."""
+    if value is None:
+        return []
+    if not isinstance(value, list):
+        raise StoreError("members must be a list of member ids")
+    if len(value) > MAX_MEMBERS:
+        raise StoreError(f"members must have at most {MAX_MEMBERS} ids")
+    result = []
+    for member_id in value:
+        if not isinstance(member_id, str) or not MEMBER_ID_RE.match(member_id):
+            raise StoreError("members must be member ids")
+        if member_id not in result:
+            result.append(member_id)
+    return result
+
+
+def _stored_members(row) -> list:
+    raw = row["members"]
+    return json.loads(raw) if raw else []
 
 
 def _add_months(first: date, months: int) -> date:
@@ -192,11 +218,12 @@ def _validate_event(data: dict) -> dict:
         "album_id": _album_id(data.get("album_id")),
         "repeat": repeat,
         "repeat_until": repeat_until,
+        "members": _members(data.get("members")),
     }
 
 
 class EventStore(SqliteStore):
-    SCHEMA_VERSION = 3
+    SCHEMA_VERSION = 4
     SCHEMA = SCHEMA
     NAME = "Events"
     MIGRATIONS = {
@@ -209,6 +236,7 @@ class EventStore(SqliteStore):
             "ALTER TABLE events ADD COLUMN member_id TEXT",
             "CREATE UNIQUE INDEX events_member ON events(member_id) WHERE member_id IS NOT NULL",
         ],
+        3: ["ALTER TABLE events ADD COLUMN members TEXT"],
     }
 
     def __init__(self, db_path: str, clock=utc_now, family=None):
@@ -270,8 +298,8 @@ class EventStore(SqliteStore):
         with closing(self.connect()) as conn, conn:
             cur = conn.execute(
                 "INSERT INTO events (title, start_date, end_date, start_time, location, note,"
-                " album_id, repeat, repeat_until, kind, member_id, created_by, created, updated)"
-                " VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, NULL, NULL, ?, ?, ?)",
+                " album_id, repeat, repeat_until, kind, member_id, members, created_by, created, updated)"
+                " VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, NULL, NULL, ?, ?, ?, ?)",
                 (
                     fields["title"],
                     fields["start_date"],
@@ -282,6 +310,7 @@ class EventStore(SqliteStore):
                     fields["album_id"],
                     fields["repeat"],
                     fields["repeat_until"],
+                    json.dumps(fields["members"]) if fields["members"] else None,
                     user_id,
                     now,
                     now,
@@ -296,17 +325,18 @@ class EventStore(SqliteStore):
                 forbidden = [f for f in ("start_date", "end_date", "repeat", "repeat_until", "title") if f in body]
                 if forbidden:
                     raise StoreError("Edit the birthday in Family settings", 409)
-            if not any(f in body for f in FIELDS):
+            if not any(f in body for f in FIELDS + ("members",)):
                 return self._json(row)
             merged = {f: body[f] if f in body else row[f] for f in FIELDS}
+            merged["members"] = body["members"] if "members" in body else _stored_members(row)
             if "repeat" in body and body["repeat"] is None and "repeat_until" not in body:
                 merged["repeat_until"] = None  # no repeat, no end of the repeat
             fields = _validate_event(merged)
             now = self.clock()
             conn.execute(
                 "UPDATE events SET title = ?, start_date = ?, end_date = ?, start_time = ?,"
-                " location = ?, note = ?, album_id = ?, repeat = ?, repeat_until = ?, updated = ?"
-                " WHERE id = ?",
+                " location = ?, note = ?, album_id = ?, repeat = ?, repeat_until = ?, members = ?,"
+                " updated = ? WHERE id = ?",
                 (
                     fields["title"],
                     fields["start_date"],
@@ -317,6 +347,7 @@ class EventStore(SqliteStore):
                     fields["album_id"],
                     fields["repeat"],
                     fields["repeat_until"],
+                    json.dumps(fields["members"]) if fields["members"] else None,
                     now,
                     event_id,
                 ),
@@ -412,6 +443,7 @@ class EventStore(SqliteStore):
             "repeat_until": row["repeat_until"],
             "kind": row["kind"],
             "member_id": row["member_id"],
+            "members": _stored_members(row),
             "occurrence_start": occ_start.isoformat(),
             "occurrence_end": occ_end.isoformat() if occ_end > occ_start else None,
             "turns": self._turns(row, occ_start),
