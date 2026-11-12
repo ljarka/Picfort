@@ -24,7 +24,7 @@ mkdir -p "$FEATURE_DIR/src/test/java/com/github/ljarka/picfort/feature/$FEATURE_
 # 1. build.gradle.kts
 cat << 'EOF' > "$FEATURE_DIR/build.gradle.kts"
 plugins {
-    alias(libs.plugins.android.library)
+    id("picfort.android.library")
     alias(libs.plugins.kotlin.compose)
     alias(libs.plugins.kotlin.serialization)
     alias(libs.plugins.ksp)
@@ -34,25 +34,9 @@ plugins {
 
 android {
     namespace = "com.github.ljarka.picfort.feature.FEATURE_PLACEHOLDER"
-    compileSdk = 37
-
-    defaultConfig {
-        minSdk = 26
-    }
-
-    compileOptions {
-        sourceCompatibility = JavaVersion.VERSION_11
-        targetCompatibility = JavaVersion.VERSION_11
-    }
 
     buildFeatures {
         compose = true
-    }
-}
-
-kotlin {
-    compilerOptions {
-        jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_11)
     }
 }
 

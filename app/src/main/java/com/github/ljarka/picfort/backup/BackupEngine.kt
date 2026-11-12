@@ -4,13 +4,13 @@ import android.content.ContentResolver
 import android.content.Context
 import android.net.Uri
 import android.util.Log
-import com.github.ljarka.picfort.db.BackupDao
-import com.github.ljarka.picfort.db.LocalBackupEntity
+import com.github.ljarka.picfort.core.database.BackupDao
+import com.github.ljarka.picfort.core.database.LocalBackupEntity
+import com.github.ljarka.picfort.core.network.AccessTokenStore
+import com.github.ljarka.picfort.core.network.ServerUrlStore
 import com.github.ljarka.picfort.local.hasMediaAccess
 import com.github.ljarka.picfort.local.localImageUri
 import com.github.ljarka.picfort.local.localVideoUri
-import com.github.ljarka.picfort.ui.login.AccessTokenStore
-import com.github.ljarka.picfort.ui.server.ServerUrlStore
 import com.github.ljarka.picfort.ui.timeline.TimelineRepository
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.CancellationException

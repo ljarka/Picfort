@@ -1,5 +1,6 @@
 package com.github.ljarka.picfort.ui.events
 
+import com.github.ljarka.picfort.core.model.FamilyEvent
 import kotlinx.serialization.json.JsonNull
 import kotlinx.serialization.json.JsonPrimitive
 import org.junit.Assert.assertEquals

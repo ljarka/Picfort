@@ -1,5 +1,7 @@
 package com.github.ljarka.picfort.ui.shopping
 
+import com.github.ljarka.picfort.core.model.ShoppingItem
+import com.github.ljarka.picfort.core.model.ShoppingList
 import com.github.ljarka.picfort.core.network.PicfortServerClient
 import com.github.ljarka.picfort.core.network.PicfortServerException
 import kotlinx.serialization.SerialName

@@ -1,7 +1,10 @@
 package com.github.ljarka.picfort.network
 
 import com.github.ljarka.picfort.BuildConfig
-import com.github.ljarka.picfort.ui.server.ServerUrlStore
+import com.github.ljarka.picfort.core.network.CleartextPolicyInterceptor
+import com.github.ljarka.picfort.core.network.PICFORT_KEY_HEADER
+import com.github.ljarka.picfort.core.network.PicfortKeyInterceptor
+import com.github.ljarka.picfort.core.network.ServerUrlStore
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn

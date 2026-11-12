@@ -10,7 +10,7 @@ import android.content.pm.ServiceInfo
 import android.os.Build
 import androidx.core.app.NotificationCompat
 import androidx.work.ForegroundInfo
-import com.github.ljarka.picfort.R
+import com.github.ljarka.picfort.core.ui.R as CoreUiR
 
 private const val CHANNEL_ID = "backup"
 private const val NOTIFICATION_ID = 1001
@@ -38,7 +38,7 @@ fun showQuotaExceededNotification(context: Context) {
     }
     val text = "Your storage quota on the server is full. Ask your Immich admin to raise it."
     val notification = NotificationCompat.Builder(context, CHANNEL_ID)
-        .setSmallIcon(R.drawable.ic_cloud)
+        .setSmallIcon(CoreUiR.drawable.ic_cloud)
         .setContentTitle("Backup stopped")
         .setContentText(text)
         .setStyle(NotificationCompat.BigTextStyle().bigText(text))
@@ -52,7 +52,7 @@ fun showQuotaExceededNotification(context: Context) {
 fun backupForegroundInfo(context: Context, done: Int, total: Int): ForegroundInfo {
     ensureChannel(context)
     val notification = NotificationCompat.Builder(context, CHANNEL_ID)
-        .setSmallIcon(R.drawable.ic_cloud)
+        .setSmallIcon(CoreUiR.drawable.ic_cloud)
         .setContentTitle("Backing up to Immich")
         .setContentText(if (total > 0) "$done of $total" else "Preparing…")
         .setProgress(total, done, total == 0)

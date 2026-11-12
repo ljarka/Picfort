@@ -7,12 +7,12 @@ import com.github.ljarka.picfort.backup.BackupScheduler
 import com.github.ljarka.picfort.backup.BackupSettingsStore
 import com.github.ljarka.picfort.backup.BackupStatus
 import com.github.ljarka.picfort.backup.LocalMediaScanner
-import com.github.ljarka.picfort.db.BackupDao
+import com.github.ljarka.picfort.core.database.BackupDao
+import com.github.ljarka.picfort.core.network.FrameSettingsStore
+import com.github.ljarka.picfort.core.network.ServerUrlStore
 import com.github.ljarka.picfort.local.hasMediaAccess
 import com.github.ljarka.picfort.network.SessionManager
 import com.github.ljarka.picfort.ui.family.FamilyRepository
-import com.github.ljarka.picfort.ui.frame.FrameSettingsStore
-import com.github.ljarka.picfort.ui.server.ServerUrlStore
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.MutableStateFlow

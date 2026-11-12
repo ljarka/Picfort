@@ -35,11 +35,11 @@ import com.github.ljarka.picfort.ui.shopping.ShoppingListsScreen
 import com.github.ljarka.picfort.ui.shell.Tab
 import com.github.ljarka.picfort.ui.shell.TabBar
 import com.github.ljarka.picfort.ui.shell.TabRoot
-import com.github.ljarka.picfort.db.AssetType
+import com.github.ljarka.picfort.core.database.AssetType
 import com.github.ljarka.picfort.network.SessionManager
 import com.github.ljarka.picfort.ui.image.ImageDetailsScreen
 import com.github.ljarka.picfort.ui.init.InitScreen
-import com.github.ljarka.picfort.ui.theme.PicfortTheme
+import com.github.ljarka.picfort.core.ui.theme.PicfortTheme
 import com.github.ljarka.picfort.collections.AlbumScreen
 import com.github.ljarka.picfort.collections.AlbumsScreen
 import com.github.ljarka.picfort.collections.GridAsset
@@ -409,5 +409,4 @@ class MainActivity : ComponentActivity() {
     }
 }
 }
-
 

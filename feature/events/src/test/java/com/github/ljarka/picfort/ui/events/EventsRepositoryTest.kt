@@ -1,5 +1,7 @@
 package com.github.ljarka.picfort.ui.events
 
+import com.github.ljarka.picfort.core.model.EventsSegment
+import com.github.ljarka.picfort.core.model.FamilyEvent
 import com.github.ljarka.picfort.core.network.PicfortServerException
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals

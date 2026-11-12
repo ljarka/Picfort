@@ -1,5 +1,6 @@
 package com.github.ljarka.picfort.ui.wall
 
+import com.github.ljarka.picfort.core.model.FamilyMember
 import com.github.ljarka.picfort.core.ui.avatar.UNKNOWN_MEMBER_COLOR
 
 import android.net.Uri

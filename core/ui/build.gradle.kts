@@ -1,30 +1,14 @@
 plugins {
-    alias(libs.plugins.android.library)
+    id("picfort.android.library")
     alias(libs.plugins.kotlin.compose)
     alias(libs.plugins.paparazzi)
 }
 
 android {
     namespace = "com.github.ljarka.picfort.core.ui"
-    compileSdk = 37
-
-    defaultConfig {
-        minSdk = 26
-    }
-
-    compileOptions {
-        sourceCompatibility = JavaVersion.VERSION_11
-        targetCompatibility = JavaVersion.VERSION_11
-    }
 
     buildFeatures {
         compose = true
-    }
-}
-
-kotlin {
-    compilerOptions {
-        jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_11)
     }
 }
 

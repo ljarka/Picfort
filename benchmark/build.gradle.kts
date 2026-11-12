@@ -1,10 +1,9 @@
 plugins {
-    alias(libs.plugins.android.test)
+    id("picfort.android.test")
 }
 
 android {
     namespace = "com.github.ljarka.picfort.benchmark"
-    compileSdk = 37
 
     defaultConfig {
         minSdk = 28
@@ -39,10 +38,4 @@ dependencies {
 
 androidComponents {
     beforeVariants(selector().all()) { it.enable = it.buildType == "benchmark" }
-}
-
-kotlin {
-    compilerOptions {
-        jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_11)
-    }
 }

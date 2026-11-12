@@ -1,6 +1,8 @@
 package com.github.ljarka.picfort.ui.events
 
 import android.text.format.DateFormat
+import com.github.ljarka.picfort.core.model.EventsSegment
+import com.github.ljarka.picfort.core.model.FamilyEvent
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement

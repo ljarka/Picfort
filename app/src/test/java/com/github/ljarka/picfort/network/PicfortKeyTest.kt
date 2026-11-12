@@ -1,5 +1,8 @@
 package com.github.ljarka.picfort.network
 
+import com.github.ljarka.picfort.core.network.PICFORT_KEY_HEADER
+import com.github.ljarka.picfort.core.network.picfortKey
+import com.github.ljarka.picfort.core.network.picfortKeyFor
 import okhttp3.Request
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull

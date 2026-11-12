@@ -1,6 +1,8 @@
 package com.github.ljarka.picfort.ui.shopping
 
 import android.content.Context
+import com.github.ljarka.picfort.core.model.ShoppingItem
+import com.github.ljarka.picfort.core.model.ShoppingList
 import com.github.ljarka.picfort.core.network.AppScope
 import com.github.ljarka.picfort.core.network.PicfortServerException
 import com.github.ljarka.picfort.core.network.FrameSettingsStore

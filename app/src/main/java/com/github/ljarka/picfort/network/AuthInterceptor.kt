@@ -1,9 +1,9 @@
 package com.github.ljarka.picfort.network
 
-import com.github.ljarka.picfort.ui.frame.FrameSettingsStore
-import com.github.ljarka.picfort.ui.frame.normalizeFrameUrl
-import com.github.ljarka.picfort.ui.login.AccessTokenStore
-import com.github.ljarka.picfort.ui.server.ServerUrlStore
+import com.github.ljarka.picfort.core.network.AccessTokenStore
+import com.github.ljarka.picfort.core.network.FrameSettingsStore
+import com.github.ljarka.picfort.core.network.ServerUrlStore
+import com.github.ljarka.picfort.core.network.normalizeFrameUrl
 import okhttp3.HttpUrl
 import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
 import okhttp3.Interceptor

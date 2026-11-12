@@ -1,5 +1,6 @@
 package com.github.ljarka.picfort.network
 
+import com.github.ljarka.picfort.core.network.isLocalNetworkHost
 import okhttp3.HttpUrl
 import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
 

@@ -2,8 +2,9 @@ package com.github.ljarka.picfort.ui.login
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.github.ljarka.picfort.network.CleartextNotAllowedException
-import com.github.ljarka.picfort.ui.server.ServerUrlStore
+import com.github.ljarka.picfort.core.network.AccessTokenStore
+import com.github.ljarka.picfort.core.network.CleartextNotAllowedException
+import com.github.ljarka.picfort.core.network.ServerUrlStore
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.MutableStateFlow

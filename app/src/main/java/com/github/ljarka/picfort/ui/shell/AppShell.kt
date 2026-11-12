@@ -59,9 +59,9 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.compose.LifecycleEventEffect
 import com.github.ljarka.picfort.R
+import com.github.ljarka.picfort.core.network.FrameSettingsStore
+import com.github.ljarka.picfort.core.network.normalizeFrameUrl
 import com.github.ljarka.picfort.ui.frame.FrameSettingsDialog
-import com.github.ljarka.picfort.ui.frame.FrameSettingsStore
-import com.github.ljarka.picfort.ui.frame.normalizeFrameUrl
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
 
