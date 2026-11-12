@@ -9,7 +9,7 @@ Thin Android application shell, navigation root, and Hilt root assembler.
 | `MainActivity.kt` | Android activity, root `NavHost`, tab bar coordination, shared element transitions |
 | `PicfortApplication.kt` | Application class, Hilt AndroidApp entry, Coil image loader init |
 | `AppModule.kt` | Top-level Hilt module: binds cross-feature bridges (e.g. `ImmichUsersSync`) |
-| `ui/shell/AppShell.kt` | Floating navigation bar (`TabBar`), `TabRoot`, `ComingSoonScreen` |
+| `ui/shell/AppShell.kt` | Floating navigation bar (`TabBar`), `TabRoot`, `ComingSoonScreen`; `Tab.accent` (Wall coral, Shopping mint, Events amber, School sky, Photos periwinkle), applied in `MainActivity` via `AccentTheme` |
 | `ui/init/*` | Onboarding, initial connection validation (`InitScreen`, `InitViewModel`) |
 | `ui/login/*` | Immich login screen, email/password form |
 | `ui/server/*` | Server address input and testing screen |

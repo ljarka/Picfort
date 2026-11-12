@@ -91,6 +91,8 @@ import com.github.ljarka.picfort.core.ui.component.SettingsAction
 import com.github.ljarka.picfort.core.model.FamilyMember
 import com.github.ljarka.picfort.core.ui.avatar.MemberAvatar
 import com.github.ljarka.picfort.core.ui.component.aboveFloatingTabBar
+import com.github.ljarka.picfort.core.ui.theme.AccentTheme
+import com.github.ljarka.picfort.core.ui.theme.BrandAccent
 
 private const val PREVIEW_ITEMS = 6
 
@@ -190,10 +192,15 @@ fun ShoppingListsContent(
 }
 
 @Composable
-private fun ListCard(list: ShoppingList, onClick: () -> Unit) {
+private fun ListCard(list: ShoppingList, onClick: () -> Unit) = AccentTheme(BrandAccent.forKey(list.id)) {
+    // Each list wears one aperture blade, like notes in Keep. With wallpaper colors the
+    // accent is skipped and primaryContainer is the phone's.
     Card(
         onClick = onClick,
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerHigh),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.primaryContainer,
+            contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
+        ),
     ) {
         Column(Modifier.padding(12.dp)) {
             Text(list.title, style = MaterialTheme.typography.titleMedium, maxLines = 2, overflow = TextOverflow.Ellipsis)
@@ -211,13 +218,11 @@ private fun ListCard(list: ShoppingList, onClick: () -> Unit) {
                 )
             }
             if (open.size > PREVIEW_ITEMS) {
-                Text("+${open.size - PREVIEW_ITEMS} more", style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text("+${open.size - PREVIEW_ITEMS} more", style = MaterialTheme.typography.bodySmall)
             }
             if (list.items.isNotEmpty()) {
                 Spacer(Modifier.height(6.dp))
-                Text("${list.checkedCount}/${list.items.size} done", style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text("${list.checkedCount}/${list.items.size} done", style = MaterialTheme.typography.labelSmall)
             }
         }
     }

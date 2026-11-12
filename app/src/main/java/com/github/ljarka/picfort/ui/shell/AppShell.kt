@@ -62,17 +62,18 @@ import com.github.ljarka.picfort.R
 import com.github.ljarka.picfort.core.network.FrameSettingsStore
 import com.github.ljarka.picfort.core.network.normalizeFrameUrl
 import com.github.ljarka.picfort.core.ui.component.FloatingTabBar
+import com.github.ljarka.picfort.core.ui.theme.BrandAccent
 import com.github.ljarka.picfort.ui.frame.FrameSettingsDialog
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
 
 /** The five bottom-bar tabs (T-017), in bar order. Daily family things first, photos last. */
-enum class Tab(val label: String, @param:DrawableRes val icon: Int) {
-    WALL("Wall", R.drawable.ic_forum),
-    SHOPPING("Shopping", R.drawable.ic_shopping_cart),
-    EVENTS("Events", R.drawable.ic_event),
-    SCHOOL("School", R.drawable.ic_school),
-    PHOTOS("Photos", R.drawable.ic_photo_library),
+enum class Tab(val label: String, @param:DrawableRes val icon: Int, val accent: BrandAccent) {
+    WALL("Wall", R.drawable.ic_forum, BrandAccent.Coral),
+    SHOPPING("Shopping", R.drawable.ic_shopping_cart, BrandAccent.Mint),
+    EVENTS("Events", R.drawable.ic_event, BrandAccent.Amber),
+    SCHOOL("School", R.drawable.ic_school, BrandAccent.Sky),
+    PHOTOS("Photos", R.drawable.ic_photo_library, BrandAccent.Periwinkle),
 }
 
 /**
