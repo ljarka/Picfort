@@ -429,6 +429,29 @@ class FamilyRepositoryTest {
     }
 
     @Test
+    fun `manual member gets a face from Immich people, when added and when edited`() = runBlocking {
+        val backend = FakeFamilyBackend()
+        val people = FakePeopleSource()
+        val repo = FamilyRepository(
+            backend = backend,
+            people = people,
+            offline = FakeOfflineCopy(),
+            usersDao = FakeUsersDao(emptyList()),
+            immichServerUrl = { "http://immich" },
+            currentUserId = { "mama" },
+        )
+        repo.addMember("Kuba", pickedPersonId = "person-kuba")
+        val kuba = repo.users.first().single()
+        assertEquals("person-kuba", people.lastThumbPersonId)
+        assertTrue(backend.uploadedPhotos[kuba.id]!!.contentEquals(byteArrayOf(1, 2, 3)))
+        assertTrue(kuba.hasCustomPhoto)
+        assertFalse(kuba.isImmichUser)
+
+        repo.saveMember(kuba, displayName = "Kuba", pickedPersonId = "person-kuba-2")
+        assertEquals("person-kuba-2", people.lastThumbPersonId)
+    }
+
+    @Test
     fun `canAddMembers becomes false on outdated server`() = runBlocking {
         val backend = FakeFamilyBackend().apply {
             failWith = PicfortServerException.Outdated("family members")

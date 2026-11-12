@@ -294,13 +294,16 @@ class FamilyRepository(
         displayName: String,
         birthDate: BirthDate? = null,
         photoBytes: ByteArray? = null,
+        pickedPersonId: String? = null,
     ) {
         val today = java.time.LocalDate.now().toString()
         val birthDateStr = birthDate?.toIsoString()
         try {
+            // Fetch the face first: a failure then doesn't leave a member without the chosen photo.
+            val photo = pickedPersonId?.let { people.faceThumbnailJpeg(it) } ?: photoBytes
             val created = backend.addMember(displayName, birthDateStr, today)
-            if (photoBytes != null) {
-                backend.uploadPhoto(created.userId, photoBytes)
+            if (photo != null) {
+                backend.uploadPhoto(created.userId, photo)
             }
             refresh()
         } catch (e: PicfortServerException.Outdated) {

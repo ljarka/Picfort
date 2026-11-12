@@ -125,6 +125,19 @@ class FamilySettingsViewModel @Inject constructor(
 
     fun selectPerson(person: ImmichPersonItem) {
         _state.update { s ->
+            val adding = s.addingPerson
+            if (s.editing == null && adding != null) {
+                return@update s.copy(
+                    peoplePicker = null,
+                    addingPerson = adding.copy(
+                        pickedPersonId = person.id,
+                        photoBytes = null,
+                        previewAvatarUrl = person.thumbnailUrl,
+                        // An empty name takes the person's name from Immich.
+                        name = adding.name.ifBlank { person.name.take(50) },
+                    ),
+                )
+            }
             val edit = s.editing ?: return@update s.copy(peoplePicker = null)
             s.copy(
                 peoplePicker = null,
@@ -167,6 +180,12 @@ class FamilySettingsViewModel @Inject constructor(
         _state.update { s -> s.copy(addingPerson = s.addingPerson?.copy(photoBytes = bytes)) }
     }
 
+    fun removeAddPersonPhoto() {
+        _state.update { s ->
+            s.copy(addingPerson = s.addingPerson?.copy(pickedPersonId = null, photoBytes = null, previewAvatarUrl = null))
+        }
+    }
+
     fun saveAddPerson() {
         val add = _state.value.addingPerson ?: return
         if (add.name.isBlank() || add.saving) return
@@ -178,6 +197,7 @@ class FamilySettingsViewModel @Inject constructor(
                     displayName = add.name.trim(),
                     birthDate = effectiveBirthDate,
                     photoBytes = add.photoBytes,
+                    pickedPersonId = add.pickedPersonId,
                 )
                 _state.update { it.copy(addingPerson = null) }
             } catch (e: CancellationException) {

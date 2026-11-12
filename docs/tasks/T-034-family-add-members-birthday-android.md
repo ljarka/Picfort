@@ -50,5 +50,11 @@ the member sheet with the birth date row; the add-person sheet. It extends `fami
 
 ## Out of scope
 
-- Photos of a manual member from Immich people (needs an account; T-030 covers children).
 - Changing Immich itself.
+
+## Amendment (2026-11-12, owner's request)
+
+- A manual member's photo comes from **Immich people** too: the picker searches the logged-in user's
+  library, so the member needs no account. Both the Add person sheet and the member sheet have
+  "Choose from Immich people"; a manual member's sheet says "Remove photo" instead of "Use Immich picture".
+  (Upload from the phone was never built.)

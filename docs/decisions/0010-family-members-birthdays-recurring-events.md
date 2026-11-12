@@ -28,8 +28,8 @@ regression.
   server doesn't know which Immich users exist; the app merges the Immich user list with the rows.
 - Manual members have no Immich account: they never post on the wall, and they can't be given
   access to an Immich album. They still show in the wall's avatar row (amended 2026-11-12, owner's
-  request). They can have a name, a photo (uploaded from the phone, not
-  from Immich people) and a birth date. Anyone in the family can add, edit and delete them.
+  request). They can have a name, a photo (a face from Immich people, as for
+  accounts; amended 2026-11-12) and a birth date. Anyone in the family can add, edit and delete them.
 - The app marks Immich users with a badge in Family settings.
 
 ### Birthdays are real recurring events
