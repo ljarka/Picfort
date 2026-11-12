@@ -102,7 +102,6 @@ data class FamilyUserUi(
 data class AddPersonUi(
     val name: String = "",
     val birthDate: BirthDate? = null,
-    val hideBirthYear: Boolean = false,
     val previewAvatarUrl: String? = null,
     val photoBytes: ByteArray? = null,
     /** Immich person whose face becomes the photo (T-034 follow-up: manual members too). */
@@ -150,7 +149,6 @@ fun FamilySettingsScreen(onBack: () -> Unit) {
                 onClearPhoto = viewModel::clearPhoto,
                 onShowInFamilyChange = viewModel::updateShowInFamily,
                 onBirthDateChange = viewModel::updateMemberBirthDate,
-                onHideYearChange = viewModel::updateMemberHideYear,
                 onAskDelete = viewModel::askDeleteMember,
                 onCancelDelete = viewModel::cancelDeleteMember,
                 onConfirmDelete = viewModel::confirmDeleteMember,
@@ -169,7 +167,6 @@ fun FamilySettingsScreen(onBack: () -> Unit) {
                 state = adding,
                 onNameChange = viewModel::updateAddPersonName,
                 onBirthDateChange = viewModel::updateAddPersonBirthDate,
-                onHideYearChange = viewModel::updateAddPersonHideYear,
                 onChooseFromPeople = viewModel::openPeoplePicker,
                 onRemovePhoto = viewModel::removeAddPersonPhoto,
                 onCancel = viewModel::dismissAddPerson,
@@ -343,7 +340,6 @@ data class FamilyMemberEditUi(
     val noPhoto: Boolean = user.noPhoto,
     val showInFamily: Boolean = !user.hidden,
     val birthDate: BirthDate? = user.birthDate,
-    val hideBirthYear: Boolean = user.birthDate?.year == null && user.birthDate != null,
     val clearBirthDate: Boolean = false,
     val confirmDelete: Boolean = false,
     val saving: Boolean = false,
@@ -359,7 +355,6 @@ fun FamilyMemberSheetContent(
     onClearPhoto: () -> Unit = {},
     onShowInFamilyChange: (Boolean) -> Unit = {},
     onBirthDateChange: (BirthDate?) -> Unit = {},
-    onHideYearChange: (Boolean) -> Unit = {},
     onAskDelete: () -> Unit = {},
     onCancelDelete: () -> Unit = {},
     onConfirmDelete: () -> Unit = {},
@@ -453,9 +448,7 @@ fun FamilyMemberSheetContent(
         Spacer(Modifier.height(16.dp))
         BirthdaySection(
             birthDate = state.birthDate,
-            hideBirthYear = state.hideBirthYear,
             onBirthDateChange = onBirthDateChange,
-            onHideYearChange = onHideYearChange,
             enabled = !state.saving,
         )
         Spacer(Modifier.height(16.dp))
@@ -523,7 +516,6 @@ fun AddPersonSheetContent(
     state: AddPersonUi,
     onNameChange: (String) -> Unit = {},
     onBirthDateChange: (BirthDate?) -> Unit = {},
-    onHideYearChange: (Boolean) -> Unit = {},
     onChooseFromPeople: () -> Unit = {},
     onRemovePhoto: () -> Unit = {},
     onCancel: () -> Unit = {},
@@ -584,9 +576,7 @@ fun AddPersonSheetContent(
         Spacer(Modifier.height(16.dp))
         BirthdaySection(
             birthDate = state.birthDate,
-            hideBirthYear = state.hideBirthYear,
             onBirthDateChange = onBirthDateChange,
-            onHideYearChange = onHideYearChange,
             enabled = !state.saving,
         )
         Spacer(Modifier.height(16.dp))
@@ -619,9 +609,7 @@ fun AddPersonSheetContent(
 @Composable
 fun BirthdaySection(
     birthDate: BirthDate?,
-    hideBirthYear: Boolean,
     onBirthDateChange: (BirthDate?) -> Unit,
-    onHideYearChange: (Boolean) -> Unit,
     enabled: Boolean = true,
 ) {
     var showDatePicker by remember { mutableStateOf(false) }
@@ -654,27 +642,6 @@ fun BirthdaySection(
                 }
             }
         }
-        if (birthDate != null) {
-            Spacer(Modifier.height(8.dp))
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clickable(enabled = enabled) { onHideYearChange(!hideBirthYear) }
-                    .padding(vertical = 4.dp),
-            ) {
-                Text(
-                    "Don't show the year",
-                    style = MaterialTheme.typography.bodyMedium,
-                    modifier = Modifier.weight(1f),
-                )
-                Switch(
-                    checked = hideBirthYear,
-                    onCheckedChange = onHideYearChange,
-                    enabled = enabled,
-                )
-            }
-        }
     }
 
     if (showDatePicker) {
@@ -696,7 +663,7 @@ fun BirthdaySection(
                                 BirthDate(
                                     month = date.monthValue,
                                     day = date.dayOfMonth,
-                                    year = if (hideBirthYear) null else date.year,
+                                    year = date.year,
                                 )
                             )
                         }

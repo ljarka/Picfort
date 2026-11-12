@@ -24,6 +24,11 @@ Family management vertical slice: member profiles, Immich users syncing, custom 
 - A picked face also saves my link member → my Immich person (`/family/<id>/person`, per viewer);
   `myPersonIds` feeds the Photos carousel (T-052).
 
+## Birthday
+
+- A date picker; the year is always saved (no "hide the year" switch, removed 2026-11-12). A date without a
+  year from the server still shows (no age).
+
 ## Public Contract / Navigation Entry Points
 
 - `FamilySettingsScreen(onBack: () -> Unit)`
