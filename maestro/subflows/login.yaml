@@ -1,0 +1,25 @@
+# Fresh install → Immich login → Picfort server. Values come from scripts/maestro-smoke.sh
+# (MAESTRO_* env vars read from ~/.config/picfort/test.env); never hardcode credentials here.
+appId: com.github.ljarka.immich.android2
+---
+- tapOn: "Server URL"
+- inputText: ${MAESTRO_IMMICH_URL}
+- hideKeyboard
+- tapOn: "Connect"
+- tapOn: "Email"
+- inputText: ${MAESTRO_IMMICH_EMAIL}
+- tapOn: "Password"
+- inputText: ${MAESTRO_IMMICH_PASSWORD}
+- hideKeyboard
+- tapOn: "Login"
+- extendedWaitUntil:
+    visible: "Server address"
+    timeout: 30000
+- tapOn: "Server address"
+- inputText: ${MAESTRO_PICFORT_SERVER}
+- hideKeyboard
+- tapOn: "Test"
+- extendedWaitUntil:
+    visible: "Connected.*"
+    timeout: 15000
+- tapOn: "Continue"

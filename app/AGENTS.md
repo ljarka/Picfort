@@ -27,4 +27,5 @@ Thin Android application shell, navigation root, and Hilt root assembler.
 ```bash
 ./gradlew :app:testDebugUnitTest
 ./gradlew :app:verifyPaparazziDebug
+./scripts/maestro-smoke.sh   # on a device: clean install, login, every tab (maestro/smoke.yaml)
 ```
