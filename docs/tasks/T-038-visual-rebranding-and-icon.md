@@ -12,9 +12,7 @@ glassmorphism feel, and updated Paparazzi goldens.
 
 ## Design
 
-- **App Icon:** Modern camera aperture framing a cozy hearth/house in warm sunset terracotta and
-  deep slate petrol tones. Master 1024×1024 PNG in `res/drawable/icon.png`, adaptive icons across
-  all mipmap densities, and monochrome vector for Android 13+ Themed Icons.
+- **App Icon:** Simplified flat minimalist design: clean monoline house outline in deep slate navy (`#1E293B`) with a colorful 6-blade camera aperture inside (coral, amber, green, sky blue, periwinkle), on a soft cream background (`#F8F6F0`). 100% flat 2D vector, zero shadows, adaptive vector icon, monochrome vector for Android 13+ Themed Icons, and full mipmap density suite.
 - **Color Theme:** Dedicated warm palette (`TerracottaLight`/`Dark`, `SlateLight`/`Dark`,
   `AmberLight`/`Dark`, warm cream background `#FCF9F6`, deep warm dark background `#131315`), with
   Material You Dynamic Color support preserved on Android 12+.
