@@ -13,11 +13,7 @@ import com.github.ljarka.picfort.core.model.meFirst
 import com.github.ljarka.picfort.core.model.ImmichUsersSync
 import com.github.ljarka.picfort.core.model.FamilyMemberProvider
 import com.github.ljarka.picfort.core.ui.avatar.avatarColor
-import dagger.Binds
-import dagger.Module
-import dagger.hilt.InstallIn
 import dagger.hilt.android.qualifiers.ApplicationContext
-import dagger.hilt.components.SingletonComponent
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -74,22 +70,6 @@ class FileFamilyOfflineCopy @Inject constructor(
     override fun clear() {
         runCatching { file.delete() }
     }
-}
-
-@Module
-@InstallIn(SingletonComponent::class)
-abstract class FamilyModule {
-    @Binds
-    abstract fun backend(api: FamilyApi): FamilyBackend
-
-    @Binds
-    abstract fun offlineCopy(file: FileFamilyOfflineCopy): FamilyOfflineCopy
-
-    @Binds
-    abstract fun peopleSource(api: PeopleApi): PeopleSource
-
-    @Binds
-    abstract fun familyMemberProvider(repo: FamilyRepository): FamilyMemberProvider
 }
 
 /**
