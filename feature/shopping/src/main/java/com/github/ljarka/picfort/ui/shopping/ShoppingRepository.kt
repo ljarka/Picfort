@@ -13,6 +13,7 @@ import dagger.hilt.InstallIn
 import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.components.SingletonComponent
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -21,8 +22,8 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.yield
 import kotlinx.coroutines.sync.Mutex
-import kotlinx.coroutines.sync.withLock
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 import java.io.File
@@ -239,9 +240,19 @@ class ShoppingRepository @Inject constructor(
             if (after == null) lists - listId else lists + (listId to after)
         }
         inFlight.merge(listId, 1, Int::plus)
-        return scope.launch {
+        // Undispatched: the lock is queued for here and now, so changes to a list reach the server
+        // in the order they were made (a toggle of a new item after its add). The work itself
+        // continues on the scope's dispatcher after yield().
+        return scope.launch(start = CoroutineStart.UNDISPATCHED) {
             try {
-                locks.getOrPut(listId) { Mutex() }.withLock { remote() }
+                val lock = locks.getOrPut(listId) { Mutex() }
+                lock.lock()
+                try {
+                    yield()
+                    remote()
+                } finally {
+                    lock.unlock()
+                }
                 keepOfflineCopy()
             } catch (e: PicfortServerException) {
                 undo(listId, before, e)
