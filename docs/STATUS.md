@@ -184,5 +184,5 @@ Decided by the owner (2026-11-11), as recommended:
 | [0007](decisions/0007-server-api-key.md) | Optional `PICFORT_API_KEY` for a server reachable from outside (e.g. Cloudflare Tunnel) |
 | [0008](decisions/0008-family-hub-storage.md) | Shopping lists, receipts, events, school timetables on the Picfort server, one SQLite file per feature, `.bak` on schema change (proposed) |
 | [0009](decisions/0009-receipts-gemini.md) | Receipts read by Gemini free tier on the server, opt-in (proposed) |
-| [0010](decisions/0010-family-members-birthdays-recurring.md) | Manual family members, birth dates & recurring events with additive migrations |
+| [0010](decisions/0010-family-members-birthdays-recurring-events.md) | Manual family members, birth dates & recurring events with additive migrations |
 | [0011](decisions/0011-modular-architecture.md) | Multi-module architecture optimized for AI Agent pair programming |

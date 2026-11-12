@@ -1,5 +1,6 @@
 package com.github.ljarka.picfort.ui.wall
 
+import com.github.ljarka.picfort.core.model.FamilyMember
 import com.github.ljarka.picfort.core.model.isTestAccount
 import com.github.ljarka.picfort.core.model.meFirst
 
@@ -23,9 +24,6 @@ import java.io.ByteArrayOutputStream
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlin.math.max
-
-/** A family member: an Immich user or manual member (T-002, T-034). */
-typealias FamilyMember = com.github.ljarka.picfort.core.model.FamilyMember
 
 @Singleton
 class WallRepository @Inject constructor(

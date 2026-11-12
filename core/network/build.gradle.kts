@@ -1,5 +1,5 @@
 plugins {
-    alias(libs.plugins.android.library)
+    id("picfort.android.library")
     alias(libs.plugins.kotlin.serialization)
     alias(libs.plugins.ksp)
     alias(libs.plugins.hilt)
@@ -7,22 +7,6 @@ plugins {
 
 android {
     namespace = "com.github.ljarka.picfort.core.network"
-    compileSdk = 37
-
-    defaultConfig {
-        minSdk = 26
-    }
-
-    compileOptions {
-        sourceCompatibility = JavaVersion.VERSION_11
-        targetCompatibility = JavaVersion.VERSION_11
-    }
-}
-
-kotlin {
-    compilerOptions {
-        jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_11)
-    }
 }
 
 dependencies {

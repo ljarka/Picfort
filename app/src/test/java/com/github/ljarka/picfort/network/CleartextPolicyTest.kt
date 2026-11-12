@@ -1,5 +1,6 @@
 package com.github.ljarka.picfort.network
 
+import com.github.ljarka.picfort.core.network.isLocalNetworkHost
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test

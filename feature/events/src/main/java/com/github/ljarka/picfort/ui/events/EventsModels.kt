@@ -1,5 +1,6 @@
 package com.github.ljarka.picfort.ui.events
 
+import com.github.ljarka.picfort.core.model.FamilyEvent
 import java.time.Instant
 import java.time.LocalDate
 import java.time.LocalTime
@@ -8,9 +9,6 @@ import java.time.ZoneOffset
 import java.time.format.DateTimeFormatter
 import java.time.temporal.ChronoUnit
 import java.util.Locale
-
-typealias FamilyEvent = com.github.ljarka.picfort.core.model.FamilyEvent
-typealias EventsSegment = com.github.ljarka.picfort.core.model.EventsSegment
 
 data class EventSection(
     val title: String,

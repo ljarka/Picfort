@@ -54,22 +54,18 @@ These are rendered from the app's UI code with sample photos by the [screenshot 
 ## Repository layout
 
 ```
-app/                     Android app (Kotlin, Jetpack Compose)
-  src/main/java/com/github/ljarka/picfort/
-    db/                  Room database: month buckets and assets
-    local/               MediaStore queries for photos on the phone
-    network/             OkHttp/Retrofit setup and auth interceptor
-    ui/init/             Startup routing: server setup, login, timeline
-    ui/server/           Server URL screen and storage
-    ui/login/            Login screen, token storage (encrypted)
-    ui/timeline/         Timeline screen, repository, grid row layout, fast scroll
-    ui/image/            Full-screen viewer, zoom
-    ui/frame/            Frame settings, frame HTTP client (no Immich auth)
-    ui/settings/         Settings screen (backup, frame, account)
-    collections/         Albums, search, shared asset grid
-    assets/              Share, download, delete, details (Immich API + MediaStore)
-    backup/              Backup engine, worker, scheduler, upload API
-    ui/preferences/      DataStore / encrypted preferences
+app/                     Thin Android shell: MainActivity, root navigation, Hilt assembly, backup
+core/model/              Shared domain models and cross-feature contracts
+core/ui/                 Design system: theme, avatars, shared UI components
+core/database/           Room entities/DAOs for local cache and backup state
+core/network/            OkHttp/Retrofit clients, secure stores, network policies
+feature/wall/            Family Wall feed + today panel
+feature/shopping/        Shared shopping lists + offline copy
+feature/events/          Family events (upcoming/past, detail, form)
+feature/family/          Family member profiles, avatars, birth dates
+feature/frame/           Picture-frame controls + server setup/pairing
+feature/timeline/        Timeline, albums, search, details, sync
+benchmark/               Macrobenchmark suite (timeline scrolling)
 ImageFrameServer/        Python service for the picture frame
   app.py                 Flask HTTP API (/run, /status, /slideshow, /next, …)
   slideshow.py           Slideshow modes, schedule, quiet hours
@@ -79,6 +75,7 @@ ImageFrameServer/        Python service for the picture frame
   wall.py, auth.py       Family Wall storage and Immich token check
   Dockerfile             Server image (ghcr.io/ljarka/picfort-server)
 docker/                  docker-compose.yml and example.env for installing the server
+docs/                    ADRs, roadmap, and implementation task briefs
 ```
 
 ## Architecture

@@ -3,6 +3,8 @@ package com.github.ljarka.picfort.ui.events
 import android.content.ActivityNotFoundException
 import android.content.Intent
 import android.net.Uri
+import com.github.ljarka.picfort.core.model.EventsSegment
+import com.github.ljarka.picfort.core.model.FamilyEvent
 import androidx.activity.compose.BackHandler
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Text

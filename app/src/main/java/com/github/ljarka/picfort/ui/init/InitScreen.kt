@@ -18,7 +18,7 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.github.ljarka.picfort.R
+import com.github.ljarka.picfort.core.ui.R as CoreUiR
 import com.github.ljarka.picfort.ui.login.LoginContent
 import com.github.ljarka.picfort.ui.server.ServerConfigurationContent
 
@@ -39,7 +39,7 @@ fun InitScreen(
                 },
                 navigationIcon = {
                     Image(
-                        painter = painterResource(R.drawable.icon),
+                        painter = painterResource(CoreUiR.drawable.icon),
                         contentDescription = null,
                         modifier = Modifier
                             .padding(horizontal = 8.dp)
@@ -61,7 +61,7 @@ fun InitScreen(
                 modifier = Modifier
                     .padding(16.dp)
                     .size(200.dp),
-                painter = painterResource(R.drawable.icon),
+                painter = painterResource(CoreUiR.drawable.icon),
                 contentDescription = null
             )
 

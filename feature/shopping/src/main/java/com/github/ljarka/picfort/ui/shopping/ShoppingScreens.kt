@@ -4,6 +4,8 @@ import android.app.Activity
 import android.content.Context
 import android.content.ContextWrapper
 import android.view.WindowManager
+import com.github.ljarka.picfort.core.model.ShoppingItem
+import com.github.ljarka.picfort.core.model.ShoppingList
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -563,4 +565,3 @@ private fun Confirm(title: String, text: String, action: String, onDismiss: () -
         dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } },
     )
 }
-

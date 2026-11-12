@@ -2,9 +2,9 @@ package com.github.ljarka.picfort.ui.init
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.github.ljarka.picfort.ui.frame.FrameSettingsStore
-import com.github.ljarka.picfort.ui.login.AccessTokenStore
-import com.github.ljarka.picfort.ui.server.ServerUrlStore
+import com.github.ljarka.picfort.core.network.AccessTokenStore
+import com.github.ljarka.picfort.core.network.FrameSettingsStore
+import com.github.ljarka.picfort.core.network.ServerUrlStore
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.SharingStarted

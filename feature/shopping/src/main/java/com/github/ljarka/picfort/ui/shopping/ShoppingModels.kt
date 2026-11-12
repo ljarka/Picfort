@@ -1,9 +1,8 @@
 package com.github.ljarka.picfort.ui.shopping
 
 import com.github.ljarka.picfort.core.model.FamilyMember
-
-typealias ShoppingItem = com.github.ljarka.picfort.core.model.ShoppingItem
-typealias ShoppingList = com.github.ljarka.picfort.core.model.ShoppingList
+import com.github.ljarka.picfort.core.model.ShoppingItem
+import com.github.ljarka.picfort.core.model.ShoppingList
 
 /** The Shopping tab: the family's lists as cards. */
 data class ShoppingListsUi(

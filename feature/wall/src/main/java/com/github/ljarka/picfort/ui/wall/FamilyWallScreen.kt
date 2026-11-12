@@ -1,7 +1,7 @@
 package com.github.ljarka.picfort.ui.wall
 
+import com.github.ljarka.picfort.core.model.FamilyMember
 import com.github.ljarka.picfort.core.ui.avatar.MemberAvatar
-import com.github.ljarka.picfort.core.ui.avatar.initials
 
 import android.net.Uri
 import android.text.format.DateUtils

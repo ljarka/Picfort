@@ -30,8 +30,6 @@ import javax.inject.Singleton
 @Retention(AnnotationRetention.BINARY)
 annotation class FrameHttpClient
 
-typealias FrameResult = com.github.ljarka.picfort.core.model.FrameResult
-
 @Serializable
 private data class FrameResponse(
     val status: String = "",

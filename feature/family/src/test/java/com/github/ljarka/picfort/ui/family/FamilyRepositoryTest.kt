@@ -2,6 +2,7 @@ package com.github.ljarka.picfort.ui.family
 
 import com.github.ljarka.picfort.core.database.UserEntity
 import com.github.ljarka.picfort.core.database.UsersDao
+import com.github.ljarka.picfort.core.model.BirthDate
 import com.github.ljarka.picfort.core.network.PicfortServerException
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -15,6 +16,7 @@ import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import java.time.Instant
+import java.util.Locale
 
 private class FakeUsersDao(initial: List<UserEntity>) : UsersDao {
     val flow = MutableStateFlow(initial)
@@ -340,20 +342,26 @@ class FamilyRepositoryTest {
     fun `birth date formatting with and without year`() {
         val today = java.time.LocalDate.of(2026, 11, 11)
         val withYearPast = BirthDate(5, 17, 1985)
-        assertEquals("17 May · 41", withYearPast.formatDisplay(today))
+        val oldLocale = Locale.getDefault()
+        Locale.setDefault(Locale.ENGLISH)
+        try {
+            assertEquals("17 May · 41", withYearPast.formatDisplay(today))
 
-        val withYearFutureThisYear = BirthDate(12, 25, 2015)
-        assertEquals("25 Dec · 10", withYearFutureThisYear.formatDisplay(today))
+            val withYearFutureThisYear = BirthDate(12, 25, 2015)
+            assertEquals("25 Dec · 10", withYearFutureThisYear.formatDisplay(today))
 
-        val withoutYear = BirthDate(12, 5, null)
-        assertEquals("5 Dec", withoutYear.formatDisplay(today))
+            val withoutYear = BirthDate(12, 5, null)
+            assertEquals("5 Dec", withoutYear.formatDisplay(today))
 
-        assertEquals("1985-05-17", withYearPast.toIsoString())
-        assertEquals("--12-05", withoutYear.toIsoString())
-        assertEquals(withYearPast, BirthDate.parse("1985-05-17"))
-        assertEquals(withoutYear, BirthDate.parse("--12-05"))
-        assertNull(BirthDate.parse(null))
-        assertNull(BirthDate.parse(""))
+            assertEquals("1985-05-17", withYearPast.toIsoString())
+            assertEquals("--12-05", withoutYear.toIsoString())
+            assertEquals(withYearPast, BirthDate.parse("1985-05-17"))
+            assertEquals(withoutYear, BirthDate.parse("--12-05"))
+            assertNull(BirthDate.parse(null))
+            assertNull(BirthDate.parse(""))
+        } finally {
+            Locale.setDefault(oldLocale)
+        }
     }
 
     @Test

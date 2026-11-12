@@ -2,7 +2,8 @@ package com.github.ljarka.picfort.ui.server
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.github.ljarka.picfort.network.CleartextNotAllowedException
+import com.github.ljarka.picfort.core.network.CleartextNotAllowedException
+import com.github.ljarka.picfort.core.network.ServerUrlStore
 import com.github.ljarka.picfort.network.normalizeServerUrl
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
