@@ -48,6 +48,7 @@ fun SettingsScreen(onBack: () -> Unit, onFrameClick: () -> Unit, onFamilyClick: 
     val backup by viewModel.backup.collectAsStateWithLifecycle()
     val status by viewModel.status.collectAsStateWithLifecycle()
     val showFamily by viewModel.showFamily.collectAsStateWithLifecycle()
+    val wallpaperColors by viewModel.wallpaperColors.collectAsStateWithLifecycle()
 
     LaunchedEffect(status) { viewModel.reloadCounts() }
     val notificationPermission = rememberLauncherForActivityResult(
@@ -66,6 +67,8 @@ fun SettingsScreen(onBack: () -> Unit, onFrameClick: () -> Unit, onFamilyClick: 
         serverUrl = viewModel.serverUrl,
         picfortServer = viewModel.picfortServer,
         showFamily = showFamily,
+        wallpaperColors = wallpaperColors,
+        onWallpaperColors = viewModel::setWallpaperColors,
         onBack = onBack,
         onFrameClick = onFrameClick,
         onFamilyClick = onFamilyClick,
@@ -86,6 +89,9 @@ fun SettingsContent(
     /** Picfort server address, "" when not set. */
     picfortServer: String = "",
     showFamily: Boolean = false,
+    /** "Colors from wallpaper" switch state; null hides it (Android < 12). */
+    wallpaperColors: Boolean? = null,
+    onWallpaperColors: (Boolean) -> Unit = {},
     onBack: () -> Unit = {},
     onFrameClick: () -> Unit = {},
     onFamilyClick: () -> Unit = {},
@@ -176,6 +182,17 @@ fun SettingsContent(
                     modifier = Modifier.clickable(onClick = onFamilyClick),
                     headlineContent = { Text("Family") },
                     supportingContent = { Text("Names, photos and hidden accounts") },
+                )
+            }
+
+            if (wallpaperColors != null) {
+                HorizontalDivider(Modifier.padding(vertical = 8.dp))
+                SectionTitle("Appearance")
+                SwitchRow(
+                    "Colors from wallpaper",
+                    "Use your phone's wallpaper colors instead of Picfort's",
+                    wallpaperColors,
+                    onWallpaperColors,
                 )
             }
 

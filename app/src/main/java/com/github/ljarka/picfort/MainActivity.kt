@@ -40,6 +40,8 @@ import com.github.ljarka.picfort.network.SessionManager
 import com.github.ljarka.picfort.ui.image.ImageDetailsScreen
 import com.github.ljarka.picfort.ui.init.InitScreen
 import com.github.ljarka.picfort.core.ui.theme.PicfortTheme
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.github.ljarka.picfort.ui.settings.AppearanceSettingsStore
 import com.github.ljarka.picfort.collections.AlbumScreen
 import com.github.ljarka.picfort.collections.AlbumsScreen
 import com.github.ljarka.picfort.collections.GridAsset
@@ -160,6 +162,9 @@ class MainActivity : ComponentActivity() {
     @Inject
     lateinit var sessionManager: SessionManager
 
+    @Inject
+    lateinit var appearanceSettings: AppearanceSettingsStore
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge(
@@ -195,7 +200,8 @@ class MainActivity : ComponentActivity() {
             var photosScrollToTop by remember { mutableIntStateOf(0) }
             val openSettings = { navController.navigate(Screen.Settings) }
 
-            PicfortTheme {
+            val wallpaperColors by appearanceSettings.wallpaperColors.collectAsStateWithLifecycle()
+            PicfortTheme(dynamicColor = wallpaperColors) {
                 Surface(
                     modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colorScheme.background,
