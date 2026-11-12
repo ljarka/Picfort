@@ -134,4 +134,14 @@ class TodayPanelTest {
         val ahead = panel(birthday.copy(startDate = today.plusDays(5)))
         assertEquals("Next: Aleksandra's birthday, turns 9 · in 5 days", ahead.nextLine(names::get))
     }
+
+    @Test
+    fun `a birthday beats an older one-day event without a time`() {
+        val birthday = FamilyEvent(
+            id = 9, title = "b", startDate = today, birthdayOf = "ola", turns = 9, created = "2026-11-10T10:00:00Z",
+        )
+        val p = panel(event(1), birthday)
+        assertEquals(9L, p.event?.id)
+        assertEquals(1, p.moreToday)
+    }
 }

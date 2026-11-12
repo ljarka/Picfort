@@ -442,7 +442,8 @@ fun EventsListScreen(
 fun EventDetailScreen(
     onBack: () -> Unit,
     onEdit: (Long) -> Unit,
-    onEditBirthday: () -> Unit = {},
+    /** Opens the member (id) whose birthday this is in Family settings. */
+    onEditBirthday: (String) -> Unit = {},
 ) {
     val viewModel = hiltViewModel<EventDetailViewModel>()
     val state by viewModel.state.collectAsStateWithLifecycle()
@@ -471,7 +472,7 @@ fun EventDetailScreen(
         },
         onRetry = viewModel::load,
         onMessageShown = viewModel::messageShown,
-        onEditBirthday = onEditBirthday,
+        onEditBirthday = { state.event?.birthdayOf?.let(onEditBirthday) },
     )
 }
 

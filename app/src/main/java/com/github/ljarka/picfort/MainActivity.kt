@@ -350,7 +350,7 @@ class MainActivity : ComponentActivity() {
                                 EventDetailScreen(
                                     onBack = { navController.popBackStack() },
                                     onEdit = { id -> navController.navigate(Screen.EventForm(id)) },
-                                    onEditBirthday = { navController.navigate(Screen.FamilySettings) },
+                                    onEditBirthday = { memberId -> navController.navigate(Screen.FamilySettings(memberId)) },
                                 )
                             }
                             composable<Screen.EventForm> {

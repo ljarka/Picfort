@@ -23,7 +23,7 @@ Family events vertical slice: upcoming and past events, details, form, recurrenc
 ## Public Contract / Navigation Entry Points
 
 - `EventsListScreen(onOpenEvent: (Long) -> Unit, onAddEvent: () -> Unit, onSettingsClick: () -> Unit, onSetUpServer: () -> Unit)`
-- `EventDetailScreen(onBack: () -> Unit, onEdit: (Long) -> Unit, onEditBirthday: () -> Unit)`
+- `EventDetailScreen(onBack: () -> Unit, onEdit: (Long) -> Unit, onEditBirthday: (memberId: String) -> Unit)`
 - `EventFormScreen(onBack: () -> Unit, onSaved: (Long) -> Unit, onGone: () -> Unit)`
 
 ## Dependencies & Boundaries
