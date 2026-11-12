@@ -24,6 +24,7 @@ data class FamilyProfileDto(
     val hidden: Boolean? = null,
     val manual: Boolean = false,
     @SerialName("birth_date") val birthDate: String? = null,
+    @SerialName("no_photo") val noPhoto: Boolean = false,
     @SerialName("updated_by") val updatedBy: String = "",
     val updated: String = "",
 )
@@ -41,6 +42,8 @@ data class FamilyProfile(
     val hidden: Boolean? = null,
     val manual: Boolean = false,
     val birthDate: String? = null,
+    /** Initials instead of the Immich account picture ("Clear"). */
+    val noPhoto: Boolean = false,
 )
 
 internal fun FamilyProfileDto.toProfile(base: HttpUrl) = FamilyProfile(
@@ -50,6 +53,7 @@ internal fun FamilyProfileDto.toProfile(base: HttpUrl) = FamilyProfile(
     hidden = hidden,
     manual = manual,
     birthDate = birthDate,
+    noPhoto = noPhoto,
 )
 
 interface FamilyBackend {
@@ -72,6 +76,8 @@ interface FamilyBackend {
         birthDate: String? = null,
         includeBirthDate: Boolean = false,
         today: String? = null,
+        /** Sent when not null. */
+        noPhoto: Boolean? = null,
     ): FamilyProfile
 
     suspend fun addMember(
@@ -118,6 +124,7 @@ class FamilyApi @Inject constructor(
         birthDate: String?,
         includeBirthDate: Boolean,
         today: String?,
+        noPhoto: Boolean?,
     ): FamilyProfile {
         val base = server.base()
         val url = base.newBuilder().addPathSegment("family").addPathSegment(userId).build()
@@ -131,6 +138,9 @@ class FamilyApi @Inject constructor(
             }
             if (today != null) {
                 put("today", JsonPrimitive(today))
+            }
+            if (noPhoto != null) {
+                put("no_photo", JsonPrimitive(noPhoto))
             }
         }
         val body = payload.toString().toRequestBody(JSON_MEDIA_TYPE)

@@ -76,3 +76,12 @@ regression.
 - The response keeps `start_date` / `end_date` as the series' first occurrence and adds the
   occurrence fields. An app without T-037 shows a recurring event under its first date (it can
   land in the wrong list), so the server and T-037 are released together.
+
+## Amendment 2026-11-12: choosing and clearing a member's photo (owner's request)
+
+- The member sheet has **Choose from Immich** and **Clear**. The picker shows the member's Immich
+  account picture first ("Profile picture", only for an Immich user who has one), then the named
+  Immich people. Every member, with or without an account, can take a face from Immich people.
+- **Clear** shows initials, even for an Immich user who has an account picture. The server keeps it as
+  `profiles.no_photo` (family schema v3, migrated from v2): `PATCH /family/<id> {no_photo: true|false}`;
+  uploading a photo resets it. "Profile picture" deletes the custom photo and sets `no_photo: false`.
