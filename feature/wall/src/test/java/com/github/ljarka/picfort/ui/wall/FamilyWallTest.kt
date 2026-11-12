@@ -99,4 +99,13 @@ class FamilyWallTest {
         assertEquals(listOf("b", "a", "c"), members.meFirst("b").map { it.id })
         assertEquals(avatarColor("primary"), avatarColor("no-such-color"))
     }
+
+    @Test
+    fun `members without a chosen color get different aperture colors`() {
+        // A picked Immich color wins over the fallback.
+        assertEquals(avatarColor("green"), avatarColor("green", 3))
+        // "primary" is Immich's default, treated like no color.
+        assertEquals(avatarColor(null, 2), avatarColor("primary", 2))
+        assertEquals(5, (0 until 5).map { avatarColor("primary", it) }.toSet().size)
+    }
 }
