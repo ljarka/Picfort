@@ -2,54 +2,68 @@ package com.github.ljarka.picfort.core.ui.theme
 
 import androidx.compose.ui.graphics.Color
 
-// --- Picfort Brand Palette: "The Lens & Hearth" (Concept 2) ---
+// --- Picfort brand palette, taken from the app icon (flat house + aperture) ---
+// Icon colors: navy outline #1C2C40, cream background #F5F1E5, aperture blades
+// coral #FC6C60, amber #FCC054, mint #90E4B4, sky #78CCF0, blue #6CA8E4, periwinkle #7890F0.
+// Strong roles are darkened (light theme) or lightened (dark theme) blade colors so text on
+// them keeps a contrast ratio of at least 4.5:1.
 
-// Primary: Warm Terracotta
-val TerracottaLight = Color(0xFFD45B3F)
-val OnTerracottaLight = Color(0xFFFFFFFF)
-val TerracottaContainerLight = Color(0xFFFFDBCF)
-val OnTerracottaContainerLight = Color(0xFF3B0A00)
+// Primary: house navy
+val NavyLight = Color(0xFF2C4466)
+val OnNavyLight = Color(0xFFFFFFFF)
+val NavyContainerLight = Color(0xFFD6E3F7)
+val OnNavyContainerLight = Color(0xFF0F1D33)
 
-val TerracottaDark = Color(0xFFFFB4A1)
-val OnTerracottaDark = Color(0xFF5E1B07)
-val TerracottaContainerDark = Color(0xFF7D2F18)
-val OnTerracottaContainerDark = Color(0xFFFFDBCF)
+val NavyDark = Color(0xFFAEC6EC)
+val OnNavyDark = Color(0xFF13294A)
+val NavyContainerDark = Color(0xFF2C4466)
+val OnNavyContainerDark = Color(0xFFD6E3F7)
 
-// Secondary: Warm Slate / Deep Petrol
-val SlateLight = Color(0xFF47606B)
-val OnSlateLight = Color(0xFFFFFFFF)
-val SlateContainerLight = Color(0xFFCCE6F2)
-val OnSlateContainerLight = Color(0xFF041E27)
+// Secondary: sky blade
+val SkyLight = Color(0xFF1D6580)
+val OnSkyLight = Color(0xFFFFFFFF)
+val SkyContainerLight = Color(0xFFC8EAF7)
+val OnSkyContainerLight = Color(0xFF00202C)
 
-val SlateDark = Color(0xFFAECAD6)
-val OnSlateDark = Color(0xFF17323C)
-val SlateContainerDark = Color(0xFF2F4953)
-val OnSlateContainerDark = Color(0xFFCCE6F2)
+val SkyDark = Color(0xFF8ED2EE)
+val OnSkyDark = Color(0xFF003546)
+val SkyContainerDark = Color(0xFF0B4D64)
+val OnSkyContainerDark = Color(0xFFC8EAF7)
 
-// Tertiary: Sunset Amber / Hearth Glow
-val AmberLight = Color(0xFF855316)
-val OnAmberLight = Color(0xFFFFFFFF)
-val AmberContainerLight = Color(0xFFFFDCB0)
-val OnAmberContainerLight = Color(0xFF2C1600)
+// Tertiary: coral blade
+val CoralLight = Color(0xFFAE3F33)
+val OnCoralLight = Color(0xFFFFFFFF)
+val CoralContainerLight = Color(0xFFFFDAD4)
+val OnCoralContainerLight = Color(0xFF3E0500)
 
-val AmberDark = Color(0xFFF9BD70)
-val OnAmberDark = Color(0xFF492900)
-val AmberContainerDark = Color(0xFF673C00)
-val OnAmberContainerDark = Color(0xFFFFDCB0)
+val CoralDark = Color(0xFFFFB4A8)
+val OnCoralDark = Color(0xFF5F1610)
+val CoralContainerDark = Color(0xFF8A2E24)
+val OnCoralContainerDark = Color(0xFFFFDAD4)
 
-// Neutral Background & Surface
-val WarmCreamBackground = Color(0xFFFCF9F6)
-val WarmCreamSurface = Color(0xFFFCF9F6)
-val WarmSurfaceVariant = Color(0xFFF3ECE6)
-val OnWarmBackground = Color(0xFF1E1A18)
-val OnWarmSurface = Color(0xFF1E1A18)
-val OnWarmSurfaceVariant = Color(0xFF52443D)
-val WarmOutline = Color(0xFF85746C)
+// Neutrals: icon cream (light), navy-tinted night (dark)
+val CreamBackground = Color(0xFFF8F5EC)
+val CreamSurfaceVariant = Color(0xFFE9E4D8)
+val OnCream = Color(0xFF1B2029)
+val OnCreamVariant = Color(0xFF474C56)
+val CreamOutline = Color(0xFF767B85)
+val CreamOutlineVariant = Color(0xFFCBC6BA)
+val CreamContainerLowest = Color(0xFFFFFFFF)
+val CreamContainerLow = Color(0xFFF3EFE5)
+val CreamContainer = Color(0xFFEEEADF)
+val CreamContainerHigh = Color(0xFFE8E4D9)
+val CreamContainerHighest = Color(0xFFE2DED3)
+val CreamDim = Color(0xFFDAD6CB)
 
-val WarmDarkBackground = Color(0xFF131315)
-val WarmDarkSurface = Color(0xFF131315)
-val WarmDarkSurfaceVariant = Color(0xFF222226)
-val OnWarmDarkBackground = Color(0xFFE8E1DC)
-val OnWarmDarkSurface = Color(0xFFE8E1DC)
-val OnWarmDarkSurfaceVariant = Color(0xFFD5C4BB)
-val WarmDarkOutline = Color(0xFF9E8D85)
+val NightBackground = Color(0xFF11151D)
+val NightSurfaceVariant = Color(0xFF2B313C)
+val OnNight = Color(0xFFE2E4EA)
+val OnNightVariant = Color(0xFFC3C8D2)
+val NightOutline = Color(0xFF8D929C)
+val NightOutlineVariant = Color(0xFF434852)
+val NightContainerLowest = Color(0xFF0C0F16)
+val NightContainerLow = Color(0xFF191D26)
+val NightContainer = Color(0xFF1D212A)
+val NightContainerHigh = Color(0xFF272B35)
+val NightContainerHighest = Color(0xFF323640)
+val NightBright = Color(0xFF373B45)
