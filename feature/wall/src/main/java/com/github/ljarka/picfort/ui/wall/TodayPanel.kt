@@ -53,7 +53,7 @@ private val createdThenId = compareBy<FamilyEvent> { it.created }.thenBy { it.id
  * Builds the panel for [today] at [now] from the loaded upcoming [events]:
  * 1. events starting today with a time: the earliest that hasn't started yet, else the latest;
  * 2. ongoing multi-day events (a start time counts only on the start day);
- * 3. one-day events without a time.
+ * 3. one-day events without a time, birthdays first.
  * Ties: earliest `created`, then lowest `id`.
  */
 fun todayPanel(events: List<FamilyEvent>, today: LocalDate, now: LocalTime): TodayPanelState {
@@ -78,7 +78,8 @@ fun todayPanel(events: List<FamilyEvent>, today: LocalDate, now: LocalTime): Tod
         if (upcoming.isNotEmpty()) upcoming.minWith(byTime) else timed.maxWith(byTime)
     } else {
         val multiDay = todays.filter { it.isMultiDay }
-        (multiDay.ifEmpty { todays }).minWith(createdThenId)
+        val birthdaysFirst = compareBy<FamilyEvent> { !it.isBirthday }.then(createdThenId)
+        multiDay.minWithOrNull(createdThenId) ?: todays.minWith(birthdaysFirst)
     }
     val trip = if (chosen.isMultiDay) {
         val day = ChronoUnit.DAYS.between(chosen.startDate, today).toInt() + 1
