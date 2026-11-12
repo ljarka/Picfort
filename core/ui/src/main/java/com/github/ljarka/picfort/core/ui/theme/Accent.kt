@@ -72,12 +72,11 @@ fun ColorScheme.withAccent(accent: BrandAccent, dark: Boolean): ColorScheme {
 @Composable
 fun AccentTheme(accent: BrandAccent?, content: @Composable () -> Unit) {
     val dark = LocalBrandDark.current
-    if (accent == null || dark == null) {
-        content()
-        return
-    }
+    // Always the same node: an if/else here would rebuild everything inside (the NavHost) when
+    // the accent goes away, e.g. opening a photo, and break its shared element transition.
+    val base = MaterialTheme.colorScheme
     MaterialTheme(
-        colorScheme = MaterialTheme.colorScheme.withAccent(accent, dark),
+        colorScheme = if (accent == null || dark == null) base else base.withAccent(accent, dark),
         typography = MaterialTheme.typography,
         shapes = MaterialTheme.shapes,
         content = content,
