@@ -1,6 +1,8 @@
 package com.github.ljarka.picfort.ui.events
 
+import com.github.ljarka.picfort.core.model.EventRepeat
 import com.github.ljarka.picfort.core.model.FamilyEvent
+import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonNull
 import kotlinx.serialization.json.JsonPrimitive
 import org.junit.Assert.assertEquals
@@ -148,5 +150,101 @@ class EventsModelsTest {
         val e = event(1, today, today)
         assertFalse(e.isMultiDay)
         assertNull(EventDraft("x", today, today).normalizedEndDate)
+    }
+
+    // --- T-037: repeat and birthdays ---
+
+    private val json = Json { ignoreUnknownKeys = true }
+
+    @Test
+    fun dtoShowsTheOccurrenceAndKeepsTheSeriesDatesForTheForm() {
+        val dto = json.decodeFromString<EventDto>(
+            """{"id": 7, "title": "Swimming", "start_date": "2026-09-04", "end_date": null,
+               "start_time": "16:00", "repeat": "weekly", "repeat_until": "2027-06-25",
+               "kind": null, "member_id": null, "occurrence_start": "2026-11-13", "occurrence_end": null,
+               "turns": null, "created_by": "tata"}""",
+        )
+        val e = dto.toEvent()
+        assertEquals(LocalDate.of(2026, 11, 13), e.startDate)
+        assertNull(e.endDate)
+        assertEquals(LocalDate.of(2026, 9, 4), e.seriesStartDate)
+        assertEquals(EventRepeat.WEEKLY, e.repeat)
+        assertEquals(LocalDate.of(2027, 6, 25), e.repeatUntil)
+        assertFalse(e.isBirthday)
+    }
+
+    @Test
+    fun dtoBirthdayAndOldEventWithoutOccurrence() {
+        val birthday = json.decodeFromString<EventDto>(
+            """{"id": 8, "title": "Ola's birthday", "start_date": "2017-11-16", "repeat": "yearly",
+               "kind": "birthday", "member_id": "ola", "occurrence_start": "2026-11-16", "turns": 9}""",
+        ).toEvent()
+        assertEquals("ola", birthday.birthdayOf)
+        assertEquals(9, birthday.turns)
+        assertEquals(LocalDate.of(2026, 11, 16), birthday.startDate)
+
+        val plain = json.decodeFromString<EventDto>(
+            """{"id": 9, "title": "Trip", "start_date": "2026-11-20", "end_date": "2026-11-22"}""",
+        ).toEvent()
+        assertEquals(LocalDate.of(2026, 11, 20), plain.startDate)
+        assertEquals(LocalDate.of(2026, 11, 22), plain.endDate)
+        assertNull(plain.repeat)
+    }
+
+    @Test
+    fun seriesIsGroupedAndLabelledByItsOccurrence() {
+        val series = FamilyEvent(
+            id = 1, title = "Swimming", startDate = today.plusDays(2), repeat = EventRepeat.WEEKLY,
+            seriesStartDate = LocalDate.of(2026, 9, 4),
+        )
+        val sections = groupUpcomingEvents(listOf(series), today)
+        assertEquals(listOf("NOVEMBER 2026"), sections.map { it.title })
+        assertEquals("in 2 days", relativeEventLabel(series, today))
+    }
+
+    @Test
+    fun birthdayTextFollowsTheMemberName() {
+        val birthday = FamilyEvent(
+            id = 1, title = "Ola's birthday", startDate = today, repeat = EventRepeat.YEARLY,
+            birthdayOf = "ola", turns = 9,
+        )
+        assertEquals("Aleksandra's birthday", birthday.displayTitle { if (it == "ola") "Aleksandra" else null })
+        assertEquals("Ola's birthday", birthday.displayTitle { null })
+        assertEquals("turns 9", turnsLabel(birthday))
+        assertNull(turnsLabel(birthday.copy(turns = null)))
+        assertNull(turnsLabel(event(2, today).copy(turns = 3)))
+    }
+
+    @Test
+    fun repeatSummaries() {
+        val weekly = event(1, today).copy(repeat = EventRepeat.WEEKLY)
+        assertNull(repeatSummary(event(2, today), today))
+        assertEquals("Every week", repeatSummary(weekly, today))
+        assertEquals("Every week · until 20 Dec", repeatSummary(weekly.copy(repeatUntil = LocalDate.of(2026, 12, 20)), today))
+        assertEquals("Every week · until 25 Jun 2027", repeatSummary(weekly.copy(repeatUntil = LocalDate.of(2027, 6, 25)), today))
+    }
+
+    @Test
+    fun patchComparesWithTheSeriesAndSendsRepeatChanges() {
+        val series = FamilyEvent(
+            id = 1, title = "Swimming", startDate = today.plusDays(2), repeat = EventRepeat.WEEKLY,
+            repeatUntil = LocalDate.of(2027, 6, 25), seriesStartDate = LocalDate.of(2026, 9, 4),
+        )
+        val same = EventDraft(
+            "Swimming", LocalDate.of(2026, 9, 4), repeat = EventRepeat.WEEKLY, repeatUntil = LocalDate.of(2027, 6, 25),
+        )
+        // The occurrence date differs from the series start, but the form edits the series: nothing changed.
+        assertTrue(buildEventPatchJson(series, same).isEmpty())
+
+        val stop = buildEventPatchJson(series, same.copy(repeat = null))
+        assertEquals(JsonNull, stop["repeat"])
+        assertEquals(JsonNull, stop["repeat_until"])
+
+        val monthlyForever = buildEventPatchJson(series, same.copy(repeat = EventRepeat.MONTHLY, repeatUntil = null))
+        assertEquals(JsonPrimitive("monthly"), monthlyForever["repeat"])
+        assertEquals(JsonNull, monthlyForever["repeat_until"])
+
+        // An end before the first occurrence is dropped rather than sent.
+        assertNull(same.copy(repeatUntil = LocalDate.of(2026, 1, 1)).normalizedRepeatUntil)
     }
 }

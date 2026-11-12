@@ -6,6 +6,9 @@ import app.cash.paparazzi.Paparazzi
 import com.android.resources.NightMode
 import com.github.ljarka.picfort.core.model.EventsSegment
 import com.github.ljarka.picfort.core.model.FamilyEvent
+import com.github.ljarka.picfort.core.model.EventRepeat
+import com.github.ljarka.picfort.core.ui.theme.AccentTheme
+import com.github.ljarka.picfort.core.ui.theme.BrandAccent
 import com.github.ljarka.picfort.core.ui.theme.PicfortTheme
 import org.junit.Rule
 import org.junit.Test
@@ -21,7 +24,8 @@ class EventsScreenshotTest {
         if (dark) paparazzi.unsafeUpdateConfig(DeviceConfig.PIXEL_6.copy(nightMode = NightMode.NIGHT))
         paparazzi.snapshot {
             PicfortTheme(darkTheme = dark, dynamicColor = false) {
-                content()
+                // As in the app: the Events tab wears the amber blade.
+                AccentTheme(BrandAccent.Amber) { content() }
             }
         }
     }
@@ -162,6 +166,87 @@ class EventsScreenshotTest {
                 startTime = LocalTime.of(8, 30),
                 location = "Białka Tatrzańska",
                 note = "Book ski school for Staś and Ola before December.",
+                today = sampleToday,
+            )
+        )
+    }
+
+    // --- T-037: repeat and birthdays ---
+
+    private val members = mapOf("ola" to "Ola", "tata" to "Tata")
+
+    private val swimming = FamilyEvent(
+        id = 20,
+        title = "Swimming lessons",
+        startDate = LocalDate.of(2026, 11, 13),
+        startTime = LocalTime.of(16, 0),
+        location = "Aquapark Fala",
+        createdBy = "tata",
+        repeat = EventRepeat.WEEKLY,
+        repeatUntil = LocalDate.of(2027, 6, 25),
+        seriesStartDate = LocalDate.of(2026, 9, 4),
+    )
+
+    private val olaBirthday = FamilyEvent(
+        id = 21,
+        title = "Ola's birthday",
+        startDate = LocalDate.of(2026, 11, 16),
+        repeat = EventRepeat.YEARLY,
+        seriesStartDate = LocalDate.of(2017, 11, 16),
+        birthdayOf = "ola",
+        turns = 9,
+    )
+
+    private val tataBirthday = FamilyEvent(
+        id = 22,
+        title = "Piotr's birthday",
+        startDate = LocalDate.of(2026, 12, 2),
+        repeat = EventRepeat.YEARLY,
+        seriesStartDate = LocalDate.of(1988, 12, 2),
+        birthdayOf = "tata",
+        turns = 38,
+    )
+
+    private val withRepeats = (sampleUpcomingEvents + swimming + olaBirthday + tataBirthday)
+
+    @Test
+    fun events_upcoming_repeat_birthdays() = snap {
+        EventsListContent(
+            EventsListUi(today = sampleToday, upcomingEvents = withRepeats, memberNames = members)
+        )
+    }
+
+    @Test
+    fun events_upcoming_repeat_birthdays_dark() = snap(dark = true) {
+        EventsListContent(
+            EventsListUi(today = sampleToday, upcomingEvents = withRepeats, memberNames = members)
+        )
+    }
+
+    @Test
+    fun event_detail_birthday() = snap {
+        EventDetailContent(EventDetailUi(event = olaBirthday, today = sampleToday, memberNames = members))
+    }
+
+    @Test
+    fun event_detail_repeating() = snap {
+        EventDetailContent(
+            EventDetailUi(event = swimming, today = sampleToday, authorName = "Tata", canDelete = true)
+        )
+    }
+
+    @Test
+    fun event_form_repeat() = snap {
+        EventFormContent(
+            EventFormUi(
+                isEditing = true,
+                title = "Swimming lessons",
+                startDate = LocalDate.of(2026, 9, 4),
+                startTime = LocalTime.of(16, 0),
+                location = "Aquapark Fala",
+                repeat = EventRepeat.WEEKLY,
+                repeatUntil = LocalDate.of(2027, 6, 25),
+                editsSeries = true,
                 today = sampleToday,
             )
         )

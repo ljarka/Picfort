@@ -1,5 +1,6 @@
 package com.github.ljarka.picfort.ui.events
 
+import com.github.ljarka.picfort.core.model.EventRepeat
 import com.github.ljarka.picfort.core.model.EventsSegment
 import com.github.ljarka.picfort.core.model.FamilyEvent
 import com.github.ljarka.picfort.core.network.PicfortServerException
@@ -32,7 +33,7 @@ private class FakeEventsBackend : EventsBackend {
             .drop(offset).take(limit)
     }
 
-    override suspend fun event(id: Long): FamilyEvent {
+    override suspend fun event(id: Long, on: LocalDate): FamilyEvent {
         check()
         return events[id] ?: throw PicfortServerException.Gone("This event no longer exists")
     }
@@ -81,6 +82,31 @@ class EventsRepositoryTest {
         repository.refreshActive()
         assertEquals(listOf(oneDayTomorrow.id), repository.upcoming.value.map { it.id })
         assertEquals(listOf(endsToday.id), repository.past.value.map { it.id })
+    }
+
+    @Test
+    fun seriesOccurrenceEndingDoesNotMoveTheSeriesToPast() = runBlocking {
+        // Weekly, the server shows the occurrence of today; it never ends.
+        val weekly = FamilyEvent(
+            backend.nextId++, "Swimming", today, repeat = EventRepeat.WEEKLY, seriesStartDate = today.minusWeeks(9),
+        ).also { backend.events[it.id] = it }
+        // Ended series: today was its last occurrence.
+        val ending = FamilyEvent(
+            backend.nextId++, "Course", today, repeat = EventRepeat.WEEKLY, repeatUntil = today,
+            seriesStartDate = today.minusWeeks(3),
+        ).also { backend.events[it.id] = it }
+        repository.refreshActive()
+
+        today = today.plusDays(1)
+        repository.rollOverMidnight()
+        assertTrue(repository.upcoming.value.isEmpty())
+        assertEquals(listOf(ending.id), repository.past.value.map { it.id })
+
+        // The server moves the series to its next occurrence; the refresh brings it back.
+        backend.events[weekly.id] = weekly.copy(startDate = weekly.startDate.plusWeeks(1))
+        repository.refreshActive()
+        assertEquals(listOf(weekly.id), repository.upcoming.value.map { it.id })
+        assertEquals(today.plusDays(6), repository.upcoming.value.single().startDate)
     }
 
     @Test

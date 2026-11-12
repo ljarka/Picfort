@@ -76,7 +76,8 @@ class EventsRepository(
 
     /**
      * Recomputes "today" and moves any events that ended before today from [upcoming] to [past]
-     * immediately, before the network refresh completes.
+     * immediately, before the network refresh completes. A series whose occurrence ended but which
+     * goes on is only dropped: the refresh that follows brings its next occurrence.
      */
     fun rollOverMidnight(): LocalDate {
         val currentToday = todayProvider()
@@ -88,8 +89,9 @@ class EventsRepository(
             }
             if (newlyPast.isNotEmpty()) {
                 _upcoming.value = stillUpcoming
+                val ended = newlyPast.filterNot { it.seriesContinuesAfter(currentToday.minusDays(1)) }
                 _past.update { existing ->
-                    (newlyPast + existing).distinctBy { it.id }
+                    (ended + existing).distinctBy { it.id }
                 }
             }
         }
@@ -160,7 +162,7 @@ class EventsRepository(
     }
 
     suspend fun fetchEvent(id: Long): FamilyEvent {
-        val fresh = backend.event(id)
+        val fresh = backend.event(id, rollOverMidnight())
         replaceInCache(fresh)
         return fresh
     }

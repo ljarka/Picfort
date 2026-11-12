@@ -282,6 +282,7 @@ private fun WallGrid(
                     onEventClick = onOpenEvent,
                     onMoreClick = onOpenEvents,
                     modifier = Modifier.padding(bottom = 12.dp),
+                    memberNames = remember(state.members) { state.members.associate { it.id to it.name } },
                 )
             }
         }
