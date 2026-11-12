@@ -110,6 +110,7 @@ private val SPACING = 4.dp
 fun FamilyWallScreen(
     onSettingsClick: () -> Unit,
     onEditMember: (String) -> Unit = {},
+    onOpenFamily: () -> Unit = {},
     onOpenEvent: (Long) -> Unit = {},
     onOpenEvents: () -> Unit = {},
     onSetUpServer: () -> Unit = onSettingsClick,
@@ -126,6 +127,7 @@ fun FamilyWallScreen(
         onRefresh = viewModel::refreshNow,
         onSelect = viewModel::select,
         onEditMember = onEditMember,
+        onOpenFamily = onOpenFamily,
         onOpenEvent = onOpenEvent,
         onOpenEvents = onOpenEvents,
         onPost = viewModel::post,
@@ -144,6 +146,7 @@ fun FamilyWallContent(
     onRefresh: () -> Unit = {},
     onSelect: (String?) -> Unit = {},
     onEditMember: (String) -> Unit = {},
+    onOpenFamily: () -> Unit = {},
     onOpenEvent: (Long) -> Unit = {},
     onOpenEvents: () -> Unit = {},
     onPost: (String, Uri?) -> Unit = { _, _ -> },
@@ -234,7 +237,13 @@ fun FamilyWallContent(
                 state.loadError != null && state.posts.isEmpty() -> Centered(state.loadError, "Retry", onRefresh)
                 else -> {
                     if (state.members.isNotEmpty()) {
-                        MemberCarousel(state.members, state.selectedMemberId, onSelect, onEditMember = onEditMember)
+                        MemberCarousel(
+                            state.members,
+                            state.selectedMemberId,
+                            onSelect,
+                            onEditMember = onEditMember,
+                            onOpenFamily = onOpenFamily,
+                        )
                     }
                     PullToRefreshBox(isRefreshing = false, onRefresh = onRefresh, modifier = Modifier.weight(1f)) {
                         WallGrid(

@@ -238,7 +238,7 @@ class TimelineScreenshotTest {
     fun timeline_people() {
         snapshot(
             TimelineState(LoadingState.LOADED, timelineLayout()),
-            header = { PeopleFilterRow(PeopleFilterUi(family, linked), onSelect = {}) },
+            header = { PeopleFilterRow(PeopleFilterUi(family, linked), onSelect = {}, onOpenFamily = {}) },
         )
     }
 
@@ -246,7 +246,7 @@ class TimelineScreenshotTest {
     fun timeline_people_not_linked() {
         snapshot(
             TimelineState(LoadingState.LOADED, timelineLayout()),
-            header = { PeopleFilterRow(PeopleFilterUi(family, linked), onSelect = {}) },
+            header = { PeopleFilterRow(PeopleFilterUi(family, linked), onSelect = {}, onOpenFamily = {}) },
             overlay = {
                 Snackbar(
                     action = { TextButton(onClick = {}) { Text("Link", color = MaterialTheme.colorScheme.inversePrimary) } },

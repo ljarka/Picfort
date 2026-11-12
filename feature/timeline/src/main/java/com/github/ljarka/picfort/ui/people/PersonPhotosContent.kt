@@ -51,6 +51,7 @@ fun PeopleFilterRow(
     state: PeopleFilterUi,
     onSelect: (String?) -> Unit,
     onEditMember: (String) -> Unit = {},
+    onOpenFamily: (() -> Unit)? = null,
 ) {
     MemberCarousel(
         members = state.members,
@@ -58,6 +59,7 @@ fun PeopleFilterRow(
         onSelect = onSelect,
         onEditMember = onEditMember,
         dimmedIds = state.notLinkedIds,
+        onOpenFamily = onOpenFamily,
     )
 }
 
@@ -70,6 +72,7 @@ fun PersonPhotosContent(
     modifier: Modifier = Modifier,
     onSelect: (String?) -> Unit = {},
     onEditMember: (String) -> Unit = {},
+    onOpenFamily: (() -> Unit)? = null,
     onRetry: () -> Unit = {},
     onLoadMore: () -> Unit = {},
     onAssetClick: (GridAsset, Int) -> Unit = { _, _ -> },
@@ -86,7 +89,7 @@ fun PersonPhotosContent(
     LaunchedEffect(nearEnd, count) { if (nearEnd && count > 0) onLoadMore() }
     val header = @Composable {
         Column {
-            PeopleFilterRow(people, onSelect, onEditMember)
+            PeopleFilterRow(people, onSelect, onEditMember, onOpenFamily)
             if (photos is LoadState.Loaded && photos.value.isNotEmpty()) {
                 Text(
                     "Photos of $name",

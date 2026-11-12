@@ -120,6 +120,8 @@ fun TimelineScreen(
     onPersonAssetClick: (asset: GridAsset, index: Int, source: String) -> Unit = { _, _, _ -> },
     /** "Link" on a member who isn't linked yet: their sheet in Family settings. */
     onEditMember: (String) -> Unit = {},
+    /** The "Family" circle at the end of the carousel. */
+    onOpenFamily: () -> Unit = {},
 ) {
     Box(modifier = modifier.fillMaxSize()) {
         val viewModel: TimelineViewModel = hiltViewModel()
@@ -159,7 +161,7 @@ fun TimelineScreen(
             }
         }
         val header: (@Composable () -> Unit)? = if (people.members.isEmpty()) null else {
-            { PeopleFilterRow(people, peopleViewModel::select, onEditMember) }
+            { PeopleFilterRow(people, peopleViewModel::select, onEditMember, onOpenFamily) }
         }
 
         val context = LocalContext.current
@@ -265,6 +267,7 @@ fun TimelineScreen(
                     modifier = Modifier.padding(innerPadding),
                     onSelect = peopleViewModel::select,
                     onEditMember = onEditMember,
+                    onOpenFamily = onOpenFamily,
                     onRetry = { peopleViewModel.retry() },
                     onLoadMore = peopleViewModel::loadMore,
                     onAssetClick = { asset, index -> onPersonAssetClick(asset, index, peopleViewModel.source) },

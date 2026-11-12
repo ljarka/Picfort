@@ -245,6 +245,7 @@ class MainActivity : ComponentActivity() {
                                         FamilyWallScreen(
                                             onSettingsClick = openSettings,
                                             onEditMember = { userId -> navController.navigate(Screen.FamilySettings(userId)) },
+                                            onOpenFamily = { navController.navigate(Screen.FamilySettings()) },
                                             onOpenEvent = { id -> navController.navigate(Screen.EventDetail(id)) },
                                             onOpenEvents = {
                                                 navController.navigate(TabGraph.Events) {
@@ -326,6 +327,7 @@ class MainActivity : ComponentActivity() {
                                                 )
                                             },
                                             onEditMember = { id -> navController.navigate(Screen.FamilySettings(id)) },
+                                            onOpenFamily = { navController.navigate(Screen.FamilySettings()) },
                                         )
                                     }
                                 }
