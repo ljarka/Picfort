@@ -13,7 +13,12 @@ Family management vertical slice: member profiles, Immich users syncing, custom 
 | `ui/family/FamilyApi.kt` | Server HTTP client: `/family` endpoints |
 | `ui/family/PeopleApi.kt` | Immich API client: reads recognized people and face thumbnails |
 | `ui/family/PeoplePickerSheet.kt` | UI: `PeoplePickerSheetContent` for linking Immich people |
-| `ui/family/FamilyScreenshotTest.kt` | Paparazzi snapshots: settings, dark mode, edit sheet, add member sheet, people picker |
+| `ui/family/FamilyScreenshotTest.kt` | Paparazzi snapshots: settings, dark mode, edit sheets (Immich and manual), add member sheet, people picker |
+
+## Photos
+
+- Every member (Immich or manual) can take a face from Immich people (`PeopleSource`, the logged-in
+  user's library); `addMember(pickedPersonId)` fetches the face before creating the member.
 
 ## Public Contract / Navigation Entry Points
 

@@ -103,6 +103,8 @@ data class AddPersonUi(
     val hideBirthYear: Boolean = false,
     val previewAvatarUrl: String? = null,
     val photoBytes: ByteArray? = null,
+    /** Immich person whose face becomes the photo (T-034 follow-up: manual members too). */
+    val pickedPersonId: String? = null,
     val saving: Boolean = false,
 )
 
@@ -166,6 +168,8 @@ fun FamilySettingsScreen(onBack: () -> Unit) {
                 onNameChange = viewModel::updateAddPersonName,
                 onBirthDateChange = viewModel::updateAddPersonBirthDate,
                 onHideYearChange = viewModel::updateAddPersonHideYear,
+                onChooseFromPeople = viewModel::openPeoplePicker,
+                onRemovePhoto = viewModel::removeAddPersonPhoto,
                 onCancel = viewModel::dismissAddPerson,
                 onSave = viewModel::saveAddPerson,
             )
@@ -426,18 +430,17 @@ fun FamilyMemberSheetContent(
         ) {
             MemberAvatar(member = previewMember, size = 56.dp)
             Spacer(Modifier.width(16.dp))
-            if (state.user.isImmichUser) {
-                FlowRow(
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    verticalArrangement = Arrangement.spacedBy(4.dp),
-                ) {
-                    OutlinedButton(onClick = onChooseFromPeople, enabled = !state.saving) {
-                        Text("Choose from Immich people")
-                    }
-                    if (state.hasCustomPhoto) {
-                        TextButton(onClick = onUseImmichPhoto, enabled = !state.saving) {
-                            Text("Use Immich picture")
-                        }
+            // Immich people (face recognition) work for every member, with or without an account.
+            FlowRow(
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalArrangement = Arrangement.spacedBy(4.dp),
+            ) {
+                OutlinedButton(onClick = onChooseFromPeople, enabled = !state.saving) {
+                    Text("Choose from Immich people")
+                }
+                if (state.hasCustomPhoto) {
+                    TextButton(onClick = onUseImmichPhoto, enabled = !state.saving) {
+                        Text(if (state.user.isImmichUser) "Use Immich picture" else "Remove photo")
                     }
                 }
             }
@@ -509,12 +512,15 @@ fun FamilyMemberSheetContent(
     }
 }
 
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun AddPersonSheetContent(
     state: AddPersonUi,
     onNameChange: (String) -> Unit = {},
     onBirthDateChange: (BirthDate?) -> Unit = {},
     onHideYearChange: (Boolean) -> Unit = {},
+    onChooseFromPeople: () -> Unit = {},
+    onRemovePhoto: () -> Unit = {},
     onCancel: () -> Unit = {},
     onSave: () -> Unit = {},
 ) {
@@ -537,6 +543,39 @@ fun AddPersonSheetContent(
             enabled = !state.saving,
             modifier = Modifier.fillMaxWidth(),
         )
+        Spacer(Modifier.height(16.dp))
+        Text(
+            "Photo",
+            style = MaterialTheme.typography.labelLarge,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        Spacer(Modifier.height(8.dp))
+        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
+            MemberAvatar(
+                member = FamilyMember(
+                    id = "new",
+                    name = state.name.trim().ifEmpty { "?" },
+                    avatarUrl = state.previewAvatarUrl,
+                    color = MaterialTheme.colorScheme.secondaryContainer,
+                    isImmichUser = false,
+                ),
+                size = 56.dp,
+            )
+            Spacer(Modifier.width(16.dp))
+            FlowRow(
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalArrangement = Arrangement.spacedBy(4.dp),
+            ) {
+                OutlinedButton(onClick = onChooseFromPeople, enabled = !state.saving) {
+                    Text("Choose from Immich people")
+                }
+                if (state.pickedPersonId != null) {
+                    TextButton(onClick = onRemovePhoto, enabled = !state.saving) {
+                        Text("Remove photo")
+                    }
+                }
+            }
+        }
         Spacer(Modifier.height(16.dp))
         BirthdaySection(
             birthDate = state.birthDate,

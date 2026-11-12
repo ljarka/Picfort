@@ -147,6 +147,22 @@ class FamilyScreenshotTest {
     }
 
     @Test
+    fun family_manual_member_sheet() = snap {
+        WithSheet(
+            background = { FamilySettingsContent(FamilySettingsUi(users = familyUsers)) },
+            sheet = {
+                FamilyMemberSheetContent(
+                    FamilyMemberEditUi(
+                        user = familyUsers.first { !it.isImmichUser }, // Staś: no Immich account
+                        previewAvatarUrl = "avatar-stas",
+                        hasCustomPhoto = true,
+                    )
+                )
+            },
+        )
+    }
+
+    @Test
     fun family_add_member_sheet() = snap {
         WithSheet(
             background = { FamilySettingsContent(FamilySettingsUi(users = familyUsers)) },
