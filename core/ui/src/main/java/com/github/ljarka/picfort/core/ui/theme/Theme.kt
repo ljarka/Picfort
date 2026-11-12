@@ -78,10 +78,14 @@ val LightColorScheme = lightColorScheme(
     surfaceContainerHighest = CreamContainerHighest,
 )
 
+/**
+ * Picfort's palette (from the app icon) everywhere by default. [dynamicColor] switches to
+ * Material You wallpaper colors on Android 12+ (Settings → Appearance).
+ */
 @Composable
 fun PicfortTheme(
     darkTheme: Boolean = isSystemInDarkTheme(),
-    dynamicColor: Boolean = true,
+    dynamicColor: Boolean = false,
     content: @Composable () -> Unit,
 ) {
     val colorScheme = when {

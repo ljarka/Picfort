@@ -46,7 +46,14 @@ class SettingsViewModel @Inject constructor(
     private val frameSettingsStore: FrameSettingsStore,
     private val familyRepository: FamilyRepository,
     private val sessionManager: SessionManager,
+    private val appearance: AppearanceSettingsStore,
 ) : ViewModel() {
+
+    /** null when the phone has no wallpaper colors (Android < 12): the row is hidden. */
+    val wallpaperColors: StateFlow<Boolean?> =
+        if (appearance.wallpaperColorsAvailable) appearance.wallpaperColors else MutableStateFlow(null)
+
+    fun setWallpaperColors(value: Boolean) = appearance.setWallpaperColors(value)
 
     private val _backup = MutableStateFlow(read())
     val backup: StateFlow<BackupSettingsUi> = _backup.asStateFlow()

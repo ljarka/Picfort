@@ -32,6 +32,10 @@ name: Smoke — login and all tabs
 
 # Photos: timeline, no logo in the app bar
 - tapOn: "Photos"
+# The system photo-access dialog sometimes shows despite launchApp permissions.
+- tapOn:
+    text: "Allow all"
+    optional: true
 - extendedWaitUntil:
     visible: "Timeline"
     timeout: 20000
@@ -41,6 +45,11 @@ name: Smoke — login and all tabs
 # Settings → Family, Settings → Picture frame
 - tapOn: "Settings"
 - assertVisible: "Backup"
+- scrollUntilVisible:
+    element: "Colors from wallpaper"
+- scrollUntilVisible:
+    element: "Names, photos and hidden accounts"
+    direction: UP
 - tapOn: "Names, photos and hidden accounts"
 - assertVisible: "Add person"
 - back

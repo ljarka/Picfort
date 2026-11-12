@@ -280,6 +280,7 @@ class ScreenshotTest {
             status = BackupStatus.Running(done = 2_455, total = 2_546),
             serverUrl = "https://photos.example.com",
             picfortServer = "http://192.168.0.105:5000",
+            wallpaperColors = false,
             now = NOW,
         )
     }

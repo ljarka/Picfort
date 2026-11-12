@@ -13,7 +13,7 @@ Thin Android application shell, navigation root, and Hilt root assembler.
 | `ui/init/*` | Onboarding, initial connection validation (`InitScreen`, `InitViewModel`) |
 | `ui/login/*` | Immich login screen, email/password form |
 | `ui/server/*` | Server address input and testing screen |
-| `ui/settings/*` | App settings, server info, backup status |
+| `ui/settings/*` | App settings, server info, backup status; `AppearanceSettingsStore` ("Colors from wallpaper", off by default → brand palette) |
 | `backup/*` | Android WorkManager periodic background photo backup |
 
 ## Architecture & Rules
