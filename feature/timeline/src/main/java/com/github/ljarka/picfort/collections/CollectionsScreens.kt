@@ -48,7 +48,7 @@ import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil3.compose.AsyncImage
 
@@ -240,7 +240,7 @@ fun SearchContent(
             )
             when {
                 state.error != null && state.results.isEmpty() ->
-                    Message(state.error!!, Modifier) { onSearch(state.query) }
+                    Message(checkNotNull(state.error), Modifier) { onSearch(state.query) }
                 state.isLoading && state.results.isEmpty() ->
                     Box(Modifier.fillMaxSize(), Alignment.Center) { CircularProgressIndicator() }
                 state.searched && state.results.isEmpty() ->

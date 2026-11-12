@@ -58,7 +58,7 @@ class ServerConfigurationViewModel @Inject constructor(
     private fun ping(baseUrl: String): String? = try {
         val request = Request.Builder().url("$baseUrl/api/server/ping").build()
         okHttpClient.newCall(request).execute().use { response ->
-            val body = response.body?.string().orEmpty()
+            val body = response.body.string()
             when {
                 response.isSuccessful && "pong" in body -> null
                 else -> "No Immich server found at $baseUrl (HTTP ${response.code})"

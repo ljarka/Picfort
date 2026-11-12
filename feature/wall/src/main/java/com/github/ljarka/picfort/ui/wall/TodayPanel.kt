@@ -70,8 +70,11 @@ fun todayPanel(events: List<FamilyEvent>, today: LocalDate, now: LocalTime): Tod
     }
     val timed = todays.filter { it.startDate == today && it.startTime != null }
     val chosen = if (timed.isNotEmpty()) {
-        val byTime = compareBy<FamilyEvent> { it.startTime }.then(createdThenId)
-        val upcoming = timed.filter { !it.startTime!!.isBefore(now) }
+        val byTime = compareBy<FamilyEvent> { checkNotNull(it.startTime) }.then(createdThenId)
+        val upcoming = timed.filter { event ->
+            val start = event.startTime ?: return@filter false
+            !start.isBefore(now)
+        }
         if (upcoming.isNotEmpty()) upcoming.minWith(byTime) else timed.maxWith(byTime)
     } else {
         val multiDay = todays.filter { it.isMultiDay }

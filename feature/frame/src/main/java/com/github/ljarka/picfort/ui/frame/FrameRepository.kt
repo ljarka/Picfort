@@ -9,6 +9,7 @@ import com.github.ljarka.picfort.core.network.FrameSettingsStore
 import com.github.ljarka.picfort.core.network.isPicfortKeyRejected
 import com.github.ljarka.picfort.core.network.normalizeFrameUrl
 import com.github.ljarka.picfort.core.network.picfortKey
+import com.github.ljarka.picfort.core.network.readParsedBody
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -86,14 +87,12 @@ class FrameRepository @Inject constructor(
         return withContext(Dispatchers.IO) {
             try {
                 client.newCall(Request.Builder().url(url).post(body).build()).execute().use { response ->
-                    val respBody = response.body?.string()?.let {
-                        runCatching { json.decodeFromString<FrameResponse>(it) }.getOrNull()
-                    }
+                    val payload = response.readParsedBody<FrameResponse>(json)
                     when (response.code) {
                         200, 202 -> FrameResult.Sent
                         409 -> FrameResult.Busy
-                        429 -> FrameResult.TooSoon(respBody?.retryAfter)
-                        else -> FrameResult.Error(respBody?.message ?: "Frame returned HTTP ${response.code}")
+                        429 -> FrameResult.TooSoon(payload.value?.retryAfter)
+                        else -> FrameResult.Error(payload.value?.message ?: "Frame returned HTTP ${response.code}")
                     }
                 }
             } catch (e: CleartextNotAllowedException) {
@@ -126,10 +125,8 @@ class FrameRepository @Inject constructor(
                 if (response.isPicfortKeyRejected()) {
                     return@use FrameResult.Error(WRONG_API_KEY)
                 }
-                val body = response.body?.string()?.let {
-                    runCatching { json.decodeFromString<FrameResponse>(it) }.getOrNull()
-                }
-                map(response.code, body)
+                val payload = response.readParsedBody<FrameResponse>(json)
+                map(response.code, payload.value)
             }
         } catch (e: CleartextNotAllowedException) {
             FrameResult.Error(e.message ?: "Use https:// for frames outside your network")

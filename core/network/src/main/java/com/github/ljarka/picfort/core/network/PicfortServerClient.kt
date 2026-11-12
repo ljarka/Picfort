@@ -53,16 +53,16 @@ class PicfortServerClient @Inject constructor(
         val request = unsigned.newBuilder().header("Authorization", "Bearer ${tokens.accessToken}").build()
         try {
             client.newCall(request).execute().use { response ->
-                val text = response.body?.string().orEmpty()
+                val body = response.readParsedBody<ErrorBody>(json)
                 if (response.isPicfortKeyRejected()) throw PicfortServerException.WrongApiKey()
                 when (response.code) {
-                    in 200..299, 304 -> Reply(response.code, text, response.header("ETag"))
+                    in 200..299, 304 -> Reply(response.code, body.text, response.header("ETag"))
                     401 -> throw PicfortServerException.NotAccepted()
-                    403 -> throw PicfortServerException.Forbidden(errorMessage(text) ?: "Not allowed")
+                    403 -> throw PicfortServerException.Forbidden(body.value?.message ?: "Not allowed")
                     404 -> throw notFound()
                     502 -> throw PicfortServerException.ImmichUnreachable()
                     else -> throw PicfortServerException.Other(
-                        errorMessage(text) ?: "The Picfort server returned HTTP ${response.code}"
+                        body.value?.message ?: "The Picfort server returned HTTP ${response.code}"
                     )
                 }
             }
@@ -72,6 +72,4 @@ class PicfortServerClient @Inject constructor(
             throw PicfortServerException.Unreachable(request.url.host)
         }
     }
-
-    private fun errorMessage(text: String) = runCatching { json.decodeFromString<ErrorBody>(text).message }.getOrNull()
 }
