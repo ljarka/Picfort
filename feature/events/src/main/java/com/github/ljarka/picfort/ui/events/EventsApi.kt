@@ -7,6 +7,7 @@ import com.github.ljarka.picfort.core.network.PicfortServerException
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonNull
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
@@ -48,6 +49,7 @@ data class EventDto(
     @SerialName("occurrence_start") val occurrenceStart: String? = null,
     @SerialName("occurrence_end") val occurrenceEnd: String? = null,
     val turns: Int? = null,
+    val members: List<String> = emptyList(),
 ) {
     /** Shown dates are the occurrence (T-035); the series' own dates stay for the form. */
     fun toEvent(): FamilyEvent {
@@ -71,6 +73,7 @@ data class EventDto(
             seriesEndDate = seriesEnd,
             birthdayOf = memberId?.takeIf { kind == KIND_BIRTHDAY },
             turns = turns,
+            memberIds = members,
         )
     }
 }
@@ -85,6 +88,8 @@ data class EventDraft(
     val albumId: String? = null,
     val repeat: EventRepeat? = null,
     val repeatUntil: LocalDate? = null,
+    /** Who the event is for (T-053). */
+    val memberIds: List<String> = emptyList(),
 ) {
     val normalizedTitle: String get() = title.trim()
     /** An end of the repeat only makes sense with a repeat, and not before the first occurrence. */
@@ -126,6 +131,9 @@ fun buildEventPatchJson(original: FamilyEvent, draft: EventDraft): JsonObject = 
     }
     if (draft.normalizedRepeatUntil != original.repeatUntil) {
         put("repeat_until", draft.normalizedRepeatUntil?.let { JsonPrimitive(it.toString()) } ?: JsonNull)
+    }
+    if (draft.memberIds != original.memberIds) {
+        put("members", JsonArray(draft.memberIds.map(::JsonPrimitive)))
     }
 }
 
@@ -177,6 +185,7 @@ class EventsApi @Inject constructor(
             draft.albumId?.let { put("album_id", it) }
             draft.repeat?.let { put("repeat", it.wire) }
             draft.normalizedRepeatUntil?.let { put("repeat_until", it.toString()) }
+            if (draft.memberIds.isNotEmpty()) put("members", JsonArray(draft.memberIds.map(::JsonPrimitive)))
         }
         return eventCall(Request.Builder().url(eventsUrl().build()).post(body(payload)).build())
     }

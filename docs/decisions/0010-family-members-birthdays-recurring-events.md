@@ -92,3 +92,11 @@ regression.
   `member_people` (family schema v4) and returns only the caller's (`GET /family/people`).
 - The link is set by choosing the member's face with "Choose from Immich" (no separate control, no
   matching by name). Photos filters the timeline by it, one member at a time.
+
+## Amendment 2026-11-13: who an event is for (T-053)
+
+- An event lists the family members it is about: `events.members`, a JSON list of member ids in the
+  order chosen (events schema v4, additive migration step 3). Several members per event; none means
+  the whole family.
+- The server checks only the id format (Immich users are not all in `family.db`); a member deleted
+  later is left out by the app. A birthday is about its member without being listed (`FamilyEvent.who`).

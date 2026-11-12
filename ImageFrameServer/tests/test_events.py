@@ -437,7 +437,7 @@ class EventsApiTest(unittest.TestCase):
         with closing(sqlite3.connect(old_db + ".v1.bak")) as conn:
             self.assertEqual(1, conn.execute("PRAGMA user_version").fetchone()[0])
         with closing(sqlite3.connect(old_db)) as conn:
-            self.assertEqual(3, conn.execute("PRAGMA user_version").fetchone()[0])
+            self.assertEqual(4, conn.execute("PRAGMA user_version").fetchone()[0])
         created = store.create(MAMA, {"title": "Weekly", "start_date": "2026-11-12", "repeat": "weekly"})
         self.assertEqual("weekly", created["repeat"])
         self.assertEqual(2, len(store.upcoming("2026-11-11")))
@@ -506,7 +506,7 @@ class EventsApiTest(unittest.TestCase):
         store = EventStore(v2_db)
         self.assertTrue(os.path.exists(v2_db + ".v2.bak"))
         with closing(sqlite3.connect(v2_db)) as conn:
-            self.assertEqual(3, conn.execute("PRAGMA user_version").fetchone()[0])
+            self.assertEqual(4, conn.execute("PRAGMA user_version").fetchone()[0])
             # Check unique index constraint on member_id
             conn.execute("INSERT INTO events (title, start_date, kind, member_id, created_by, created, updated)"
                          f" VALUES ('B1', '2026-11-10', 'birthday', '{MAMA}', '{MAMA}', 'now', 'now')")
@@ -524,6 +524,48 @@ class EventsApiTest(unittest.TestCase):
         up_2028 = self.store.upcoming("2028-01-01")
         self.assertEqual("2028-02-29", up_2028[0]["occurrence_start"])
         self.assertEqual(28, up_2028[0]["turns"])
+
+    # --- T-053: who the event is for ---
+
+    def test_members_saved_in_order_without_repeats_and_kept_on_edit(self):
+        e = self.new_event(members=["ola", MAMA, "ola"])
+        self.assertEqual(["ola", MAMA], e["members"])
+        r = self.client.patch(f"/events/{e['id']}", json={"title": "Mazury"})
+        self.assertEqual(["ola", MAMA], r.get_json()["members"])
+        self.assertEqual(["ola", MAMA], self.client.get(f"/events/{e['id']}").get_json()["members"])
+        r = self.client.patch(f"/events/{e['id']}", json={"members": []})
+        self.assertEqual([], r.get_json()["members"])
+        r = self.client.patch(f"/events/{e['id']}", json={"members": ["kuba"]})
+        self.assertEqual(["kuba"], r.get_json()["members"])
+        self.assertEqual(["kuba"], self.client.get("/events?after=2026-11-01").get_json()[0]["members"])
+
+    def test_event_without_members_has_an_empty_list(self):
+        self.assertEqual([], self.new_event()["members"])
+
+    def test_members_are_validated(self):
+        for bad in ("ola", [1], ["a b"], ["x" * 65], [f"m{i}" for i in range(31)]):
+            r = self.client.post("/events", json={"title": "T", "start_date": "2026-11-10", "members": bad})
+            self.assertEqual(400, r.status_code, bad)
+
+    def test_v3_database_migration_to_v4_keeps_events(self):
+        v3_db = os.path.join(self.dir, "v3-events.db")
+        with closing(sqlite3.connect(v3_db)) as conn, conn:
+            conn.executescript(
+                "CREATE TABLE events (id INTEGER PRIMARY KEY AUTOINCREMENT, title TEXT NOT NULL,"
+                " start_date TEXT NOT NULL, end_date TEXT, start_time TEXT, location TEXT, note TEXT,"
+                " album_id TEXT, repeat TEXT, repeat_until TEXT, kind TEXT, member_id TEXT,"
+                " created_by TEXT NOT NULL, created TEXT NOT NULL, updated TEXT NOT NULL);"
+                "CREATE INDEX events_start ON events(start_date);"
+                f"INSERT INTO events (title, start_date, created_by, created, updated)"
+                f" VALUES ('Old', '2026-11-10', '{MAMA}', '2026-11-01T10:00:00Z', '2026-11-01T10:00:00Z');"
+                "PRAGMA user_version = 3;"
+            )
+        store = EventStore(v3_db)
+        self.assertTrue(os.path.exists(v3_db + ".v3.bak"))
+        old = store.get(1)
+        self.assertEqual("Old", old["title"])
+        self.assertEqual([], old["members"])
+        self.assertEqual(["ola"], store.update(1, {"members": ["ola"]})["members"])
 
 
 if __name__ == "__main__":

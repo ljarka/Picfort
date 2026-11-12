@@ -7,6 +7,8 @@ import com.android.resources.NightMode
 import com.github.ljarka.picfort.core.model.EventsSegment
 import com.github.ljarka.picfort.core.model.FamilyEvent
 import com.github.ljarka.picfort.core.model.EventRepeat
+import com.github.ljarka.picfort.core.model.FamilyMember
+import androidx.compose.ui.graphics.Color
 import com.github.ljarka.picfort.core.ui.theme.AccentTheme
 import com.github.ljarka.picfort.core.ui.theme.BrandAccent
 import com.github.ljarka.picfort.core.ui.theme.PicfortTheme
@@ -247,6 +249,65 @@ class EventsScreenshotTest {
                 repeat = EventRepeat.WEEKLY,
                 repeatUntil = LocalDate.of(2027, 6, 25),
                 editsSeries = true,
+                today = sampleToday,
+            )
+        )
+    }
+
+    // --- T-053: who the event is for ---
+
+    private val family = listOf(
+        FamilyMember("mama", "Mama", null, Color(0xFFD9708F)),
+        FamilyMember("tata", "Tata", null, Color(0xFF5B8DD6)),
+        FamilyMember("ola", "Ola", null, Color(0xFF4FAF7A)),
+        FamilyMember("stas", "Staś", null, Color(0xFFE08A3C), isImmichUser = false),
+        FamilyMember("kuba", "Kuba", null, Color(0xFF8C7AE6), isImmichUser = false),
+    )
+
+    private val withWho = listOf(
+        sampleUpcomingEvents[0].copy(memberIds = listOf("mama", "tata", "ola", "stas", "kuba")),
+        sampleUpcomingEvents[1].copy(memberIds = listOf("ola")),
+        swimming.copy(memberIds = listOf("ola", "stas")),
+        olaBirthday,
+        sampleUpcomingEvents[2],
+    )
+
+    @Test
+    fun events_upcoming_who() = snap {
+        EventsListContent(
+            EventsListUi(today = sampleToday, upcomingEvents = withWho, memberNames = members, members = family)
+        )
+    }
+
+    @Test
+    fun events_upcoming_who_dark() = snap(dark = true) {
+        EventsListContent(
+            EventsListUi(today = sampleToday, upcomingEvents = withWho, memberNames = members, members = family)
+        )
+    }
+
+    @Test
+    fun event_detail_who() = snap {
+        EventDetailContent(
+            EventDetailUi(
+                event = withWho[2], today = sampleToday, authorName = "Tata", canDelete = true, members = family,
+            )
+        )
+    }
+
+    @Test
+    fun event_form_who() = snap {
+        EventFormContent(
+            EventFormUi(
+                isEditing = true,
+                title = "Swimming lessons",
+                startDate = LocalDate.of(2026, 9, 4),
+                startTime = LocalTime.of(16, 0),
+                location = "Aquapark Fala",
+                repeat = EventRepeat.WEEKLY,
+                editsSeries = true,
+                memberIds = listOf("ola", "stas"),
+                members = family,
                 today = sampleToday,
             )
         )

@@ -20,6 +20,12 @@ Family events vertical slice: upcoming and past events, details, form, recurrenc
 - Midnight: a series whose occurrence ended is dropped from Upcoming (not moved to Past); the refresh brings its next occurrence.
 - `EventDto` must not declare a companion object (it would replace the kotlinx serializer's).
 
+## Who it is for (T-053)
+
+- `FamilyEvent.memberIds` (server `members`); `who` adds a birthday's member. `EventMembers.kt`:
+  `membersOf` (drops deleted members), `MemberStack` (row, max 3 + "+N"), `WhoLine` (detail),
+  `WhoField` (form chips from `FamilyMemberProvider.allMembers`). PATCH sends `members` only when changed.
+
 ## Public Contract / Navigation Entry Points
 
 - `EventsListScreen(onOpenEvent: (Long) -> Unit, onAddEvent: () -> Unit, onSettingsClick: () -> Unit, onSetUpServer: () -> Unit)`

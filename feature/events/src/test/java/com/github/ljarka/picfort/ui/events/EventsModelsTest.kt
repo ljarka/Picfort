@@ -2,6 +2,9 @@ package com.github.ljarka.picfort.ui.events
 
 import com.github.ljarka.picfort.core.model.EventRepeat
 import com.github.ljarka.picfort.core.model.FamilyEvent
+import com.github.ljarka.picfort.core.model.FamilyMember
+import androidx.compose.ui.graphics.Color
+import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonNull
 import kotlinx.serialization.json.JsonPrimitive
@@ -246,5 +249,36 @@ class EventsModelsTest {
 
         // An end before the first occurrence is dropped rather than sent.
         assertNull(same.copy(repeatUntil = LocalDate.of(2026, 1, 1)).normalizedRepeatUntil)
+    }
+
+    // --- T-053: who the event is for ---
+
+    @Test
+    fun membersAreSentOnlyWhenChanged() {
+        val event = FamilyEvent(1, "Swimming", LocalDate.of(2026, 11, 13), memberIds = listOf("ola", "stas"))
+        val same = EventDraft("Swimming", LocalDate.of(2026, 11, 13), memberIds = listOf("ola", "stas"))
+        assertTrue(buildEventPatchJson(event, same).isEmpty())
+        val cleared = buildEventPatchJson(event, same.copy(memberIds = emptyList()))
+        assertEquals(JsonArray(emptyList()), cleared["members"])
+        val reordered = buildEventPatchJson(event, same.copy(memberIds = listOf("stas", "ola")))
+        assertEquals(JsonArray(listOf(JsonPrimitive("stas"), JsonPrimitive("ola"))), reordered["members"])
+    }
+
+    @Test
+    fun eventDtoReadsMembers() {
+        val dto = Json { ignoreUnknownKeys = true }.decodeFromString<EventDto>(
+            """{"id":1,"title":"T","start_date":"2026-11-13","members":["ola","kuba"]}"""
+        )
+        assertEquals(listOf("ola", "kuba"), dto.toEvent().memberIds)
+    }
+
+    @Test
+    fun birthdayIsAboutItsMemberAndDeletedMembersAreLeftOut() {
+        val birthday = FamilyEvent(2, "B", LocalDate.of(2026, 11, 16), birthdayOf = "ola")
+        assertEquals(listOf("ola"), birthday.who)
+        assertEquals(listOf("ola", "kuba"), birthday.copy(memberIds = listOf("kuba")).who)
+        assertEquals(listOf("ola"), birthday.copy(memberIds = listOf("ola")).who)
+        val family = listOf(FamilyMember("ola", "Ola", null, Color.Red), FamilyMember("kuba", "Kuba", null, Color.Blue))
+        assertEquals(listOf("kuba", "ola"), membersOf(listOf("kuba", "gone", "ola"), family).map { it.id })
     }
 }
