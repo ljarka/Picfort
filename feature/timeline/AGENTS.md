@@ -21,7 +21,8 @@ Immich photo timeline, gallery, full-screen viewer, collections, and media sync 
 
 ## Public Contract / Navigation Entry Points
 
-- `TimelineScreen(onImageClick, onSearchClick, onAlbumsClick, onSettingsClick, onPersonAssetClick, onEditMember)`
+- `TimelineScreen(onImageClick, onSearchClick, onAlbumsClick, onSettingsClick, onPersonAssetClick, onEditMember, onOpenFamily)`; `onOpenFamily` = the "+ Family" circle
+  at the end of the carousel
 - `ImageDetailsScreen(sharedTransitionScope, animatedVisibilityScope, onDismissRequest, assetId, assetType, imageIndex, frameSettingsDialog)`
 - `AlbumsScreen(onAlbumClick, onBack)`
 - `AlbumScreen(onBack, onAssetClick)`

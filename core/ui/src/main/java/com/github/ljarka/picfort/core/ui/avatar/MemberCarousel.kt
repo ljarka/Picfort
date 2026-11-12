@@ -2,18 +2,25 @@ package com.github.ljarka.picfort.core.ui.avatar
 
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -37,6 +44,7 @@ private val AVATAR_SIZE = 56.dp
 /**
  * The family's avatar row (Wall, Photos): tap selects one member (tap again to clear, the caller
  * decides), long-press offers "Edit". Members in [dimmedIds] are drawn faded (e.g. not linked).
+ * With [onOpenFamily], a last "Family" circle opens Family settings.
  */
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
@@ -47,6 +55,7 @@ fun MemberCarousel(
     modifier: Modifier = Modifier,
     onEditMember: (String) -> Unit = {},
     dimmedIds: Set<String> = emptySet(),
+    onOpenFamily: (() -> Unit)? = null,
 ) {
     LazyRow(
         contentPadding = PaddingValues(horizontal = 8.dp, vertical = 8.dp),
@@ -90,5 +99,45 @@ fun MemberCarousel(
                 }
             }
         }
+        if (onOpenFamily != null) {
+            item(key = "picfort:family-settings") { FamilyCircle(onOpenFamily) }
+        }
+    }
+}
+
+@Composable
+private fun FamilyCircle(onClick: () -> Unit) {
+    Column(
+        horizontalAlignment = Alignment.CenterHorizontally,
+        modifier = Modifier
+            .padding(horizontal = 4.dp)
+            .clip(RoundedCornerShape(16.dp))
+            .clickable(onClickLabel = "Family settings", onClick = onClick)
+            .padding(horizontal = 4.dp, vertical = 6.dp),
+    ) {
+        Box(
+            contentAlignment = Alignment.Center,
+            modifier = Modifier
+                .size(AVATAR_SIZE)
+                .clip(CircleShape)
+                .background(MaterialTheme.colorScheme.surfaceVariant)
+                .border(2.dp, MaterialTheme.colorScheme.outlineVariant, CircleShape),
+        ) {
+            Icon(
+                Icons.Default.Add,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+        Text(
+            "Family",
+            style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            maxLines = 1,
+            textAlign = TextAlign.Center,
+            modifier = Modifier
+                .width(AVATAR_SIZE + 8.dp)
+                .padding(top = 4.dp),
+        )
     }
 }

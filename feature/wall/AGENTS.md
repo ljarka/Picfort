@@ -15,7 +15,8 @@ Family wall vertical slice: posts stream, today panel (events/trips/birthdays), 
 
 ## Public Contract / Navigation Entry Points
 
-- `FamilyWallScreen(onSettingsClick: () -> Unit, onSetUpServer: () -> Unit = onSettingsClick)`
+- `FamilyWallScreen(onSettingsClick, onEditMember, onOpenFamily, onOpenEvent, onOpenEvents, onSetUpServer)`;
+  `onOpenFamily` is the "+ Family" circle at the end of the avatar row (opens Family settings).
 
 ## Dependencies & Boundaries
 
