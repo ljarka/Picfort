@@ -45,6 +45,9 @@ jobs:
           done
           exit 1
 
+      - name: Architecture boundaries check
+        run: ./scripts/check-modular-boundaries.sh
+
       # verifyPaparazziDebug runs all unit tests and compares the screenshots
       # with the checked-in images.
       - name: Unit tests, screenshots, lint, build
