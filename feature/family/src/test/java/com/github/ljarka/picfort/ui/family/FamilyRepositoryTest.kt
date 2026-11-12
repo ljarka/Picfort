@@ -66,7 +66,7 @@ private class FakeFamilyBackend(
         val list = map.values.toList()
         val raw = """{"profiles":[${
             list.joinToString(",") { p ->
-                """{"user_id":"${p.userId}","display_name":${p.displayName?.let { "\"$it\"" } ?: "null"},"photo_url":${p.photoUrl?.let { "\"$it\"" } ?: "null"},"hidden":${p.hidden ?: "null"},"manual":${p.manual},"birth_date":${p.birthDate?.let { "\"$it\"" } ?: "null"}}"""
+                """{"user_id":"${p.userId}","display_name":${p.displayName?.let { "\"$it\"" } ?: "null"},"photo_url":${p.photoUrl?.let { "\"$it\"" } ?: "null"},"hidden":${p.hidden ?: "null"},"manual":${p.manual},"birth_date":${p.birthDate?.let { "\"$it\"" } ?: "null"},"no_photo":${p.noPhoto}}"""
             }
         }]}"""
         return list to raw
@@ -83,6 +83,7 @@ private class FakeFamilyBackend(
         birthDate: String?,
         includeBirthDate: Boolean,
         today: String?,
+        noPhoto: Boolean?,
     ): FamilyProfile {
         failWith?.let { throw it }
         val existing = map[userId]
@@ -93,8 +94,9 @@ private class FakeFamilyBackend(
             hidden = if (includeHidden) hidden else existing?.hidden,
             manual = existing?.manual ?: false,
             birthDate = if (includeBirthDate) birthDate else existing?.birthDate,
+            noPhoto = noPhoto ?: existing?.noPhoto ?: false,
         )
-        if (updated.displayName == null && updated.photoUrl == null && updated.hidden == null && updated.birthDate == null && !updated.manual) {
+        if (updated.displayName == null && updated.photoUrl == null && updated.hidden == null && updated.birthDate == null && !updated.manual && !updated.noPhoto) {
             map.remove(userId)
         } else {
             map[userId] = updated
@@ -128,7 +130,7 @@ private class FakeFamilyBackend(
         failWith?.let { throw it }
         uploadedPhotos[userId] = photoJpeg
         val existing = map[userId] ?: FamilyProfile(userId = userId)
-        val updated = existing.copy(photoUrl = "http://192.168.0.105:5000/family/photo/$userId.jpg")
+        val updated = existing.copy(photoUrl = "http://192.168.0.105:5000/family/photo/$userId.jpg", noPhoto = false)
         map[userId] = updated
         return updated
     }
@@ -293,6 +295,38 @@ class FamilyRepositoryTest {
         assertEquals("Piotr Kowalski", revertedTata.name)
         assertNull(revertedTata.avatarUrl)
         assertFalse(revertedTata.hasCustomPhoto)
+    }
+
+    @Test
+    fun `clear shows initials over the Immich picture, profile picture brings it back`(): Unit = runBlocking {
+        val backend = FakeFamilyBackend()
+        val repo = FamilyRepository(
+            backend, FakePeopleSource(), FakeOfflineCopy(), FakeUsersDao(immichUsers),
+            { "https://photos.example.com" }, { "mama" },
+        )
+        repo.refresh()
+        val immichPicture = "https://photos.example.com/api/users/mama/profile-image?v=42"
+        val mama = repo.users.first().first { it.id == "mama" }
+        assertEquals(immichPicture, mama.avatarUrl)
+
+        repo.saveMember(mama, displayName = "", clearPhoto = true, noPhoto = true)
+        val cleared = repo.users.first().first { it.id == "mama" }
+        assertNull(cleared.avatarUrl)
+        assertTrue(cleared.noPhoto)
+        assertEquals(immichPicture, cleared.immichAvatarUrl)
+
+        repo.saveMember(cleared, displayName = "", clearPhoto = true, noPhoto = false)
+        val restored = repo.users.first().first { it.id == "mama" }
+        assertEquals(immichPicture, restored.avatarUrl)
+        assertFalse(restored.noPhoto)
+        assertTrue(backend.map.isEmpty())
+
+        // A face picked after Clear replaces the initials.
+        repo.saveMember(restored, displayName = "", noPhoto = true, clearPhoto = true)
+        repo.saveMember(repo.users.first().first { it.id == "mama" }, displayName = "", pickedPersonId = "p", noPhoto = false)
+        val withFace = repo.users.first().first { it.id == "mama" }
+        assertEquals("http://192.168.0.105:5000/family/photo/mama.jpg", withFace.avatarUrl)
+        assertFalse(withFace.noPhoto)
     }
 
     @Test

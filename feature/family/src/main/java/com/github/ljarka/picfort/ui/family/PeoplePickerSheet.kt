@@ -50,6 +50,8 @@ data class ImmichPersonItem(
 
 data class PeoplePickerUi(
     val people: List<ImmichPersonItem> = emptyList(),
+    /** The member's Immich account picture, offered as the first circle; null for none. */
+    val profilePictureUrl: String? = null,
     val query: String = "",
     val isLoading: Boolean = false,
     val error: String? = null,
@@ -60,6 +62,9 @@ data class PeoplePickerUi(
             if (q.isEmpty()) return people
             return people.filter { it.name.contains(q, ignoreCase = true) }
         }
+
+    /** The "Profile picture" circle shows while no search is typed. */
+    val showsProfilePicture: Boolean get() = profilePictureUrl != null && query.isBlank()
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -69,6 +74,7 @@ fun PeoplePickerSheet(
     onDismiss: () -> Unit,
     onQueryChange: (String) -> Unit,
     onSelect: (ImmichPersonItem) -> Unit,
+    onSelectProfilePicture: () -> Unit = {},
 ) {
     ModalBottomSheet(
         onDismissRequest = onDismiss,
@@ -78,6 +84,7 @@ fun PeoplePickerSheet(
             state = state,
             onQueryChange = onQueryChange,
             onSelect = onSelect,
+            onSelectProfilePicture = onSelectProfilePicture,
         )
     }
 }
@@ -87,6 +94,7 @@ fun PeoplePickerSheetContent(
     state: PeoplePickerUi,
     onQueryChange: (String) -> Unit = {},
     onSelect: (ImmichPersonItem) -> Unit = {},
+    onSelectProfilePicture: () -> Unit = {},
 ) {
     Column(
         Modifier
@@ -96,7 +104,7 @@ fun PeoplePickerSheetContent(
             .imePadding()
             .padding(top = 8.dp, bottom = 16.dp),
     ) {
-        Text("Choose from Immich people", style = MaterialTheme.typography.titleLarge)
+        Text("Choose from Immich", style = MaterialTheme.typography.titleLarge)
         Spacer(Modifier.height(12.dp))
         if (state.people.isNotEmpty() || state.query.isNotEmpty()) {
             OutlinedTextField(
@@ -131,7 +139,7 @@ fun PeoplePickerSheetContent(
                 style = MaterialTheme.typography.bodyMedium,
                 modifier = Modifier.padding(vertical = 24.dp),
             )
-            state.filtered.isEmpty() -> Text(
+            state.filtered.isEmpty() && !state.showsProfilePicture -> Text(
                 if (state.people.isEmpty()) "No named people in your Immich library yet."
                 else "No people matching \"${state.query}\".",
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -150,32 +158,13 @@ fun PeoplePickerSheetContent(
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
                 verticalArrangement = Arrangement.spacedBy(12.dp),
             ) {
-                items(state.filtered, key = { it.id }) { person ->
-                    Column(
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                        modifier = Modifier
-                            .clip(RoundedCornerShape(12.dp))
-                            .clickable { onSelect(person) }
-                            .padding(vertical = 6.dp, horizontal = 4.dp),
-                    ) {
-                        AsyncImage(
-                            model = person.thumbnailUrl,
-                            contentDescription = person.name,
-                            contentScale = ContentScale.Crop,
-                            modifier = Modifier
-                                .size(64.dp)
-                                .clip(CircleShape)
-                                .background(MaterialTheme.colorScheme.surfaceVariant),
-                        )
-                        Spacer(Modifier.height(6.dp))
-                        Text(
-                            person.name,
-                            style = MaterialTheme.typography.bodySmall,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis,
-                            textAlign = TextAlign.Center,
-                        )
+                if (state.showsProfilePicture) {
+                    item(key = "profile-picture") {
+                        PickerCircle(state.profilePictureUrl, "Profile picture", onSelectProfilePicture, maxLines = 2)
                     }
+                }
+                items(state.filtered, key = { it.id }) { person ->
+                    PickerCircle(person.thumbnailUrl, person.name, onClick = { onSelect(person) })
                 }
             }
         }
@@ -186,6 +175,35 @@ fun PeoplePickerSheetContent(
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             textAlign = TextAlign.Center,
             modifier = Modifier.fillMaxWidth(),
+        )
+    }
+}
+
+@Composable
+private fun PickerCircle(imageUrl: String?, label: String, onClick: () -> Unit, maxLines: Int = 1) {
+    Column(
+        horizontalAlignment = Alignment.CenterHorizontally,
+        modifier = Modifier
+            .clip(RoundedCornerShape(12.dp))
+            .clickable(onClick = onClick)
+            .padding(vertical = 6.dp, horizontal = 4.dp),
+    ) {
+        AsyncImage(
+            model = imageUrl,
+            contentDescription = label,
+            contentScale = ContentScale.Crop,
+            modifier = Modifier
+                .size(64.dp)
+                .clip(CircleShape)
+                .background(MaterialTheme.colorScheme.surfaceVariant),
+        )
+        Spacer(Modifier.height(6.dp))
+        Text(
+            label,
+            style = MaterialTheme.typography.bodySmall,
+            maxLines = maxLines,
+            overflow = TextOverflow.Ellipsis,
+            textAlign = TextAlign.Center,
         )
     }
 }

@@ -36,9 +36,9 @@ A profile: `{"user_id", "display_name", "photo_url", "hidden", "updated_by", "up
 | Endpoint | Result |
 |---|---|
 | `GET /family` | `{"profiles": [profile, …]}`: only users that have a row. |
-| `PATCH /family/<user_id>` `{display_name?, hidden?}` | Creates the row if missing; `null` clears a field. Returns the profile. Anyone in the family, for any user (owner decision: it's family config). |
+| `PATCH /family/<user_id>` `{display_name?, hidden?, no_photo?}` | Creates the row if missing; `null` clears a field. Returns the profile. Anyone in the family, for any user (owner decision: it's family config). |
 | `PUT /family/<user_id>/photo` multipart `photo` | JPEG or PNG up to 2 MB, checked like wall photos; replaces and deletes the old file. Returns the profile. |
-| `DELETE /family/<user_id>/photo` | `204`; back to the Immich picture. |
+| `DELETE /family/<user_id>/photo` | `204`; back to the Immich picture (or initials with `no_photo`, ADR 0010 amendment). |
 | `GET /family/photo/<file>` | The photo, `Cache-Control: private`, long max-age (a new file name on every change). |
 
 - Validation → `400`: `user_id` not a UUID, `display_name` empty or too long, `hidden` not

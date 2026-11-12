@@ -77,7 +77,7 @@ class FileFamilyOfflineCopy @Inject constructor(
 /**
  * Pure merge of Immich users (`UsersDao`) and Picfort server profiles (`/family`) (T-032):
  * - name = `display_name` ?: Immich name
- * - avatar = profile photo ?: Immich profile picture ?: initials on the Immich avatar color
+ * - avatar = profile photo ?: Immich profile picture (unless `no_photo`) ?: initials on the Immich avatar color
  * - hidden = `hidden` ?: `isTestAccount(Immich name)`; the logged-in user ([myId]) is never hidden.
  */
 fun mergeFamilyUsers(
@@ -100,7 +100,8 @@ fun mergeFamilyUsers(
         } else {
             null
         }
-        val avatarUrl = profile?.photoUrl ?: immichAvatar
+        val noPhoto = profile?.noPhoto == true
+        val avatarUrl = profile?.photoUrl ?: immichAvatar.takeUnless { noPhoto }
         val isMe = u.id == myId
         val hidden = if (isMe) false else (profile?.hidden ?: isTestAccount(u.name))
         FamilyUserUi(
@@ -110,6 +111,7 @@ fun mergeFamilyUsers(
             avatarUrl = avatarUrl,
             immichAvatarUrl = immichAvatar,
             hasCustomPhoto = profile?.photoUrl != null,
+            noPhoto = noPhoto,
             color = avatarColor(u.avatarColor, fallbackIndex[u.id] ?: 0),
             hidden = hidden,
             isMe = isMe,
@@ -262,6 +264,8 @@ class FamilyRepository(
         showInFamily: Boolean = true,
         birthDate: BirthDate? = null,
         clearBirthDate: Boolean = false,
+        /** "Clear" on an Immich user: initials instead of the account picture. */
+        noPhoto: Boolean = user.noPhoto,
     ) {
         if (pickedPersonId != null) {
             val jpeg = people.faceThumbnailJpeg(pickedPersonId)
@@ -286,6 +290,8 @@ class FamilyRepository(
             birthDate = birthDateStr,
             includeBirthDate = birthDateChanged,
             today = today,
+            // A new photo resets the flag on the server.
+            noPhoto = noPhoto.takeIf { user.isImmichUser && pickedPersonId == null && photoBytes == null && it != user.noPhoto },
         )
         refresh()
     }

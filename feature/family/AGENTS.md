@@ -17,8 +17,10 @@ Family management vertical slice: member profiles, Immich users syncing, custom 
 
 ## Photos
 
-- Every member (Immich or manual) can take a face from Immich people (`PeopleSource`, the logged-in
-  user's library); `addMember(pickedPersonId)` fetches the face before creating the member.
+- Member sheet: "Choose from Immich" (picker: "Profile picture" = the account picture first, then
+  named Immich people from the logged-in user's library) and "Clear" (initials; `no_photo` on the
+  server for Immich users). Manual members can take a face too. ADR 0010 amendment 2026-11-12.
+- `addMember(pickedPersonId)` fetches the face before creating the member.
 
 ## Public Contract / Navigation Entry Points
 

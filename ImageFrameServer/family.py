@@ -31,6 +31,7 @@ CREATE TABLE profiles (
   hidden        INTEGER,
   manual        INTEGER NOT NULL DEFAULT 0,
   birth_date    TEXT,
+  no_photo      INTEGER,
   updated_by    TEXT NOT NULL,
   updated       TEXT NOT NULL
 );
@@ -52,6 +53,15 @@ def _display_name(value):
     if len(value) > MAX_NAME:
         raise StoreError(f"display_name must be at most {MAX_NAME} characters")
     return value
+
+
+def _no_photo(value):
+    """True: show initials even when Immich has a profile picture. Stored as 1 or NULL."""
+    if value is None or value is False:
+        return None
+    if value is True:
+        return 1
+    raise StoreError("no_photo must be true, false or null")
 
 
 def _hidden(value):
@@ -119,12 +129,15 @@ def _parse_today(today_arg, body: dict = None) -> str | None:
 
 
 class FamilyStore(SqliteStore):
-    SCHEMA_VERSION = 2
+    SCHEMA_VERSION = 3
     SCHEMA = SCHEMA
     MIGRATIONS = {
         1: [
             "ALTER TABLE profiles ADD COLUMN manual INTEGER NOT NULL DEFAULT 0",
             "ALTER TABLE profiles ADD COLUMN birth_date TEXT",
+        ],
+        2: [
+            "ALTER TABLE profiles ADD COLUMN no_photo INTEGER",
         ],
     }
     NAME = "Family"
@@ -181,11 +194,13 @@ class FamilyStore(SqliteStore):
         if "birth_date" in body:
             ref_today = date.fromisoformat(today_str) if today_str else date.fromisoformat(now[:10])
             changes["birth_date"] = _birth_date(body["birth_date"], ref_today)
+        if "no_photo" in body:
+            changes["no_photo"] = _no_photo(body["no_photo"])
         deleted = False
         with closing(self.connect()) as conn, conn:
             row = conn.execute("SELECT * FROM profiles WHERE user_id = ?", (user_id,)).fetchone()
             manual = bool(row["manual"]) if row else False
-            current = {k: (row[k] if row else None) for k in ("display_name", "hidden", "birth_date")}
+            current = {k: (row[k] if row else None) for k in ("display_name", "hidden", "birth_date", "no_photo")}
             current.update(changes)
             photo = row["photo"] if row else None
             if manual and current["display_name"] is None:
@@ -201,22 +216,25 @@ class FamilyStore(SqliteStore):
                     "hidden": None,
                     "manual": False,
                     "birth_date": None,
+                    "no_photo": False,
                     "updated_by": actor_id,
                     "updated": now,
                 }
             elif row is None:
                 conn.execute(
-                    "INSERT INTO profiles (user_id, display_name, photo, hidden, birth_date, updated_by, updated)"
-                    " VALUES (?, ?, ?, ?, ?, ?, ?)",
-                    (user_id, current["display_name"], photo, current["hidden"], current["birth_date"], actor_id, now),
+                    "INSERT INTO profiles (user_id, display_name, photo, hidden, birth_date, no_photo, updated_by,"
+                    " updated) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+                    (user_id, current["display_name"], photo, current["hidden"], current["birth_date"],
+                     current["no_photo"], actor_id, now),
                 )
                 res = self._json(conn.execute("SELECT * FROM profiles WHERE user_id = ?", (user_id,)).fetchone())
             else:
                 if changes:
                     conn.execute(
-                        "UPDATE profiles SET display_name = ?, hidden = ?, birth_date = ?, updated_by = ?, updated = ?"
-                        " WHERE user_id = ?",
-                        (current["display_name"], current["hidden"], current["birth_date"], actor_id, now, user_id),
+                        "UPDATE profiles SET display_name = ?, hidden = ?, birth_date = ?, no_photo = ?, updated_by = ?,"
+                        " updated = ? WHERE user_id = ?",
+                        (current["display_name"], current["hidden"], current["birth_date"], current["no_photo"],
+                         actor_id, now, user_id),
                     )
                 res = self._json(conn.execute("SELECT * FROM profiles WHERE user_id = ?", (user_id,)).fetchone())
 
@@ -264,7 +282,7 @@ class FamilyStore(SqliteStore):
                 else:
                     old_photo = row["photo"]
                     conn.execute(
-                        "UPDATE profiles SET photo = ?, updated_by = ?, updated = ? WHERE user_id = ?",
+                        "UPDATE profiles SET photo = ?, no_photo = NULL, updated_by = ?, updated = ? WHERE user_id = ?",
                         (filename, actor_id, now, user_id),
                     )
                 saved = self._json(conn.execute("SELECT * FROM profiles WHERE user_id = ?", (user_id,)).fetchone())
@@ -285,7 +303,7 @@ class FamilyStore(SqliteStore):
                 return
             old_photo = row["photo"]
             if (not row["manual"] and row["display_name"] is None and row["hidden"] is None
-                    and row["birth_date"] is None):
+                    and row["birth_date"] is None and row["no_photo"] is None):
                 conn.execute("DELETE FROM profiles WHERE user_id = ?", (user_id,))
             else:
                 conn.execute(
@@ -316,6 +334,7 @@ class FamilyStore(SqliteStore):
             "hidden": None if row["hidden"] is None else bool(row["hidden"]),
             "manual": bool(row["manual"]),
             "birth_date": row["birth_date"],
+            "no_photo": bool(row["no_photo"]),
             "updated_by": row["updated_by"],
             "updated": row["updated"],
         }

@@ -71,6 +71,7 @@ class FamilyApiTest(unittest.TestCase):
             "hidden": False,
             "manual": False,
             "birth_date": None,
+            "no_photo": False,
             "updated_by": TATA,
             "updated": "2026-11-10T12:01:00Z",
         }, r.get_json())
@@ -135,6 +136,26 @@ class FamilyApiTest(unittest.TestCase):
         self.assertEqual(1, len(profiles))
         self.assertEqual("Mama", profiles[0]["display_name"])
         self.assertIsNone(profiles[0]["photo_url"])
+
+    def test_no_photo_shows_initials_until_a_photo_is_uploaded(self):
+        # Clear on an Immich user with a profile picture: no custom photo, but initials instead.
+        r = self.client.patch(f"/family/{MAMA}", json={"no_photo": True})
+        self.assertEqual(200, r.status_code, r.get_json())
+        self.assertIs(True, r.get_json()["no_photo"])
+        self.assertEqual(1, len(self.client.get("/family").get_json()["profiles"]))
+        # Deleting a (missing) photo keeps the flag.
+        self.client.delete(f"/family/{MAMA}/photo")
+        self.assertIs(True, self.client.get("/family").get_json()["profiles"][0]["no_photo"])
+        # Uploading a photo clears the flag.
+        self.assertIs(False, self.put_photo(MAMA, image_bytes("JPEG")).get_json()["no_photo"])
+        # "Profile picture" again: delete the photo, no_photo false → the row is gone.
+        self.client.delete(f"/family/{MAMA}/photo")
+        self.assertEqual({"profiles": []}, self.client.get("/family").get_json())
+        # With a flag and nothing else, false removes the row.
+        self.client.patch(f"/family/{MAMA}", json={"no_photo": True})
+        self.client.patch(f"/family/{MAMA}", json={"no_photo": False})
+        self.assertEqual({"profiles": []}, self.client.get("/family").get_json())
+        self.assertEqual(400, self.client.patch(f"/family/{MAMA}", json={"no_photo": "yes"}).status_code)
 
     def test_validation(self):
         for bad_id in ("not-a-uuid", "123", "11111111-1111-1111-1111-11111111111z"):
@@ -283,12 +304,13 @@ class FamilyApiTest(unittest.TestCase):
         self.assertIs(True, profiles[TATA]["hidden"])
         self.assertFalse(profiles[MAMA]["manual"])
         self.assertIsNone(profiles[MAMA]["birth_date"])
+        self.assertIs(False, profiles[MAMA]["no_photo"])
         self.assertTrue(os.path.exists(old_db + ".v1.bak"))
         with closing(sqlite3.connect(old_db + ".v1.bak")) as conn:
             self.assertEqual(2, conn.execute("SELECT count(*) FROM profiles").fetchone()[0])
             self.assertEqual(1, conn.execute("PRAGMA user_version").fetchone()[0])
         with closing(sqlite3.connect(old_db)) as conn:
-            self.assertEqual(2, conn.execute("PRAGMA user_version").fetchone()[0])
+            self.assertEqual(3, conn.execute("PRAGMA user_version").fetchone()[0])
         # Reopening a current database changes nothing.
         self.assertEqual(2, len(FamilyStore(old_db, self.photos).profiles()))
         # The migrated database accepts the new features.

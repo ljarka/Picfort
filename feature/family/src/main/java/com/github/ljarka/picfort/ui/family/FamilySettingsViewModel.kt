@@ -88,7 +88,26 @@ class FamilySettingsViewModel @Inject constructor(
                 editing = edit.copy(
                     pickedPersonId = null,
                     clearPhoto = true,
+                    noPhoto = false,
                     previewAvatarUrl = edit.user.immichAvatarUrl,
+                    hasCustomPhoto = false,
+                ),
+                peoplePicker = null,
+            )
+        }
+    }
+
+    /** "Clear": initials, also for an Immich user who has an account picture. */
+    fun clearPhoto() {
+        _state.update { s ->
+            val edit = s.editing ?: return@update s
+            s.copy(
+                editing = edit.copy(
+                    pickedPersonId = null,
+                    pickedPhotoBytes = null,
+                    clearPhoto = true,
+                    noPhoto = edit.user.isImmichUser,
+                    previewAvatarUrl = null,
                     hasCustomPhoto = false,
                 ),
             )
@@ -96,7 +115,11 @@ class FamilySettingsViewModel @Inject constructor(
     }
 
     fun openPeoplePicker() {
-        _state.update { it.copy(peoplePicker = PeoplePickerUi(isLoading = true)) }
+        _state.update {
+            // The member's Immich account picture is the first circle (none for the Add sheet).
+            val profilePicture = it.editing?.user?.immichAvatarUrl
+            it.copy(peoplePicker = PeoplePickerUi(isLoading = true, profilePictureUrl = profilePicture))
+        }
         viewModelScope.launch {
             try {
                 val people = repository.namedPeople()
@@ -144,6 +167,7 @@ class FamilySettingsViewModel @Inject constructor(
                 editing = edit.copy(
                     pickedPersonId = person.id,
                     clearPhoto = false,
+                    noPhoto = false,
                     previewAvatarUrl = person.thumbnailUrl,
                     hasCustomPhoto = true,
                 ),
@@ -281,6 +305,7 @@ class FamilySettingsViewModel @Inject constructor(
                     showInFamily = edit.showInFamily,
                     birthDate = effectiveBirthDate,
                     clearBirthDate = edit.clearBirthDate,
+                    noPhoto = edit.noPhoto,
                 )
                 _state.update { it.copy(editing = null, peoplePicker = null) }
             } catch (e: CancellationException) {

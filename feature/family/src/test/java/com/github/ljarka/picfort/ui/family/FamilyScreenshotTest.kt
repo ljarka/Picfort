@@ -183,7 +183,7 @@ class FamilyScreenshotTest {
             .mapIndexed { i, name -> ImmichPersonItem(id = "p-$i", name = name, thumbnailUrl = "person-$i") }
         WithSheet(
             background = { FamilySettingsContent(FamilySettingsUi(users = familyUsers)) },
-            sheet = { PeoplePickerSheetContent(PeoplePickerUi(people = people)) },
+            sheet = { PeoplePickerSheetContent(PeoplePickerUi(people = people, profilePictureUrl = "avatar-mama")) },
         )
     }
 }

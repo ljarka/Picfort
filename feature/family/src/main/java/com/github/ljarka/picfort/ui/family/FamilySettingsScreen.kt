@@ -81,6 +81,8 @@ data class FamilyUserUi(
     val avatarUrl: String?,
     val immichAvatarUrl: String? = null,
     val hasCustomPhoto: Boolean = false,
+    /** "Clear" was used: initials even though Immich has a picture. */
+    val noPhoto: Boolean = false,
     val color: Color,
     val hidden: Boolean = false,
     val isMe: Boolean = false,
@@ -145,7 +147,7 @@ fun FamilySettingsScreen(onBack: () -> Unit) {
                 state = edit,
                 onNameChange = viewModel::updateName,
                 onChooseFromPeople = viewModel::openPeoplePicker,
-                onUseImmichPhoto = viewModel::useImmichPhoto,
+                onClearPhoto = viewModel::clearPhoto,
                 onShowInFamilyChange = viewModel::updateShowInFamily,
                 onBirthDateChange = viewModel::updateMemberBirthDate,
                 onHideYearChange = viewModel::updateMemberHideYear,
@@ -182,6 +184,7 @@ fun FamilySettingsScreen(onBack: () -> Unit) {
             onDismiss = viewModel::dismissPeoplePicker,
             onQueryChange = viewModel::updatePeopleQuery,
             onSelect = viewModel::selectPerson,
+            onSelectProfilePicture = viewModel::useImmichPhoto,
         )
     }
 
@@ -337,6 +340,7 @@ data class FamilyMemberEditUi(
     val pickedPersonId: String? = null,
     val pickedPhotoBytes: ByteArray? = null,
     val clearPhoto: Boolean = false,
+    val noPhoto: Boolean = user.noPhoto,
     val showInFamily: Boolean = !user.hidden,
     val birthDate: BirthDate? = user.birthDate,
     val hideBirthYear: Boolean = user.birthDate?.year == null && user.birthDate != null,
@@ -351,7 +355,8 @@ fun FamilyMemberSheetContent(
     state: FamilyMemberEditUi,
     onNameChange: (String) -> Unit = {},
     onChooseFromPeople: () -> Unit = {},
-    onUseImmichPhoto: () -> Unit = {},
+    /** Initials instead of any picture. */
+    onClearPhoto: () -> Unit = {},
     onShowInFamilyChange: (Boolean) -> Unit = {},
     onBirthDateChange: (BirthDate?) -> Unit = {},
     onHideYearChange: (Boolean) -> Unit = {},
@@ -436,11 +441,11 @@ fun FamilyMemberSheetContent(
                 verticalArrangement = Arrangement.spacedBy(4.dp),
             ) {
                 OutlinedButton(onClick = onChooseFromPeople, enabled = !state.saving) {
-                    Text("Choose from Immich people")
+                    Text("Choose from Immich")
                 }
-                if (state.hasCustomPhoto) {
-                    TextButton(onClick = onUseImmichPhoto, enabled = !state.saving) {
-                        Text(if (state.user.isImmichUser) "Use Immich picture" else "Remove photo")
+                if (state.previewAvatarUrl != null) {
+                    TextButton(onClick = onClearPhoto, enabled = !state.saving) {
+                        Text("Clear")
                     }
                 }
             }
@@ -567,11 +572,11 @@ fun AddPersonSheetContent(
                 verticalArrangement = Arrangement.spacedBy(4.dp),
             ) {
                 OutlinedButton(onClick = onChooseFromPeople, enabled = !state.saving) {
-                    Text("Choose from Immich people")
+                    Text("Choose from Immich")
                 }
                 if (state.pickedPersonId != null) {
                     TextButton(onClick = onRemovePhoto, enabled = !state.saving) {
-                        Text("Remove photo")
+                        Text("Clear")
                     }
                 }
             }
