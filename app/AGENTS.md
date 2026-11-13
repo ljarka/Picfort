@@ -21,6 +21,8 @@ Thin Android application shell, navigation root, and Hilt root assembler.
 - `:app` is the only module that depends on all `:feature:*` modules.
 - **NEVER** put feature-specific domain logic, database DAOs, or feature UI in `:app`.
 - Cross-feature dependencies must be wired in `AppModule.kt` via interfaces in `:core:model`.
+- `Screen.Timeline(date)`: a birthday's year opens Photos on that day on top of the event (Back returns
+  to it); a tab switch from there pops it without `saveState`, so it never ends up in another tab's stack (T-056).
 
 ## Verification
 

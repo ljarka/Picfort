@@ -66,6 +66,9 @@ and modern Android standards (Now in Android pattern).
   Hilt there. Events draws them with Coil; the viewer pages through them via the existing
   `ImageDetailsRoute.source` collection, which the provider registers.
 - `justify` (justified rows) moved to `:core:ui` so both features lay photos out the same way.
+- T-056: from a birthday's year, Events asks `:app` (`onOpenDay`) to open Photos on that day:
+  `Screen.Timeline(date)` pushed on top of the event. Not a tab switch, so Back returns to the event;
+  switching tabs from there drops it unsaved instead of saving it into the event's tab.
 
 ### Agentic Best Practices Enforced
 

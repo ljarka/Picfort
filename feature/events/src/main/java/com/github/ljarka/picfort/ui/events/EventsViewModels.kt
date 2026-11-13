@@ -498,6 +498,8 @@ fun EventDetailScreen(
     onEditBirthday: (String) -> Unit = {},
     /** Opens a birthday photo full screen: Immich asset id, its index in [source], the viewer's collection. */
     onOpenPhoto: (assetId: String, index: Int, source: String) -> Unit = { _, _, _ -> },
+    /** A birthday year's title: that day in the Photos timeline (T-056). */
+    onOpenDay: (LocalDate) -> Unit = {},
 ) {
     val viewModel = hiltViewModel<EventDetailViewModel>()
     val state by viewModel.state.collectAsStateWithLifecycle()
@@ -528,6 +530,7 @@ fun EventDetailScreen(
         onMessageShown = viewModel::messageShown,
         onEditBirthday = { state.event?.birthdayOf?.let(onEditBirthday) },
         onOpenPhoto = { photo, index -> onOpenPhoto(photo.id, index, viewModel.photoSource) },
+        onOpenDay = onOpenDay,
     )
 }
 

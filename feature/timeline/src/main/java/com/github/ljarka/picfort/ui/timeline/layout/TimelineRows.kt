@@ -3,6 +3,8 @@ package com.github.ljarka.picfort.ui.timeline.layout
 import com.github.ljarka.picfort.core.ui.layout.justify
 import com.github.ljarka.picfort.ui.timeline.TimelineAsset
 import com.github.ljarka.picfort.ui.timeline.TimelineIndex
+import java.time.LocalDate
+import java.time.ZoneOffset
 
 /** What the timeline list draws, top to bottom. Sizes are in pixels. */
 sealed interface TimelineRow {
@@ -24,6 +26,19 @@ data class TilesRow(val month: Long, val row: Int, val tiles: List<Tile>, val he
 data class MonthMarker(val month: Long, val title: String, val rowIndex: Int)
 
 data class TimelineLayout(val rows: List<TimelineRow>, val months: List<MonthMarker>) {
+    /**
+     * The row to scroll to for [day] (T-056): the row with its newest photo, or the month header
+     * just above when that row starts the month. Days without photos land on the next older one;
+     * days older than the whole timeline on its end. Null when there are no photos.
+     */
+    fun rowIndexOf(day: LocalDate): Int? {
+        // dateTaken is wall-clock time written as UTC, like the day itself.
+        val endOfDay = day.plusDays(1).atStartOfDay(ZoneOffset.UTC).toInstant().toEpochMilli()
+        val row = rows.indexOfFirst { r -> r is TilesRow && r.tiles.any { it.asset.dateTaken < endOfDay } }
+            .takeIf { it >= 0 } ?: rows.indexOfLast { it is TilesRow }.takeIf { it >= 0 } ?: return null
+        return if (row > 0 && rows[row - 1] is MonthHeaderRow) row - 1 else row
+    }
+
     companion object {
         val EMPTY = TimelineLayout(emptyList(), emptyList())
     }

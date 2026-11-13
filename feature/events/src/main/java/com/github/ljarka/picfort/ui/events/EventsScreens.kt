@@ -533,6 +533,7 @@ fun EventDetailContent(
     albumSlot: @Composable () -> Unit = {},
     /** A birthday photo was tapped: the photo and its position among all of them (T-055). */
     onOpenPhoto: (DayPhoto, Int) -> Unit = { _, _ -> },
+    onOpenDay: (LocalDate) -> Unit = {},
 ) {
     val snackbar = remember { SnackbarHostState() }
     LaunchedEffect(state.message) {
@@ -602,6 +603,7 @@ fun EventDetailContent(
                     photos = state.birthdayPhotos,
                     name = event.birthdayOf?.let(state.memberNames::get) ?: event.title,
                     onOpenPhoto = onOpenPhoto,
+                    onOpenDay = onOpenDay,
                     modifier = Modifier.fillMaxSize().padding(padding),
                 ) {
                 Column(Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 8.dp)) {
