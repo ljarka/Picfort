@@ -1,0 +1,37 @@
+#!/bin/sh
+# Picfort pre-commit hook: runs ktlintFormat on the staged Kotlin files and stages the result
+# (ADR 0013). Install with ./scripts/install-git-hooks.sh. Skip once: git commit --no-verify.
+#
+# Only what is being committed is formatted: unstaged changes are set aside first and put back
+# afterwards. Violations ktlintFormat can't fix (e.g. a too long line) stop the commit.
+
+CHANGED_FILES="$(git --no-pager diff --name-status --no-color --cached | awk '$1 != "D" && $NF ~ /\.kts?$/ { print $NF }')"
+[ -z "$CHANGED_FILES" ] && exit 0
+
+cd "$(git rev-parse --show-toplevel)" || exit 1
+diff="$(git rev-parse --git-dir)/unstaged-ktlint.diff"
+git diff --binary --no-color -- $CHANGED_FILES > "$diff"
+if [ -s "$diff" ]; then
+    git apply -R "$diff" || { echo "pre-commit: couldn't set aside unstaged changes"; rm -f "$diff"; exit 1; }
+fi
+
+echo "pre-commit: ktlintFormat on $(echo "$CHANGED_FILES" | wc -l | tr -d ' ') staged Kotlin file(s)"
+./gradlew --quiet ktlintFormat -PinternalKtlintGitFilter="$CHANGED_FILES"
+status=$?
+
+echo "$CHANGED_FILES" | while read -r file; do
+    [ -f "$file" ] && git add -- "$file"
+done
+
+if [ -s "$diff" ]; then
+    if ! git apply --ignore-whitespace "$diff"; then
+        echo "pre-commit: couldn't put back the unstaged changes; they are saved in $diff"
+        exit 1
+    fi
+fi
+rm -f "$diff"
+
+if [ $status -ne 0 ]; then
+    echo "pre-commit: ktlint found problems it can't fix (see above). Fix them and commit again."
+fi
+exit $status

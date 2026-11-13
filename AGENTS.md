@@ -9,6 +9,7 @@ This file is the index. Keep it short (< 150 lines); details live where the tabl
 
 1. Read this file, then [docs/tasks/README.md](docs/tasks/README.md).
 2. Run `./scripts/check-modular-boundaries.sh` and `./gradlew testDebugUnitTest`. Must be green before any change.
+   Run `./scripts/install-git-hooks.sh` once: the pre-commit hook runs `ktlintFormat` on staged Kotlin files.
 3. Before touching an area, read its module `AGENTS.md` and the ADRs it links ([ADR 0011](docs/decisions/0011-modular-architecture.md)).
 4. Finish with the Definition of Done below; leave the next task specified.
 

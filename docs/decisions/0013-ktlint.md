@@ -23,6 +23,10 @@ sometimes no. Review time went to noise, and diffs mixed formatting with real ch
   `./gradlew ktlintFormat` fixes almost everything; what it can't (mostly long lines) is fixed by
   hand. A file-level `@Suppress("ktlint:standard:<rule>")` is allowed only with a reason, e.g. test
   data kept one record per line.
+- A versioned pre-commit hook (`scripts/git-hooks/pre-commit`, installed per clone with
+  `./scripts/install-git-hooks.sh`) runs `ktlintFormat` on the staged `.kt`/`.kts` files only,
+  stages the result and keeps unstaged changes aside; what it can't fix stops the commit
+  (`--no-verify` skips it). CI stays the gate for clones without the hook.
 - The one-time reformat is a separate commit, listed in `.git-blame-ignore-revs`.
 
 ## Consequences
