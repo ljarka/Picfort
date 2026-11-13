@@ -20,7 +20,7 @@ longer change after the grid is laid out.
 
 ## Protocol checked live (2026-11-09, Immich v3.3.5, test account)
 
-Run with a session token against `photos.jarka.club`, with types `AuthUsersV2, PartnersV1,
+Run with a session token against `photos.example.com`, with types `AuthUsersV2, PartnersV1,
 AssetsV2, PartnerAssetsV2, StacksV1, PartnerStacksV1`:
 
 | Step | Result |
