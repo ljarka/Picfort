@@ -4,6 +4,7 @@ import androidx.compose.runtime.Composable
 import app.cash.paparazzi.DeviceConfig
 import app.cash.paparazzi.Paparazzi
 import com.android.resources.NightMode
+import com.github.ljarka.picfort.core.model.DayPhoto
 import com.github.ljarka.picfort.core.model.EventsSegment
 import com.github.ljarka.picfort.core.model.FamilyEvent
 import com.github.ljarka.picfort.core.model.EventRepeat
@@ -343,5 +344,59 @@ class EventsScreenshotTest {
                 selectedMemberId = "tata",
             )
         )
+    }
+
+    // --- T-055: photos from past birthdays ---
+
+    private fun photo(id: String, day: LocalDate, ratio: Float, video: Boolean = false) =
+        DayPhoto(id, day, ratio, "https://immich.test/$id", video)
+
+    private val birthdayYearsSample: List<BirthdayYear> = run {
+        val d25 = LocalDate.of(2025, 11, 16)
+        val d24 = LocalDate.of(2024, 11, 16)
+        val d22 = LocalDate.of(2022, 11, 16)
+        val d17 = LocalDate.of(2017, 11, 16)
+        birthdayYears(
+            birthdayDays(olaBirthday, sampleToday),
+            listOf(
+                photo("a1", d25, 1.5f), photo("a2", d25, 0.75f), photo("a3", d25, 1.33f),
+                photo("a4", d25, 0.75f, video = true), photo("a5", d25, 1.5f),
+                photo("b1", d24, 1.33f), photo("b2", d24, 0.75f), photo("b3", d24, 1.5f),
+                photo("c1", d22, 0.75f), photo("c2", d22, 1.5f), photo("c3", d22, 1.0f), photo("c4", d22, 1.33f),
+                photo("d1", d17, 1.33f), photo("d2", d17, 0.75f),
+            ),
+        )
+    }
+
+    private fun birthdayWithPhotos(photos: BirthdayPhotosUi) = EventDetailUi(
+        event = olaBirthday.copy(memberIds = listOf("ola")), today = sampleToday, memberNames = members,
+        members = family, birthdayPhotos = photos,
+    )
+
+    @Test
+    fun event_detail_birthday_photos() = snap {
+        WithSamplePhotos { EventDetailContent(birthdayWithPhotos(BirthdayPhotosUi(false, birthdayYearsSample))) }
+    }
+
+    @Test
+    fun event_detail_birthday_photos_long() {
+        paparazzi.unsafeUpdateConfig(DeviceConfig.PIXEL_6.copy(screenHeight = 4600))
+        paparazzi.snapshot {
+            PicfortTheme(darkTheme = false, dynamicColor = false) {
+                AccentTheme(BrandAccent.Amber) {
+                    WithSamplePhotos { EventDetailContent(birthdayWithPhotos(BirthdayPhotosUi(false, birthdayYearsSample))) }
+                }
+            }
+        }
+    }
+
+    @Test
+    fun event_detail_birthday_photos_dark() = snap(dark = true) {
+        WithSamplePhotos { EventDetailContent(birthdayWithPhotos(BirthdayPhotosUi(false, birthdayYearsSample))) }
+    }
+
+    @Test
+    fun event_detail_birthday_no_photos() = snap {
+        EventDetailContent(birthdayWithPhotos(BirthdayPhotosUi(loading = false)))
     }
 }

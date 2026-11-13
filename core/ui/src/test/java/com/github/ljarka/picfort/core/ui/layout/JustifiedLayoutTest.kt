@@ -1,4 +1,4 @@
-package com.github.ljarka.picfort.ui.timeline.layout
+package com.github.ljarka.picfort.core.ui.layout
 
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue

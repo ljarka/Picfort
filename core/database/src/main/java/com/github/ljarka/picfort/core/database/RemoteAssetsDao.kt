@@ -65,6 +65,17 @@ interface RemoteAssetsDao {
     @Query("SELECT * FROM remote_assets a WHERE $TIMELINE_FILTER ORDER BY a.localDateTime DESC, a.id")
     fun timelineAll(userId: String): Flow<List<RemoteAssetEntity>>
 
+    /**
+     * Timeline assets taken (local time, [localDateTime] in ms) on one of [monthDays] ("MM-DD")
+     * from [fromMillis] on, newest first. The caller keeps the exact days it wants (T-055).
+     */
+    @Query(
+        "SELECT * FROM remote_assets a WHERE $TIMELINE_FILTER AND a.localDateTime >= :fromMillis" +
+            " AND strftime('%m-%d', a.localDateTime / 1000, 'unixepoch') IN (:monthDays)" +
+            " ORDER BY a.localDateTime DESC, a.id"
+    )
+    suspend fun takenOnMonthDays(userId: String, fromMillis: Long, monthDays: List<String>): List<RemoteAssetEntity>
+
     @Query("SELECT COUNT(*) FROM remote_assets")
     suspend fun countAll(): Int
 }

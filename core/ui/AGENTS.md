@@ -8,6 +8,8 @@ Design tokens, Theme, MemberAvatar, and reusable Compose components.
 - Reusable UI elements: `MemberAvatar`, `initials()`, `avatarColor(name, fallbackIndex)` (Immich color names tuned to the aperture; members with no picked color — null or Immich default "primary" — get 5 distinct blades in id order, see `mergeFamilyUsers`) (`com.github.ljarka.picfort.core.ui.avatar`).
 - `MemberCarousel` (avatar row, one selected, long-press "Edit", `dimmedIds` faded, optional last "+ Family" circle via `onOpenFamily`): Wall and Photos (T-052).
 - Floating tab bar size: `FloatingTabBar` (height, margins, `Clearance`) used by `:app`'s `TabBar`; tab roots lift their FAB with `Modifier.aboveFloatingTabBar()` (`com.github.ljarka.picfort.core.ui.component`).
+- Justified photo rows: `justify(ratios, width, targetHeight, spacing)` (`core.ui.layout`), pure; used by the
+  timeline and by birthday photos in Events.
 - App logo: `R.drawable.icon` (flat house + aperture, same as the launcher icon); shown only on the init/login screen.
 - UI guidelines: Never hardcode hex color literals in feature screens; consume from `MaterialTheme.colorScheme`.
 

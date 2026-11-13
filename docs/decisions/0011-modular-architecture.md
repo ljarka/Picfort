@@ -59,6 +59,14 @@ and modern Android standards (Now in Android pattern).
 6. **`:app`**:
    - Thin application orchestrator: `MainActivity`, `PicfortApplication`, root bottom bar / `AppShell`, and Hilt dependency graph assembly.
 
+### Amendment 2026-11-13: photos across features (T-055)
+
+- Events shows photos without depending on `:feature:timeline`: `DayPhotosProvider` in `:core:model`
+  returns thumbnail URLs and ratios, implemented by `:feature:timeline` (local Immich copy) and bound by
+  Hilt there. Events draws them with Coil; the viewer pages through them via the existing
+  `ImageDetailsRoute.source` collection, which the provider registers.
+- `justify` (justified rows) moved to `:core:ui` so both features lay photos out the same way.
+
 ### Agentic Best Practices Enforced
 
 1. **Per-Module `AGENTS.md`**:

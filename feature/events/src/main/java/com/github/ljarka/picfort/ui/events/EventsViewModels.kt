@@ -36,6 +36,10 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.map
+import com.github.ljarka.picfort.core.model.DayPhotosProvider
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import java.time.LocalDate
@@ -161,6 +165,7 @@ class EventsListViewModel @Inject constructor(
 class EventDetailViewModel @Inject constructor(
     private val repository: EventsRepository,
     private val family: FamilyMemberProvider,
+    private val dayPhotos: DayPhotosProvider,
     savedState: SavedStateHandle,
 ) : ViewModel() {
 
@@ -205,7 +210,25 @@ class EventDetailViewModel @Inject constructor(
                 )
             }.collect { _state.value = it }
         }
+        viewModelScope.launch {
+            // Birthday photos (T-055): reloaded when the birth date or the day changes.
+            _state.map { st -> st.event?.let { birthdayDays(it, st.today) }.orEmpty() to st.event?.birthdayOf }
+                .distinctUntilChanged()
+                .collectLatest { (days, memberId) ->
+                    if (days.isEmpty() || memberId == null) {
+                        _state.update { it.copy(birthdayPhotos = null) }
+                        return@collectLatest
+                    }
+                    _state.update { it.copy(birthdayPhotos = (it.birthdayPhotos ?: BirthdayPhotosUi()).copy(loading = true)) }
+                    val photos = runCatching { dayPhotos.photosOn(days.map { it.first }.toSet(), photoSource) }
+                        .getOrDefault(emptyList())
+                    _state.update { it.copy(birthdayPhotos = BirthdayPhotosUi(false, birthdayYears(days, photos))) }
+                }
+        }
     }
+
+    /** The viewer's collection key for this event's photos. */
+    val photoSource: String get() = "event:$eventId"
 
     fun load() {
         viewModelScope.launch {
@@ -473,6 +496,8 @@ fun EventDetailScreen(
     onEdit: (Long) -> Unit,
     /** Opens the member (id) whose birthday this is in Family settings. */
     onEditBirthday: (String) -> Unit = {},
+    /** Opens a birthday photo full screen: Immich asset id, its index in [source], the viewer's collection. */
+    onOpenPhoto: (assetId: String, index: Int, source: String) -> Unit = { _, _, _ -> },
 ) {
     val viewModel = hiltViewModel<EventDetailViewModel>()
     val state by viewModel.state.collectAsStateWithLifecycle()
@@ -502,6 +527,7 @@ fun EventDetailScreen(
         onRetry = viewModel::load,
         onMessageShown = viewModel::messageShown,
         onEditBirthday = { state.event?.birthdayOf?.let(onEditBirthday) },
+        onOpenPhoto = { photo, index -> onOpenPhoto(photo.id, index, viewModel.photoSource) },
     )
 }
 
