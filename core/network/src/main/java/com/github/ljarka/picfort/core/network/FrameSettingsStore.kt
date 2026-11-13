@@ -34,12 +34,13 @@ class FrameSettingsStore @Inject constructor(
 }
 
 /**
- * Accepts what people actually type ("192.168.0.105:5000", "frame.local:5000/")
- * and returns a normalized base URL, or null if it isn't a valid address.
+ * Accepts what people actually type ("192.168.0.105:5000", "frame.local:5000/", "picfort.example.com")
+ * and returns a normalized base URL, or null if it isn't a valid address. Without a scheme, local
+ * network hosts get http:// and everything else https:// ([defaultSchemeFor]).
  */
 fun normalizeFrameUrl(input: String): HttpUrl? {
     val trimmed = input.trim().trimEnd('/')
     if (trimmed.isEmpty()) return null
-    val withScheme = if ("://" in trimmed) trimmed else "http://$trimmed"
+    val withScheme = if ("://" in trimmed) trimmed else defaultSchemeFor(trimmed) + trimmed
     return withScheme.toHttpUrlOrNull()?.takeIf { it.scheme == "http" || it.scheme == "https" }
 }

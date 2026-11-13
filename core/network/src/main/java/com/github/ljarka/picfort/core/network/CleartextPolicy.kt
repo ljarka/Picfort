@@ -29,6 +29,18 @@ private val LOCAL_SUFFIXES = listOf(
     ".ts.net", // Tailscale MagicDNS: traffic is already encrypted by WireGuard
 )
 
+/**
+ * The scheme for an address typed without one ("photos.example.com", "192.168.0.10:2283"):
+ * http:// on the local network (self-hosted servers usually have no certificate there),
+ * https:// everywhere else, where plain http would be refused anyway.
+ */
+fun defaultSchemeFor(address: String): String {
+    val host = address.trim().substringBefore('/').let { hostPort ->
+        if (hostPort.startsWith("[")) hostPort.substringBefore(']') + "]" else hostPort.substringBefore(':')
+    }
+    return if (isLocalNetworkHost(host)) "http://" else "https://"
+}
+
 /** True for hosts that can only be reached on a local network or VPN. Never does DNS. */
 fun isLocalNetworkHost(host: String): Boolean {
     val h = host.lowercase().trimEnd('.').removePrefix("[").removeSuffix("]")

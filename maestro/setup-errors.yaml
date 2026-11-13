@@ -1,0 +1,64 @@
+# T-058: the one-page setup's errors. Wrong login → under the password; a Picfort address
+# without a scheme gets https:// (not on the local network) and, unreachable, shows its error
+# while Immich stays signed in; Skip goes on without it. Ends logged in again with the test
+# server, like a normal fresh install (test account only).
+appId: com.github.ljarka.immich.android2
+name: Setup — errors on the one-page setup (T-058)
+---
+- launchApp:
+    clearState: true
+    permissions:
+      all: allow
+- tapOn: "Immich address"
+- inputText: ${MAESTRO_IMMICH_URL}
+- tapOn: "Email"
+- inputText: "nobody@example.invalid"
+- tapOn: "Password"
+- inputText: ${MAESTRO_IMMICH_PASSWORD}
+- hideKeyboard
+- scrollUntilVisible:
+    element: "Picfort server address"
+    centerElement: true
+- tapOn: "Picfort server address"
+- inputText: "picfort.invalid"
+- hideKeyboard
+- assertVisible: "Will connect to https://picfort.invalid"
+- tapOn: "Connect"
+- scrollUntilVisible:
+    element: "Wrong email or password"
+    direction: UP
+    timeout: 20000
+# Start again (Maestro can't clear a field reliably): the Immich address is remembered.
+# Right login: Immich signs in, the Picfort server can't be reached.
+- launchApp:
+    stopApp: true
+- assertVisible: "Will connect to ${MAESTRO_IMMICH_URL}"
+- tapOn: "Email"
+- inputText: ${MAESTRO_IMMICH_EMAIL}
+- tapOn: "Password"
+- inputText: ${MAESTRO_IMMICH_PASSWORD}
+- hideKeyboard
+- scrollUntilVisible:
+    element: "Picfort server address"
+    centerElement: true
+- tapOn: "Picfort server address"
+- inputText: "picfort.invalid"
+- hideKeyboard
+- scrollUntilVisible:
+    element: "Connect"
+- tapOn: "Connect"
+- extendedWaitUntil:
+    visible: "Signed in as.*"
+    timeout: 30000
+- assertVisible: "Try again"
+- tapOn: "Skip the Picfort server for now"
+- extendedWaitUntil:
+    notVisible: "Welcome to Picfort"
+    timeout: 10000
+
+# Back to the usual state for the other flows
+- launchApp:
+    clearState: true
+    permissions:
+      all: allow
+- runFlow: subflows/login.yaml

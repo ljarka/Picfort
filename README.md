@@ -108,8 +108,11 @@ Or open the project in Android Studio and run the `app` configuration.
 
 The first time you start the app:
 
-1. Enter your Immich server URL, for example `https://photos.example.com`.
-2. Log in with your Immich email and password.
+1. On one screen, enter your Immich address (for example `photos.example.com`), your Immich email and
+   password, and, optionally, your Picfort server's address. Without `http://` or `https://`, addresses
+   on your local network (`192.168.0.10:2283`, `nas`, `*.local`) use http://, all others https://; each
+   field shows the address it will use. A local Immich address offers "Same computer: …:5000".
+2. Tap **Connect**. If the Picfort server doesn't answer, fix it and try again, or skip it for now.
 3. Allow photo access so photos on the phone appear in the timeline.
 
 ## Tests
@@ -365,7 +368,7 @@ You can also run it from the command line: `python3 frame.py <assetId>`.
 
 ### Using it from the app
 
-The app calls ImageFrameServer the **Picfort server**: one address for the frame, the Family Wall and the other family tabs. After the first login the app asks for it once (you can skip). Later, set it under **Settings → Picfort server** (⚙ on any tab), with **⚙** in the photo viewer, or with **Set up server** on the Wall, Shopping, Events or School tab. Enter the address (for example `192.168.0.105:5000`), and the API key if the server has `PICFORT_API_KEY` set, then tap **Test**: it says whether the frame and the Family Wall both work, or what's wrong (for example a server that uses another Immich). Then tap **Save**. After that, the **Send** button puts the photo you're viewing on the frame. Only photos on the Immich server can be sent, not photos that exist only on the phone.
+The app calls ImageFrameServer the **Picfort server**: one address for the frame, the Family Wall and the other family tabs. The setup screen asks for it with the Immich login (you can skip). Later, set it under **Settings → Picfort server** (⚙ on any tab), with **⚙** in the photo viewer, or with **Set up server** on the Wall, Shopping, Events or School tab. Enter the address (for example `192.168.0.105:5000`), and the API key if the server has `PICFORT_API_KEY` set, then tap **Test**: it says whether the frame and the Family Wall both work, or what's wrong (for example a server that uses another Immich). Then tap **Save**. After that, the **Send** button puts the photo you're viewing on the frame. Only photos on the Immich server can be sent, not photos that exist only on the phone.
 
 ## Security notes
 

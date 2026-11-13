@@ -1,6 +1,6 @@
 package com.github.ljarka.picfort.network
 
-import com.github.ljarka.picfort.core.network.isLocalNetworkHost
+import com.github.ljarka.picfort.core.network.defaultSchemeFor
 import okhttp3.HttpUrl
 import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
 
@@ -14,9 +14,6 @@ fun normalizeServerUrl(input: String): HttpUrl? {
     var text = input.trim().trimEnd('/')
     if (text.isEmpty()) return null
     text = text.removeSuffix("/api")
-    if (!hasScheme) {
-        val host = text.substringBefore('/').substringBefore(':')
-        text = (if (isLocalNetworkHost(host)) "http://" else "https://") + text
-    }
+    if (!hasScheme) text = defaultSchemeFor(text) + text
     return text.toHttpUrlOrNull()?.takeIf { it.scheme == "http" || it.scheme == "https" }
 }

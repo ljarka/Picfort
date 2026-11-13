@@ -10,8 +10,8 @@ Ambient e-paper frame mode and Picfort server setup/pairing vertical slice.
 | `ui/frame/FrameViewModel.kt` | ViewModel: frame status, polling, interval/mode settings, next photo trigger |
 | `ui/frame/FrameRepository.kt` | Repository & implementation of `FrameSender`: runs photo push to frame |
 | `ui/frame/FrameDashboardApi.kt` | HTTP client for frame management endpoints (`/status`, `/slideshow`, `/albums`) |
-| `ui/frame/FrameSettingsDialog.kt` | Server pairing dialog, live connection test, IP/port & API key input |
-| `ui/frame/PicfortServerSetupScreen.kt` | Full-screen initial server setup flow |
+| `ui/frame/FrameSettingsDialog.kt` | Server pairing dialog, live connection test, IP/port & API key input; `PicfortServerCheck` (test + save, also used by `:app`'s setup) |
+| `ui/frame/PicfortServerSetupScreen.kt` | One-time step after login, only for installs from before T-058 (setup now asks on one page) |
 | `ui/frame/FrameModule.kt` | Hilt module: provides `@FrameHttpClient` OkHttpClient and binds `FrameSender` |
 | `ui/frame/FrameScreenshotTest.kt` | Paparazzi snapshots: frame view, not configured, server form & setup |
 

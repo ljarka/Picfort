@@ -10,9 +10,8 @@ Thin Android application shell, navigation root, and Hilt root assembler.
 | `PicfortApplication.kt` | Application class, Hilt AndroidApp entry, Coil image loader init |
 | `AppModule.kt` | Top-level Hilt module: binds cross-feature bridges (e.g. `ImmichUsersSync`) |
 | `ui/shell/AppShell.kt` | Floating navigation bar (`TabBar`), `TabRoot`, `ComingSoonScreen`; `Tab.accent` (Wall coral, Shopping mint, Events amber, School sky, Photos periwinkle), applied in `MainActivity` via `AccentTheme` |
-| `ui/init/*` | Onboarding, initial connection validation (`InitScreen`, `InitViewModel`) |
-| `ui/login/*` | Immich login screen, email/password form |
-| `ui/server/*` | Server address input and testing screen |
+| `ui/init/*` | `InitScreen` (signed in → app) and the one-page setup (T-058): `SetupScreen`/`SetupContent`, `SetupViewModel` (Immich ping → login → `PicfortServerCheck`), `picfortSuggestion` (same host :5000) |
+| `ui/login/*` | `LoginService` (`/api/auth/login`, via `Provider`: Retrofit reads the base URL when built) |
 | `ui/settings/*` | App settings, server info, backup status; `AppearanceSettingsStore` ("Colors from wallpaper", off by default → brand palette) |
 | `backup/*` | Android WorkManager periodic background photo backup |
 
@@ -30,4 +29,5 @@ Thin Android application shell, navigation root, and Hilt root assembler.
 ./gradlew :app:testDebugUnitTest
 ./gradlew :app:verifyPaparazziDebug
 ./scripts/maestro-smoke.sh   # on a device: clean install, login, every tab (maestro/smoke.yaml)
+./scripts/maestro-smoke.sh maestro/setup-errors.yaml   # T-058: setup errors, https:// default, Skip
 ```
