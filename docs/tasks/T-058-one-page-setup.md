@@ -1,6 +1,6 @@
 # T-058 — First start on one screen; https:// by default
 
-**Status:** done (COMMIT; mockup `docs/wireframes/setup-one-screen-v1.png` approved 2026-11-13)  
+**Status:** done (bca44dd; mockup `docs/wireframes/setup-one-screen-v1.png` approved 2026-11-13)  
 **Component:** Android app (`:app`, `:feature:frame`, `:core:network`)  
 **Depends on:** T-002 (Picfort server step), ADR 0011
 
