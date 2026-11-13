@@ -51,6 +51,7 @@ Do not load the whole project. Each module's `AGENTS.md` tells you what to read.
 ## Definition of Done (every task)
 
 - [ ] `./scripts/check-modular-boundaries.sh` green.
+- [ ] `./gradlew ktlintCheck` green (`./gradlew ktlintFormat` fixes most; rules in `.editorconfig`, [ADR 0013](docs/decisions/0013-ktlint.md)).
 - [ ] `./gradlew testDebugUnitTest` and relevant Paparazzi tests green.
 - [ ] Module `AGENTS.md` updated for every module touched (< 80 lines).
 - [ ] New decision → ADR; task queue updated: task `done` with commit hash.

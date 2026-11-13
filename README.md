@@ -137,7 +137,7 @@ After an intended UI change, re-record the screenshots and commit the updated im
 ## CI and releases
 
 Every pull request and push to `main` runs [CI](.github/workflows/ci.yml):
-- **Android:** architecture boundaries, change-scope guardrail, diff secret scan, unit tests, screenshot comparison, lint and a debug APK (downloadable from the run). When screenshots differ, the diffs are uploaded as an artifact.
+- **Android:** architecture boundaries, change-scope guardrail, diff secret scan, code style (ktlint), unit tests, screenshot comparison, lint and a debug APK (downloadable from the run). When screenshots differ, the diffs are uploaded as an artifact.
 - **Frame server:** the Python tests (including API contract checks) on 3.11 (Raspberry Pi OS Bookworm) and 3.13, and a build and smoke test of the Docker image.
 - **Agent KPI snapshot:** each run uploads `agent-kpi-snapshot` (`build/agent-kpi/agent-kpi.json`) with first-pass-green and stability inputs.
 

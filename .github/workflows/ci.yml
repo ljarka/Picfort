@@ -69,9 +69,9 @@ jobs:
 
       # verifyPaparazziDebug runs all unit tests and compares the screenshots
       # with the checked-in images.
-      - name: Unit tests, screenshots, lint, build
+      - name: Code style, unit tests, screenshots, lint, build
         id: android_checks
-        run: ./gradlew verifyPaparazziDebug lintDebug assembleDebug
+        run: ./gradlew ktlintCheck verifyPaparazziDebug lintDebug assembleDebug
 
       - name: Collect agent KPI snapshot
         if: always()
