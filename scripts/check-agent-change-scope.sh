@@ -45,6 +45,8 @@ fi
 extract_module() {
   local path="$1"
   case "$path" in
+    # README.md, AGENTS.md and other notes are documentation, not code modules.
+    *.md) echo "docs" ;;
     feature/*/*) echo "$(cut -d/ -f1-2 <<< "$path")" ;;
     core/*/*) echo "$(cut -d/ -f1-2 <<< "$path")" ;;
     app/*) echo "app" ;;

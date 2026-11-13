@@ -121,22 +121,7 @@ class TimelineViewModel @Inject constructor(
                 block(selected)
             } catch (e: CancellationException) {
                 throw e
-            } catch (e: CleartextNotAllowedException) {
-                Log.w(TAG, "Action failed", e)
-                _messages.send(describe(e))
-            } catch (e: IOException) {
-                Log.w(TAG, "Action failed", e)
-                _messages.send(describe(e))
-            } catch (e: HttpException) {
-                Log.w(TAG, "Action failed", e)
-                _messages.send(describe(e))
-            } catch (e: IllegalArgumentException) {
-                Log.w(TAG, "Action failed", e)
-                _messages.send(describe(e))
-            } catch (e: IllegalStateException) {
-                Log.w(TAG, "Action failed", e)
-                _messages.send(describe(e))
-            } catch (e: SecurityException) {
+            } catch (e: Exception) { // anything else would crash the app
                 Log.w(TAG, "Action failed", e)
                 _messages.send(describe(e))
             } finally {
@@ -242,11 +227,7 @@ class TimelineViewModel @Inject constructor(
             timelineRepository.refresh()
         } catch (e: CancellationException) {
             throw e
-        } catch (e: IOException) {
-            Log.w(TAG, "Refresh after a change failed", e)
-        } catch (e: HttpException) {
-            Log.w(TAG, "Refresh after a change failed", e)
-        } catch (e: SecurityException) {
+        } catch (e: Exception) { // anything else would crash the app
             Log.w(TAG, "Refresh after a change failed", e)
         }
     }
@@ -275,24 +256,15 @@ class TimelineViewModel @Inject constructor(
                 timelineRepository.refresh()
             } catch (e: CancellationException) {
                 throw e
-            } catch (e: CleartextNotAllowedException) {
+            } catch (e: Exception) { // anything else would crash the app
                 Log.w(TAG, "Refresh failed", e)
-                _messages.send(describe(e))
-            } catch (e: IOException) {
-                Log.w(TAG, "Refresh failed", e)
-                _messages.send(describe(e))
-            } catch (e: HttpException) {
-                Log.w(TAG, "Refresh failed", e)
-                _messages.send(describe(e))
-            } catch (e: IllegalArgumentException) {
-                Log.w(TAG, "Refresh failed", e)
-                _messages.send(describe(e))
-            } catch (e: IllegalStateException) {
-                Log.w(TAG, "Refresh failed", e)
-                _messages.send(describe(e))
-            } catch (e: SecurityException) {
-                Log.w(TAG, "Refresh failed", e)
-                _messages.send(describe(e))
+                _messages.send(
+                    if (e is IOException && e !is CleartextNotAllowedException) {
+                        "Can't reach the server, showing saved photos"
+                    } else {
+                        describe(e)
+                    }
+                )
             } finally {
                 loadingState.value = LoadingState.LOADED
                 if (refreshAgain) {
