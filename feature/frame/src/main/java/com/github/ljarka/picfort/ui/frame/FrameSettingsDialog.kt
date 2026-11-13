@@ -61,8 +61,7 @@ fun wallTestResult(error: Exception?): ConnectionTest = when (error) {
 @HiltViewModel
 class FrameSettingsViewModel @Inject constructor(
     private val store: FrameSettingsStore,
-    private val repository: FrameRepository,
-    private val serverClient: PicfortServerClient,
+    private val check: PicfortServerCheck,
 ) : ViewModel() {
 
     private val _test = MutableStateFlow<ConnectionTest>(ConnectionTest.Idle)
@@ -79,28 +78,46 @@ class FrameSettingsViewModel @Inject constructor(
 
     fun test(address: String, apiKey: String) {
         _test.value = ConnectionTest.Running
-        viewModelScope.launch {
-            _test.value = when (val status = repository.testConnection(address, apiKey)) {
-                FrameResult.Sent -> try {
-                    serverClient.pingWall(address = address, apiKey = apiKey)
-                    wallTestResult(null)
-                } catch (e: CancellationException) {
-                    throw e
-                } catch (e: Exception) {
-                    wallTestResult(e)
-                }
-                is FrameResult.Error -> ConnectionTest.Failed(status.message)
-                else -> ConnectionTest.Failed("Unexpected response")
-            }
-        }
+        viewModelScope.launch { _test.value = check.check(address, apiKey) }
     }
+
+    fun save(address: String, apiKey: String) = check.save(address, apiKey)
+
+    /** The first-run step was answered (Skip or Continue); don't show it again. */
+    fun markPrompted() {
+        store.serverPrompted = true
+    }
+}
+
+/**
+ * Tests a Picfort server address (frame `/status`, then the Family Wall with my Immich login)
+ * and saves it. Shared by Settings, the old first-run step and the app's setup screen (T-058).
+ */
+class PicfortServerCheck @Inject constructor(
+    private val store: FrameSettingsStore,
+    private val repository: FrameRepository,
+    private val serverClient: PicfortServerClient,
+) {
+    suspend fun check(address: String, apiKey: String): ConnectionTest =
+        when (val status = repository.testConnection(address, apiKey)) {
+            FrameResult.Sent -> try {
+                serverClient.pingWall(address = address, apiKey = apiKey)
+                wallTestResult(null)
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                wallTestResult(e)
+            }
+            is FrameResult.Error -> ConnectionTest.Failed(status.message)
+            else -> ConnectionTest.Failed("Unexpected response")
+        }
 
     fun save(address: String, apiKey: String) {
         store.frameUrl = normalizeFrameUrl(address)?.toString()?.trimEnd('/') ?: ""
         store.apiKey = apiKey
     }
 
-    /** The first-run step was answered (Skip or Continue); don't show it again. */
+    /** Asked once on this install (saved or skipped): no separate Picfort step after login. */
     fun markPrompted() {
         store.serverPrompted = true
     }

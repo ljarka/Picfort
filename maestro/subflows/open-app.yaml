@@ -7,5 +7,5 @@ appId: com.github.ljarka.immich.android2
       all: allow
 - runFlow:
     when:
-      visible: "Server URL"
+      visible: "Welcome to Picfort"
     file: login.yaml

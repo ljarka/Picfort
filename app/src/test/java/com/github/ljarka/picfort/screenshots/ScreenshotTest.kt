@@ -37,6 +37,9 @@ import com.github.ljarka.picfort.ui.wall.FamilyWallUiState
 import com.github.ljarka.picfort.ui.wall.WallPost
 import org.junit.Rule
 import org.junit.Test
+import com.github.ljarka.picfort.ui.init.SetupContent
+import com.github.ljarka.picfort.ui.init.SetupStep
+import com.github.ljarka.picfort.ui.init.SetupUi
 import java.time.Instant
 import java.time.LocalDate
 import java.time.LocalTime
@@ -201,6 +204,37 @@ class ScreenshotTest {
         lastResult = "Uploaded 37 · 4 were already in Immich",
         lastRunAt = NOW - 2 * 3_600_000,
     )
+
+    private val setupFilled = SetupUi(
+        immichAddress = "192.168.0.10:2283", email = "ola@example.com", password = "secret",
+    )
+
+    @Test
+    fun setup() = snap { SetupContent(SetupUi()) }
+
+    @Test
+    fun setup_filled() = snap { SetupContent(setupFilled) }
+
+    @Test
+    fun setup_filled_dark() = snap(dark = true) {
+        SetupContent(setupFilled.copy(picfortAddress = "picfort.example.com", showApiKey = true))
+    }
+
+    @Test
+    fun setup_connecting() = snap {
+        SetupContent(setupFilled.copy(picfortAddress = "192.168.0.10:5000", step = SetupStep.SigningIn))
+    }
+
+    @Test
+    fun setup_picfort_failed() = snap {
+        SetupContent(
+            setupFilled.copy(
+                immichAddress = "photos.example.com", password = "", signedIn = true,
+                picfortAddress = "picfort.example.com",
+                picfortError = "Can't reach https://picfort.example.com",
+            ),
+        )
+    }
 
     @Test
     fun wall() = snap {
