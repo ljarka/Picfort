@@ -2,6 +2,7 @@ package com.github.ljarka.picfort.ui.events
 
 import android.text.format.DateFormat
 import com.github.ljarka.picfort.core.model.EventsSegment
+import com.github.ljarka.picfort.core.model.DayPhoto
 import com.github.ljarka.picfort.core.model.EventRepeat
 import com.github.ljarka.picfort.core.model.FamilyEvent
 import com.github.ljarka.picfort.core.model.FamilyMember
@@ -129,6 +130,8 @@ data class EventDetailUi(
     val message: String? = null,
     val memberNames: Map<String, String> = emptyMap(),
     val members: List<FamilyMember> = emptyList(),
+    /** Photos from past birthdays (T-055); null for other events and birthdays without a year. */
+    val birthdayPhotos: BirthdayPhotosUi? = null,
 )
 
 data class EventFormUi(
@@ -528,6 +531,8 @@ fun EventDetailContent(
     /** Birthdays live in Family settings (T-036): their only action opens it. */
     onEditBirthday: () -> Unit = {},
     albumSlot: @Composable () -> Unit = {},
+    /** A birthday photo was tapped: the photo and its position among all of them (T-055). */
+    onOpenPhoto: (DayPhoto, Int) -> Unit = { _, _ -> },
 ) {
     val snackbar = remember { SnackbarHostState() }
     LaunchedEffect(state.message) {
@@ -593,13 +598,13 @@ fun EventDetailContent(
                 val relLabel = remember(event, state.today) {
                     if (event.isOngoingOn(state.today)) "Now" else relativeEventLabel(event, state.today)
                 }
-                Column(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(padding)
-                        .verticalScroll(rememberScrollState())
-                        .padding(horizontal = 20.dp, vertical = 8.dp),
+                EventDetailList(
+                    photos = state.birthdayPhotos,
+                    name = event.birthdayOf?.let(state.memberNames::get) ?: event.title,
+                    onOpenPhoto = onOpenPhoto,
+                    modifier = Modifier.fillMaxSize().padding(padding),
                 ) {
+                Column(Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 8.dp)) {
                     if (relLabel != null) {
                         Surface(
                             shape = RoundedCornerShape(8.dp),
@@ -715,6 +720,7 @@ fun EventDetailContent(
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
                     }
+                }
                 }
             }
         }

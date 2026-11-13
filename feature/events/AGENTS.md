@@ -11,6 +11,7 @@ Family events vertical slice: upcoming and past events, details, form, recurrenc
 | `ui/events/EventsRepository.kt` | Repository: polling, pagination of past events, midnight rollover |
 | `ui/events/EventsApi.kt` | Server HTTP client: `/events` endpoints |
 | `ui/events/EventsModels.kt` | Grouping, relative labels, `turnsLabel`, `repeatSummary` |
+| `ui/events/BirthdayPhotos.kt` | Birthday photos (T-055): `birthdayDays`, `birthdayYears`, `EventDetailList` (lazy detail + rows) |
 | `ui/events/EventsScreenshotTest.kt` | Paparazzi snapshots: upcoming, past, dark theme, details, form, repeat & birthdays |
 
 ## Repeat & birthdays (T-037)
@@ -28,16 +29,22 @@ Family events vertical slice: upcoming and past events, details, form, recurrenc
 - Filter (T-054): `MemberCarousel` above Upcoming/Past; `EventsListUi.selectedMemberId` lives in the
   ViewModel (not saved); `forMember` keeps events whose `who` has the member, filtered in the app.
 
+## Birthday photos (T-055)
+
+- A birthday with a known year (`turns`): days = `seriesStartDate` (birth) + N years up to today; photos
+  from `DayPhotosProvider`, one section per year ("Turned 8 · 16 Nov 2025"), empty years left out.
+- The detail is one `LazyColumn` (event as the first item); tap → `onOpenPhoto(id, index, "event:<id>")`.
+
 ## Public Contract / Navigation Entry Points
 
 - `EventsListScreen(onOpenEvent: (Long) -> Unit, onAddEvent: () -> Unit, onSettingsClick: () -> Unit, onSetUpServer: () -> Unit)`
-- `EventDetailScreen(onBack: () -> Unit, onEdit: (Long) -> Unit, onEditBirthday: (memberId: String) -> Unit)`
+- `EventDetailScreen(onBack, onEdit: (Long) -> Unit, onEditBirthday: (memberId: String) -> Unit, onOpenPhoto: (assetId, index, source) -> Unit)`
 - `EventFormScreen(onBack: () -> Unit, onSaved: (Long) -> Unit, onGone: () -> Unit)`
 
 ## Dependencies & Boundaries
 
-- Depends on `:core:model` (`FamilyEvent`, `EventsSegment`, `FamilyMemberProvider`, `FamilyEventsProvider`).
-- Depends on `:core:ui` (`PicfortTheme`, `SettingsAction`, `ServerRequiredContent`).
+- Depends on `:core:model` (`FamilyEvent`, `EventsSegment`, `FamilyMemberProvider`, `FamilyEventsProvider`, `DayPhotosProvider`).
+- Depends on `:core:ui` (`PicfortTheme`, `SettingsAction`, `ServerRequiredContent`, `justify`); Coil for thumbnails.
 - Depends on `:core:network` (`PicfortServerClient`, `PicfortServerException`).
 - **NEVER** depends directly on other feature modules (`:feature:wall`, `:feature:shopping`, `:feature:family`).
 - Implements `FamilyEventsProvider` interface for cross-feature consumers (e.g. Wall's today panel).

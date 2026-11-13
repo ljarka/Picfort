@@ -33,6 +33,8 @@ dependencies {
     implementation(libs.androidx.lifecycle.runtime.ktx)
     implementation(libs.kotlin.serialization.json)
     implementation(libs.okhttp)
+    implementation(libs.coil)
+    implementation(libs.coil.network.okhttp)
 
     testImplementation(libs.junit)
     debugImplementation(libs.androidx.ui.tooling)

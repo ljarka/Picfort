@@ -359,6 +359,9 @@ class MainActivity : ComponentActivity() {
                                     onBack = { navController.popBackStack() },
                                     onEdit = { id -> navController.navigate(Screen.EventForm(id)) },
                                     onEditBirthday = { memberId -> navController.navigate(Screen.FamilySettings(memberId)) },
+                                    onOpenPhoto = { id, index, source ->
+                                        navController.navigate(ImageDetailsRoute(id, AssetType.REMOTE, index, source))
+                                    },
                                 )
                             }
                             composable<Screen.EventForm> {

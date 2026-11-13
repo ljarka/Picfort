@@ -1,6 +1,7 @@
 package com.github.ljarka.picfort.ui.events
 
 import com.github.ljarka.picfort.core.model.EventRepeat
+import com.github.ljarka.picfort.core.model.DayPhoto
 import com.github.ljarka.picfort.core.model.FamilyEvent
 import com.github.ljarka.picfort.core.model.FamilyMember
 import androidx.compose.ui.graphics.Color
@@ -294,5 +295,45 @@ class EventsModelsTest {
         assertEquals(listOf(swim, birthday), all.forMember("ola"))
         assertEquals(emptyList<FamilyEvent>(), all.forMember("tata"))
         assertEquals(all, all.forMember(null))
+    }
+
+    @Test
+    fun birthdayDaysRunFromBirthToToday() {
+        val born = LocalDate.of(2017, 11, 16)
+        val ola = FamilyEvent(1, "Ola", LocalDate.of(2026, 11, 16), seriesStartDate = born, birthdayOf = "ola", turns = 9)
+
+        val beforeBirthday = birthdayDays(ola, LocalDate.of(2026, 11, 15))
+        assertEquals(LocalDate.of(2025, 11, 16) to 8, beforeBirthday.first())
+        assertEquals(born to 0, beforeBirthday.last())
+        assertEquals(9, beforeBirthday.size)
+        // On the day, today's photos count too.
+        assertEquals(LocalDate.of(2026, 11, 16) to 9, birthdayDays(ola, LocalDate.of(2026, 11, 16)).first())
+        // No birth year, or not a birthday: nothing.
+        assertEquals(emptyList<Pair<LocalDate, Int>>(), birthdayDays(ola.copy(turns = null), LocalDate.of(2026, 11, 16)))
+        assertEquals(emptyList<Pair<LocalDate, Int>>(), birthdayDays(ola.copy(birthdayOf = null), LocalDate.of(2026, 11, 16)))
+    }
+
+    @Test
+    fun leapDayBirthdayFallsOn28FebruaryInOtherYears() {
+        val born = LocalDate.of(2020, 2, 29)
+        val e = FamilyEvent(1, "Leap", born, seriesStartDate = born, birthdayOf = "x", turns = 6)
+        val days = birthdayDays(e, LocalDate.of(2026, 3, 1)).map { it.first }
+        assertTrue(LocalDate.of(2025, 2, 28) in days)
+        assertTrue(LocalDate.of(2024, 2, 29) in days)
+    }
+
+    @Test
+    fun birthdayYearsGroupPhotosAndSkipEmptyYears() {
+        val d25 = LocalDate.of(2025, 11, 16)
+        val d17 = LocalDate.of(2017, 11, 16)
+        val days = listOf(d25 to 8, LocalDate.of(2024, 11, 16) to 7, d17 to 0)
+        val photos = listOf(
+            DayPhoto("a", d25, 1f, "u"), DayPhoto("b", d25, 1f, "u"), DayPhoto("c", d17, 1f, "u"),
+        )
+        val years = birthdayYears(days, photos)
+        assertEquals(listOf(8, 0), years.map { it.age })
+        assertEquals(listOf("a", "b"), years.first().photos.map { it.id })
+        assertEquals("Born · 16 Nov 2017", birthdayYearTitle(years.last()))
+        assertEquals("Turned 8 · 16 Nov 2025", birthdayYearTitle(years.first()))
     }
 }
