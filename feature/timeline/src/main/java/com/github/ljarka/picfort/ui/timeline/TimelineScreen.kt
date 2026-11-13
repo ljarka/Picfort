@@ -52,6 +52,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.wrapContentHeight
@@ -254,6 +255,8 @@ fun TimelineScreen(
                 .nestedScroll(scrollBehavior.nestedScrollConnection),
             scaffoldState = scaffoldState,
             sheetContent = {
+                // The sheet slides up under the floating tab bar: its actions sit above it.
+                Box(Modifier.navigationBarsPadding().aboveFloatingTabBar()) {
                 TimelineMenuContent(
                     selectedCount = selection.size,
                     isBusy = isBusy,
@@ -264,6 +267,7 @@ fun TimelineScreen(
                     onAddToAlbum = { chooseAlbum = true },
                     onDelete = { confirmDelete = true },
                 )
+                }
             },
             topBar = { TimelineAppBar(
                     scrollBehavior = scrollBehavior,
