@@ -4,8 +4,8 @@
 /app/src/main/java/com/github/ljarka/picfort/MainActivity.kt @ljarka
 /app/src/main/java/com/github/ljarka/picfort/AppNavigation.kt @ljarka
 /core/network/src/main/java/com/github/ljarka/picfort/core/network/ @ljarka
-/ImageFrameServer/app.py @ljarka
-/ImageFrameServer/auth.py @ljarka
+/picfort-server/app.py @ljarka
+/picfort-server/auth.py @ljarka
 /.github/workflows/ @ljarka
 /scripts/check-modular-boundaries.sh @ljarka
 /scripts/check-agent-change-scope.sh @ljarka

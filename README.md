@@ -66,7 +66,7 @@ feature/family/          Family member profiles, avatars, birth dates
 feature/frame/           Picture-frame controls + server setup/pairing
 feature/timeline/        Timeline, albums, search, details, sync
 benchmark/               Macrobenchmark suite (timeline scrolling)
-ImageFrameServer/        Python service for the picture frame
+picfort-server/        Python service for the picture frame
   app.py                 Flask HTTP API (/run, /status, /slideshow, /next, …)
   slideshow.py           Slideshow modes, schedule, quiet hours
   immich.py              Immich API client used by the slideshow
@@ -163,11 +163,11 @@ gh secret set PICFORT_KEY_PASSWORD
 
 Builds made before release signing used the debug key, so moving to a release APK means uninstalling the old app first (you'll log in again).
 
-## ImageFrameServer
+## Picfort server
 
 A small Flask service that puts Immich photos on a picture frame. It is meant to run on the device that drives the display, a Raspberry Pi with a Waveshare 13.3" e-Paper HAT+ (E). The frame downloads photos from Immich with its own API key, so controlling the frame never needs your login token. Only the Family Wall does: the app sends its Immich token on `/wall` calls, and the server asks Immich who you are (ADR 0006).
 
-**Don't expose ImageFrameServer to the internet without an API key.** By default the frame endpoints have no authentication (ADR 0004): use it on your home network or over a VPN such as Tailscale. To reach it from outside through a tunnel, set `PICFORT_API_KEY` first (see [Reaching the server from outside](#reaching-the-server-from-outside), ADR 0007).
+**Don't expose the Picfort server to the internet without an API key.** By default the frame endpoints have no authentication (ADR 0004): use it on your home network or over a VPN such as Tailscale. To reach it from outside through a tunnel, set `PICFORT_API_KEY` first (see [Reaching the server from outside](#reaching-the-server-from-outside), ADR 0007).
 
 ### Install with Docker (recommended)
 
@@ -222,7 +222,7 @@ Every request needs the key; the Family Wall also still needs your Immich login.
 Use Python 3.11+ (same versions as CI: 3.11 and 3.13).
 
 ```bash
-cd ImageFrameServer
+cd picfort-server
 python3 -m venv .venv && . .venv/bin/activate
 pip install -r requirements.txt
 cp .env.example .env              # then fill in IMMICH_URL and IMMICH_API_KEY
@@ -367,13 +367,13 @@ Family events (trips, holidays, birthdays) with plain calendar dates, recurrence
 
 An event looks like `{"id","title","start_date","end_date","start_time","location","note","album_id","repeat","repeat_until","kind","member_id","occurrence_start","occurrence_end","turns","created_by","created","updated"}` (unset fields are `null`; an `end_date` equal to `start_date` is stored as `null`). Events are stored in `events.db` (ADR 0008, ADR 0010); additive migrations keep `events.db.v<old>.bak`.
 
-Run the tests with `cd ImageFrameServer && python3 -m unittest discover -s tests -t tests`.
+Run the tests with `cd picfort-server && python3 -m unittest discover -s tests -t tests`.
 
 You can also run it from the command line: `python3 frame.py <assetId>`.
 
 ### Using it from the app
 
-The app calls ImageFrameServer the **Picfort server**: one address for the frame, the Family Wall and the other family tabs. The setup screen asks for it with the Immich login (you can skip). Later, set it under **Settings → Picfort server** (⚙ on any tab), with **⚙** in the photo viewer, or with **Set up server** on the Wall, Shopping, Events or School tab. Enter the address (for example `192.168.0.105:5000`), and the API key if the server has `PICFORT_API_KEY` set, then tap **Test**: it says whether the frame and the Family Wall both work, or what's wrong (for example a server that uses another Immich). Then tap **Save**. After that, the **Send** button puts the photo you're viewing on the frame. Only photos on the Immich server can be sent, not photos that exist only on the phone.
+The **Picfort server** (`picfort-server/`, formerly ImageFrameServer) is one address for the frame, the Family Wall and the other family tabs. The setup screen asks for it with the Immich login (you can skip). Later, set it under **Settings → Picfort server** (⚙ on any tab), with **⚙** in the photo viewer, or with **Set up server** on the Wall, Shopping, Events or School tab. Enter the address (for example `192.168.0.105:5000`), and the API key if the server has `PICFORT_API_KEY` set, then tap **Test**: it says whether the frame and the Family Wall both work, or what's wrong (for example a server that uses another Immich). Then tap **Save**. After that, the **Send** button puts the photo you're viewing on the frame. Only photos on the Immich server can be sent, not photos that exist only on the phone.
 
 ## Security notes
 

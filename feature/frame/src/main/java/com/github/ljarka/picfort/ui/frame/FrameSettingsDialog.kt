@@ -58,7 +58,7 @@ fun wallTestResult(error: Exception?): ConnectionTest = when (error) {
     )
 
     is PicfortServerException.NoWall -> ConnectionTest.Partial(
-        "Connected. This server has no Family Wall yet, update ImageFrameServer.",
+        "Connected. This server has no Family Wall yet, update the server.",
     )
 
     is PicfortServerException.ImmichUnreachable -> ConnectionTest.Partial(

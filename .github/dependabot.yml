@@ -10,7 +10,7 @@ updates:
         update-types: [minor, patch]
 
   - package-ecosystem: pip
-    directory: /ImageFrameServer
+    directory: /picfort-server
     schedule:
       interval: weekly
 

@@ -55,7 +55,7 @@ private data class ErrorBody(val message: String? = null)
 /** A failure talking to the frame, with a message fit for the UI. */
 class FrameException(message: String) : Exception(message)
 
-/** Slideshow and status calls to the ImageFrameServer (same no-Immich-token client as [FrameRepository]). */
+/** Slideshow and status calls to the Picfort server (same no-Immich-token client as [FrameRepository]). */
 @Singleton
 class FrameDashboardApi @Inject constructor(
     @FrameHttpClient private val client: OkHttpClient,

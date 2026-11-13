@@ -39,7 +39,7 @@ private data class FrameResponse(
 )
 
 /**
- * Talks to the ImageFrameServer on the local network.
+ * Talks to the Picfort server on the local network.
  *
  * Uses its own OkHttp client on purpose: the shared client attaches the Immich
  * access token to every request, and that token must never be sent to the frame.

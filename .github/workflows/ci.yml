@@ -117,7 +117,7 @@ jobs:
         python: ["3.11", "3.13"]
     defaults:
       run:
-        working-directory: ImageFrameServer
+        working-directory: picfort-server
     steps:
       - uses: actions/checkout@v7
 
@@ -125,7 +125,7 @@ jobs:
         with:
           python-version: ${{ matrix.python }}
           cache: pip
-          cache-dependency-path: ImageFrameServer/requirements.txt
+          cache-dependency-path: picfort-server/requirements.txt
 
       - run: pip install -r requirements.txt
 
@@ -140,7 +140,7 @@ jobs:
       - uses: docker/setup-buildx-action@v4
       - name: Build and smoke-test the Docker image
         run: |
-          docker build -t picfort-server:ci ImageFrameServer
+          docker build -t picfort-server:ci picfort-server
           docker run -d --name picfort -p 5000:5000 \
             -e IMMICH_URL=http://immich.invalid -e IMMICH_API_KEY=ci picfort-server:ci
           for i in $(seq 1 20); do curl -fsS localhost:5000/status && exit 0; sleep 1; done

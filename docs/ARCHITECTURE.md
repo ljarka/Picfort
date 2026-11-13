@@ -4,7 +4,7 @@ Picfort is a privacy-first family photo ecosystem built entirely on self-hosted 
 No Google Photos, no iCloud, no Amazon — everything runs at home. (Planned exception: receipt
 photos read by Gemini, opt-in, [ADR 0009](decisions/0009-receipts-gemini.md).)
 
-ImageFrameServer is called the **Picfort server** in the app and the README.
+The **Picfort server** (`picfort-server/`) was called ImageFrameServer until 2026-11-13; older ADRs and tasks still use that name.
 
 ## Components
 
@@ -13,7 +13,7 @@ ImageFrameServer is called the **Picfort server** in the app and the README.
 │  Home network                                                   │
 │                                                                 │
 │  ┌──────────────┐    ┌──────────────┐    ┌──────────────────┐  │
-│  │  Android app │    │    Immich    │    │ ImageFrameServer │  │
+│  │  Android app │    │    Immich    │    │  Picfort server  │  │
 │  │   (Picfort)  │◄──►│  (NAS/VPS)  │    │  (Raspberry Pi)  │  │
 │  └──────┬───────┘    └──────────────┘    └────────┬─────────┘  │
 │         │                                         │            │
@@ -45,7 +45,7 @@ External self-hosted photo server. Picfort uses its REST API for:
 
 Picfort does not modify Immich. It is a pure API consumer.
 
-### ImageFrameServer (`ImageFrameServer/`)
+### Picfort server (`picfort-server/`)
 Python Flask service, installed with Docker Compose on any always-on machine (preview mode,
 no panel) or directly on a Raspberry Pi that drives an e-paper panel. Responsibilities:
 - Receive a photo from the app and display it on the connected screen
@@ -65,14 +65,14 @@ One of:
 
 ### Photo display (manual)
 ```
-App ──POST /run?assetId=X──► ImageFrameServer ──► fetch from Immich ──► render ──► display
+App ──POST /run?assetId=X──► Picfort server ──► fetch from Immich ──► render ──► display
 ```
 
 ### Family Wall post
 ```
-App ──POST /wall + Authorization: Bearer <Immich token>──► ImageFrameServer
-        ImageFrameServer ──GET /api/users/me (cached 5 min)──► Immich   (who is posting)
-        ImageFrameServer ──► SQLite (wall.db) + wall_photos/
+App ──POST /wall + Authorization: Bearer <Immich token>──► Picfort server
+        Picfort server ──GET /api/users/me (cached 5 min)──► Immich   (who is posting)
+        Picfort server ──► SQLite (wall.db) + wall_photos/
 App ──GET /wall (poll 60 s while the screen is open)──► posts
 ```
 
@@ -122,7 +122,7 @@ Beyond runtime app security, Picfort also treats **agent workflow** as a securit
   high-confidence credential patterns.
 - **Critical-path ownership gates:** `.github/CODEOWNERS` requires owner review for navigation,
   networking/security, workflows, architecture decisions, and guardrail scripts.
-- **Contract checks for the server API:** `ImageFrameServer/tests/test_api_contract.py` snapshots
+- **Contract checks for the server API:** `picfort-server/tests/test_api_contract.py` snapshots
   route methods and key response shapes so accidental API drift fails tests.
 
 These controls complement existing runtime protections (API key, token-based wall auth, private

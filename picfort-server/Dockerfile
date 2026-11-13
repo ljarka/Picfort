@@ -1,4 +1,4 @@
-# Picfort server (ImageFrameServer). Install with docker/docker-compose.yml, see README.
+# Picfort server. Install with docker/docker-compose.yml, see README.
 FROM python:3.13-slim
 
 ENV PYTHONUNBUFFERED=1 \
