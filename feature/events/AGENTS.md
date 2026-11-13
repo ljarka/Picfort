@@ -25,6 +25,8 @@ Family events vertical slice: upcoming and past events, details, form, recurrenc
 - `FamilyEvent.memberIds` (server `members`); `who` adds a birthday's member. `EventMembers.kt`:
   `membersOf` (drops deleted members), `MemberStack` (row, max 3 + "+N"), `WhoLine` (detail),
   `WhoField` (form chips from `FamilyMemberProvider.allMembers`). PATCH sends `members` only when changed.
+- Filter (T-054): `MemberCarousel` above Upcoming/Past; `EventsListUi.selectedMemberId` lives in the
+  ViewModel (not saved); `forMember` keeps events whose `who` has the member, filtered in the app.
 
 ## Public Contract / Navigation Entry Points
 

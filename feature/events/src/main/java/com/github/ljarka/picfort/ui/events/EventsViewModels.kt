@@ -59,6 +59,7 @@ class EventsListViewModel @Inject constructor(
         val message: String? = null,
         val memberNames: Map<String, String> = emptyMap(),
         val members: List<FamilyMember> = emptyList(),
+        val selectedMemberId: String? = null,
     )
 
     private val extra = MutableStateFlow(Extra(configured = server.isConfigured, isLoading = true))
@@ -88,6 +89,7 @@ class EventsListViewModel @Inject constructor(
                     message = ext.message,
                     memberNames = ext.memberNames,
                     members = ext.members,
+                    selectedMemberId = ext.selectedMemberId?.takeIf { id -> ext.members.any { it.id == id } },
                 )
             }.collect { _state.value = it }
         }
@@ -118,6 +120,11 @@ class EventsListViewModel @Inject constructor(
         if (repository.segment.value == segment) return
         repository.setSegment(segment)
         viewModelScope.launch { refresh() }
+    }
+
+    /** Filters the list to [memberId]'s events; null shows everyone's. */
+    fun selectMember(memberId: String?) {
+        extra.update { it.copy(selectedMemberId = memberId) }
     }
 
     fun loadMorePast() {
@@ -456,6 +463,7 @@ fun EventsListScreen(
         onSettingsClick = onSettingsClick,
         onSetUpServer = onSetUpServer,
         onMessageShown = viewModel::messageShown,
+        onSelectMember = viewModel::selectMember,
     )
 }
 

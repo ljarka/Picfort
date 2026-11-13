@@ -88,6 +88,7 @@ import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.FilledTonalButton
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.vectorResource
+import com.github.ljarka.picfort.core.ui.avatar.MemberCarousel
 import com.github.ljarka.picfort.core.ui.R
 import com.github.ljarka.picfort.core.ui.component.ServerRequiredContent
 import com.github.ljarka.picfort.core.ui.component.SettingsAction
@@ -114,6 +115,8 @@ data class EventsListUi(
     val memberNames: Map<String, String> = emptyMap(),
     /** All family members, for the avatars of who an event is for (T-053). */
     val members: List<FamilyMember> = emptyList(),
+    /** The member the list is filtered to, or null for everyone. */
+    val selectedMemberId: String? = null,
 )
 
 data class EventDetailUi(
@@ -165,12 +168,15 @@ fun EventsListContent(
     onSettingsClick: () -> Unit = {},
     onSetUpServer: () -> Unit = {},
     onMessageShown: () -> Unit = {},
+    onSelectMember: (String?) -> Unit = {},
 ) {
     val snackbar = remember { SnackbarHostState() }
     LaunchedEffect(state.message) {
         state.message?.let { snackbar.showSnackbar(it); onMessageShown() }
     }
-    val events = if (state.segment == EventsSegment.UPCOMING) state.upcomingEvents else state.pastEvents
+    val selected = state.members.firstOrNull { it.id == state.selectedMemberId }
+    val events = (if (state.segment == EventsSegment.UPCOMING) state.upcomingEvents else state.pastEvents)
+        .forMember(selected?.id)
     val sections = remember(state.segment, events, state.today, locale) {
         if (state.segment == EventsSegment.UPCOMING) {
             groupUpcomingEvents(events, state.today, locale)
@@ -202,6 +208,13 @@ fun EventsListContent(
             if (!state.configured) {
                 ServerRequiredContent("Connect your Picfort server to use events.", onSetUpServer)
                 return@Scaffold
+            }
+            if (state.members.isNotEmpty()) {
+                MemberCarousel(
+                    members = state.members,
+                    selectedId = selected?.id,
+                    onSelect = { onSelectMember(it.takeIf { id -> id != selected?.id }) },
+                )
             }
             SingleChoiceSegmentedButtonRow(
                 modifier = Modifier
@@ -244,10 +257,13 @@ fun EventsListContent(
                         if (sections.isEmpty()) {
                             CenteredBox {
                                 Text(
-                                    text = if (state.segment == EventsSegment.UPCOMING) {
-                                        "Nothing planned yet. Add a trip or a birthday."
-                                    } else {
-                                        "No past events."
+                                    text = when {
+                                        selected != null && state.segment == EventsSegment.UPCOMING ->
+                                            "Nothing planned for ${selected.name}."
+                                        selected != null -> "No past events for ${selected.name}."
+                                        state.segment == EventsSegment.UPCOMING ->
+                                            "Nothing planned yet. Add a trip or a birthday."
+                                        else -> "No past events."
                                     },
                                     style = MaterialTheme.typography.bodyLarge,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant,

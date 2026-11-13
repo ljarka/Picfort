@@ -281,4 +281,18 @@ class EventsModelsTest {
         val family = listOf(FamilyMember("ola", "Ola", null, Color.Red), FamilyMember("kuba", "Kuba", null, Color.Blue))
         assertEquals(listOf("kuba", "ola"), membersOf(listOf("kuba", "gone", "ola"), family).map { it.id })
     }
+
+    @Test
+    fun forMemberKeepsTheirEventsAndBirthdaysOnly() {
+        val day = LocalDate.of(2026, 11, 11)
+        val swim = FamilyEvent(1, "Swim", day, memberIds = listOf("ola", "stas"))
+        val trip = FamilyEvent(2, "Trip", day, memberIds = listOf("mama"))
+        val xmas = FamilyEvent(3, "Christmas Eve", day)
+        val birthday = FamilyEvent(4, "Birthday", day, birthdayOf = "ola")
+        val all = listOf(swim, trip, xmas, birthday)
+
+        assertEquals(listOf(swim, birthday), all.forMember("ola"))
+        assertEquals(emptyList<FamilyEvent>(), all.forMember("tata"))
+        assertEquals(all, all.forMember(null))
+    }
 }
