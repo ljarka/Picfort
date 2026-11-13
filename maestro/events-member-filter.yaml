@@ -1,0 +1,41 @@
+# T-054: the avatar row in Events filters the list by family member.
+# Test server only: scripts/test-data.js creates "Basen T054" (Ola, Kuba) and "Wspolne T054" (no one).
+appId: com.github.ljarka.immich.android2
+name: Events — filter by member (T-054)
+---
+- runScript:
+    file: scripts/test-data.js
+    env:
+      EVENTS: "1"
+      BIRTH_DATE: "2017-11-12"
+- runFlow: subflows/open-app.yaml
+- tapOn: "Events"
+- extendedWaitUntil:
+    visible: "Basen T054.*"
+    timeout: 15000
+- assertVisible: "Wspolne T054.*"
+
+# Ola: her events and her birthday, not the family-wide one
+- tapOn: "Ola"
+- assertVisible: "Basen T054.*"
+- scrollUntilVisible:
+    element: "Ola's birthday.*"
+- assertNotVisible: "Wspolne T054.*"
+
+# Kuba: Basen only; tapping him again shows everyone
+- scrollUntilVisible:
+    element: "Kuba"
+    direction: UP
+- tapOn: "Kuba"
+- assertVisible: "Basen T054.*"
+- assertNotVisible: "Ola's birthday.*"
+- assertNotVisible: "Wspolne T054.*"
+- tapOn: "Kuba"
+- assertVisible: "Wspolne T054.*"
+
+# Past keeps the filter and names the member when empty
+- tapOn: "Kuba"
+- tapOn: "Past"
+- assertVisible: "No past events for Kuba."
+- tapOn: "Kuba"
+- tapOn: "Upcoming"

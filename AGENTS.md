@@ -61,3 +61,4 @@ Do not load the whole project. Each module's `AGENTS.md` tells you what to read.
 - ImageFrameServer (Python) in `ImageFrameServer/`.
 - Device smoke test: `./scripts/maestro-smoke.sh` (Maestro flows in `maestro/`; test account from
   `~/.config/picfort/test.env`, test server `picfort_test` on :5051 — never the family's server).
+  Feature flows set up their own data with `maestro/scripts/test-data.js` (test server only).

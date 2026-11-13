@@ -31,3 +31,4 @@ only the events they are in; tapping them again shows everyone's.
 
 - Ola → "Basen T037" (Ola, Kuba) and "Ola's birthday" only; Past → "No past events for Ola.";
   Kuba → "Basen T037" only; tapping Kuba again shows all 4 upcoming events. No crashes.
+- Repeatable: `maestro/events-member-filter.yaml` (Maestro; sets up its own test data, 2026-11-13).

@@ -1,0 +1,38 @@
+# T-055: a birthday's detail shows the photos taken on past birthdays, per year.
+# Test server only: Ola's birth date is set to 22 Dec 2022 (the test library has photos on
+# 22 Dec 2022 and 2023) and put back to 12 Nov 2017 at the end.
+appId: com.github.ljarka.immich.android2
+name: Events — birthday photos (T-055)
+onFlowComplete:
+  - runScript:
+      file: scripts/test-data.js
+      env:
+        BIRTH_DATE: "2017-11-12"
+---
+- runScript:
+    file: scripts/test-data.js
+    env:
+      BIRTH_DATE: "2022-12-22"
+- runFlow: subflows/open-app.yaml
+- tapOn: "Events"
+- scrollUntilVisible:
+    element: "Ola's birthday, 22 Dec.*"
+    timeout: 15000
+    # Centred, so the row isn't under the floating tab bar when tapped.
+    centerElement: true
+- tapOn: "Ola's birthday, 22 Dec.*"
+- extendedWaitUntil:
+    visible: "Photos from Ola's birthdays"
+    timeout: 10000
+- assertVisible: "Turned 1 · 22 Dec 2023"
+- scrollUntilVisible:
+    element: "Born · 22 Dec 2022"
+- assertVisible: "Photo, 22 Dec 2022"
+
+# The viewer opens and pages through the birthday photos
+- tapOn: "Photo, 22 Dec 2022"
+- extendedWaitUntil:
+    visible: "Show on frame"
+    timeout: 10000
+- back
+- assertVisible: "Born · 22 Dec 2022"

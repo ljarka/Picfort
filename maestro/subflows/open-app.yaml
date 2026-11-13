@@ -1,0 +1,11 @@
+# Starts the app fresh (keeps the login); logs in only when the app is logged out.
+appId: com.github.ljarka.immich.android2
+---
+- launchApp:
+    stopApp: true
+    permissions:
+      all: allow
+- runFlow:
+    when:
+      visible: "Server URL"
+    file: login.yaml

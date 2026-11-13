@@ -56,4 +56,6 @@ Family events vertical slice: upcoming and past events, details, form, recurrenc
 ./gradlew :feature:events:testDebugUnitTest
 ./gradlew :feature:events:verifyPaparazziDebug
 ./gradlew :feature:events:recordPaparazziDebug # on intentional UI changes
+DEVICE=emulator-5556 ./scripts/maestro-smoke.sh maestro/events-member-filter.yaml   # T-054, test server
+DEVICE=emulator-5556 ./scripts/maestro-smoke.sh maestro/events-birthday-photos.yaml  # T-055
 ```
