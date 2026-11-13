@@ -1,3 +1,5 @@
+@file:Suppress("ktlint:standard:max-line-length") // one palette per line
+
 package com.github.ljarka.picfort.ui.timeline
 
 import android.graphics.Bitmap
@@ -36,11 +38,21 @@ fun samplePhoto(seed: Int, width: Int = 480, height: Int = 480): Bitmap {
     val c = Canvas(bmp)
     val w = width.toFloat()
     val h = height.toFloat()
-    c.drawRect(0f, 0f, w, h, Paint().apply {
-        shader = LinearGradient(0f, 0f, 0f, h * 0.75f, p[0], p[1], Shader.TileMode.CLAMP)
-    })
-    c.drawCircle(w * (0.2f + rnd.nextFloat() * 0.6f), h * (0.25f + rnd.nextFloat() * 0.25f), w * 0.09f,
-        Paint(Paint.ANTI_ALIAS_FLAG).apply { color = p[2] })
+    c.drawRect(
+        0f,
+        0f,
+        w,
+        h,
+        Paint().apply {
+            shader = LinearGradient(0f, 0f, 0f, h * 0.75f, p[0], p[1], Shader.TileMode.CLAMP)
+        },
+    )
+    c.drawCircle(
+        w * (0.2f + rnd.nextFloat() * 0.6f),
+        h * (0.25f + rnd.nextFloat() * 0.25f),
+        w * 0.09f,
+        Paint(Paint.ANTI_ALIAS_FLAG).apply { color = p[2] },
+    )
     fun hills(base: Float, amp: Float, color: Int) {
         val path = Path().apply {
             moveTo(0f, h)
@@ -48,7 +60,11 @@ fun samplePhoto(seed: Int, width: Int = 480, height: Int = 480): Bitmap {
             val phase = rnd.nextFloat() * 6f
             var x = 0f
             while (x <= w) {
-                lineTo(x, base - amp * kotlin.math.sin(phase + x / w * 5f).toFloat() - amp * 0.4f * kotlin.math.sin(x / w * 13f).toFloat())
+                lineTo(
+                    x,
+                    base - amp * kotlin.math.sin(phase + x / w * 5f).toFloat() -
+                        amp * 0.4f * kotlin.math.sin(x / w * 13f).toFloat(),
+                )
                 x += 8f
             }
             lineTo(w, h)

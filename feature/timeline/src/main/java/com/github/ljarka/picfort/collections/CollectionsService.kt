@@ -44,12 +44,7 @@ data class PeopleResponse(val people: List<PersonDto> = emptyList(), val hasNext
 
 /** Photos with a person (T-052). No default values: the app's Json doesn't encode defaults. */
 @Serializable
-data class MetadataSearchRequest(
-    val personIds: List<String>,
-    val page: Int,
-    val size: Int,
-    val order: String,
-)
+data class MetadataSearchRequest(val personIds: List<String>, val page: Int, val size: Int, val order: String)
 
 @Serializable
 data class SearchAssetDto(

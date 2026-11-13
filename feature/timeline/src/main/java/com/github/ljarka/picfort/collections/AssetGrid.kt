@@ -61,7 +61,7 @@ fun AssetGrid(
                     .aspectRatio(1f)
                     .clip(RoundedCornerShape(6.dp))
                     .background(Color.LightGray.copy(alpha = 0.3f))
-                    .clickable { onClick(index) }
+                    .clickable { onClick(index) },
             ) {
                 AsyncImage(
                     model = thumbnailUrl(asset),

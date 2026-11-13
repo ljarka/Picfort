@@ -7,6 +7,7 @@ plugins {
     alias(libs.plugins.ksp) apply false
     alias(libs.plugins.hilt) apply false
     alias(libs.plugins.paparazzi) apply false
+    alias(libs.plugins.ktlint) apply false
 }
 
 /**
@@ -26,6 +27,16 @@ val kspLock = gradle.sharedServices.registerIfAbsent("kspLock", KspLock::class) 
 val hiltAggregating = Regex("@(InstallIn|HiltViewModel|AndroidEntryPoint|HiltAndroidApp|EntryPoint)\\b")
 
 subprojects {
+    // Code style: ktlint (rules in .editorconfig, docs/decisions/0013-ktlint.md).
+    // `./gradlew ktlintCheck` checks, `./gradlew ktlintFormat` fixes what it can.
+    apply(plugin = "org.jlleitschuh.gradle.ktlint")
+    configure<org.jlleitschuh.gradle.ktlint.KtlintExtension> {
+        version.set(rootProject.extensions.getByType<VersionCatalogsExtension>().named("libs").findVersion("ktlint").get().requiredVersion)
+        android.set(true)
+        filter {
+            exclude { it.file.path.contains("/build/") }
+        }
+    }
     plugins.withId("com.google.devtools.ksp") {
         tasks.matching { it.name.startsWith("ksp") && it.name.endsWith("Kotlin") }.configureEach {
             usesService(kspLock)

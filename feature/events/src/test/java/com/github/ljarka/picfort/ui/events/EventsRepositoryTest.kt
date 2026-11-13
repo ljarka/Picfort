@@ -4,12 +4,12 @@ import com.github.ljarka.picfort.core.model.EventRepeat
 import com.github.ljarka.picfort.core.model.EventsSegment
 import com.github.ljarka.picfort.core.model.FamilyEvent
 import com.github.ljarka.picfort.core.network.PicfortServerException
+import java.time.LocalDate
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
-import java.time.LocalDate
 
 /** An in-memory events server applying the T-022 upcoming/past split. */
 private class FakeEventsBackend : EventsBackend {
@@ -47,7 +47,11 @@ private class FakeEventsBackend : EventsBackend {
     override suspend fun update(original: FamilyEvent, draft: EventDraft): FamilyEvent {
         check()
         if (original.id !in events) throw PicfortServerException.Gone("This event no longer exists")
-        return original.copy(title = draft.normalizedTitle, startDate = draft.startDate, endDate = draft.normalizedEndDate)
+        return original.copy(
+            title = draft.normalizedTitle,
+            startDate = draft.startDate,
+            endDate = draft.normalizedEndDate,
+        )
             .also { events[it.id] = it }
     }
 
@@ -88,11 +92,19 @@ class EventsRepositoryTest {
     fun seriesOccurrenceEndingDoesNotMoveTheSeriesToPast() = runBlocking {
         // Weekly, the server shows the occurrence of today; it never ends.
         val weekly = FamilyEvent(
-            backend.nextId++, "Swimming", today, repeat = EventRepeat.WEEKLY, seriesStartDate = today.minusWeeks(9),
+            backend.nextId++,
+            "Swimming",
+            today,
+            repeat = EventRepeat.WEEKLY,
+            seriesStartDate = today.minusWeeks(9),
         ).also { backend.events[it.id] = it }
         // Ended series: today was its last occurrence.
         val ending = FamilyEvent(
-            backend.nextId++, "Course", today, repeat = EventRepeat.WEEKLY, repeatUntil = today,
+            backend.nextId++,
+            "Course",
+            today,
+            repeat = EventRepeat.WEEKLY,
+            repeatUntil = today,
             seriesStartDate = today.minusWeeks(3),
         ).also { backend.events[it.id] = it }
         repository.refreshActive()

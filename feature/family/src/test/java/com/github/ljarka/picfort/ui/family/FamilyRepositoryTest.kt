@@ -5,6 +5,8 @@ import com.github.ljarka.picfort.core.database.UsersDao
 import com.github.ljarka.picfort.core.model.BirthDate
 import com.github.ljarka.picfort.core.network.PicfortServerException
 import com.github.ljarka.picfort.core.ui.avatar.avatarColor
+import java.time.Instant
+import java.util.Locale
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.first
@@ -16,8 +18,6 @@ import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
-import java.time.Instant
-import java.util.Locale
 
 private class FakeUsersDao(initial: List<UserEntity>) : UsersDao {
     val flow = MutableStateFlow(initial)
@@ -51,9 +51,7 @@ private class FakePeopleSource : PeopleSource {
     }
 }
 
-private class FakeFamilyBackend(
-    override var isConfigured: Boolean = true,
-) : FamilyBackend {
+private class FakeFamilyBackend(override var isConfigured: Boolean = true) : FamilyBackend {
     private val json = Json { ignoreUnknownKeys = true }
     private val base = "http://192.168.0.105:5000".toHttpUrl()
     var failWith: PicfortServerException? = null
@@ -73,7 +71,13 @@ private class FakeFamilyBackend(
         val list = map.values.toList()
         val raw = """{"profiles":[${
             list.joinToString(",") { p ->
-                """{"user_id":"${p.userId}","display_name":${p.displayName?.let { "\"$it\"" } ?: "null"},"photo_url":${p.photoUrl?.let { "\"$it\"" } ?: "null"},"hidden":${p.hidden ?: "null"},"manual":${p.manual},"birth_date":${p.birthDate?.let { "\"$it\"" } ?: "null"},"no_photo":${p.noPhoto}}"""
+                """{"user_id":"${p.userId}","display_name":${p.displayName?.let {
+                    "\"$it\""
+                } ?: "null"},"photo_url":${p.photoUrl?.let {
+                    "\"$it\""
+                } ?: "null"},"hidden":${p.hidden ?: "null"},"manual":${p.manual},"birth_date":${p.birthDate?.let {
+                    "\"$it\""
+                } ?: "null"},"no_photo":${p.noPhoto}}"""
             }
         }]}"""
         return list to raw
@@ -103,7 +107,11 @@ private class FakeFamilyBackend(
             birthDate = if (includeBirthDate) birthDate else existing?.birthDate,
             noPhoto = noPhoto ?: existing?.noPhoto ?: false,
         )
-        if (updated.displayName == null && updated.photoUrl == null && updated.hidden == null && updated.birthDate == null && !updated.manual && !updated.noPhoto) {
+        if (updated.displayName == null && updated.photoUrl == null && updated.hidden == null &&
+            updated.birthDate == null &&
+            !updated.manual &&
+            !updated.noPhoto
+        ) {
             map.remove(userId)
         } else {
             map[userId] = updated
@@ -111,11 +119,7 @@ private class FakeFamilyBackend(
         return updated
     }
 
-    override suspend fun addMember(
-        displayName: String,
-        birthDate: String?,
-        today: String?,
-    ): FamilyProfile {
+    override suspend fun addMember(displayName: String, birthDate: String?, today: String?): FamilyProfile {
         failWith?.let { throw it }
         val id = java.util.UUID.randomUUID().toString()
         val created = FamilyProfile(
@@ -159,7 +163,14 @@ class FamilyRepositoryTest {
 
     private val immichUsers = listOf(
         UserEntity("mama", "Anna Kowalska", "anna@example.com", "pink", hasProfileImage = true, profileChangedAt = 42L),
-        UserEntity("tata", "Piotr Kowalski", "piotr@example.com", "blue", hasProfileImage = false, profileChangedAt = null),
+        UserEntity(
+            "tata",
+            "Piotr Kowalski",
+            "piotr@example.com",
+            "blue",
+            hasProfileImage = false,
+            profileChangedAt = null,
+        ),
         UserEntity("test", "LukaszTest", "test@example.com", "gray", hasProfileImage = false, profileChangedAt = null),
     )
 
@@ -191,7 +202,10 @@ class FamilyRepositoryTest {
         ).associateBy { it.id }
 
         assertEquals("Anna Kowalska", defaults.getValue("mama").name)
-        assertEquals("https://photos.example.com/api/users/mama/profile-image?v=42", defaults.getValue("mama").avatarUrl)
+        assertEquals(
+            "https://photos.example.com/api/users/mama/profile-image?v=42",
+            defaults.getValue("mama").avatarUrl,
+        )
         assertFalse(defaults.getValue("mama").hasCustomPhoto)
         assertFalse(defaults.getValue("mama").hidden)
         assertTrue(defaults.getValue("mama").isMe)
@@ -202,8 +216,20 @@ class FamilyRepositoryTest {
 
         // Custom profile: rename Mama, custom photo for Tata, unhide LukaszTest, hide Tata, try to hide me.
         val profiles = mapOf(
-            "mama" to FamilyProfile("mama", displayName = "Mama", photoUrl = "http://picfort/family/photo/m.jpg", hidden = true),
-            "tata" to FamilyProfile("tata", displayName = "Tata", photoUrl = "http://picfort/family/photo/t.jpg", hidden = true),
+            "mama" to
+                FamilyProfile(
+                    "mama",
+                    displayName = "Mama",
+                    photoUrl = "http://picfort/family/photo/m.jpg",
+                    hidden = true,
+                ),
+            "tata" to
+                FamilyProfile(
+                    "tata",
+                    displayName = "Tata",
+                    photoUrl = "http://picfort/family/photo/t.jpg",
+                    hidden = true,
+                ),
             "test" to FamilyProfile("test", displayName = null, photoUrl = null, hidden = false),
         )
         val merged = mergeFamilyUsers(
@@ -216,7 +242,10 @@ class FamilyRepositoryTest {
         assertEquals("Mama", merged.getValue("mama").name)
         assertEquals("Anna Kowalska", merged.getValue("mama").immichName)
         assertEquals("http://picfort/family/photo/m.jpg", merged.getValue("mama").avatarUrl)
-        assertEquals("https://photos.example.com/api/users/mama/profile-image?v=42", merged.getValue("mama").immichAvatarUrl)
+        assertEquals(
+            "https://photos.example.com/api/users/mama/profile-image?v=42",
+            merged.getValue("mama").immichAvatarUrl,
+        )
         assertTrue(merged.getValue("mama").hasCustomPhoto)
         // Logged-in user is never hidden, even if the profile says hidden = true or name has "test".
         assertFalse(merged.getValue("mama").hidden)
@@ -243,9 +272,16 @@ class FamilyRepositoryTest {
         val dao = FakeUsersDao(emptyList())
         var syncs = 0
         val repo = FamilyRepository(
-            FakeFamilyBackend(), FakePeopleSource(), FakeOfflineCopy(), dao,
-            { "https://photos.example.com" }, { "mama" },
-            syncImmichUsers = { syncs++; dao.upsert(immichUsers) },
+            FakeFamilyBackend(),
+            FakePeopleSource(),
+            FakeOfflineCopy(),
+            dao,
+            { "https://photos.example.com" },
+            { "mama" },
+            syncImmichUsers = {
+                syncs++
+                dao.upsert(immichUsers)
+            },
         )
         repo.refresh()
         assertEquals(1, syncs)
@@ -257,59 +293,65 @@ class FamilyRepositoryTest {
     }
 
     @Test
-    fun `offline cold start keeps saved names and photos, and saveMember updates photo and fields`(): Unit = runBlocking {
-        val backend = FakeFamilyBackend()
-        val offline = FakeOfflineCopy()
-        val people = FakePeopleSource()
-        val dao = FakeUsersDao(immichUsers)
-        val repo = FamilyRepository(backend, people, offline, dao, { "https://photos.example.com" }, { "mama" })
-        val tataUser = repo.users.first().first { it.id == "tata" }
+    fun `offline cold start keeps saved names and photos, and saveMember updates photo and fields`(): Unit =
+        runBlocking {
+            val backend = FakeFamilyBackend()
+            val offline = FakeOfflineCopy()
+            val people = FakePeopleSource()
+            val dao = FakeUsersDao(immichUsers)
+            val repo = FamilyRepository(backend, people, offline, dao, { "https://photos.example.com" }, { "mama" })
+            val tataUser = repo.users.first().first { it.id == "tata" }
 
-        // Pick a face from Immich people, rename Tata, and save.
-        repo.saveMember(
-            user = tataUser,
-            displayName = "Tata Piotr",
-            pickedPersonId = "person-tata",
-            clearPhoto = false,
-            showInFamily = true,
-        )
-        assertEquals("person-tata", people.lastThumbPersonId)
-        val updatedTata = repo.users.first().first { it.id == "tata" }
-        assertEquals("Tata Piotr", updatedTata.name)
-        assertEquals("http://192.168.0.105:5000/family/photo/tata.jpg", updatedTata.avatarUrl)
-        assertTrue(updatedTata.hasCustomPhoto)
+            // Pick a face from Immich people, rename Tata, and save.
+            repo.saveMember(
+                user = tataUser,
+                displayName = "Tata Piotr",
+                pickedPersonId = "person-tata",
+                clearPhoto = false,
+                showInFamily = true,
+            )
+            assertEquals("person-tata", people.lastThumbPersonId)
+            val updatedTata = repo.users.first().first { it.id == "tata" }
+            assertEquals("Tata Piotr", updatedTata.name)
+            assertEquals("http://192.168.0.105:5000/family/photo/tata.jpg", updatedTata.avatarUrl)
+            assertTrue(updatedTata.hasCustomPhoto)
 
-        // Cold start offline with a new repository reading the saved offline copy.
-        val offlineBackend = FakeFamilyBackend().apply {
-            failWith = PicfortServerException.Unreachable("192.168.0.105")
+            // Cold start offline with a new repository reading the saved offline copy.
+            val offlineBackend = FakeFamilyBackend().apply {
+                failWith = PicfortServerException.Unreachable("192.168.0.105")
+            }
+            val coldRepo =
+                FamilyRepository(offlineBackend, people, offline, dao, { "https://photos.example.com" }, { "mama" })
+            coldRepo.refresh()
+            val coldMembers = coldRepo.members.first().associateBy { it.id }
+            assertEquals("Tata Piotr", coldMembers.getValue("tata").name)
+            assertEquals("http://192.168.0.105:5000/family/photo/tata.jpg", coldMembers.getValue("tata").avatarUrl)
+
+            // "Use Immich picture" deletes the custom photo and reverts to Immich picture / initials.
+            repo.saveMember(
+                user = updatedTata,
+                displayName = "",
+                pickedPersonId = null,
+                clearPhoto = true,
+                showInFamily = true,
+            )
+            assertEquals(listOf("tata"), backend.deletedPhotos)
+            val revertedTata = repo.users.first().first { it.id == "tata" }
+            assertEquals("Piotr Kowalski", revertedTata.name)
+            assertNull(revertedTata.avatarUrl)
+            assertFalse(revertedTata.hasCustomPhoto)
         }
-        val coldRepo = FamilyRepository(offlineBackend, people, offline, dao, { "https://photos.example.com" }, { "mama" })
-        coldRepo.refresh()
-        val coldMembers = coldRepo.members.first().associateBy { it.id }
-        assertEquals("Tata Piotr", coldMembers.getValue("tata").name)
-        assertEquals("http://192.168.0.105:5000/family/photo/tata.jpg", coldMembers.getValue("tata").avatarUrl)
-
-        // "Use Immich picture" deletes the custom photo and reverts to Immich picture / initials.
-        repo.saveMember(
-            user = updatedTata,
-            displayName = "",
-            pickedPersonId = null,
-            clearPhoto = true,
-            showInFamily = true,
-        )
-        assertEquals(listOf("tata"), backend.deletedPhotos)
-        val revertedTata = repo.users.first().first { it.id == "tata" }
-        assertEquals("Piotr Kowalski", revertedTata.name)
-        assertNull(revertedTata.avatarUrl)
-        assertFalse(revertedTata.hasCustomPhoto)
-    }
 
     @Test
     fun `clear shows initials over the Immich picture, profile picture brings it back`(): Unit = runBlocking {
         val backend = FakeFamilyBackend()
         val repo = FamilyRepository(
-            backend, FakePeopleSource(), FakeOfflineCopy(), FakeUsersDao(immichUsers),
-            { "https://photos.example.com" }, { "mama" },
+            backend,
+            FakePeopleSource(),
+            FakeOfflineCopy(),
+            FakeUsersDao(immichUsers),
+            { "https://photos.example.com" },
+            { "mama" },
         )
         repo.refresh()
         val immichPicture = "https://photos.example.com/api/users/mama/profile-image?v=42"
@@ -330,7 +372,14 @@ class FamilyRepositoryTest {
 
         // A face picked after Clear replaces the initials.
         repo.saveMember(restored, displayName = "", noPhoto = true, clearPhoto = true)
-        repo.saveMember(repo.users.first().first { it.id == "mama" }, displayName = "", pickedPersonId = "p", noPhoto = false)
+        repo.saveMember(
+            repo.users.first().first {
+                it.id == "mama"
+            },
+            displayName = "",
+            pickedPersonId = "p",
+            noPhoto = false,
+        )
         val withFace = repo.users.first().first { it.id == "mama" }
         assertEquals("http://192.168.0.105:5000/family/photo/mama.jpg", withFace.avatarUrl)
         assertFalse(withFace.noPhoto)
@@ -375,7 +424,14 @@ class FamilyRepositoryTest {
     @Test
     fun `merge family users marks immich vs manual and parses birth dates`() {
         val immich = listOf(
-            UserEntity("1", "Mama", "mama@example.com", avatarColor = "pink", hasProfileImage = false, profileChangedAt = null),
+            UserEntity(
+                "1",
+                "Mama",
+                "mama@example.com",
+                avatarColor = "pink",
+                hasProfileImage = false,
+                profileChangedAt = null,
+            ),
         )
         val profiles = mapOf(
             "1" to FamilyProfile("1", displayName = "Mama Anna", birthDate = "1985-05-17"),
@@ -431,9 +487,18 @@ class FamilyRepositoryTest {
             backend = backend,
             people = FakePeopleSource(),
             offline = FakeOfflineCopy(),
-            usersDao = FakeUsersDao(listOf(
-                UserEntity("mama", "Mama", "m@example.com", avatarColor = "pink", hasProfileImage = false, profileChangedAt = null),
-            )),
+            usersDao = FakeUsersDao(
+                listOf(
+                    UserEntity(
+                        "mama",
+                        "Mama",
+                        "m@example.com",
+                        avatarColor = "pink",
+                        hasProfileImage = false,
+                        profileChangedAt = null,
+                    ),
+                ),
+            ),
             immichServerUrl = { "http://immich" },
             currentUserId = { "mama" },
         )

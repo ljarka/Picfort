@@ -8,10 +8,10 @@ import com.github.ljarka.picfort.collections.CollectionsRepository
 import com.github.ljarka.picfort.collections.CollectionsService
 import com.github.ljarka.picfort.collections.CreateAlbumRequest
 import com.github.ljarka.picfort.collections.MetadataSearchRequest
+import com.github.ljarka.picfort.collections.PeopleResponse
 import com.github.ljarka.picfort.collections.SearchAssetDto
 import com.github.ljarka.picfort.collections.SearchAssetsPage
 import com.github.ljarka.picfort.collections.SearchResponse
-import com.github.ljarka.picfort.collections.PeopleResponse
 import com.github.ljarka.picfort.collections.SmartSearchRequest
 import com.github.ljarka.picfort.core.model.FamilyMember
 import kotlinx.coroutines.runBlocking
@@ -51,7 +51,10 @@ class PeopleFilterTest {
             override suspend fun metadataSearch(body: MetadataSearchRequest): SearchResponse {
                 requests += body
                 return SearchResponse(
-                    SearchAssetsPage(listOf(SearchAssetDto("a1"), SearchAssetDto("v1", type = "VIDEO")), nextPage = "2"),
+                    SearchAssetsPage(
+                        listOf(SearchAssetDto("a1"), SearchAssetDto("v1", type = "VIDEO")),
+                        nextPage = "2",
+                    ),
                 )
             }
         }

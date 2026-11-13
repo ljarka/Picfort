@@ -77,7 +77,8 @@ private data class YearHeader(val year: BirthdayYear) : PhotoRow {
 
 private data class PhotoTile(val photo: DayPhoto, val index: Int, val width: Float)
 
-private data class TilesRow(val day: LocalDate, val row: Int, val tiles: List<PhotoTile>, val height: Float) : PhotoRow {
+private data class TilesRow(val day: LocalDate, val row: Int, val tiles: List<PhotoTile>, val height: Float) :
+    PhotoRow {
     override val key: String get() = "r${day}_$row"
 }
 
@@ -92,7 +93,9 @@ private fun layoutYears(years: List<BirthdayYear>, width: Float, spacing: Float)
     years.forEach { year ->
         rows += YearHeader(year)
         justify(year.photos.map { it.ratio }, width, target, spacing).forEachIndexed { r, row ->
-            val tiles = row.widths.mapIndexed { k, w -> PhotoTile(year.photos[row.start + k], index + row.start + k, w) }
+            val tiles = row.widths.mapIndexed { k, w ->
+                PhotoTile(year.photos[row.start + k], index + row.start + k, w)
+            }
             rows += TilesRow(year.day, r, tiles, row.height)
         }
         index += year.photos.size
@@ -140,6 +143,7 @@ internal fun EventDetailList(
                     photos.loading && years.isEmpty() -> item(key = "photos-loading") {
                         CircularProgressIndicator(Modifier.padding(20.dp).size(24.dp), strokeWidth = 2.dp)
                     }
+
                     years.isEmpty() -> item(key = "photos-none") {
                         Text(
                             "No photos from these days in Immich yet.",
@@ -152,6 +156,7 @@ internal fun EventDetailList(
                 items(rows, key = { it.key }, contentType = { if (it is YearHeader) "year" else "row" }) { row ->
                     when (row) {
                         is YearHeader -> YearTitle(row.year) { onOpenDay(row.year.day) }
+
                         is TilesRow -> Row(
                             horizontalArrangement = Arrangement.spacedBy(SPACING),
                             modifier = Modifier.fillMaxWidth().padding(horizontal = SIDE, vertical = SPACING / 2),
@@ -159,7 +164,12 @@ internal fun EventDetailList(
                             row.tiles.forEach { tile ->
                                 PhotoTileView(
                                     tile.photo,
-                                    Modifier.size(with(density) { tile.width.toDp() }, with(density) { row.height.toDp() }),
+                                    Modifier.size(
+                                        with(density) {
+                                            tile.width.toDp()
+                                        },
+                                        with(density) { row.height.toDp() },
+                                    ),
                                 ) { onOpenPhoto(tile.photo, tile.index) }
                             }
                         }

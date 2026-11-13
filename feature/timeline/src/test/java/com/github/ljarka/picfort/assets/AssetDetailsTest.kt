@@ -1,9 +1,9 @@
 package com.github.ljarka.picfort.assets
 
+import java.time.ZoneId
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Test
-import java.time.ZoneId
 
 class AssetDetailsTest {
 
@@ -49,7 +49,10 @@ class AssetDetailsTest {
         assertEquals("512 B", formatFileSize(512))
         assertEquals("3 KB", formatFileSize(3_000))
         assertEquals("ƒ/2 · ISO 50", formatExposure(ExifInfo(fNumber = 2.0, iso = 50.0)))
-        assertEquals("Apple iPhone", AssetInfo(id = "x", exifInfo = ExifInfo(make = "Apple", model = "Apple iPhone"))
-            .toDetails(utc).rows.single().value)
+        assertEquals(
+            "Apple iPhone",
+            AssetInfo(id = "x", exifInfo = ExifInfo(make = "Apple", model = "Apple iPhone"))
+                .toDetails(utc).rows.single().value,
+        )
     }
 }

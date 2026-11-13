@@ -1,10 +1,5 @@
 package com.github.ljarka.picfort.ui.wall
 
-import com.github.ljarka.picfort.core.model.FamilyMember
-import com.github.ljarka.picfort.core.model.isTestAccount
-import com.github.ljarka.picfort.core.model.meFirst
-
-import com.github.ljarka.picfort.core.network.PicfortServerException
 import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
@@ -12,18 +7,22 @@ import android.graphics.Matrix
 import android.media.ExifInterface
 import android.net.Uri
 import androidx.compose.ui.graphics.Color
+import com.github.ljarka.picfort.core.model.BirthDate
+import com.github.ljarka.picfort.core.model.FamilyMember
+import com.github.ljarka.picfort.core.model.isTestAccount
+import com.github.ljarka.picfort.core.model.meFirst
+import com.github.ljarka.picfort.core.network.AccessTokenStore
+import com.github.ljarka.picfort.core.network.PicfortServerException
 import com.github.ljarka.picfort.core.ui.avatar.UNKNOWN_MEMBER_COLOR
 import com.github.ljarka.picfort.core.ui.avatar.avatarColor
 import com.github.ljarka.picfort.core.ui.avatar.initials
-import com.github.ljarka.picfort.core.network.AccessTokenStore
 import dagger.hilt.android.qualifiers.ApplicationContext
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.withContext
-import com.github.ljarka.picfort.core.model.BirthDate
 import java.io.ByteArrayOutputStream
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlin.math.max
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 
 @Singleton
 class WallRepository @Inject constructor(
@@ -73,12 +72,24 @@ class WallRepository @Inject constructor(
         if (scale < 1f) matrix.postScale(scale, scale)
         when (orientation) {
             ExifInterface.ORIENTATION_ROTATE_90 -> matrix.postRotate(90f)
+
             ExifInterface.ORIENTATION_ROTATE_180 -> matrix.postRotate(180f)
+
             ExifInterface.ORIENTATION_ROTATE_270 -> matrix.postRotate(270f)
+
             ExifInterface.ORIENTATION_FLIP_HORIZONTAL -> matrix.postScale(-1f, 1f)
+
             ExifInterface.ORIENTATION_FLIP_VERTICAL -> matrix.postScale(1f, -1f)
-            ExifInterface.ORIENTATION_TRANSPOSE -> { matrix.postRotate(90f); matrix.postScale(-1f, 1f) }
-            ExifInterface.ORIENTATION_TRANSVERSE -> { matrix.postRotate(270f); matrix.postScale(-1f, 1f) }
+
+            ExifInterface.ORIENTATION_TRANSPOSE -> {
+                matrix.postRotate(90f)
+                matrix.postScale(-1f, 1f)
+            }
+
+            ExifInterface.ORIENTATION_TRANSVERSE -> {
+                matrix.postRotate(270f)
+                matrix.postScale(-1f, 1f)
+            }
         }
         if (matrix.isIdentity) return bitmap
         return Bitmap.createBitmap(bitmap, 0, 0, bitmap.width, bitmap.height, matrix, true)

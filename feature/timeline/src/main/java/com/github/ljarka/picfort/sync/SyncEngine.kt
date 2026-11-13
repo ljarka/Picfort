@@ -1,5 +1,8 @@
 package com.github.ljarka.picfort.sync
 
+import javax.inject.Inject
+import javax.inject.Singleton
+import kotlin.coroutines.coroutineContext
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -10,9 +13,6 @@ import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.Json
 import retrofit2.HttpException
-import javax.inject.Inject
-import javax.inject.Singleton
-import kotlin.coroutines.coroutineContext
 
 /** Lines written and acked per transaction. */
 internal const val SYNC_BATCH = 500
@@ -33,11 +33,7 @@ data class SyncResult(
  * sent only after its transaction commits, so an interrupted sync resumes without gaps.
  */
 @Singleton
-class SyncEngine @Inject constructor(
-    private val api: SyncApi,
-    private val store: SyncStore,
-    private val json: Json,
-) {
+class SyncEngine @Inject constructor(private val api: SyncApi, private val store: SyncStore, private val json: Json) {
     private val mutex = Mutex()
     private val _linesApplied = MutableStateFlow<Int?>(null)
 
@@ -108,7 +104,9 @@ class SyncEngine @Inject constructor(
                         sendAcks(listOf(line.ack))
                         return StreamOutcome(lines, serverReset = true)
                     }
+
                     SyncChange.AckOnly -> Unit
+
                     else -> changes += change
                 }
                 acks[line.ackType] = line.ack

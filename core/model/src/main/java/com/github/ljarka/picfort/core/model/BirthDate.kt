@@ -8,11 +8,7 @@ import java.util.Locale
 /**
  * Birth date: either with a known birth year (e.g. 2015-06-12) or without a year (--06-12).
  */
-data class BirthDate(
-    val month: Int,
-    val day: Int,
-    val year: Int? = null,
-) {
+data class BirthDate(val month: Int, val day: Int, val year: Int? = null) {
     /** Serializes to ISO 8601 string: YYYY-MM-DD or --MM-DD */
     fun toIsoString(): String = if (year != null) {
         String.format(Locale.US, "%04d-%02d-%02d", year, month, day)
@@ -25,7 +21,9 @@ data class BirthDate(
         val monthName = Month.of(month).getDisplayName(TextStyle.SHORT, Locale.getDefault())
         val dateText = "$day $monthName"
         if (year == null) return dateText
-        val age = today.year - year - if (today.monthValue < month || (today.monthValue == month && today.dayOfMonth < day)) 1 else 0
+        val age =
+            today.year - year -
+                if (today.monthValue < month || (today.monthValue == month && today.dayOfMonth < day)) 1 else 0
         return "$dateText · $age"
     }
 

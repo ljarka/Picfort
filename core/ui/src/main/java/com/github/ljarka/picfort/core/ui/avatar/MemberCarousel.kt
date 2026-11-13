@@ -97,7 +97,10 @@ fun MemberCarousel(
                 DropdownMenu(expanded = menu, onDismissRequest = { menu = false }) {
                     DropdownMenuItem(
                         text = { Text("Edit") },
-                        onClick = { menu = false; onEditMember?.invoke(member.id) },
+                        onClick = {
+                            menu = false
+                            onEditMember?.invoke(member.id)
+                        },
                     )
                 }
             }

@@ -4,14 +4,14 @@ import com.github.ljarka.picfort.core.model.ShoppingItem
 import com.github.ljarka.picfort.core.model.ShoppingList
 import com.github.ljarka.picfort.core.network.PicfortServerException
 import kotlinx.coroutines.CompletableDeferred
-import kotlinx.coroutines.CoroutineStart
-import kotlinx.coroutines.async
-import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.withTimeout
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.async
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.withTimeout
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
@@ -51,8 +51,9 @@ private class FakeBackend : ShoppingBackend {
     /** What [encodeLists] was given, by the text it returned, so decoding gives the lists back. */
     private val encoded = mutableMapOf<String, List<ShoppingList>>()
 
-    override fun decodeLists(raw: String) = encoded[raw] ?: raw.removePrefix("raw:").split(",").filter { it.isNotEmpty() }
-        .map { ShoppingList(it.toLong(), "offline ${it}") }
+    override fun decodeLists(raw: String) =
+        encoded[raw] ?: raw.removePrefix("raw:").split(",").filter { it.isNotEmpty() }
+            .map { ShoppingList(it.toLong(), "offline $it") }
 
     override fun encodeLists(lists: List<ShoppingList>): String =
         ("saved#${encoded.size}:" + lists.joinToString(",") { "${it.id}" }).also { encoded[it] = lists }
@@ -63,7 +64,10 @@ private class FakeBackend : ShoppingBackend {
         return ListFetch(list.takeIf { it.revision != knownRevision })
     }
 
-    override suspend fun create(title: String) = ShoppingList(nextId++, title, createdBy = "me").also { lists[it.id] = it }
+    override suspend fun create(title: String) = ShoppingList(nextId++, title, createdBy = "me").also {
+        lists[it.id] =
+            it
+    }
 
     override suspend fun update(id: Long, title: String?, archived: Boolean?): ShoppingList {
         write("update")
@@ -96,11 +100,26 @@ private class FakeBackend : ShoppingBackend {
         write("update $itemId")
         var updated: ShoppingItem? = null
         bump(listId) { l ->
-            l.copy(items = l.items.map {
-                if (it.id != itemId) it
-                else it.copy(text = text ?: it.text, checked = checked ?: it.checked, checkedBy = if (checked == true) "me" else it.checkedBy)
-                    .also { u -> updated = u }
-            })
+            l.copy(
+                items = l.items.map {
+                    if (it.id != itemId) {
+                        it
+                    } else {
+                        it.copy(
+                            text = text ?: it.text,
+                            checked = checked ?: it.checked,
+                            checkedBy = if (checked ==
+                                true
+                            ) {
+                                "me"
+                            } else {
+                                it.checkedBy
+                            },
+                        )
+                            .also { u -> updated = u }
+                    }
+                },
+            )
         }
         return updated ?: throw PicfortServerException.Gone("gone")
     }
@@ -122,9 +141,15 @@ private class MemoryCopy : OfflineCopy {
 
 class ShoppingRepositoryTest {
     private val backend = FakeBackend().apply {
-        lists[1] = ShoppingList(1, "Biedronka", createdBy = "me", items = listOf(
-            ShoppingItem(10, "milk", position = 1.0), ShoppingItem(11, "bread", position = 2.0),
-        ))
+        lists[1] = ShoppingList(
+            1,
+            "Biedronka",
+            createdBy = "me",
+            items = listOf(
+                ShoppingItem(10, "milk", position = 1.0),
+                ShoppingItem(11, "bread", position = 2.0),
+            ),
+        )
     }
     private val copy = MemoryCopy()
     private val repo = ShoppingRepository(backend, copy, CoroutineScope(SupervisorJob() + Dispatchers.Default))
@@ -206,7 +231,18 @@ class ShoppingRepositoryTest {
         repo.refresh()
         // Someone else checks bread; the poll of the open list brings it.
         backend.lists[1] = backend.lists.getValue(1).let { l ->
-            l.copy(items = l.items.map { if (it.text == "bread") it.copy(checked = true) else it }, revision = l.revision + 1)
+            l.copy(
+                items = l.items.map {
+                    if (it.text ==
+                        "bread"
+                    ) {
+                        it.copy(checked = true)
+                    } else {
+                        it
+                    }
+                },
+                revision = l.revision + 1,
+            )
         }
         assertNull(repo.refreshList(1))
         // And we rename milk here.
@@ -223,7 +259,8 @@ class ShoppingRepositoryTest {
     fun `an item deleted by someone else disappears quietly`() = runBlocking {
         repo.refresh()
         val milk = list().items.first()
-        backend.lists[1] = backend.lists.getValue(1).let { it.copy(items = it.items.drop(1), revision = it.revision + 1) }
+        backend.lists[1] =
+            backend.lists.getValue(1).let { it.copy(items = it.items.drop(1), revision = it.revision + 1) }
         repo.toggle(1, milk, "me").join()
         assertEquals(listOf("bread"), list().items.map { it.text })
     }

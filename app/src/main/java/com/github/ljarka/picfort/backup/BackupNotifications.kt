@@ -22,7 +22,7 @@ private fun ensureChannel(context: Context) {
         manager.createNotificationChannel(
             NotificationChannel(CHANNEL_ID, "Backup", NotificationManager.IMPORTANCE_LOW).apply {
                 description = "Progress while photos are uploaded to Immich"
-            }
+            },
         )
     }
 }
@@ -31,7 +31,9 @@ private fun ensureChannel(context: Context) {
 fun showQuotaExceededNotification(context: Context) {
     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
         context.checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED
-    ) return // Settings still shows the reason
+    ) {
+        return // Settings still shows the reason
+    }
     ensureChannel(context)
     val open = context.packageManager.getLaunchIntentForPackage(context.packageName)?.let {
         PendingIntent.getActivity(context, 0, it, PendingIntent.FLAG_IMMUTABLE)

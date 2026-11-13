@@ -1,12 +1,16 @@
 package com.github.ljarka.picfort.ui.timeline
 
 import android.content.Context
-import com.github.ljarka.picfort.core.network.AppScope
 import com.github.ljarka.picfort.UrlProvider
 import com.github.ljarka.picfort.core.database.BackupDao
+import com.github.ljarka.picfort.core.network.AppScope
 import com.github.ljarka.picfort.local.ImageData
 import com.github.ljarka.picfort.local.LocalImagesProvider
 import dagger.hilt.android.qualifiers.ApplicationContext
+import java.io.IOException
+import java.time.ZoneId
+import javax.inject.Inject
+import javax.inject.Singleton
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -17,10 +21,6 @@ import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.stateIn
 import retrofit2.HttpException
-import java.io.IOException
-import java.time.ZoneId
-import javax.inject.Inject
-import javax.inject.Singleton
 
 /** The phone's media and which of it is already backed up (local id → Immich id). */
 private class LocalSnapshot(val media: List<ImageData>, val backups: Map<Long, String>)

@@ -1,18 +1,16 @@
 package com.github.ljarka.picfort.core.network
 
-import okhttp3.HttpUrl
-import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
 import javax.inject.Inject
 import javax.inject.Singleton
+import okhttp3.HttpUrl
+import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
 
 private const val FRAME_URL = "FRAME_URL"
 private const val PICFORT_API_KEY = "PICFORT_API_KEY"
 private const val PICFORT_SERVER_PROMPTED = "PICFORT_SERVER_PROMPTED"
 
 @Singleton
-class FrameSettingsStore @Inject constructor(
-    private val securePreferences: SecurePreferencesStore,
-) {
+class FrameSettingsStore @Inject constructor(private val securePreferences: SecurePreferencesStore) {
     var frameUrl: String
         get() = securePreferences.getString(FRAME_URL)
         set(value) = securePreferences.putString(FRAME_URL, value)

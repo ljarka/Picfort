@@ -97,6 +97,7 @@ internal fun TimelineList(
         ) { row ->
             when (row) {
                 is MonthHeaderRow -> ImagesBucketTitle(row.title)
+
                 is TilesRow -> Row(horizontalArrangement = Arrangement.spacedBy(GRID_SPACING)) {
                     val height = with(density) { row.height.toDp() }
                     row.tiles.forEach { tile ->
@@ -112,10 +113,12 @@ internal fun TimelineList(
                             onClick = {
                                 when {
                                     !isInEditMode -> onImageClick(tile.asset.id, tile.asset.type, tile.index)
+
                                     isSelected -> {
                                         viewModel.deselectAsset(tile.asset.id)
                                         if (viewModel.selectedAssets.value.isEmpty()) onCollapseMenuRequest()
                                     }
+
                                     else -> {
                                         viewModel.selectAsset(tile.asset, row.month)
                                         onExpandMenuRequest()
@@ -193,7 +196,7 @@ private fun GalleryTile(
                             Modifier.paint(placeholder, contentScale = ContentScale.Crop)
                         } else {
                             Modifier
-                        }
+                        },
                     ),
                 model = tile.url,
                 onSuccess = { loaded = true },
@@ -206,7 +209,7 @@ private fun GalleryTile(
                     .padding(vertical = 8.dp, horizontal = 12.dp)
                     .alpha(0.5f),
                 painter = painterResource(
-                    if (asset.type == AssetType.LOCAL) R.drawable.ic_cloud_off else R.drawable.ic_cloud
+                    if (asset.type == AssetType.LOCAL) R.drawable.ic_cloud_off else R.drawable.ic_cloud,
                 ),
                 tint = Color.White,
                 contentDescription = null,
@@ -245,14 +248,15 @@ private fun CheckBox(checked: Boolean) {
             Icon(
                 modifier = Modifier
                     .border(width = 1.dp, Color.White, shape = CircleShape),
-                imageVector = Icons.Default.CheckCircle, contentDescription = null,
+                imageVector = Icons.Default.CheckCircle,
+                contentDescription = null,
                 tint = Color.White,
             )
         } else {
             Box(
                 modifier = Modifier
                     .size(24.dp)
-                    .border(width = 1.dp, Color.White, shape = CircleShape)
+                    .border(width = 1.dp, Color.White, shape = CircleShape),
             )
         }
     }

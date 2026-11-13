@@ -5,8 +5,8 @@ import androidx.compose.animation.AnimatedVisibilityScope
 import androidx.compose.animation.ExperimentalSharedTransitionApi
 import androidx.compose.animation.SharedTransitionScope
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.gestures.detectTransformGestures
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -52,10 +52,10 @@ import coil3.compose.AsyncImage
 import coil3.compose.SubcomposeAsyncImage
 import com.github.ljarka.picfort.core.database.AssetType
 import com.github.ljarka.picfort.ui.timeline.AssetIndex
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.launch
 import kotlin.math.abs
 import kotlin.math.max
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalSharedTransitionApi::class, ExperimentalMaterial3Api::class)
 @Composable
@@ -92,7 +92,7 @@ fun ImageDetailsScreen(
     val currentPage = pagerState.currentPage
     val currentAsset by remember(currentPage) { viewModel.getAssetIndex(currentPage) }
         .collectAsState(
-            initial = AssetIndex(imageIndex, assetId, assetType).takeIf { currentPage == imageIndex }
+            initial = AssetIndex(imageIndex, assetId, assetType).takeIf { currentPage == imageIndex },
         )
     val isSending by viewModel.isSendingToFrame.collectAsState()
     val snackbarHostState = remember { SnackbarHostState() }
@@ -102,6 +102,7 @@ fun ImageDetailsScreen(
         viewModel.frameEvents.collect { event ->
             when (event) {
                 FrameEvent.OpenSettings -> showFrameSettings = true
+
                 is FrameEvent.Message -> {
                     snackbarHostState.currentSnackbarData?.dismiss()
                     snackbarHostState.showSnackbar(event.text)
@@ -170,7 +171,7 @@ fun ImageDetailsScreen(
                             )
                         }
                     }
-                }
+                },
             )
         },
     ) { innerPadding ->
@@ -194,10 +195,10 @@ fun ImageDetailsScreen(
                             )
                             scale = max(
                                 ZoomStatus.Zoom1().scale,
-                                minOf(scale * zoom, ZoomStatus.Zoom4().scale)
+                                minOf(scale * zoom, ZoomStatus.Zoom4().scale),
                             )
                         }
-                    }
+                    },
             ) { page ->
 
                 val isCurrentPage = page == pagerState.currentPage
@@ -262,7 +263,7 @@ private fun SharedTransitionScope.Page(
             if ((abs(offset.x) > 0 || abs(offset.y) > 0) && scale == ZoomStatus.Zoom1().scale && isCurrentPage) {
                 dismissRequest()
             }
-        }
+        },
     ) {
         Box(contentAlignment = Alignment.Center) {
             SubcomposeAsyncImage(
@@ -270,10 +271,14 @@ private fun SharedTransitionScope.Page(
                     .fillMaxWidth()
                     .onPlaced { onImageSizeChanged(it.size) }
                     .then(
-                        if (isCurrentPage) Modifier.sharedElement(
-                            sharedContentState = rememberSharedContentState(key = assetIndex.assetId),
-                            animatedVisibilityScope = animatedVisibilityScope,
-                        ) else Modifier
+                        if (isCurrentPage) {
+                            Modifier.sharedElement(
+                                sharedContentState = rememberSharedContentState(key = assetIndex.assetId),
+                                animatedVisibilityScope = animatedVisibilityScope,
+                            )
+                        } else {
+                            Modifier
+                        },
                     )
                     .clip(RoundedCornerShape(8.dp)),
                 model = viewModel.getPreview(assetIndex),
@@ -284,7 +289,7 @@ private fun SharedTransitionScope.Page(
                         model = viewModel.getThumbnail(assetIndex),
                         contentDescription = null,
                     )
-                }
+                },
             )
             if (assetIndex.isVideo) {
                 Icon(

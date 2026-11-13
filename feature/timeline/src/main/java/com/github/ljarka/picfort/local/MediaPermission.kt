@@ -18,10 +18,12 @@ val mediaPermissions: Array<String> = when {
         Manifest.permission.READ_MEDIA_VIDEO,
         Manifest.permission.READ_MEDIA_VISUAL_USER_SELECTED,
     )
+
     Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU -> arrayOf(
         Manifest.permission.READ_MEDIA_IMAGES,
         Manifest.permission.READ_MEDIA_VIDEO,
     )
+
     else -> arrayOf(Manifest.permission.READ_EXTERNAL_STORAGE)
 }
 
@@ -35,7 +37,7 @@ fun hasMediaAccess(context: Context): Boolean = mediaPermissions.any {
 fun RequestMediaPermission(onGranted: () -> Unit) {
     val context = LocalContext.current
     val launcher = rememberLauncherForActivityResult(
-        ActivityResultContracts.RequestMultiplePermissions()
+        ActivityResultContracts.RequestMultiplePermissions(),
     ) { result -> if (result.values.any { it }) onGranted() }
 
     LaunchedEffect(Unit) {

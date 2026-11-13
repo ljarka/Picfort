@@ -1,11 +1,11 @@
 package com.github.ljarka.picfort.core.network
 
+import javax.inject.Inject
+import javax.inject.Provider
 import okhttp3.HttpUrl
 import okhttp3.Interceptor
 import okhttp3.Request
 import okhttp3.Response
-import javax.inject.Inject
-import javax.inject.Provider
 
 /** Header carrying the Picfort server's own API key (PICFORT_API_KEY on the server). */
 const val PICFORT_KEY_HEADER = "X-Picfort-Key"
@@ -26,9 +26,8 @@ fun HttpUrl.isUnder(base: HttpUrl): Boolean =
  * Family Wall (including wall photos loaded by Coil). Never to any other host. A key set on the
  * request already (testing an unsaved address) wins.
  */
-class PicfortKeyInterceptor @Inject constructor(
-    private val frameSettings: Provider<FrameSettingsStore>,
-) : Interceptor {
+class PicfortKeyInterceptor @Inject constructor(private val frameSettings: Provider<FrameSettingsStore>) :
+    Interceptor {
 
     override fun intercept(chain: Interceptor.Chain): Response {
         val request = chain.request()

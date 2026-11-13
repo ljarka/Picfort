@@ -24,6 +24,9 @@ import com.github.ljarka.picfort.core.ui.theme.AccentTheme
 import com.github.ljarka.picfort.core.ui.theme.PicfortTheme
 import com.github.ljarka.picfort.ui.events.EventsListContent
 import com.github.ljarka.picfort.ui.events.EventsListUi
+import com.github.ljarka.picfort.ui.init.SetupContent
+import com.github.ljarka.picfort.ui.init.SetupStep
+import com.github.ljarka.picfort.ui.init.SetupUi
 import com.github.ljarka.picfort.ui.settings.BackupSettingsUi
 import com.github.ljarka.picfort.ui.settings.SettingsContent
 import com.github.ljarka.picfort.ui.shell.ComingSoonContent
@@ -35,15 +38,12 @@ import com.github.ljarka.picfort.ui.shopping.ShoppingListsUi
 import com.github.ljarka.picfort.ui.wall.FamilyWallContent
 import com.github.ljarka.picfort.ui.wall.FamilyWallUiState
 import com.github.ljarka.picfort.ui.wall.WallPost
-import org.junit.Rule
-import org.junit.Test
-import com.github.ljarka.picfort.ui.init.SetupContent
-import com.github.ljarka.picfort.ui.init.SetupStep
-import com.github.ljarka.picfort.ui.init.SetupUi
 import java.time.Instant
 import java.time.LocalDate
 import java.time.LocalTime
 import java.util.Locale
+import org.junit.Rule
+import org.junit.Test
 
 /**
  * Screens rendered with sample data. Record after intended UI changes with
@@ -61,7 +61,7 @@ class ScreenshotTest {
         paparazzi.unsafeUpdateConfig(
             DeviceConfig.PIXEL_6.copy(
                 nightMode = if (dark) NightMode.NIGHT else NightMode.NOTNIGHT,
-            )
+            ),
         )
         try {
             paparazzi.snapshot {
@@ -217,7 +217,9 @@ class ScreenshotTest {
     )
 
     private val setupFilled = SetupUi(
-        immichAddress = "192.168.0.10:2283", email = "ola@example.com", password = "secret",
+        immichAddress = "192.168.0.10:2283",
+        email = "ola@example.com",
+        password = "secret",
     )
 
     @Test
@@ -240,7 +242,9 @@ class ScreenshotTest {
     fun setup_picfort_failed() = snap {
         SetupContent(
             setupFilled.copy(
-                immichAddress = "photos.example.com", password = "", signedIn = true,
+                immichAddress = "photos.example.com",
+                password = "",
+                signedIn = true,
                 picfortAddress = "picfort.example.com",
                 picfortError = "Can't reach https://picfort.example.com",
             ),
@@ -282,7 +286,7 @@ class ScreenshotTest {
                     today = sampleToday,
                     segment = EventsSegment.UPCOMING,
                     upcomingEvents = sampleUpcomingEvents,
-                )
+                ),
             )
         }
     }
@@ -295,7 +299,7 @@ class ScreenshotTest {
                     today = sampleToday,
                     segment = EventsSegment.UPCOMING,
                     upcomingEvents = sampleUpcomingEvents,
-                )
+                ),
             )
         }
     }

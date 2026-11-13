@@ -5,6 +5,9 @@ import com.github.ljarka.picfort.core.network.FrameSettingsStore
 import com.github.ljarka.picfort.core.network.isPicfortKeyRejected
 import com.github.ljarka.picfort.core.network.normalizeFrameUrl
 import com.github.ljarka.picfort.core.network.readParsedBody
+import java.io.IOException
+import javax.inject.Inject
+import javax.inject.Singleton
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.SerialName
@@ -17,11 +20,8 @@ import kotlinx.serialization.json.JsonPrimitive
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
 import okhttp3.Request
-import okhttp3.Response
 import okhttp3.RequestBody.Companion.toRequestBody
-import java.io.IOException
-import javax.inject.Inject
-import javax.inject.Singleton
+import okhttp3.Response
 
 @Serializable
 data class SlideshowState(
@@ -91,7 +91,8 @@ class FrameDashboardApi @Inject constructor(
         }
     }
 
-    private fun base() = normalizeFrameUrl(settings.frameUrl) ?: throw FrameException("Set the Picfort server address first")
+    private fun base() =
+        normalizeFrameUrl(settings.frameUrl) ?: throw FrameException("Set the Picfort server address first")
 
     private suspend fun call(method: String, path: String, jsonBody: String? = null): String =
         withContext(Dispatchers.IO) {
@@ -99,8 +100,11 @@ class FrameDashboardApi @Inject constructor(
             val body = jsonBody?.toRequestBody("application/json".toMediaType())
             execute(Request.Builder().url(url).method(method, body).build()) { response ->
                 val payload = response.readParsedBody<ErrorBody>(json)
-                if (response.code in 200..299) payload.text
-                else throw FrameException(payload.value?.message ?: "Frame returned HTTP ${response.code}")
+                if (response.code in 200..299) {
+                    payload.text
+                } else {
+                    throw FrameException(payload.value?.message ?: "Frame returned HTTP ${response.code}")
+                }
             }
         }
 

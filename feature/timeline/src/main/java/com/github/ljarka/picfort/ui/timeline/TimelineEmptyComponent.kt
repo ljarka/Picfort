@@ -29,11 +29,7 @@ data class TimelineAccount(val email: String, val serverUrl: String)
  * still works around it.
  */
 @Composable
-fun TimelineEmptyComponent(
-    account: TimelineAccount,
-    onSetUpBackupClick: () -> Unit,
-    modifier: Modifier = Modifier,
-) {
+fun TimelineEmptyComponent(account: TimelineAccount, onSetUpBackupClick: () -> Unit, modifier: Modifier = Modifier) {
     Column(
         modifier = modifier
             .fillMaxSize()

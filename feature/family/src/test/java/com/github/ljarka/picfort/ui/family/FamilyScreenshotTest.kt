@@ -20,9 +20,9 @@ import com.android.resources.NightMode
 import com.github.ljarka.picfort.core.model.BirthDate
 import com.github.ljarka.picfort.core.ui.avatar.avatarColor
 import com.github.ljarka.picfort.core.ui.theme.PicfortTheme
+import java.util.Locale
 import org.junit.Rule
 import org.junit.Test
-import java.util.Locale
 
 class FamilyScreenshotTest {
 
@@ -35,7 +35,7 @@ class FamilyScreenshotTest {
         paparazzi.unsafeUpdateConfig(
             DeviceConfig.PIXEL_6.copy(
                 nightMode = if (dark) NightMode.NIGHT else NightMode.NOTNIGHT,
-            )
+            ),
         )
         try {
             paparazzi.snapshot {
@@ -151,7 +151,7 @@ class FamilyScreenshotTest {
                         hasCustomPhoto = true,
                         showInFamily = true,
                         birthDate = BirthDate(month = 9, day = 3, year = 2018),
-                    )
+                    ),
                 )
             },
         )
@@ -167,7 +167,7 @@ class FamilyScreenshotTest {
                         user = familyUsers.first { !it.isImmichUser }, // Staś: no Immich account
                         previewAvatarUrl = "avatar-stas",
                         hasCustomPhoto = true,
-                    )
+                    ),
                 )
             },
         )
@@ -182,7 +182,7 @@ class FamilyScreenshotTest {
                     AddPersonUi(
                         name = "Dziadek Jan",
                         birthDate = BirthDate(month = 6, day = 20, year = 1955),
-                    )
+                    ),
                 )
             },
         )

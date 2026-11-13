@@ -28,7 +28,7 @@ suspend fun pollEvery(
                 elapsedMillis = elapsedMillis,
                 minDelayMillis = minDelayMillis,
                 includeRunTimeInInterval = includeRunTimeInInterval,
-            )
+            ),
         )
     }
 }

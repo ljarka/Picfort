@@ -28,11 +28,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 
 /** Pick an album, or name a new one. */
 @Composable
-fun AddToAlbumDialog(
-    onDismiss: () -> Unit,
-    onAlbumChosen: (AlbumDto) -> Unit,
-    onNewAlbum: (name: String) -> Unit,
-) {
+fun AddToAlbumDialog(onDismiss: () -> Unit, onAlbumChosen: (AlbumDto) -> Unit, onNewAlbum: (name: String) -> Unit) {
     val viewModel: AlbumsViewModel = hiltViewModel()
     val albums by viewModel.albums.collectAsStateWithLifecycle()
     var newName by remember { mutableStateOf("") }
@@ -52,7 +48,9 @@ fun AddToAlbumDialog(
                 Box(Modifier.heightIn(min = 80.dp, max = 320.dp).padding(top = 8.dp)) {
                     when (val s = albums) {
                         LoadState.Loading -> CircularProgressIndicator(Modifier.align(Alignment.Center))
+
                         is LoadState.Error -> Text(s.message, color = MaterialTheme.colorScheme.error)
+
                         is LoadState.Loaded -> LazyColumn {
                             items(s.value, key = { it.id }) { album ->
                                 ListItem(

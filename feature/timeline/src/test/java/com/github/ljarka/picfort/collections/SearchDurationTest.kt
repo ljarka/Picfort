@@ -26,10 +26,10 @@ class SearchDurationTest {
     fun `search response parses with either format`() {
         val json = Json { ignoreUnknownKeys = true }
         val old = json.decodeFromString<SearchResponse>(
-            """{"assets":{"items":[{"id":"a","type":"VIDEO","duration":"0:00:03.000000"}],"nextPage":"2","total":1}}"""
+            """{"assets":{"items":[{"id":"a","type":"VIDEO","duration":"0:00:03.000000"}],"nextPage":"2","total":1}}""",
         )
         val new = json.decodeFromString<SearchResponse>(
-            """{"assets":{"items":[{"id":"a","type":"VIDEO","duration":3000}],"nextPage":null,"nextCursor":null}}"""
+            """{"assets":{"items":[{"id":"a","type":"VIDEO","duration":3000}],"nextPage":null,"nextCursor":null}}""",
         )
         assertEquals("2", old.assets.nextPage)
         assertEquals(3000L, parseSearchDuration(old.assets.items.single().duration))

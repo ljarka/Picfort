@@ -8,10 +8,10 @@ import android.os.Build
 import android.provider.MediaStore
 import com.github.ljarka.picfort.core.model.localImageUri
 import com.github.ljarka.picfort.core.model.localVideoUri
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.withContext
 import java.time.YearMonth
 import java.time.ZoneId
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 
 fun localImageUri(id: Long): Uri = com.github.ljarka.picfort.core.model.localImageUri(id)
 fun localVideoUri(id: Long): Uri = com.github.ljarka.picfort.core.model.localVideoUri(id)
@@ -40,8 +40,6 @@ fun monthRangeMillis(month: YearMonth, zone: ZoneId): LongRange {
 
 private val FILES_URI: Uri get() = MediaStore.Files.getContentUri("external")
 
-
-
 private val ALL_SELECTION =
     "${MediaStore.Files.FileColumns.MEDIA_TYPE} IN (" +
         "${MediaStore.Files.FileColumns.MEDIA_TYPE_IMAGE}, ${MediaStore.Files.FileColumns.MEDIA_TYPE_VIDEO})" +
@@ -55,7 +53,11 @@ class LocalImagesProvider {
         if (!hasMediaAccess(context)) return emptyList()
         return withContext(Dispatchers.IO) {
             context.contentResolver.query(
-                FILES_URI, PROJECTION, ALL_SELECTION, null, "${MediaStore.MediaColumns.DATE_TAKEN} DESC",
+                FILES_URI,
+                PROJECTION,
+                ALL_SELECTION,
+                null,
+                "${MediaStore.MediaColumns.DATE_TAKEN} DESC",
             )?.use(::readAll).orEmpty()
         }
     }
@@ -85,7 +87,13 @@ class LocalImagesProvider {
                 width = if (sideways) height else width,
                 height = if (sideways) width else height,
                 isVideo = isVideo,
-                durationMs = if (durationColumn != -1 && !cursor.isNull(durationColumn)) cursor.getLong(durationColumn) else null,
+                durationMs = if (durationColumn != -1 &&
+                    !cursor.isNull(durationColumn)
+                ) {
+                    cursor.getLong(durationColumn)
+                } else {
+                    null
+                },
             )
         }
         return items

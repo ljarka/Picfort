@@ -17,7 +17,7 @@ class PollingTest {
                 elapsedMillis = 120L,
                 minDelayMillis = 5L,
                 includeRunTimeInInterval = false,
-            )
+            ),
         )
     }
 
@@ -30,7 +30,7 @@ class PollingTest {
                 elapsedMillis = 15L,
                 minDelayMillis = 5L,
                 includeRunTimeInInterval = true,
-            )
+            ),
         )
         assertEquals(
             5L,
@@ -39,7 +39,7 @@ class PollingTest {
                 elapsedMillis = 80L,
                 minDelayMillis = 5L,
                 includeRunTimeInInterval = true,
-            )
+            ),
         )
     }
 

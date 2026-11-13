@@ -8,11 +8,11 @@ import com.github.ljarka.picfort.core.model.FamilyEvent
 import com.github.ljarka.picfort.core.model.FamilyMember
 import com.github.ljarka.picfort.core.ui.avatar.avatarColor
 import com.github.ljarka.picfort.core.ui.theme.PicfortTheme
-import org.junit.Rule
-import org.junit.Test
 import java.time.Instant
 import java.time.LocalDate
 import java.time.LocalTime
+import org.junit.Rule
+import org.junit.Test
 
 class WallScreenshotTest {
 
@@ -136,7 +136,13 @@ class WallScreenshotTest {
     fun wall_panel_trip_ongoing() = snap {
         FamilyWallContent(
             wallWithPanel(
-                panelEvent(1, "Mazury trip", start = panelDay.minusDays(1), end = panelDay.plusDays(3), location = "Giżycko"),
+                panelEvent(
+                    1,
+                    "Mazury trip",
+                    start = panelDay.minusDays(1),
+                    end = panelDay.plusDays(3),
+                    location = "Giżycko",
+                ),
             ),
             now = NOW,
         )
@@ -146,7 +152,13 @@ class WallScreenshotTest {
     fun wall_panel_several_events() = snap {
         FamilyWallContent(
             wallWithPanel(
-                panelEvent(1, "Mazury trip", start = panelDay.minusDays(1), end = panelDay.plusDays(3), location = "Giżycko"),
+                panelEvent(
+                    1,
+                    "Mazury trip",
+                    start = panelDay.minusDays(1),
+                    end = panelDay.plusDays(3),
+                    location = "Giżycko",
+                ),
                 panelEvent(2, "Ola's football match", time = LocalTime.of(17, 30), location = "Orlik"),
                 panelEvent(3, "Grandma's birthday"),
             ),
@@ -184,7 +196,13 @@ class WallScreenshotTest {
     fun wall_panel_dark() = snap(dark = true) {
         FamilyWallContent(
             wallWithPanel(
-                panelEvent(1, "Mazury trip", start = panelDay.minusDays(1), end = panelDay.plusDays(3), location = "Giżycko"),
+                panelEvent(
+                    1,
+                    "Mazury trip",
+                    start = panelDay.minusDays(1),
+                    end = panelDay.plusDays(3),
+                    location = "Giżycko",
+                ),
                 panelEvent(2, "Ola's football match", time = LocalTime.of(17, 30)),
             ),
             now = NOW,

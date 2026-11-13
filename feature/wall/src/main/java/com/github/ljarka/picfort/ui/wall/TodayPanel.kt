@@ -161,7 +161,13 @@ fun TodayPanel(
             Column(Modifier.weight(1f).clearAndSetSemantics {}) {
                 Text(
                     dateText,
-                    style = if (event == null) MaterialTheme.typography.titleMedium else MaterialTheme.typography.bodyMedium,
+                    style = if (event ==
+                        null
+                    ) {
+                        MaterialTheme.typography.titleMedium
+                    } else {
+                        MaterialTheme.typography.bodyMedium
+                    },
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                 )

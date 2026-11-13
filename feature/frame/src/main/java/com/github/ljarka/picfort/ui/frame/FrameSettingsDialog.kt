@@ -29,18 +29,20 @@ import com.github.ljarka.picfort.core.network.PicfortServerClient
 import com.github.ljarka.picfort.core.network.PicfortServerException
 import com.github.ljarka.picfort.core.network.normalizeFrameUrl
 import dagger.hilt.android.lifecycle.HiltViewModel
+import javax.inject.Inject
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
-import javax.inject.Inject
 
 /** Result of the Test button for the Picfort server (frame + Family Wall, T-002). */
 sealed interface ConnectionTest {
     data object Idle : ConnectionTest
     data object Running : ConnectionTest
+
     /** Frame and Family Wall both work. */
     data class Ok(val message: String) : ConnectionTest
+
     /** The server answers, but the Family Wall doesn't work with this login. */
     data class Partial(val message: String) : ConnectionTest
     data class Failed(val message: String) : ConnectionTest
@@ -49,12 +51,20 @@ sealed interface ConnectionTest {
 /** What to say once `/status` answered, given how `/wall` went (null = it worked). */
 fun wallTestResult(error: Exception?): ConnectionTest = when (error) {
     null -> ConnectionTest.Ok("Connected: frame and Family Wall")
+
     is PicfortServerException.NotAccepted -> ConnectionTest.Partial(
         "Connected, but the server didn't accept your Immich login. " +
-            "Check that it uses the same Immich server (IMMICH_URL)."
+            "Check that it uses the same Immich server (IMMICH_URL).",
     )
-    is PicfortServerException.NoWall -> ConnectionTest.Partial("Connected. This server has no Family Wall yet, update ImageFrameServer.")
-    is PicfortServerException.ImmichUnreachable -> ConnectionTest.Partial("Connected, but the server can't reach Immich.")
+
+    is PicfortServerException.NoWall -> ConnectionTest.Partial(
+        "Connected. This server has no Family Wall yet, update ImageFrameServer.",
+    )
+
+    is PicfortServerException.ImmichUnreachable -> ConnectionTest.Partial(
+        "Connected, but the server can't reach Immich.",
+    )
+
     else -> ConnectionTest.Partial("Connected, but the Family Wall didn't answer: ${error.message}")
 }
 
@@ -108,7 +118,9 @@ class PicfortServerCheck @Inject constructor(
             } catch (e: Exception) {
                 wallTestResult(e)
             }
+
             is FrameResult.Error -> ConnectionTest.Failed(status.message)
+
             else -> ConnectionTest.Failed("Unexpected response")
         }
 
@@ -175,10 +187,7 @@ fun PicfortServerForm(
 }
 
 @Composable
-fun FrameSettingsDialog(
-    onDismiss: () -> Unit,
-    onSaved: () -> Unit = {},
-) {
+fun FrameSettingsDialog(onDismiss: () -> Unit, onSaved: () -> Unit = {}) {
     val viewModel = hiltViewModel<FrameSettingsViewModel>()
     var address by remember { mutableStateOf(viewModel.savedAddress) }
     var apiKey by remember { mutableStateOf(viewModel.savedApiKey) }

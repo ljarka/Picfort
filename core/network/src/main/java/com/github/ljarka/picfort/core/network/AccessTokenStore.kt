@@ -8,9 +8,7 @@ private const val USER_ID = "USER_ID"
 private const val USER_EMAIL = "USER_EMAIL"
 
 @Singleton
-class AccessTokenStore @Inject constructor(
-    private val securePreferences: SecurePreferencesStore,
-) {
+class AccessTokenStore @Inject constructor(private val securePreferences: SecurePreferencesStore) {
     var accessToken: String
         get() = securePreferences.getString(ACCESS_TOKEN)
         set(value) = securePreferences.putString(ACCESS_TOKEN, value)

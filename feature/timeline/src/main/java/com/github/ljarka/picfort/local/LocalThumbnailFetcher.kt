@@ -27,18 +27,14 @@ private const val MAX_THUMBNAIL_PX = 512
 val hasLocalThumbnails: Boolean get() = Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q
 
 /** Model for a phone photo's or video's system thumbnail, loaded by [LocalThumbnailFetcher]. */
-fun localThumbnailUrl(id: Long, isVideo: Boolean): String =
-    "$SCHEME://${if (isVideo) "video" else "image"}/$id"
+fun localThumbnailUrl(id: Long, isVideo: Boolean): String = "$SCHEME://${if (isVideo) "video" else "image"}/$id"
 
 /**
  * Loads phone media through MediaStore's thumbnail cache instead of decoding the
  * original (a 12 MP photo, or a frame of a video) for every timeline tile.
  */
 @RequiresApi(Build.VERSION_CODES.Q)
-class LocalThumbnailFetcher(
-    private val uri: android.net.Uri,
-    private val options: Options,
-) : Fetcher {
+class LocalThumbnailFetcher(private val uri: android.net.Uri, private val options: Options) : Fetcher {
 
     override suspend fun fetch(): FetchResult {
         // Ask for the tile's size, not the maximum: every bitmap stays in Coil's memory cache.

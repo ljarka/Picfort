@@ -42,11 +42,7 @@ import androidx.compose.ui.unit.dp
 import coil3.compose.AsyncImage
 
 /** A named person from the caller's Immich library (shared by T-032 and T-030). */
-data class ImmichPersonItem(
-    val id: String,
-    val name: String,
-    val thumbnailUrl: String,
-)
+data class ImmichPersonItem(val id: String, val name: String, val thumbnailUrl: String)
 
 data class PeoplePickerUi(
     val people: List<ImmichPersonItem> = emptyList(),
@@ -133,15 +129,20 @@ fun PeoplePickerSheetContent(
             ) {
                 CircularProgressIndicator()
             }
+
             state.error != null -> Text(
                 state.error,
                 color = MaterialTheme.colorScheme.error,
                 style = MaterialTheme.typography.bodyMedium,
                 modifier = Modifier.padding(vertical = 24.dp),
             )
+
             state.filtered.isEmpty() && !state.showsProfilePicture -> Text(
-                if (state.people.isEmpty()) "No named people in your Immich library yet."
-                else "No people matching \"${state.query}\".",
+                if (state.people.isEmpty()) {
+                    "No named people in your Immich library yet."
+                } else {
+                    "No people matching \"${state.query}\"."
+                },
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 style = MaterialTheme.typography.bodyMedium,
                 textAlign = TextAlign.Center,
@@ -149,6 +150,7 @@ fun PeoplePickerSheetContent(
                     .fillMaxWidth()
                     .padding(vertical = 32.dp),
             )
+
             else -> LazyVerticalGrid(
                 columns = GridCells.Fixed(4),
                 modifier = Modifier

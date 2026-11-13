@@ -10,16 +10,9 @@ import java.time.format.DateTimeFormatter
 import java.time.temporal.ChronoUnit
 import java.util.Locale
 
-data class EventSection(
-    val title: String,
-    val isNow: Boolean = false,
-    val events: List<FamilyEvent>,
-)
+data class EventSection(val title: String, val isNow: Boolean = false, val events: List<FamilyEvent>)
 
-data class DateBadgeText(
-    val top: String,
-    val bottom: String,
-)
+data class DateBadgeText(val top: String, val bottom: String)
 
 /**
  * Converts Material3 DatePicker UTC milliseconds to a [LocalDate] without shifting by time zone.
@@ -27,8 +20,7 @@ data class DateBadgeText(
 fun pickerMillisToLocalDate(utcMillis: Long): LocalDate =
     Instant.ofEpochMilli(utcMillis).atZone(ZoneOffset.UTC).toLocalDate()
 
-fun localDateToPickerMillis(date: LocalDate): Long =
-    date.atStartOfDay(ZoneOffset.UTC).toInstant().toEpochMilli()
+fun localDateToPickerMillis(date: LocalDate): Long = date.atStartOfDay(ZoneOffset.UTC).toInstant().toEpochMilli()
 
 /**
  * Relative label for upcoming events: "Today", "Tomorrow", "in N days" (up to 60 days; null after).
@@ -77,11 +69,7 @@ fun formatEventDateRange(
     }
 }
 
-fun formatEventDateBadge(
-    startDate: LocalDate,
-    endDate: LocalDate?,
-    locale: Locale = Locale.ENGLISH,
-): DateBadgeText {
+fun formatEventDateBadge(startDate: LocalDate, endDate: LocalDate?, locale: Locale = Locale.ENGLISH): DateBadgeText {
     val monthFmt = DateTimeFormatter.ofPattern("MMM", locale)
     val effectiveEnd = endDate?.takeIf { it.isAfter(startDate) }
     if (effectiveEnd == null) {
@@ -145,17 +133,13 @@ fun groupUpcomingEvents(
 /**
  * Groups past events (latest effective end date first) into month sections by start date's month.
  */
-fun groupPastEvents(
-    events: List<FamilyEvent>,
-    today: LocalDate,
-    locale: Locale = Locale.ENGLISH,
-): List<EventSection> {
+fun groupPastEvents(events: List<FamilyEvent>, today: LocalDate, locale: Locale = Locale.ENGLISH): List<EventSection> {
     val past = events
         .filter { it.effectiveEndDate.isBefore(today) }
         .sortedWith(
             compareByDescending<FamilyEvent> { it.effectiveEndDate }
                 .thenByDescending { it.startDate }
-                .thenByDescending { it.id }
+                .thenByDescending { it.id },
         )
     val sections = mutableListOf<EventSection>()
     for (event in past) {

@@ -2,7 +2,6 @@ package com.github.ljarka.picfort.ui.image
 
 import android.content.ActivityNotFoundException
 import android.content.Intent
-import androidx.core.net.toUri
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -16,15 +15,16 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.ListItemDefaults
-import androidx.compose.ui.graphics.Color
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
+import androidx.core.net.toUri
 import com.github.ljarka.picfort.assets.AssetDetails
 import java.util.Locale
 
@@ -58,11 +58,13 @@ fun AssetDetailsList(state: DetailsState) {
                 DetailsState.Loading -> Box(Modifier.fillMaxWidth().padding(32.dp), Alignment.Center) {
                     CircularProgressIndicator()
                 }
+
                 is DetailsState.Error -> Text(
                     state.message,
                     color = MaterialTheme.colorScheme.error,
                     modifier = Modifier.padding(24.dp),
                 )
+
                 is DetailsState.Loaded -> {
                     state.details.rows.forEach { row ->
                         ListItem(

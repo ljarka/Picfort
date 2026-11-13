@@ -4,6 +4,11 @@ import com.github.ljarka.picfort.core.model.EventRepeat
 import com.github.ljarka.picfort.core.model.FamilyEvent
 import com.github.ljarka.picfort.core.network.PicfortServerClient
 import com.github.ljarka.picfort.core.network.PicfortServerException
+import java.time.LocalDate
+import java.time.LocalTime
+import java.time.format.DateTimeFormatter
+import javax.inject.Inject
+import javax.inject.Singleton
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
@@ -17,11 +22,6 @@ import okhttp3.HttpUrl
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.Request
 import okhttp3.RequestBody.Companion.toRequestBody
-import java.time.LocalDate
-import java.time.LocalTime
-import java.time.format.DateTimeFormatter
-import javax.inject.Inject
-import javax.inject.Singleton
 
 const val PAST_PAGE_SIZE = 50
 
@@ -92,6 +92,7 @@ data class EventDraft(
     val memberIds: List<String> = emptyList(),
 ) {
     val normalizedTitle: String get() = title.trim()
+
     /** An end of the repeat only makes sense with a repeat, and not before the first occurrence. */
     val normalizedRepeatUntil: LocalDate? get() = repeatUntil?.takeIf { repeat != null && !it.isBefore(startDate) }
     val normalizedEndDate: LocalDate? get() = endDate?.takeIf { it.isAfter(startDate) }
@@ -140,6 +141,7 @@ fun buildEventPatchJson(original: FamilyEvent, draft: EventDraft): JsonObject = 
 interface EventsBackend {
     suspend fun upcoming(after: LocalDate): List<FamilyEvent>
     suspend fun past(before: LocalDate, limit: Int = PAST_PAGE_SIZE, offset: Int = 0): List<FamilyEvent>
+
     /** The event; for a series, its occurrence that is ongoing or next [on] (the last one once it ended). */
     suspend fun event(id: Long, on: LocalDate): FamilyEvent
     suspend fun create(draft: EventDraft): FamilyEvent
@@ -148,10 +150,7 @@ interface EventsBackend {
 }
 
 @Singleton
-class EventsApi @Inject constructor(
-    private val server: PicfortServerClient,
-    private val json: Json,
-) : EventsBackend {
+class EventsApi @Inject constructor(private val server: PicfortServerClient, private val json: Json) : EventsBackend {
 
     override suspend fun upcoming(after: LocalDate): List<FamilyEvent> {
         val url = eventsUrl().addQueryParameter("after", after.toString()).build()
@@ -204,8 +203,11 @@ class EventsApi @Inject constructor(
     private fun eventUrl(id: Long): HttpUrl = eventsUrl().addPathSegment("$id").build()
 
     private fun notFound(eventId: Long?) = {
-        if (eventId == null) PicfortServerException.Outdated("events")
-        else PicfortServerException.Gone("This event no longer exists")
+        if (eventId == null) {
+            PicfortServerException.Outdated("events")
+        } else {
+            PicfortServerException.Gone("This event no longer exists")
+        }
     }
 
     private suspend fun call(request: Request, eventId: Long? = null): String =

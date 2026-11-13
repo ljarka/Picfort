@@ -8,8 +8,8 @@ import androidx.work.WorkerParameters
 import androidx.work.workDataOf
 import dagger.assisted.Assisted
 import dagger.assisted.AssistedInject
-import retrofit2.HttpException
 import java.io.IOException
+import retrofit2.HttpException
 
 const val KEY_DONE = "done"
 const val KEY_TOTAL = "total"
@@ -33,8 +33,11 @@ class BackupWorker @AssistedInject constructor(
             when (outcome) {
                 is BackupOutcome.Done -> Result.success(workDataOf(KEY_UPLOADED to outcome.uploaded)) to
                     summary(outcome)
+
                 BackupOutcome.NoMediaAccess -> Result.failure() to "Allow access to photos and videos"
+
                 BackupOutcome.NotLoggedIn -> Result.failure() to "Log in to back up"
+
                 is BackupOutcome.QuotaExceeded -> Result.failure() to buildString {
                     if (outcome.uploaded > 0) append("Uploaded ${outcome.uploaded} · ")
                     append("Storage quota on the server is full. Ask your Immich admin to raise it.")
@@ -45,8 +48,11 @@ class BackupWorker @AssistedInject constructor(
             Result.retry() to "Interrupted (no connection), will retry" // WorkManager backs off
         } catch (e: HttpException) {
             Log.w("BackupWorker", "Backup failed", e)
-            if (e.code() >= 500) Result.retry() to "Server error (HTTP ${e.code()}), will retry"
-            else Result.failure() to "Server refused backup (HTTP ${e.code()})"
+            if (e.code() >= 500) {
+                Result.retry() to "Server error (HTTP ${e.code()}), will retry"
+            } else {
+                Result.failure() to "Server refused backup (HTTP ${e.code()})"
+            }
         }
         settings.lastResult = message
         settings.lastRunAt = System.currentTimeMillis()

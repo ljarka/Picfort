@@ -10,10 +10,7 @@ import kotlinx.coroutines.flow.drop
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun MenuClosedObserver(
-    sheetState: SheetState,
-    onMenuClosed: () -> Unit
-) {
+fun MenuClosedObserver(sheetState: SheetState, onMenuClosed: () -> Unit) {
     LaunchedEffect(sheetState) {
         snapshotFlow { sheetState.currentValue }
             .drop(1) // skip initial Hidden state on composition

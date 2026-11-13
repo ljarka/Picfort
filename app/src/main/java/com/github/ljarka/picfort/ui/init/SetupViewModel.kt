@@ -14,6 +14,9 @@ import com.github.ljarka.picfort.ui.frame.PicfortServerCheck
 import com.github.ljarka.picfort.ui.login.LoginRequestBody
 import com.github.ljarka.picfort.ui.login.LoginService
 import dagger.hilt.android.lifecycle.HiltViewModel
+import java.io.IOException
+import javax.inject.Inject
+import javax.inject.Provider
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -25,9 +28,6 @@ import kotlinx.coroutines.withContext
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import retrofit2.HttpException
-import java.io.IOException
-import javax.inject.Inject
-import javax.inject.Provider
 
 /** What the setup screen is doing right now. */
 enum class SetupStep(val label: String) {
@@ -59,7 +59,7 @@ data class SetupUi(
 ) {
     val busy: Boolean get() = step != SetupStep.Idle && step != SetupStep.Done
     val canConnect: Boolean
-        get() = !busy && (signedIn || immichAddress.isNotBlank() && email.isNotBlank() && password.isNotEmpty())
+        get() = !busy && (signedIn || (immichAddress.isNotBlank() && email.isNotBlank() && password.isNotEmpty()))
 }
 
 /** "Will connect to https://photos.example.com": what a typed address becomes, or null. */
@@ -129,7 +129,10 @@ class SetupViewModel @Inject constructor(
             _state.update { it.copy(step = SetupStep.CheckingPicfort, picfortError = null) }
             val apiKey = _state.value.picfortApiKey
             when (val result = picfortServer.check(picfort, apiKey)) {
-                is ConnectionTest.Failed -> _state.update { it.copy(step = SetupStep.Idle, picfortError = result.message) }
+                is ConnectionTest.Failed -> _state.update {
+                    it.copy(step = SetupStep.Idle, picfortError = result.message)
+                }
+
                 else -> { // Ok, or it answers but the wall has a problem: saved, details in Settings.
                     picfortServer.save(picfort, apiKey)
                     picfortServer.markPrompted()
@@ -172,8 +175,11 @@ class SetupViewModel @Inject constructor(
             "Login failed: ${e.message}"
         }
         _state.update {
-            if (error == null) it.copy(signedIn = true, password = "", step = SetupStep.Idle)
-            else it.copy(loginError = error, step = SetupStep.Idle)
+            if (error == null) {
+                it.copy(signedIn = true, password = "", step = SetupStep.Idle)
+            } else {
+                it.copy(loginError = error, step = SetupStep.Idle)
+            }
         }
         return error == null
     }
@@ -182,8 +188,11 @@ class SetupViewModel @Inject constructor(
         val request = Request.Builder().url("$baseUrl/api/server/ping").build()
         okHttpClient.newCall(request).execute().use { response ->
             val body = response.body.string()
-            if (response.isSuccessful && "pong" in body) null
-            else "No Immich server found at $baseUrl (HTTP ${response.code})"
+            if (response.isSuccessful && "pong" in body) {
+                null
+            } else {
+                "No Immich server found at $baseUrl (HTTP ${response.code})"
+            }
         }
     } catch (e: CleartextNotAllowedException) {
         e.message

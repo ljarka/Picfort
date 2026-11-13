@@ -8,9 +8,7 @@ import javax.inject.Inject
 import javax.inject.Singleton
 
 @Singleton
-class BackupSettingsStore @Inject constructor(
-    @ApplicationContext context: Context,
-) {
+class BackupSettingsStore @Inject constructor(@ApplicationContext context: Context) {
     private val prefs = context.getSharedPreferences("backup", Context.MODE_PRIVATE)
 
     var enabled: Boolean

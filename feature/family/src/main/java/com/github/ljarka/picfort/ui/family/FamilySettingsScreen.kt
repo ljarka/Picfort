@@ -123,7 +123,7 @@ data class FamilySettingsUi(
         get() = users.sortedWith(
             compareBy<FamilyUserUi> { it.hidden }
                 .thenBy { if (it.isMe) 0 else 1 }
-                .thenBy(String.CASE_INSENSITIVE_ORDER) { it.name }
+                .thenBy(String.CASE_INSENSITIVE_ORDER) { it.name },
         )
 }
 
@@ -309,20 +309,26 @@ private fun FamilyUserRow(user: FamilyUserUi, onClick: () -> Unit) {
             }
         },
         trailingContent = when {
-            user.hidden -> ({
-                Text(
-                    "Hidden",
-                    style = MaterialTheme.typography.labelMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+            user.hidden -> (
+                {
+                    Text(
+                        "Hidden",
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
                 )
-            })
-            user.isMe -> ({
-                Text(
-                    "You",
-                    style = MaterialTheme.typography.labelMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+
+            user.isMe -> (
+                {
+                    Text(
+                        "You",
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
                 )
-            })
+
             else -> null
         },
     )

@@ -6,9 +6,7 @@ import javax.inject.Singleton
 private const val SERVER_URL = "SERVER_URL"
 
 @Singleton
-class ServerUrlStore @Inject constructor(
-    private val securePreferences: SecurePreferencesStore,
-) {
+class ServerUrlStore @Inject constructor(private val securePreferences: SecurePreferencesStore) {
     var serverUrl: String
         get() = securePreferences.getString(SERVER_URL)
         set(value) = securePreferences.putString(SERVER_URL, value)

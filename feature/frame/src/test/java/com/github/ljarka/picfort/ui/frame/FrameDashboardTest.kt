@@ -1,11 +1,11 @@
 package com.github.ljarka.picfort.ui.frame
 
+import java.time.LocalDateTime
+import java.time.ZoneId
 import kotlinx.serialization.json.Json
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Test
-import java.time.LocalDateTime
-import java.time.ZoneId
 
 class FrameDashboardTest {
 
@@ -27,7 +27,7 @@ class FrameDashboardTest {
         val status = Json { ignoreUnknownKeys = true }.decodeFromString<FrameStatus>(
             """{"status":"ok","busy":true,"currentAsset":"a","lastError":null,"hardware":false,"width":1200,
                "slideshow":{"mode":"memories","album_id":null,"interval_minutes":360,"quiet_start":22,"quiet_end":7,
-               "next_change_at":1752582600.5,"last_error":null,"modes":["off"],"intervals":[15,60]}}"""
+               "next_change_at":1752582600.5,"last_error":null,"modes":["off"],"intervals":[15,60]}}""",
         )
         assertEquals(true, status.busy)
         assertEquals("memories", status.slideshow?.mode)

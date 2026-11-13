@@ -52,7 +52,7 @@ fun SettingsScreen(onBack: () -> Unit, onFrameClick: () -> Unit, onFamilyClick: 
 
     LaunchedEffect(status) { viewModel.reloadCounts() }
     val notificationPermission = rememberLauncherForActivityResult(
-        ActivityResultContracts.RequestPermission()
+        ActivityResultContracts.RequestPermission(),
     ) { /* backup works either way; this only shows its progress */ }
     val onEnable: (Boolean) -> Unit = { enabled ->
         if (enabled && Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
@@ -113,7 +113,12 @@ fun SettingsContent(
             onDismissRequest = { confirmLogout = false },
             title = { Text("Log out?") },
             text = { Text("Backup stops until you log in again.") },
-            confirmButton = { TextButton(onClick = { confirmLogout = false; onLogout() }) { Text("Log out") } },
+            confirmButton = {
+                TextButton(onClick = {
+                    confirmLogout = false
+                    onLogout()
+                }) { Text("Log out") }
+            },
             dismissButton = { TextButton(onClick = { confirmLogout = false }) { Text("Cancel") } },
         )
     }
@@ -134,7 +139,7 @@ fun SettingsContent(
             Modifier
                 .fillMaxSize()
                 .padding(padding)
-                .verticalScroll(rememberScrollState())
+                .verticalScroll(rememberScrollState()),
         ) {
             SectionTitle("Backup")
             SwitchRow("Back up this phone", "Photos and videos are uploaded to Immich", backup.enabled, onEnable)
@@ -157,7 +162,9 @@ fun SettingsContent(
                             LinearProgressIndicator(Modifier.fillMaxWidth().padding(vertical = 8.dp))
                         }
                     }
+
                     is BackupStatus.Waiting -> Text(s.reason, style = MaterialTheme.typography.bodyMedium)
+
                     BackupStatus.Idle -> Text(
                         "${backup.backedUp} of ${backup.onPhone} phone items are in Immich",
                         style = MaterialTheme.typography.bodyMedium,

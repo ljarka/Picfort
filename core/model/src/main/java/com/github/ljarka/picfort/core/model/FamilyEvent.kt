@@ -44,7 +44,13 @@ data class FamilyEvent(
     val memberIds: List<String> = emptyList(),
 ) {
     /** Who it's about: a birthday is about its member even without [memberIds]. */
-    val who: List<String> get() = if (birthdayOf != null && birthdayOf !in memberIds) listOf(birthdayOf) + memberIds else memberIds
+    val who: List<String> get() = if (birthdayOf != null &&
+        birthdayOf !in memberIds
+    ) {
+        listOf(birthdayOf) + memberIds
+    } else {
+        memberIds
+    }
     val effectiveEndDate: LocalDate get() = endDate ?: startDate
     val isMultiDay: Boolean get() = endDate != null && endDate.isAfter(startDate)
     val isBirthday: Boolean get() = birthdayOf != null

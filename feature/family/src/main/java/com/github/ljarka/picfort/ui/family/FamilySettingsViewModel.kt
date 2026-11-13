@@ -6,13 +6,13 @@ import androidx.lifecycle.viewModelScope
 import com.github.ljarka.picfort.core.model.BirthDate
 import com.github.ljarka.picfort.core.model.pollEvery
 import dagger.hilt.android.lifecycle.HiltViewModel
+import javax.inject.Inject
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import javax.inject.Inject
 
 private const val POLL_MILLIS = 60_000L
 
@@ -123,15 +123,27 @@ class FamilySettingsViewModel @Inject constructor(
             try {
                 val people = repository.namedPeople()
                 _state.update { s ->
-                    if (s.peoplePicker == null) s
-                    else s.copy(peoplePicker = s.peoplePicker.copy(people = people, isLoading = false, error = null))
+                    if (s.peoplePicker == null) {
+                        s
+                    } else {
+                        s.copy(peoplePicker = s.peoplePicker.copy(people = people, isLoading = false, error = null))
+                    }
                 }
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
                 _state.update { s ->
-                    if (s.peoplePicker == null) s
-                    else s.copy(peoplePicker = s.peoplePicker.copy(isLoading = false, error = e.message ?: "Couldn't load people"))
+                    if (s.peoplePicker == null) {
+                        s
+                    } else {
+                        s.copy(
+                            peoplePicker = s.peoplePicker.copy(
+                                isLoading = false,
+                                error =
+                                    e.message ?: "Couldn't load people",
+                            ),
+                        )
+                    }
                 }
             }
         }
@@ -197,7 +209,9 @@ class FamilySettingsViewModel @Inject constructor(
 
     fun removeAddPersonPhoto() {
         _state.update { s ->
-            s.copy(addingPerson = s.addingPerson?.copy(pickedPersonId = null, photoBytes = null, previewAvatarUrl = null))
+            s.copy(
+                addingPerson = s.addingPerson?.copy(pickedPersonId = null, photoBytes = null, previewAvatarUrl = null),
+            )
         }
     }
 

@@ -20,9 +20,7 @@ interface SyncStore {
     suspend fun setOwner(owner: String)
 }
 
-class RoomSyncStore @Inject constructor(
-    private val database: ImagesDatabase,
-) : SyncStore {
+class RoomSyncStore @Inject constructor(private val database: ImagesDatabase) : SyncStore {
     private val dao by lazy { database.remoteAssetsDao() }
     private val users by lazy { database.usersDao() }
 
@@ -43,20 +41,29 @@ class RoomSyncStore @Inject constructor(
     private suspend fun write(run: List<SyncChange>) {
         when (run.first()) {
             is SyncChange.UpsertAsset -> dao.upsertAssets(run.map { (it as SyncChange.UpsertAsset).asset })
+
             is SyncChange.DeleteAsset -> run.map { (it as SyncChange.DeleteAsset).id }
                 .chunked(500).forEach { dao.deleteAssets(it) }
+
             is SyncChange.UpsertStack -> dao.upsertStacks(run.map { (it as SyncChange.UpsertStack).stack })
+
             is SyncChange.DeleteStack -> dao.deleteStacks(run.map { (it as SyncChange.DeleteStack).id })
+
             is SyncChange.UpsertPartner -> dao.upsertPartners(
-                run.map { (it as SyncChange.UpsertPartner).let { p -> PartnerEntity(p.sharedById, p.inTimeline) } }
+                run.map { (it as SyncChange.UpsertPartner).let { p -> PartnerEntity(p.sharedById, p.inTimeline) } },
             )
+
             is SyncChange.DeletePartner -> dao.deletePartners(run.map { (it as SyncChange.DeletePartner).sharedById })
+
             is SyncChange.SetUser -> {
                 val userId = (run.last() as SyncChange.SetUser).id
                 dao.setSyncState((dao.syncState() ?: SyncStateEntity(owner = "", userId = "")).copy(userId = userId))
             }
+
             is SyncChange.UpsertUser -> users.upsert(run.map { (it as SyncChange.UpsertUser).user })
+
             is SyncChange.DeleteUser -> users.delete(run.map { (it as SyncChange.DeleteUser).id })
+
             SyncChange.Reset, SyncChange.AckOnly -> Unit
         }
     }

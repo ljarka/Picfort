@@ -14,6 +14,7 @@ interface FamilyMemberProvider {
     val members: Flow<List<FamilyMember>>
     val allMembers: Flow<List<FamilyMember>> get() = members
     val hiddenIds: Flow<Set<String>> get() = emptyFlow()
+
     /** Member id → person id in the logged-in user's Immich people (T-052); Photos filters by it. */
     val myPersonIds: Flow<Map<String, String>> get() = flowOf(emptyMap())
     suspend fun refresh(): Any?

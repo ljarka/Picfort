@@ -1,8 +1,8 @@
 package com.github.ljarka.picfort.core.network
 
+import java.io.IOException
 import okhttp3.Interceptor
 import okhttp3.Response
-import java.io.IOException
 
 class CleartextNotAllowedException(host: String) :
     IOException("Unencrypted http:// is only allowed on your local network ($host). Use https://.")
@@ -25,7 +25,12 @@ class CleartextPolicyInterceptor : Interceptor {
 }
 
 private val LOCAL_SUFFIXES = listOf(
-    ".local", ".lan", ".home", ".home.arpa", ".internal", ".localdomain",
+    ".local",
+    ".lan",
+    ".home",
+    ".home.arpa",
+    ".internal",
+    ".localdomain",
     ".ts.net", // Tailscale MagicDNS: traffic is already encrypted by WireGuard
 )
 

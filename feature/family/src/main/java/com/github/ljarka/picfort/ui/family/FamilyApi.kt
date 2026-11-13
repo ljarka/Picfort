@@ -2,6 +2,8 @@ package com.github.ljarka.picfort.ui.family
 
 import com.github.ljarka.picfort.core.network.PicfortServerClient
 import com.github.ljarka.picfort.core.network.PicfortServerException
+import javax.inject.Inject
+import javax.inject.Singleton
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
@@ -13,8 +15,6 @@ import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.MultipartBody
 import okhttp3.Request
 import okhttp3.RequestBody.Companion.toRequestBody
-import javax.inject.Inject
-import javax.inject.Singleton
 
 @Serializable
 data class FamilyProfileDto(
@@ -33,9 +33,7 @@ data class FamilyProfileDto(
 data class MyPeopleDto(val people: Map<String, String> = emptyMap())
 
 @Serializable
-data class FamilyProfilesResponseDto(
-    val profiles: List<FamilyProfileDto> = emptyList(),
-)
+data class FamilyProfilesResponseDto(val profiles: List<FamilyProfileDto> = emptyList())
 
 data class FamilyProfile(
     val userId: String,
@@ -83,11 +81,7 @@ interface FamilyBackend {
         noPhoto: Boolean? = null,
     ): FamilyProfile
 
-    suspend fun addMember(
-        displayName: String,
-        birthDate: String? = null,
-        today: String? = null,
-    ): FamilyProfile
+    suspend fun addMember(displayName: String, birthDate: String? = null, today: String? = null): FamilyProfile
 
     suspend fun deleteMember(userId: String)
 
@@ -102,10 +96,7 @@ interface FamilyBackend {
 }
 
 @Singleton
-class FamilyApi @Inject constructor(
-    private val server: PicfortServerClient,
-    private val json: Json,
-) : FamilyBackend {
+class FamilyApi @Inject constructor(private val server: PicfortServerClient, private val json: Json) : FamilyBackend {
 
     override val isConfigured: Boolean get() = server.isConfigured
 
@@ -156,11 +147,7 @@ class FamilyApi @Inject constructor(
         return json.decodeFromString<FamilyProfileDto>(raw).toProfile(base)
     }
 
-    override suspend fun addMember(
-        displayName: String,
-        birthDate: String?,
-        today: String?,
-    ): FamilyProfile {
+    override suspend fun addMember(displayName: String, birthDate: String?, today: String?): FamilyProfile {
         val base = server.base()
         val url = base.newBuilder().addPathSegment("family").addPathSegment("members").build()
         val payload = buildJsonObject {
@@ -194,7 +181,9 @@ class FamilyApi @Inject constructor(
     }
 
     override suspend fun deletePhoto(userId: String) {
-        val url = server.base().newBuilder().addPathSegment("family").addPathSegment(userId).addPathSegment("photo").build()
+        val url = server.base().newBuilder().addPathSegment(
+            "family",
+        ).addPathSegment(userId).addPathSegment("photo").build()
         execute(Request.Builder().url(url).delete().build())
     }
 
@@ -206,7 +195,9 @@ class FamilyApi @Inject constructor(
     override suspend fun linkPerson(memberId: String, personId: String) {
         val url = server.base().newBuilder().addPathSegment("family").addPathSegment(memberId)
             .addPathSegment("person").build()
-        val body = buildJsonObject { put("person_id", JsonPrimitive(personId)) }.toString().toRequestBody(JSON_MEDIA_TYPE)
+        val body = buildJsonObject {
+            put("person_id", JsonPrimitive(personId))
+        }.toString().toRequestBody(JSON_MEDIA_TYPE)
         execute(Request.Builder().url(url).put(body).build())
     }
 

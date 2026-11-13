@@ -8,15 +8,15 @@ import dagger.Binds
 import dagger.Module
 import dagger.hilt.InstallIn
 import dagger.hilt.components.SingletonComponent
+import java.time.LocalDate
+import javax.inject.Inject
+import javax.inject.Singleton
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
-import java.time.LocalDate
-import javax.inject.Inject
-import javax.inject.Singleton
 
 @Module
 @InstallIn(SingletonComponent::class)
@@ -33,10 +33,8 @@ abstract class EventsModule {
  * Unlike shopping lists, changes are not optimistic: the list reloads after a successful save or delete.
  */
 @Singleton
-class EventsRepository(
-    private val backend: EventsBackend,
-    private val todayProvider: () -> LocalDate,
-) : FamilyEventsProvider {
+class EventsRepository(private val backend: EventsBackend, private val todayProvider: () -> LocalDate) :
+    FamilyEventsProvider {
     @Inject
     constructor(backend: EventsBackend) : this(backend, LocalDate::now)
 
@@ -181,7 +179,9 @@ class EventsRepository(
         val updated = backend.update(original, draft)
         val date = rollOverMidnight()
         refreshUpcoming(date)
-        if (pastLoadedForDate != null || updated.effectiveEndDate.isBefore(date) || original.effectiveEndDate.isBefore(date)) {
+        if (pastLoadedForDate != null || updated.effectiveEndDate.isBefore(date) ||
+            original.effectiveEndDate.isBefore(date)
+        ) {
             refreshPast(date)
         }
         return updated

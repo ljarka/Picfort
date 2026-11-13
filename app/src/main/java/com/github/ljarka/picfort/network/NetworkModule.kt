@@ -10,12 +10,12 @@ import dagger.Provides
 import dagger.hilt.InstallIn
 import dagger.hilt.android.components.ViewModelComponent
 import dagger.hilt.components.SingletonComponent
+import javax.inject.Singleton
 import kotlinx.serialization.json.Json
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
 import okhttp3.logging.HttpLoggingInterceptor
 import retrofit2.Retrofit
-import javax.inject.Singleton
 import retrofit2.converter.kotlinx.serialization.asConverterFactory
 
 @Module
@@ -47,18 +47,14 @@ class NetworkModule {
                     redactHeader("Authorization")
                     redactHeader("x-api-key")
                     redactHeader(PICFORT_KEY_HEADER)
-                }
+                },
             )
         }
         return builder.build()
     }
 
     @Provides
-    fun retrofit(
-        okHttpClient: OkHttpClient,
-        serverUrlStore: ServerUrlStore,
-        json: Json,
-    ) = Retrofit.Builder()
+    fun retrofit(okHttpClient: OkHttpClient, serverUrlStore: ServerUrlStore, json: Json) = Retrofit.Builder()
         .baseUrl(serverUrlStore.serverUrl)
         .client(okHttpClient)
         .addConverterFactory(json.asConverterFactory("application/json".toMediaType()))

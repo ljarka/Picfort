@@ -11,18 +11,18 @@ import com.github.ljarka.picfort.core.database.AssetType
 import com.github.ljarka.picfort.core.model.FamilyMember
 import com.github.ljarka.picfort.core.model.FamilyMemberProvider
 import dagger.hilt.android.lifecycle.HiltViewModel
+import javax.inject.Inject
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.SharedFlow
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
-import javax.inject.Inject
 
 /**
  * The family carousel on Photos (T-052): one member at a time; their photos come from my Immich
@@ -63,8 +63,11 @@ class PeopleFilterViewModel @Inject constructor(
     fun select(id: String?) {
         when (val tap = people.value.tap(id)) {
             PeopleTap.Clear -> clear()
+
             PeopleTap.Ignore -> Unit
+
             is PeopleTap.NotLinked -> _notLinked.tryEmit(tap.member)
+
             is PeopleTap.Show -> {
                 selectedId.value = tap.memberId
                 job?.cancel()

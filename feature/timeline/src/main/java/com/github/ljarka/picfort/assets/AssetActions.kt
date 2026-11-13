@@ -12,28 +12,23 @@ import android.provider.MediaStore
 import androidx.annotation.RequiresApi
 import androidx.core.content.FileProvider
 import com.github.ljarka.picfort.core.database.AssetType
+import com.github.ljarka.picfort.core.network.ServerUrlStore
 import com.github.ljarka.picfort.local.localImageUri
 import com.github.ljarka.picfort.local.localVideoUri
-import com.github.ljarka.picfort.core.network.ServerUrlStore
 import dagger.hilt.android.qualifiers.ApplicationContext
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.withContext
-import okhttp3.OkHttpClient
-import okhttp3.Request
 import java.io.File
 import java.io.IOException
 import java.io.OutputStream
 import javax.inject.Inject
 import javax.inject.Provider
 import javax.inject.Singleton
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
+import okhttp3.OkHttpClient
+import okhttp3.Request
 
 /** An asset picked in the timeline, with the month bucket it belongs to. */
-data class SelectedAsset(
-    val id: String,
-    val type: AssetType,
-    val bucket: Long,
-    val isVideo: Boolean = false,
-)
+data class SelectedAsset(val id: String, val type: AssetType, val bucket: Long, val isVideo: Boolean = false)
 
 /**
  * Share, download and delete for both Immich (REMOTE) and on-phone (LOCAL) assets.
@@ -61,6 +56,7 @@ class AssetActions @Inject constructor(
                     val uri = localUri(asset)
                     uri to (context.contentResolver.getType(uri) ?: if (asset.isVideo) "video/*" else "image/*")
                 }
+
                 AssetType.REMOTE -> {
                     val info = assetsService.get().getAssetInfo(asset.id)
                     val file = File(shareDir, safeFileName(info))

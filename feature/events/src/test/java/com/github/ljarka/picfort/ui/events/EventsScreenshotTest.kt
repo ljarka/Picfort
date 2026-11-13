@@ -1,22 +1,22 @@
 package com.github.ljarka.picfort.ui.events
 
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.graphics.Color
 import app.cash.paparazzi.DeviceConfig
 import app.cash.paparazzi.Paparazzi
 import com.android.resources.NightMode
 import com.github.ljarka.picfort.core.model.DayPhoto
+import com.github.ljarka.picfort.core.model.EventRepeat
 import com.github.ljarka.picfort.core.model.EventsSegment
 import com.github.ljarka.picfort.core.model.FamilyEvent
-import com.github.ljarka.picfort.core.model.EventRepeat
 import com.github.ljarka.picfort.core.model.FamilyMember
-import androidx.compose.ui.graphics.Color
 import com.github.ljarka.picfort.core.ui.theme.AccentTheme
 import com.github.ljarka.picfort.core.ui.theme.BrandAccent
 import com.github.ljarka.picfort.core.ui.theme.PicfortTheme
-import org.junit.Rule
-import org.junit.Test
 import java.time.LocalDate
 import java.time.LocalTime
+import org.junit.Rule
+import org.junit.Test
 
 class EventsScreenshotTest {
 
@@ -27,7 +27,7 @@ class EventsScreenshotTest {
         paparazzi.unsafeUpdateConfig(
             DeviceConfig.PIXEL_6.copy(
                 nightMode = if (dark) NightMode.NIGHT else NightMode.NOTNIGHT,
-            )
+            ),
         )
         paparazzi.snapshot {
             PicfortTheme(darkTheme = dark, dynamicColor = false) {
@@ -110,7 +110,7 @@ class EventsScreenshotTest {
                 today = sampleToday,
                 segment = EventsSegment.UPCOMING,
                 upcomingEvents = sampleUpcomingEvents,
-            )
+            ),
         )
     }
 
@@ -121,7 +121,7 @@ class EventsScreenshotTest {
                 today = sampleToday,
                 segment = EventsSegment.UPCOMING,
                 upcomingEvents = sampleUpcomingEvents,
-            )
+            ),
         )
     }
 
@@ -132,21 +132,21 @@ class EventsScreenshotTest {
                 today = sampleToday,
                 segment = EventsSegment.PAST,
                 pastEvents = samplePastEvents,
-            )
+            ),
         )
     }
 
     @Test
     fun events_empty_upcoming() = snap {
         EventsListContent(
-            EventsListUi(today = sampleToday, segment = EventsSegment.UPCOMING)
+            EventsListUi(today = sampleToday, segment = EventsSegment.UPCOMING),
         )
     }
 
     @Test
     fun events_empty_past() = snap {
         EventsListContent(
-            EventsListUi(today = sampleToday, segment = EventsSegment.PAST)
+            EventsListUi(today = sampleToday, segment = EventsSegment.PAST),
         )
     }
 
@@ -158,7 +158,7 @@ class EventsScreenshotTest {
                 today = sampleToday,
                 authorName = "Mama",
                 canDelete = true,
-            )
+            ),
         )
     }
 
@@ -174,7 +174,7 @@ class EventsScreenshotTest {
                 location = "Białka Tatrzańska",
                 note = "Book ski school for Staś and Ola before December.",
                 today = sampleToday,
-            )
+            ),
         )
     }
 
@@ -219,14 +219,14 @@ class EventsScreenshotTest {
     @Test
     fun events_upcoming_repeat_birthdays() = snap {
         EventsListContent(
-            EventsListUi(today = sampleToday, upcomingEvents = withRepeats, memberNames = members)
+            EventsListUi(today = sampleToday, upcomingEvents = withRepeats, memberNames = members),
         )
     }
 
     @Test
     fun events_upcoming_repeat_birthdays_dark() = snap(dark = true) {
         EventsListContent(
-            EventsListUi(today = sampleToday, upcomingEvents = withRepeats, memberNames = members)
+            EventsListUi(today = sampleToday, upcomingEvents = withRepeats, memberNames = members),
         )
     }
 
@@ -238,7 +238,7 @@ class EventsScreenshotTest {
     @Test
     fun event_detail_repeating() = snap {
         EventDetailContent(
-            EventDetailUi(event = swimming, today = sampleToday, authorName = "Tata", canDelete = true)
+            EventDetailUi(event = swimming, today = sampleToday, authorName = "Tata", canDelete = true),
         )
     }
 
@@ -255,7 +255,7 @@ class EventsScreenshotTest {
                 repeatUntil = LocalDate.of(2027, 6, 25),
                 editsSeries = true,
                 today = sampleToday,
-            )
+            ),
         )
     }
 
@@ -280,14 +280,14 @@ class EventsScreenshotTest {
     @Test
     fun events_upcoming_who() = snap {
         EventsListContent(
-            EventsListUi(today = sampleToday, upcomingEvents = withWho, memberNames = members, members = family)
+            EventsListUi(today = sampleToday, upcomingEvents = withWho, memberNames = members, members = family),
         )
     }
 
     @Test
     fun events_upcoming_who_dark() = snap(dark = true) {
         EventsListContent(
-            EventsListUi(today = sampleToday, upcomingEvents = withWho, memberNames = members, members = family)
+            EventsListUi(today = sampleToday, upcomingEvents = withWho, memberNames = members, members = family),
         )
     }
 
@@ -295,8 +295,12 @@ class EventsScreenshotTest {
     fun event_detail_who() = snap {
         EventDetailContent(
             EventDetailUi(
-                event = withWho[2], today = sampleToday, authorName = "Tata", canDelete = true, members = family,
-            )
+                event = withWho[2],
+                today = sampleToday,
+                authorName = "Tata",
+                canDelete = true,
+                members = family,
+            ),
         )
     }
 
@@ -314,7 +318,7 @@ class EventsScreenshotTest {
                 memberIds = listOf("ola", "stas"),
                 members = family,
                 today = sampleToday,
-            )
+            ),
         )
     }
 
@@ -324,9 +328,12 @@ class EventsScreenshotTest {
     fun events_upcoming_filter_ola() = snap {
         EventsListContent(
             EventsListUi(
-                today = sampleToday, upcomingEvents = withWho, memberNames = members, members = family,
+                today = sampleToday,
+                upcomingEvents = withWho,
+                memberNames = members,
+                members = family,
                 selectedMemberId = "ola",
-            )
+            ),
         )
     }
 
@@ -334,9 +341,12 @@ class EventsScreenshotTest {
     fun events_upcoming_filter_ola_dark() = snap(dark = true) {
         EventsListContent(
             EventsListUi(
-                today = sampleToday, upcomingEvents = withWho, memberNames = members, members = family,
+                today = sampleToday,
+                upcomingEvents = withWho,
+                memberNames = members,
+                members = family,
                 selectedMemberId = "ola",
-            )
+            ),
         )
     }
 
@@ -344,9 +354,12 @@ class EventsScreenshotTest {
     fun events_upcoming_filter_empty() = snap {
         EventsListContent(
             EventsListUi(
-                today = sampleToday, upcomingEvents = withWho.drop(1), memberNames = members, members = family,
+                today = sampleToday,
+                upcomingEvents = withWho.drop(1),
+                memberNames = members,
+                members = family,
                 selectedMemberId = "tata",
-            )
+            ),
         )
     }
 
@@ -373,8 +386,11 @@ class EventsScreenshotTest {
     }
 
     private fun birthdayWithPhotos(photos: BirthdayPhotosUi) = EventDetailUi(
-        event = olaBirthday.copy(memberIds = listOf("ola")), today = sampleToday, memberNames = members,
-        members = family, birthdayPhotos = photos,
+        event = olaBirthday.copy(memberIds = listOf("ola")),
+        today = sampleToday,
+        memberNames = members,
+        members = family,
+        birthdayPhotos = photos,
     )
 
     @Test
@@ -388,7 +404,9 @@ class EventsScreenshotTest {
         paparazzi.snapshot {
             PicfortTheme(darkTheme = false, dynamicColor = false) {
                 AccentTheme(BrandAccent.Amber) {
-                    WithSamplePhotos { EventDetailContent(birthdayWithPhotos(BirthdayPhotosUi(false, birthdayYearsSample))) }
+                    WithSamplePhotos {
+                        EventDetailContent(birthdayWithPhotos(BirthdayPhotosUi(false, birthdayYearsSample)))
+                    }
                 }
             }
         }

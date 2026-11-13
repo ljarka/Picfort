@@ -7,9 +7,14 @@ import org.junit.Test
 class UploadFieldsTest {
 
     private val video = LocalMedia(
-        id = 7, fileName = "VID_1.mp4", mimeType = "video/mp4", size = 1234,
-        dateTaken = 1_700_000_000_000, dateModified = 1_700_000_100_000,
-        isVideo = true, durationMs = 75_500,
+        id = 7,
+        fileName = "VID_1.mp4",
+        mimeType = "video/mp4",
+        size = 1234,
+        dateTaken = 1_700_000_000_000,
+        dateModified = 1_700_000_100_000,
+        isVideo = true,
+        durationMs = 75_500,
     )
 
     @Test

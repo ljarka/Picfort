@@ -25,6 +25,7 @@ class SearchPeopleTest {
                 listOf(PersonDto("p1", "Ola"), PersonDto("x", ""), PersonDto("h", "Hidden", isHidden = true)),
                 hasNextPage = true,
             )
+
             else -> PeopleResponse(listOf(PersonDto("p2", " Kuba ")))
         }
     }
@@ -59,7 +60,8 @@ class SearchPeopleTest {
     @Test
     fun `nothing found says what was searched for`() {
         val people = listOf(SearchPerson("p1", "Ola"), SearchPerson("p2", "Kuba"), SearchPerson("p3", "Staś"))
-        fun ui(query: String, vararg ids: String) = SearchUi(query = query, people = people, selectedPeople = ids.toSet())
+        fun ui(query: String, vararg ids: String) =
+            SearchUi(query = query, people = people, selectedPeople = ids.toSet())
         assertEquals("Nothing found for \"dog\"", ui("dog").nothingFound())
         assertEquals("No photos of Ola", ui("", "p1").nothingFound())
         assertEquals("No photos of Ola and Kuba together", ui("", "p2", "p1").nothingFound())
@@ -84,6 +86,11 @@ class SearchPeopleRowTest {
         assertEquals(listOf("l"), filterPeople(people, " lukasz").map { it.id })
         assertEquals(listOf("z"), filterPeople(people, "zoe kow").map { it.id })
         assertEquals(people, filterPeople(people, ""))
-        assertEquals(listOf("p1", "p10", "p11", "p12", "p13", "p14", "p15", "p16", "p17", "p18", "p19"), filterPeople(people, "son 1").map { it.id })
+        assertEquals(
+            listOf("p1", "p10", "p11", "p12", "p13", "p14", "p15", "p16", "p17", "p18", "p19"),
+            filterPeople(people, "son 1").map {
+                it.id
+            },
+        )
     }
 }

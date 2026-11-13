@@ -3,18 +3,24 @@ package com.github.ljarka.picfort.sync
 import com.github.ljarka.picfort.core.database.RemoteAssetEntity
 import com.github.ljarka.picfort.core.database.RemoteStackEntity
 import com.github.ljarka.picfort.core.database.UserEntity
+import java.time.Instant
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.decodeFromJsonElement
-import java.time.Instant
 
 /**
  * The types we sync: the timeline's (ADR 0005) and the server's users (Family Wall members,
  * T-002). Order doesn't matter; the server has its own.
  */
 val TIMELINE_SYNC_TYPES = listOf(
-    "AuthUsersV2", "UsersV1", "PartnersV1", "AssetsV2", "PartnerAssetsV2", "StacksV1", "PartnerStacksV1",
+    "AuthUsersV2",
+    "UsersV1",
+    "PartnersV1",
+    "AssetsV2",
+    "PartnerAssetsV2",
+    "StacksV1",
+    "PartnerStacksV1",
 )
 
 /** One line of `/api/sync/stream`: `{"type": …, "data": {…}, "ack": "<type>|<id>[|<extra>]"}`. */
@@ -99,25 +105,35 @@ sealed interface SyncChange {
 fun SyncLine.toChange(json: Json): SyncChange = when (type) {
     "AssetV2", "PartnerAssetV2", "PartnerAssetBackfillV2" ->
         SyncChange.UpsertAsset(json.decodeFromJsonElement<SyncAssetDto>(data).toEntity())
+
     "AssetDeleteV1", "PartnerAssetDeleteV1" ->
         SyncChange.DeleteAsset(json.decodeFromJsonElement<SyncAssetDeleteDto>(data).assetId)
+
     "StackV1", "PartnerStackV1", "PartnerStackBackfillV1" ->
         json.decodeFromJsonElement<SyncStackDto>(data).let {
             SyncChange.UpsertStack(RemoteStackEntity(it.id, it.primaryAssetId, it.ownerId))
         }
+
     "StackDeleteV1", "PartnerStackDeleteV1" ->
         SyncChange.DeleteStack(json.decodeFromJsonElement<SyncStackDeleteDto>(data).stackId)
+
     "PartnerV1" -> json.decodeFromJsonElement<SyncPartnerDto>(data).let {
         SyncChange.UpsertPartner(it.sharedById, it.inTimeline)
     }
+
     "PartnerDeleteV1" -> SyncChange.DeletePartner(json.decodeFromJsonElement<SyncPartnerDeleteDto>(data).sharedById)
+
     "AuthUserV2" -> SyncChange.SetUser(json.decodeFromJsonElement<SyncAuthUserDto>(data).id)
+
     "UserV1" -> json.decodeFromJsonElement<SyncUserDto>(data).let {
         // A soft-deleted user is gone for the wall.
         if (it.deletedAt != null) SyncChange.DeleteUser(it.id) else SyncChange.UpsertUser(it.toEntity())
     }
+
     "UserDeleteV1" -> SyncChange.DeleteUser(json.decodeFromJsonElement<SyncUserDeleteDto>(data).userId)
+
     "SyncResetV1" -> SyncChange.Reset
+
     else -> SyncChange.AckOnly
 }
 

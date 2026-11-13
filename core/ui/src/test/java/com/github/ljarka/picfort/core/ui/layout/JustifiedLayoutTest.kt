@@ -1,9 +1,9 @@
 package com.github.ljarka.picfort.core.ui.layout
 
+import kotlin.random.Random
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
-import kotlin.random.Random
 
 class JustifiedLayoutTest {
 

@@ -1,11 +1,11 @@
 package com.github.ljarka.picfort.ui.wall
 
 import com.github.ljarka.picfort.core.model.FamilyEvent
+import java.time.LocalDate
+import java.time.LocalTime
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Test
-import java.time.LocalDate
-import java.time.LocalTime
 
 class TodayPanelTest {
     private val today = LocalDate.of(2026, 11, 11)
@@ -138,7 +138,12 @@ class TodayPanelTest {
     @Test
     fun `a birthday beats an older one-day event without a time`() {
         val birthday = FamilyEvent(
-            id = 9, title = "b", startDate = today, birthdayOf = "ola", turns = 9, created = "2026-11-10T10:00:00Z",
+            id = 9,
+            title = "b",
+            startDate = today,
+            birthdayOf = "ola",
+            turns = 9,
+            created = "2026-11-10T10:00:00Z",
         )
         val p = panel(event(1), birthday)
         assertEquals(9L, p.event?.id)

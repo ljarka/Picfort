@@ -4,15 +4,23 @@ import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.ExperimentalSharedTransitionApi
 import androidx.compose.animation.SharedTransitionLayout
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxScope
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Snackbar
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.unit.dp
 import app.cash.paparazzi.DeviceConfig
 import app.cash.paparazzi.Paparazzi
 import com.github.ljarka.picfort.assets.AssetInfo
@@ -24,31 +32,23 @@ import com.github.ljarka.picfort.collections.AlbumDto
 import com.github.ljarka.picfort.collections.AlbumsContent
 import com.github.ljarka.picfort.collections.GridAsset
 import com.github.ljarka.picfort.collections.LoadState
-import com.github.ljarka.picfort.collections.SearchContent
-import com.github.ljarka.picfort.collections.SearchUi
-import com.github.ljarka.picfort.collections.SearchPerson
 import com.github.ljarka.picfort.collections.PeoplePickerContent
-import com.github.ljarka.picfort.core.ui.theme.PicfortTheme
+import com.github.ljarka.picfort.collections.SearchContent
+import com.github.ljarka.picfort.collections.SearchPerson
+import com.github.ljarka.picfort.collections.SearchUi
+import com.github.ljarka.picfort.core.database.AssetType
 import com.github.ljarka.picfort.core.model.FamilyMember
 import com.github.ljarka.picfort.core.ui.avatar.avatarColor
+import com.github.ljarka.picfort.core.ui.theme.PicfortTheme
+import com.github.ljarka.picfort.ui.image.AssetDetailsList
+import com.github.ljarka.picfort.ui.image.DetailsState
 import com.github.ljarka.picfort.ui.people.PeopleFilterRow
 import com.github.ljarka.picfort.ui.people.PeopleFilterUi
 import com.github.ljarka.picfort.ui.people.PersonPhotosContent
-import androidx.compose.foundation.layout.BoxScope
-import androidx.compose.material3.Snackbar
-import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
-import com.github.ljarka.picfort.core.database.AssetType
-import com.github.ljarka.picfort.ui.image.AssetDetailsList
-import com.github.ljarka.picfort.ui.image.DetailsState
-import androidx.compose.foundation.layout.Column
-import androidx.compose.ui.unit.dp
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Surface
-import java.time.ZoneId
 import com.github.ljarka.picfort.ui.timeline.layout.TimelineLayout
 import com.github.ljarka.picfort.ui.timeline.layout.Viewport
 import com.github.ljarka.picfort.ui.timeline.layout.layoutTimeline
+import java.time.ZoneId
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import org.junit.Rule
@@ -71,17 +71,21 @@ class TimelineScreenshotTest {
     /** A month with a realistic mix of shapes: portrait, landscape, square, a panorama, videos, phone-only. */
     private fun month(key: Long, start: Int, seed: Int, count: Int): TimelineMonth {
         val ratios = listOf(4f / 3, 3f / 4, 3f / 4, 16f / 9, 1f, 3f / 4, 3f, 3f / 4, 4f / 3, 4f / 3, 9f / 16, 3f / 4)
-        return TimelineMonth(key, start, List(count) { i ->
-            val n = seed + i
-            TimelineAsset(
-                id = "photo-$n",
-                type = if (n % 5 == 2) AssetType.LOCAL else AssetType.REMOTE,
-                dateTaken = key,
-                ratio = ratios[n % ratios.size],
-                isVideo = n % 6 == 4,
-                durationMs = if (n % 6 == 4) 8_000L + n * 3_000 else null,
-            )
-        })
+        return TimelineMonth(
+            key,
+            start,
+            List(count) { i ->
+                val n = seed + i
+                TimelineAsset(
+                    id = "photo-$n",
+                    type = if (n % 5 == 2) AssetType.LOCAL else AssetType.REMOTE,
+                    dateTaken = key,
+                    ratio = ratios[n % ratios.size],
+                    isVideo = n % 6 == 4,
+                    durationMs = if (n % 6 == 4) 8_000L + n * 3_000 else null,
+                )
+            },
+        )
     }
 
     /** Pixel 6: 1080 px wide at 2.625 px/dp, with the list's 4 dp margins and gaps. */
@@ -113,7 +117,9 @@ class TimelineScreenshotTest {
                                     topBar = {
                                         TimelineAppBar(
                                             scrollBehavior = TopAppBarDefaults.enterAlwaysScrollBehavior(),
-                                            onSettingsClick = {}, onSearchClick = {}, onAlbumsClick = {},
+                                            onSettingsClick = {},
+                                            onSearchClick = {},
+                                            onAlbumsClick = {},
                                         )
                                     },
                                 ) { padding ->
@@ -175,8 +181,12 @@ class TimelineScreenshotTest {
     @Test
     fun albums() = snap {
         val albums = listOf(
-            "Summer in Kraków" to 214, "Family" to 1_032, "Hiking" to 87,
-            "Frame favourites" to 46, "Winter 2024" to 158, "Garden" to 23,
+            "Summer in Kraków" to 214,
+            "Family" to 1_032,
+            "Hiking" to 87,
+            "Frame favourites" to 46,
+            "Winter 2024" to 158,
+            "Garden" to 23,
         ).mapIndexed { i, (name, count) -> AlbumDto("album-$i", name, "cover-$i", count) }
         AlbumsContent(albums = LoadState.Loaded(albums), thumbnail = { it.albumThumbnailAssetId })
     }
@@ -190,8 +200,12 @@ class TimelineScreenshotTest {
     }
 
     private val searchPeople = listOf(
-        SearchPerson("p1", "Ola"), SearchPerson("p2", "Kuba"), SearchPerson("p3", "Monika"),
-        SearchPerson("p4", "Łukasz"), SearchPerson("p5", "Babcia Ela"), SearchPerson("p6", "Dziadek"),
+        SearchPerson("p1", "Ola"),
+        SearchPerson("p2", "Kuba"),
+        SearchPerson("p3", "Monika"),
+        SearchPerson("p4", "Łukasz"),
+        SearchPerson("p5", "Babcia Ela"),
+        SearchPerson("p6", "Dziadek"),
     ) + listOf(
         "Ania", "Bartek", "Celina", "Darek", "Ewa Nowak", "Franek", "Gosia", "Henryk", "Iza", "Janek",
         "Kasia z przedszkola", "Lena", "Marek", "Natalia", "Oskar", "Paweł", "Róża", "Staś", "Tomek", "Wiktoria",
@@ -199,9 +213,17 @@ class TimelineScreenshotTest {
 
     @Test
     fun search_all_people() = snap {
-        androidx.compose.material3.Surface(color = androidx.compose.material3.MaterialTheme.colorScheme.surfaceContainerLow) {
+        androidx.compose.material3.Surface(
+            color = androidx.compose.material3.MaterialTheme.colorScheme.surfaceContainerLow,
+        ) {
             PeoplePickerContent(
-                people = searchPeople, selected = setOf("p1", "p5"), personThumbnail = { null }, onToggle = {}, onDone = {},
+                people = searchPeople,
+                selected = setOf("p1", "p5"),
+                personThumbnail = {
+                    null
+                },
+                onToggle = {},
+                onDone = {},
             )
         }
     }
@@ -214,7 +236,12 @@ class TimelineScreenshotTest {
     @Test
     fun search_people_selected() = snap {
         SearchContent(
-            state = SearchUi(results = photos, searched = true, people = searchPeople, selectedPeople = setOf("p1", "p2")),
+            state = SearchUi(
+                results = photos,
+                searched = true,
+                people = searchPeople,
+                selectedPeople = setOf("p1", "p2"),
+            ),
             thumbnail = { it.id },
         )
     }
@@ -222,7 +249,13 @@ class TimelineScreenshotTest {
     @Test
     fun search_people_with_text() = snap {
         SearchContent(
-            state = SearchUi(query = "beach", results = photos.drop(6), searched = true, people = searchPeople, selectedPeople = setOf("p1")),
+            state = SearchUi(
+                query = "beach",
+                results = photos.drop(6),
+                searched = true,
+                people = searchPeople,
+                selectedPeople = setOf("p1"),
+            ),
             thumbnail = { it.id },
         )
     }
@@ -297,7 +330,9 @@ class TimelineScreenshotTest {
             header = { PeopleFilterRow(PeopleFilterUi(family, linked), onSelect = {}, onOpenFamily = {}) },
             overlay = {
                 Snackbar(
-                    action = { TextButton(onClick = {}) { Text("Link", color = MaterialTheme.colorScheme.inversePrimary) } },
+                    action = {
+                        TextButton(onClick = {}) { Text("Link", color = MaterialTheme.colorScheme.inversePrimary) }
+                    },
                     modifier = Modifier.align(Alignment.BottomCenter).padding(12.dp),
                 ) { Text("Kuba isn't linked to your Immich people") }
             },
@@ -311,7 +346,9 @@ class TimelineScreenshotTest {
             topBar = {
                 TimelineAppBar(
                     scrollBehavior = TopAppBarDefaults.enterAlwaysScrollBehavior(),
-                    onSettingsClick = {}, onSearchClick = {}, onAlbumsClick = {},
+                    onSettingsClick = {},
+                    onSearchClick = {},
+                    onAlbumsClick = {},
                 )
             },
         ) { padding ->

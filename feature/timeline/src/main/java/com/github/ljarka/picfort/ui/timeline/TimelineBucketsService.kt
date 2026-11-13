@@ -27,5 +27,4 @@ interface TimelineBucketsService {
         /** Restrict to one album (then withPartners must be false); null = whole timeline. */
         @Query("albumId") albumId: String? = null,
     ): BucketResponse
-
 }

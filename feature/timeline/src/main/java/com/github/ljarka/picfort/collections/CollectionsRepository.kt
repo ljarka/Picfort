@@ -6,6 +6,10 @@ import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
 import dagger.hilt.components.SingletonComponent
+import java.util.concurrent.ConcurrentHashMap
+import javax.inject.Inject
+import javax.inject.Provider
+import javax.inject.Singleton
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
@@ -15,17 +19,9 @@ import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.longOrNull
 import retrofit2.Retrofit
-import java.util.concurrent.ConcurrentHashMap
-import javax.inject.Inject
-import javax.inject.Provider
-import javax.inject.Singleton
 
 /** An Immich asset in an album or search result. */
-data class GridAsset(
-    val id: String,
-    val isVideo: Boolean = false,
-    val durationMs: Long? = null,
-)
+data class GridAsset(val id: String, val isVideo: Boolean = false, val durationMs: Long? = null)
 
 data class SearchPage(val assets: List<GridAsset>, val nextPage: Int?)
 
@@ -64,7 +60,10 @@ class CollectionsRepository @Inject constructor(
             async {
                 limit.withPermit {
                     val b = api.getBucket(
-                        timeBucket = month.timeBucket, albumId = albumId, visibility = null, withPartners = false,
+                        timeBucket = month.timeBucket,
+                        albumId = albumId,
+                        visibility = null,
+                        withPartners = false,
                     )
                     b.id.mapIndexed { i, id ->
                         GridAsset(
@@ -85,7 +84,9 @@ class CollectionsRepository @Inject constructor(
     suspend fun search(query: String, page: Int, personIds: Set<String> = emptySet()): SearchPage {
         val text = query.trim()
         val response = if (text.isEmpty()) {
-            service.get().metadataSearch(MetadataSearchRequest(personIds.toList(), page = page, size = 100, order = "desc"))
+            service.get().metadataSearch(
+                MetadataSearchRequest(personIds.toList(), page = page, size = 100, order = "desc"),
+            )
         } else {
             service.get().smartSearch(SmartSearchRequest(text, page, personIds = personIds.toList().ifEmpty { null }))
         }.assets

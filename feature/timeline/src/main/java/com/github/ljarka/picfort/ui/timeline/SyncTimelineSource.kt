@@ -2,17 +2,17 @@ package com.github.ljarka.picfort.ui.timeline
 
 import com.github.ljarka.picfort.core.database.ImagesDatabase
 import com.github.ljarka.picfort.core.database.RemoteAssetEntity
-import com.github.ljarka.picfort.sync.SyncEngine
 import com.github.ljarka.picfort.core.network.AccessTokenStore
 import com.github.ljarka.picfort.core.network.ServerUrlStore
+import com.github.ljarka.picfort.sync.SyncEngine
+import java.security.MessageDigest
+import javax.inject.Inject
+import javax.inject.Singleton
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.map
-import java.security.MessageDigest
-import javax.inject.Inject
-import javax.inject.Singleton
 
 /**
  * The timeline's Immich assets: a local copy kept up to date by the sync stream (ADR 0005).

@@ -3,15 +3,20 @@ package com.github.ljarka.picfort.ui.shopping
 import android.content.Context
 import com.github.ljarka.picfort.core.model.ShoppingItem
 import com.github.ljarka.picfort.core.model.ShoppingList
-import com.github.ljarka.picfort.core.network.AppScope
-import com.github.ljarka.picfort.core.network.PicfortServerException
-import com.github.ljarka.picfort.core.network.FrameSettingsStore
 import com.github.ljarka.picfort.core.network.AccessTokenStore
+import com.github.ljarka.picfort.core.network.AppScope
+import com.github.ljarka.picfort.core.network.FrameSettingsStore
+import com.github.ljarka.picfort.core.network.PicfortServerException
 import dagger.Binds
 import dagger.Module
 import dagger.hilt.InstallIn
 import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.components.SingletonComponent
+import java.io.File
+import java.time.Instant
+import java.util.concurrent.ConcurrentHashMap
+import javax.inject.Inject
+import javax.inject.Singleton
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.Job
@@ -22,15 +27,10 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.yield
 import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.yield
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
-import java.io.File
-import java.time.Instant
-import java.util.concurrent.ConcurrentHashMap
-import javax.inject.Inject
-import javax.inject.Singleton
 
 /** The active lists as last seen online, kept on the phone for the shop (T-019). */
 interface OfflineCopy {
@@ -59,7 +59,8 @@ class FileOfflineCopy @Inject constructor(
     }
 
     override fun load(): Pair<Long, String>? {
-        val saved = runCatching { json.decodeFromString(SavedLists.serializer(), file.readText()) }.getOrNull() ?: return null
+        val saved =
+            runCatching { json.decodeFromString(SavedLists.serializer(), file.readText()) }.getOrNull() ?: return null
         if (saved.server != settings.frameUrl || saved.user != tokens.userId) {
             file.delete()
             return null
@@ -93,6 +94,7 @@ class ShoppingRepository @Inject constructor(
     val lists: StateFlow<Map<Long, ShoppingList>> = all.asStateFlow()
 
     private val _offlineSince = MutableStateFlow<Long?>(null)
+
     /** When the offline copy shown was saved; null while online. Editing is off then. */
     val offlineSince: StateFlow<Long?> = _offlineSince.asStateFlow()
 
@@ -101,6 +103,7 @@ class ShoppingRepository @Inject constructor(
 
     private val locks = ConcurrentHashMap<Long, Mutex>()
     private val inFlight = ConcurrentHashMap<Long, Int>()
+
     /** Temporary (negative) item id -> the server's id, once the item is saved. */
     private val savedIds = ConcurrentHashMap<Long, Long>()
     private var nextTempId = -1L
@@ -139,8 +142,12 @@ class ShoppingRepository @Inject constructor(
             all.update { it - id }
             e
         } catch (e: PicfortServerException) {
-            if (e is PicfortServerException.Unreachable && all.value.isEmpty()) useOfflineCopy()
-            else if (e is PicfortServerException.Unreachable) _offlineSince.value = _offlineSince.value ?: offline.load()?.first
+            if (e is PicfortServerException.Unreachable && all.value.isEmpty()) {
+                useOfflineCopy()
+            } else if (e is PicfortServerException.Unreachable) {
+                _offlineSince.value =
+                    _offlineSince.value ?: offline.load()?.first
+            }
             e
         }
     }
@@ -169,7 +176,13 @@ class ShoppingRepository @Inject constructor(
         val checked = !item.checked
         return change(listId, { list ->
             list.withItem(item.id) {
-                it.copy(checked = checked, checkedBy = me.takeIf { checked }, checkedAt = Instant.now().toString().takeIf { checked })
+                it.copy(
+                    checked = checked,
+                    checkedBy = me.takeIf {
+                        checked
+                    },
+                    checkedAt = Instant.now().toString().takeIf { checked },
+                )
             }
         }) {
             replaceItem(listId, item.id, backend.updateItem(listId, idOf(item.id), checked = checked))
@@ -192,7 +205,9 @@ class ShoppingRepository @Inject constructor(
     /** Undo of [delete]: the same text at the same place. */
     fun restore(listId: Long, item: ShoppingItem): Job = addItem(listId, item.text, item.position)
 
-    fun rename(listId: Long, title: String) = listChange(listId, { it.copy(title = title) }) { backend.update(listId, title = title) }
+    fun rename(listId: Long, title: String) = listChange(listId, {
+        it.copy(title = title)
+    }) { backend.update(listId, title = title) }
 
     fun archive(listId: Long, archived: Boolean) =
         listChange(listId, { it.copy(archived = archived) }) { backend.update(listId, archived = archived) }
@@ -201,8 +216,9 @@ class ShoppingRepository @Inject constructor(
         list.copy(items = list.items.map { it.copy(checked = false, checkedBy = null, checkedAt = null) })
     }) { backend.uncheckAll(listId) }
 
-    fun deleteChecked(listId: Long) =
-        listChange(listId, { list -> list.copy(items = list.items.filter { !it.checked }) }) { backend.deleteChecked(listId) }
+    fun deleteChecked(listId: Long) = listChange(listId, { list ->
+        list.copy(items = list.items.filter { !it.checked })
+    }) { backend.deleteChecked(listId) }
 
     fun deleteList(listId: Long): Job = change(listId, { null }) { backend.delete(listId) }
 
@@ -284,7 +300,8 @@ class ShoppingRepository @Inject constructor(
     private fun replaceItem(listId: Long, oldId: Long, saved: ShoppingItem) {
         all.update { lists ->
             val list = lists[listId] ?: return@update lists
-            lists + (listId to list.copy(items = list.items.map { if (it.id == oldId || it.id == saved.id) saved else it }))
+            lists +
+                (listId to list.copy(items = list.items.map { if (it.id == oldId || it.id == saved.id) saved else it }))
         }
     }
 

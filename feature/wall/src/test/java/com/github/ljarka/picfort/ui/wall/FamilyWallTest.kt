@@ -3,11 +3,11 @@ package com.github.ljarka.picfort.ui.wall
 import com.github.ljarka.picfort.core.model.FamilyMember
 import com.github.ljarka.picfort.core.model.isTestAccount
 import com.github.ljarka.picfort.core.model.meFirst
+import com.github.ljarka.picfort.core.network.PicfortServerException
 import com.github.ljarka.picfort.core.ui.avatar.UNKNOWN_MEMBER_COLOR
 import com.github.ljarka.picfort.core.ui.avatar.avatarColor
 import com.github.ljarka.picfort.core.ui.avatar.initials
-
-import com.github.ljarka.picfort.core.network.PicfortServerException
+import java.time.Instant
 import kotlinx.serialization.json.Json
 import okhttp3.HttpUrl.Companion.toHttpUrl
 import org.junit.Assert.assertEquals
@@ -15,7 +15,6 @@ import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
-import java.time.Instant
 
 class FamilyWallTest {
 
@@ -30,7 +29,7 @@ class FamilyWallTest {
     fun `parses a post and resolves the photo url`() {
         val dto = Json.decodeFromString<WallPostDto>(
             """{"id":2,"author_id":"u2","author":"Tata","text":null,"photo_url":"/wall/photo/abc.jpg",
-               "photo_width":1920,"photo_height":1440,"pinned":false,"created":"2026-11-10T20:20:02Z"}"""
+               "photo_width":1920,"photo_height":1440,"pinned":false,"created":"2026-11-10T20:20:02Z"}""",
         )
         val p = dto.toPost("http://192.168.0.105:5000".toHttpUrl())
         assertEquals("http://192.168.0.105:5000/wall/photo/abc.jpg", p.photoUrl)
@@ -43,8 +42,12 @@ class FamilyWallTest {
     fun `text and photo posts are split, pinned first, then newest`() {
         val state = FamilyWallUiState(
             posts = listOf(
-                post(1, "mama", 1), post(2, "tata", 2), post(3, "mama", 3, pinned = false),
-                post(4, "tata", 4, photo = true), post(5, "mama", 5, photo = true), post(6, "tata", 0, pinned = true),
+                post(1, "mama", 1),
+                post(2, "tata", 2),
+                post(3, "mama", 3, pinned = false),
+                post(4, "tata", 4, photo = true),
+                post(5, "mama", 5, photo = true),
+                post(6, "tata", 0, pinned = true),
             ),
         )
         assertEquals(listOf(6, 3, 2, 1), state.messages.map { it.id })
