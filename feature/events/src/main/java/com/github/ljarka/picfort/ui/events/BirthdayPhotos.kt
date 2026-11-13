@@ -14,6 +14,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
@@ -114,6 +115,8 @@ internal fun EventDetailList(
     name: String,
     onOpenPhoto: (DayPhoto, Int) -> Unit,
     modifier: Modifier = Modifier,
+    /** A year's title: that day in the Photos timeline (T-056). */
+    onOpenDay: (LocalDate) -> Unit = {},
     header: @Composable () -> Unit,
 ) {
     BoxWithConstraints(modifier) {
@@ -148,12 +151,7 @@ internal fun EventDetailList(
                 }
                 items(rows, key = { it.key }, contentType = { if (it is YearHeader) "year" else "row" }) { row ->
                     when (row) {
-                        is YearHeader -> Text(
-                            birthdayYearTitle(row.year),
-                            style = MaterialTheme.typography.labelLarge,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            modifier = Modifier.padding(start = 20.dp, end = 20.dp, top = 16.dp, bottom = 8.dp),
-                        )
+                        is YearHeader -> YearTitle(row.year) { onOpenDay(row.year.day) }
                         is TilesRow -> Row(
                             horizontalArrangement = Arrangement.spacedBy(SPACING),
                             modifier = Modifier.fillMaxWidth().padding(horizontal = SIDE, vertical = SPACING / 2),
@@ -169,6 +167,32 @@ internal fun EventDetailList(
                 }
             }
         }
+    }
+}
+
+@Composable
+private fun YearTitle(year: BirthdayYear, onClick: () -> Unit) {
+    val label = "Show ${year.day.format(YEAR_DATE)} in Photos"
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(top = 8.dp)
+            .clickable(onClickLabel = label, onClick = onClick)
+            .padding(start = 20.dp, end = 12.dp, top = 8.dp, bottom = 8.dp),
+    ) {
+        Text(
+            birthdayYearTitle(year),
+            style = MaterialTheme.typography.labelLarge,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.weight(1f),
+        )
+        Icon(
+            Icons.AutoMirrored.Filled.KeyboardArrowRight,
+            contentDescription = null,
+            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.size(20.dp),
+        )
     }
 }
 

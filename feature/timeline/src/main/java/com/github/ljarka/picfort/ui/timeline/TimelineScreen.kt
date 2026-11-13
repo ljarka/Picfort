@@ -77,6 +77,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -103,6 +104,7 @@ import com.github.ljarka.picfort.core.database.AssetType
 import com.github.ljarka.picfort.collections.AddToAlbumDialog
 import com.github.ljarka.picfort.local.RequestMediaPermission
 import kotlinx.coroutines.launch
+import java.time.LocalDate
 
 @OptIn(ExperimentalSharedTransitionApi::class, ExperimentalMaterial3Api::class)
 @Composable
@@ -122,6 +124,8 @@ fun TimelineScreen(
     onEditMember: (String) -> Unit = {},
     /** The "Family" circle at the end of the carousel. */
     onOpenFamily: () -> Unit = {},
+    /** Opened on a day (a birthday's year, T-056): scrolled there once, when the timeline is laid out. */
+    scrollToDate: LocalDate? = null,
 ) {
     Box(modifier = modifier.fillMaxSize()) {
         val viewModel: TimelineViewModel = hiltViewModel()
@@ -162,6 +166,16 @@ fun TimelineScreen(
         }
         val header: (@Composable () -> Unit)? = if (people.members.isEmpty()) null else {
             { PeopleFilterRow(people, peopleViewModel::select, onEditMember, onOpenFamily) }
+        }
+        // Saved, so coming back to this tab later doesn't jump again.
+        var scrolledToDate by rememberSaveable { mutableStateOf(false) }
+        val timelineLayout = state.layout
+        LaunchedEffect(scrollToDate, timelineLayout, scrolledToDate) {
+            if (scrollToDate == null || scrolledToDate || timelineLayout == null) return@LaunchedEffect
+            val row = timelineLayout.rowIndexOf(scrollToDate) ?: return@LaunchedEffect
+            peopleViewModel.clear()
+            listState.requestScrollToItem(row + if (header != null) 1 else 0)
+            scrolledToDate = true
         }
 
         val context = LocalContext.current

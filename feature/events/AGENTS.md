@@ -34,11 +34,12 @@ Family events vertical slice: upcoming and past events, details, form, recurrenc
 - A birthday with a known year (`turns`): days = `seriesStartDate` (birth) + N years up to today; photos
   from `DayPhotosProvider`, one section per year ("Turned 8 · 16 Nov 2025"), empty years left out.
 - The detail is one `LazyColumn` (event as the first item); tap → `onOpenPhoto(id, index, "event:<id>")`.
+- A year's title (whole row, ">") → `onOpenDay(day)`: Photos on that day (T-056, routed by `:app`).
 
 ## Public Contract / Navigation Entry Points
 
 - `EventsListScreen(onOpenEvent: (Long) -> Unit, onAddEvent: () -> Unit, onSettingsClick: () -> Unit, onSetUpServer: () -> Unit)`
-- `EventDetailScreen(onBack, onEdit: (Long) -> Unit, onEditBirthday: (memberId: String) -> Unit, onOpenPhoto: (assetId, index, source) -> Unit)`
+- `EventDetailScreen(onBack, onEdit: (Long) -> Unit, onEditBirthday: (memberId: String) -> Unit, onOpenPhoto: (assetId, index, source) -> Unit, onOpenDay: (LocalDate) -> Unit)`
 - `EventFormScreen(onBack: () -> Unit, onSaved: (Long) -> Unit, onGone: () -> Unit)`
 
 ## Dependencies & Boundaries
@@ -57,5 +58,5 @@ Family events vertical slice: upcoming and past events, details, form, recurrenc
 ./gradlew :feature:events:verifyPaparazziDebug
 ./gradlew :feature:events:recordPaparazziDebug # on intentional UI changes
 DEVICE=emulator-5556 ./scripts/maestro-smoke.sh maestro/events-member-filter.yaml   # T-054, test server
-DEVICE=emulator-5556 ./scripts/maestro-smoke.sh maestro/events-birthday-photos.yaml  # T-055
+DEVICE=emulator-5556 ./scripts/maestro-smoke.sh maestro/events-birthday-photos.yaml  # T-055, T-056
 ```

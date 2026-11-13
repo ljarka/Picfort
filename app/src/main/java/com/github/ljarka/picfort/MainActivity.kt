@@ -61,14 +61,16 @@ import com.github.ljarka.picfort.ui.timeline.ImageDetailsRoute
 import com.github.ljarka.picfort.ui.timeline.TimelineScreen
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.serialization.Serializable
+import java.time.LocalDate
 import javax.inject.Inject
 
 sealed interface Screen {
     @Serializable
     object Init : Screen
 
+    /** The Photos tab; [date] (ISO) opens it scrolled to that day (T-056). */
     @Serializable
-    object Timeline : Screen
+    data class Timeline(val date: String? = null) : Screen
 
     @Serializable
     object Settings : Screen
@@ -153,7 +155,7 @@ private val Tab.root: Screen
         Tab.SHOPPING -> Screen.Shopping
         Tab.EVENTS -> Screen.Events
         Tab.SCHOOL -> Screen.School
-        Tab.PHOTOS -> Screen.Timeline
+        Tab.PHOTOS -> Screen.Timeline()
     }
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalSharedTransitionApi::class)
@@ -197,6 +199,8 @@ class MainActivity : ComponentActivity() {
                 destination?.hierarchy?.any { it.hasRoute(tab.graph::class) } == true
             }
             val onTabRoot = currentTab != null && destination?.hasRoute(currentTab.root::class) == true
+            val onDayJump = destination?.hasRoute(Screen.Timeline::class) == true &&
+                backStackEntry?.toRoute<Screen.Timeline>()?.date != null
             // Bumped when Photos is reselected at its root: the timeline scrolls to the top.
             var photosScrollToTop by remember { mutableIntStateOf(0) }
             val openSettings = { navController.navigate(Screen.Settings) }
@@ -304,8 +308,8 @@ class MainActivity : ComponentActivity() {
                                     }
                                 }
                             }
-                            navigation<TabGraph.Photos>(startDestination = Screen.Timeline) {
-                                composable<Screen.Timeline> {
+                            navigation<TabGraph.Photos>(startDestination = Screen.Timeline()) {
+                                composable<Screen.Timeline> { entry ->
                                     TabRoot {
                                         TimelineScreen(
                                             sharedTransitionScope = this@SharedTransitionLayout,
@@ -314,7 +318,7 @@ class MainActivity : ComponentActivity() {
                                                 navController.navigate(
                                                     ImageDetailsRoute(assetId, assetType, imageIndex)
                                                 ) {
-                                                    popUpTo(Screen.Timeline)
+                                                    popUpTo<Screen.Timeline>()
                                                 }
                                             },
                                             onSettingsClick = openSettings,
@@ -328,6 +332,7 @@ class MainActivity : ComponentActivity() {
                                             },
                                             onEditMember = { id -> navController.navigate(Screen.FamilySettings(id)) },
                                             onOpenFamily = { navController.navigate(Screen.FamilySettings()) },
+                                            scrollToDate = entry.toRoute<Screen.Timeline>().date?.let(LocalDate::parse),
                                         )
                                     }
                                 }
@@ -362,6 +367,8 @@ class MainActivity : ComponentActivity() {
                                     onOpenPhoto = { id, index, source ->
                                         navController.navigate(ImageDetailsRoute(id, AssetType.REMOTE, index, source))
                                     },
+                                    // On top of the detail, so Back returns to the birthday.
+                                    onOpenDay = { day -> navController.navigate(Screen.Timeline(day.toString())) },
                                 )
                             }
                             composable<Screen.EventForm> {
@@ -413,7 +420,9 @@ class MainActivity : ComponentActivity() {
                                     when {
                                         tab != currentTab -> navController.navigate(tab.graph) {
                                             // Each tab keeps its stack; back from a tab root goes to Wall.
-                                            popUpTo(Screen.FamilyWall) { saveState = true }
+                                            // Photos opened on a day from an event (T-056) sits on top of
+                                            // that event: not saved, or the event's tab would restore it.
+                                            popUpTo(Screen.FamilyWall) { saveState = !onDayJump }
                                             launchSingleTop = true
                                             restoreState = true
                                         }

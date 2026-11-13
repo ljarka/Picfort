@@ -2,7 +2,7 @@
 # Test server only: Ola's birth date is set to 22 Dec 2022 (the test library has photos on
 # 22 Dec 2022 and 2023) and put back to 12 Nov 2017 at the end.
 appId: com.github.ljarka.immich.android2
-name: Events — birthday photos (T-055)
+name: Events — birthday photos (T-055, T-056)
 onFlowComplete:
   - runScript:
       file: scripts/test-data.js
@@ -36,3 +36,20 @@ onFlowComplete:
     timeout: 10000
 - back
 - assertVisible: "Born · 22 Dec 2022"
+
+# T-056: a year's title opens Photos on that day; Back returns to the birthday
+- tapOn: "Born · 22 Dec 2022"
+- extendedWaitUntil:
+    visible: "December, 2022"
+    timeout: 10000
+- assertNotVisible: "Photos from Ola's birthdays"
+- back
+- assertVisible: "Born · 22 Dec 2022"
+# Switching tabs from there doesn't leave Photos inside the Events tab
+- tapOn: "Born · 22 Dec 2022"
+- extendedWaitUntil:
+    visible: "December, 2022"
+    timeout: 10000
+- tapOn: "Events"
+- assertVisible: "Upcoming"
+- assertNotVisible: "Photos from Ola's birthdays"
