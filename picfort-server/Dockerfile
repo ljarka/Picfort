@@ -15,13 +15,20 @@ ENV PYTHONUNBUFFERED=1 \
     EVENTS_DB_PATH=/data/events.db
 
 WORKDIR /app
-COPY requirements.txt .
-# pillow-heif: HEIC originals from iPhones (optional outside Docker).
-RUN pip install --no-cache-dir -r requirements.txt pillow-heif
+COPY requirements.txt requirements-heif.txt ./
+# requirements-heif.txt: HEIC originals from iPhones (optional outside Docker).
+RUN pip install --no-cache-dir -r requirements.txt -r requirements-heif.txt
 COPY *.py ./
+COPY docker-entrypoint.sh /usr/local/bin/
+
+# The server runs as this user, not root (docker-entrypoint.sh drops root after fixing /data).
+RUN groupadd --system --gid 1000 picfort \
+    && useradd --system --uid 1000 --gid picfort --no-create-home --shell /usr/sbin/nologin picfort \
+    && mkdir -p /data && chown picfort:picfort /data
 
 VOLUME /data
 EXPOSE 5000
 HEALTHCHECK --interval=30s --timeout=5s --start-period=10s \
     CMD python -c "import os, urllib.request as u; u.urlopen(u.Request('http://127.0.0.1:%s/status' % os.environ.get('PORT', '5000'), headers={'X-Picfort-Key': os.environ.get('PICFORT_API_KEY', '')}), timeout=4)"
+ENTRYPOINT ["docker-entrypoint.sh"]
 CMD ["python", "app.py"]

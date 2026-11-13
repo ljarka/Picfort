@@ -189,6 +189,7 @@ Then in the app: **Settings → Picfort server**, enter `<this machine's IP>:500
 - The image is built for `amd64` and `arm64` (64-bit Raspberry Pi OS). Any variable from the table below can go in `.env`.
 - On macOS, port 5000 is taken by AirPlay Receiver: set another `PICFORT_PORT` (e.g. `5050`) in `.env`.
 - If Immich runs in Docker on the same machine, `IMMICH_URL=http://host.docker.internal:2283` works on Docker Desktop.
+- The server runs as an unprivileged user (uid 1000), not root, on the production WSGI server waitress. On start the container hands files left in `./data` by older images (owned by root) over to that user; nothing to do by hand.
 - In Docker the server runs in **preview mode** (no e-paper panel), which is all the Family Wall and the app need. To drive a Waveshare panel, install it directly on the Raspberry Pi (below).
 
 ### Immich API key
@@ -224,7 +225,7 @@ Use Python 3.11+ (same versions as CI: 3.11 and 3.13).
 ```bash
 cd picfort-server
 python3 -m venv .venv && . .venv/bin/activate
-pip install -r requirements.txt
+pip install -r requirements.txt     # exact versions; again after every update
 cp .env.example .env              # then fill in IMMICH_URL and IMMICH_API_KEY
 set -a; . ./.env; set +a
 python3 app.py                    # listens on 0.0.0.0:5000
@@ -284,7 +285,7 @@ The frame uses Waveshare's 13.3" E Ink Spectra 6 panel (1200×1600, 6 colours, a
 | `PORT` | `5000` | HTTP port |
 | `PICFORT_API_KEY` | (empty) | When set, every request needs `X-Picfort-Key: <key>` (enter it in the app next to the address). Required before exposing the server outside your network (ADR 0007). |
 
-HEIC originals need `pip install pillow-heif`. Otherwise the server falls back to Immich's preview image.
+HEIC originals need `pip install -r requirements-heif.txt` (included in the Docker image). Otherwise the server falls back to Immich's preview image.
 
 ### Slideshow
 
