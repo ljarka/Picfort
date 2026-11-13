@@ -121,7 +121,22 @@ class TimelineViewModel @Inject constructor(
                 block(selected)
             } catch (e: CancellationException) {
                 throw e
-            } catch (e: Exception) {
+            } catch (e: CleartextNotAllowedException) {
+                Log.w(TAG, "Action failed", e)
+                _messages.send(describe(e))
+            } catch (e: IOException) {
+                Log.w(TAG, "Action failed", e)
+                _messages.send(describe(e))
+            } catch (e: HttpException) {
+                Log.w(TAG, "Action failed", e)
+                _messages.send(describe(e))
+            } catch (e: IllegalArgumentException) {
+                Log.w(TAG, "Action failed", e)
+                _messages.send(describe(e))
+            } catch (e: IllegalStateException) {
+                Log.w(TAG, "Action failed", e)
+                _messages.send(describe(e))
+            } catch (e: SecurityException) {
                 Log.w(TAG, "Action failed", e)
                 _messages.send(describe(e))
             } finally {
@@ -227,7 +242,11 @@ class TimelineViewModel @Inject constructor(
             timelineRepository.refresh()
         } catch (e: CancellationException) {
             throw e
-        } catch (e: Exception) {
+        } catch (e: IOException) {
+            Log.w(TAG, "Refresh after a change failed", e)
+        } catch (e: HttpException) {
+            Log.w(TAG, "Refresh after a change failed", e)
+        } catch (e: SecurityException) {
             Log.w(TAG, "Refresh after a change failed", e)
         }
     }
@@ -256,15 +275,24 @@ class TimelineViewModel @Inject constructor(
                 timelineRepository.refresh()
             } catch (e: CancellationException) {
                 throw e
-            } catch (e: Exception) {
+            } catch (e: CleartextNotAllowedException) {
                 Log.w(TAG, "Refresh failed", e)
-                _messages.send(
-                    if (e is IOException && e !is CleartextNotAllowedException) {
-                        "Can't reach the server, showing saved photos"
-                    } else {
-                        describe(e)
-                    }
-                )
+                _messages.send(describe(e))
+            } catch (e: IOException) {
+                Log.w(TAG, "Refresh failed", e)
+                _messages.send(describe(e))
+            } catch (e: HttpException) {
+                Log.w(TAG, "Refresh failed", e)
+                _messages.send(describe(e))
+            } catch (e: IllegalArgumentException) {
+                Log.w(TAG, "Refresh failed", e)
+                _messages.send(describe(e))
+            } catch (e: IllegalStateException) {
+                Log.w(TAG, "Refresh failed", e)
+                _messages.send(describe(e))
+            } catch (e: SecurityException) {
+                Log.w(TAG, "Refresh failed", e)
+                _messages.send(describe(e))
             } finally {
                 loadingState.value = LoadingState.LOADED
                 if (refreshAgain) {
@@ -275,11 +303,12 @@ class TimelineViewModel @Inject constructor(
         }
     }
 
-    private fun describe(e: Exception) = when (e) {
-        is CleartextNotAllowedException -> e.message ?: "Use https://"
+    private fun describe(error: Throwable) = when (error) {
+        is CleartextNotAllowedException -> error.message ?: "Use https://"
         is IOException -> "Can't reach the server"
-        is HttpException -> "Server error (HTTP ${e.code()})"
-        else -> "Something went wrong: ${e.message}"
+        is HttpException -> "Server error (HTTP ${error.code()})"
+        is SecurityException -> "Allow media access and try again"
+        else -> "Something went wrong: ${error.message}"
     }
 }
 private val MONTH_FORMAT = DateTimeFormatter.ofPattern("MMMM, yyyy", Locale.ENGLISH)

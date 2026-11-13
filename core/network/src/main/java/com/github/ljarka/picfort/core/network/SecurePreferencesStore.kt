@@ -8,15 +8,19 @@ import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
+import com.github.ljarka.picfort.core.network.AppScope
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.launch
 import java.nio.charset.StandardCharsets
 import java.security.KeyStore
 import java.util.Base64
 import java.util.Locale
 import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.CountDownLatch
 import javax.crypto.Cipher
 import javax.crypto.KeyGenerator
 import javax.crypto.SecretKey
@@ -37,6 +41,7 @@ private val Context.securePreferencesDataStore: DataStore<Preferences> by prefer
 @Singleton
 class SecurePreferencesStore @Inject constructor(
     @ApplicationContext private val context: Context,
+    @AppScope private val appScope: CoroutineScope,
 ) {
     private val dataStore = context.securePreferencesDataStore
     private val cache = ConcurrentHashMap<String, String>()
@@ -44,7 +49,24 @@ class SecurePreferencesStore @Inject constructor(
 
     @Volatile
     private var loaded = false
-    private val loadLock = Any()
+    private val loading = CompletableDeferred<Unit>()
+
+    init {
+        appScope.launch(Dispatchers.IO) {
+            try {
+                val snapshot = dataStore.data.first()
+                snapshot.asMap().forEach { (prefKey, storedValue) ->
+                    val encrypted = storedValue as? String
+                        ?: throw IllegalStateException("Unsupported type for secure key ${prefKey.name}")
+                    cache[prefKey.name] = decrypt(encrypted)
+                }
+                loaded = true
+                loading.complete(Unit)
+            } catch (t: Throwable) {
+                loading.completeExceptionally(t)
+            }
+        }
+    }
 
     fun getString(name: String, default: String = ""): String {
         ensureLoaded()
@@ -54,7 +76,7 @@ class SecurePreferencesStore @Inject constructor(
     fun putString(name: String, value: String) {
         ensureLoaded()
         val encrypted = encrypt(value)
-        runBlocking(Dispatchers.IO) {
+        blockingIo {
             dataStore.edit { prefs -> prefs[stringPreferencesKey(name)] = encrypted }
         }
         cache[name] = value
@@ -76,16 +98,37 @@ class SecurePreferencesStore @Inject constructor(
 
     private fun ensureLoaded() {
         if (loaded) return
-        synchronized(loadLock) {
-            if (loaded) return
-            val snapshot = runBlocking(Dispatchers.IO) { dataStore.data.first() }
-            snapshot.asMap().forEach { (prefKey, storedValue) ->
-                val encrypted = storedValue as? String
-                    ?: throw IllegalStateException("Unsupported type for secure key ${prefKey.name}")
-                cache[prefKey.name] = decrypt(encrypted)
+        var failure: Throwable? = null
+        val done = CountDownLatch(1)
+        appScope.launch(Dispatchers.IO) {
+            try {
+                loading.await()
+            } catch (t: Throwable) {
+                failure = t
+            } finally {
+                done.countDown()
             }
-            loaded = true
         }
+        done.await()
+        if (!loaded) {
+            throw IllegalStateException("Couldn't load secure preferences", failure)
+        }
+    }
+
+    private fun blockingIo(block: suspend () -> Unit) {
+        var failure: Throwable? = null
+        val done = CountDownLatch(1)
+        appScope.launch(Dispatchers.IO) {
+            try {
+                block()
+            } catch (t: Throwable) {
+                failure = t
+            } finally {
+                done.countDown()
+            }
+        }
+        done.await()
+        failure?.let { throw IllegalStateException("Couldn't save secure preference", it) }
     }
 
     private fun encrypt(plainText: String): String {

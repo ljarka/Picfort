@@ -91,6 +91,8 @@ Compose UI ──► ViewModel (Hilt) ──► TimelineRepository ──┬─�
 - **Assets:** loaded per month when needed (`/api/timeline/bucket` plus MediaStore), sorted by date taken and saved to Room. The ViewModel keeps at most 5 loads running and cancels the oldest.
 - **Auth:** you log in with email and password and get an access token. The token is stored in encrypted preferences and added as `Authorization: Bearer …` to every request.
 
+**AI-agent development report:** [docs/playbooks/ai-agent-mobile-development.md](docs/playbooks/ai-agent-mobile-development.md)
+
 ## Requirements
 
 - Android Studio (recent stable), JDK 21+ (the Paparazzi plugin requires it)
@@ -124,7 +126,7 @@ The first time you start the app:
 
 ### Screenshot tests
 
-`ScreenshotTest` and `TimelineScreenshotTest` (in `app/src/test`) render screens on the JVM with [Paparazzi](https://github.com/cashapp/paparazzi), with no device or emulator. Photos come from a small generator that draws deterministic landscapes, so the images are stable. The reference images are checked in under `app/src/test/snapshots/images/` and are also used in this README.
+Paparazzi tests (`*ScreenshotTest`) render screens on the JVM with [Paparazzi](https://github.com/cashapp/paparazzi), with no device or emulator. They live in `app` and feature modules (`feature/*/src/test`). Photos come from a small generator that draws deterministic landscapes, so the images are stable. The reference images are checked in under `**/src/test/snapshots/images/` and are also used in this README.
 
 After an intended UI change, re-record the screenshots and commit the updated images:
 
@@ -135,8 +137,9 @@ After an intended UI change, re-record the screenshots and commit the updated im
 ## CI and releases
 
 Every pull request and push to `main` runs [CI](.github/workflows/ci.yml):
-- **Android:** unit tests, screenshot comparison, lint and a debug APK (downloadable from the run). When screenshots differ, the diffs are uploaded as an artifact.
-- **Frame server:** the Python tests on 3.11 (Raspberry Pi OS Bookworm) and 3.13, and a build and smoke test of the Docker image.
+- **Android:** architecture boundaries, change-scope guardrail, diff secret scan, unit tests, screenshot comparison, lint and a debug APK (downloadable from the run). When screenshots differ, the diffs are uploaded as an artifact.
+- **Frame server:** the Python tests (including API contract checks) on 3.11 (Raspberry Pi OS Bookworm) and 3.13, and a build and smoke test of the Docker image.
+- **Agent KPI snapshot:** each run uploads `agent-kpi-snapshot` (`build/agent-kpi/agent-kpi.json`) with first-pass-green and stability inputs.
 
 Dependabot opens weekly update PRs for Gradle and pip, and monthly ones for GitHub Actions.
 
@@ -215,6 +218,8 @@ With [Cloudflare Tunnel](https://developers.cloudflare.com/cloudflare-one/connec
 Every request needs the key; the Family Wall also still needs your Immich login. With a key set the server marks all responses `Cache-Control: private`, so Cloudflare doesn't keep wall photos at its edge.
 
 ### Install without Docker
+
+Use Python 3.11+ (same versions as CI: 3.11 and 3.13).
 
 ```bash
 cd ImageFrameServer

@@ -24,7 +24,11 @@ class EventsScreenshotTest {
     val paparazzi = Paparazzi(deviceConfig = DeviceConfig.PIXEL_6, maxPercentDifference = 0.1)
 
     private fun snap(dark: Boolean = false, content: @Composable () -> Unit) {
-        if (dark) paparazzi.unsafeUpdateConfig(DeviceConfig.PIXEL_6.copy(nightMode = NightMode.NIGHT))
+        paparazzi.unsafeUpdateConfig(
+            DeviceConfig.PIXEL_6.copy(
+                nightMode = if (dark) NightMode.NIGHT else NightMode.NOTNIGHT,
+            )
+        )
         paparazzi.snapshot {
             PicfortTheme(darkTheme = dark, dynamicColor = false) {
                 // As in the app: the Events tab wears the amber blade.

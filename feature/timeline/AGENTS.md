@@ -7,8 +7,9 @@ Immich photo timeline, gallery, full-screen viewer, collections, and media sync 
 | File | Purpose |
 |---|---|
 | `ui/timeline/TimelineScreen.kt` | UI: `TimelineScreen`, `TimeLineContent`, month groupings, fast scroll; selection sheet padded above the floating tab bar |
+| `ui/timeline/TimelineGridRows.kt` | Extracted timeline grid row/tile rendering helpers used by `TimelineScreen` |
 | `ui/timeline/TimelineViewModel.kt` | ViewModel: layout engine, viewports, selection mode, asset actions |
-| `ui/timeline/layout/JustifiedLayout.kt` | Justified photo grid layout computation |
+| `core/ui/src/main/java/com/github/ljarka/picfort/core/ui/layout/JustifiedLayout.kt` | Shared justified row computation (`justify`) used by timeline layout |
 | `ui/timeline/layout/TimelineRows.kt` | Row measurement and tile placement |
 | `ui/timeline/SyncTimelineSource.kt` | Local copy of Immich assets kept fresh via sync stream |
 | `ui/image/ImageDetailsScreen.kt` | Full-screen photo/video viewer, shared element transition |

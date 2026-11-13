@@ -43,6 +43,7 @@ import com.github.ljarka.picfort.ui.init.SetupUi
 import java.time.Instant
 import java.time.LocalDate
 import java.time.LocalTime
+import java.util.Locale
 
 /**
  * Screens rendered with sample data. Record after intended UI changes with
@@ -55,11 +56,21 @@ class ScreenshotTest {
     val paparazzi = Paparazzi(deviceConfig = DeviceConfig.PIXEL_6, maxPercentDifference = 0.1)
 
     private fun snap(dark: Boolean = false, content: @Composable () -> Unit) {
-        if (dark) paparazzi.unsafeUpdateConfig(DeviceConfig.PIXEL_6.copy(nightMode = NightMode.NIGHT))
-        paparazzi.snapshot {
-            PicfortTheme(darkTheme = dark, dynamicColor = false) {
-                WithSamplePhotos(content)
+        val previousLocale = Locale.getDefault()
+        Locale.setDefault(Locale.US)
+        paparazzi.unsafeUpdateConfig(
+            DeviceConfig.PIXEL_6.copy(
+                nightMode = if (dark) NightMode.NIGHT else NightMode.NOTNIGHT,
+            )
+        )
+        try {
+            paparazzi.snapshot {
+                PicfortTheme(darkTheme = dark, dynamicColor = false) {
+                    WithSamplePhotos(content)
+                }
             }
+        } finally {
+            Locale.setDefault(previousLocale)
         }
     }
 
@@ -317,6 +328,7 @@ class ScreenshotTest {
             picfortServer = "http://192.168.0.105:5000",
             wallpaperColors = false,
             now = NOW,
+            relativeTimeSpan = { _, _ -> "2 hours ago" },
         )
     }
 

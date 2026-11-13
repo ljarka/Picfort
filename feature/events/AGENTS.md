@@ -6,7 +6,8 @@ Family events vertical slice: upcoming and past events, details, form, recurrenc
 
 | File | Purpose |
 |---|---|
-| `ui/events/EventsScreens.kt` | UI: `EventsListContent`, `EventDetailContent`, `EventFormContent`, date pickers |
+| `ui/events/EventsScreens.kt` | UI: `EventsListContent`, `EventDetailContent` |
+| `ui/events/EventFormContent.kt` | UI: `EventFormContent` + form-only pickers (`PickerField`, `RepeatField`) |
 | `ui/events/EventsViewModels.kt` | ViewModels: `EventsListViewModel`, `EventDetailViewModel`, `EventFormViewModel` |
 | `ui/events/EventsRepository.kt` | Repository: polling, pagination of past events, midnight rollover |
 | `ui/events/EventsApi.kt` | Server HTTP client: `/events` endpoints |

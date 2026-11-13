@@ -1,6 +1,5 @@
 package com.github.ljarka.picfort.ui.shopping
 
-import android.os.SystemClock
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -17,11 +16,11 @@ import androidx.lifecycle.repeatOnLifecycle
 import androidx.lifecycle.viewModelScope
 import com.github.ljarka.picfort.core.network.PicfortServerClient
 import com.github.ljarka.picfort.core.network.PicfortServerException
+import com.github.ljarka.picfort.core.model.pollEvery
 import com.github.ljarka.picfort.core.model.ShoppingItem
 import com.github.ljarka.picfort.core.model.ShoppingList
 import com.github.ljarka.picfort.core.model.FamilyMemberProvider
 import dagger.hilt.android.lifecycle.HiltViewModel
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -66,9 +65,8 @@ class ShoppingListsViewModel @Inject constructor(
     }
 
     suspend fun keepFresh() {
-        while (true) {
+        pollEvery(intervalMillis = LISTS_POLL_MILLIS) {
             refresh()
-            delay(LISTS_POLL_MILLIS)
         }
     }
 
@@ -127,14 +125,16 @@ class ShoppingListViewModel @Inject constructor(
     }
 
     suspend fun keepFresh() {
-        while (true) {
-            // Polls start every LIST_POLL_MILLIS, request time included, so a change made on
-            // another phone shows within that time (T-019), not that time plus the request.
-            val started = SystemClock.elapsedRealtime()
+        // Polls start every LIST_POLL_MILLIS, request time included, so a change made on
+        // another phone shows within that time (T-019), not that time plus the request.
+        pollEvery(
+            intervalMillis = LIST_POLL_MILLIS,
+            minDelayMillis = 1_000L,
+            includeRunTimeInInterval = true,
+        ) {
             val error = repository.refreshList(listId)
             if (error is PicfortServerException.Gone) extra.update { it.copy(loadError = "This list no longer exists") }
             else if (error != null && repository.lists.value[listId] == null) extra.update { it.copy(loadError = error.message) }
-            delay((LIST_POLL_MILLIS - (SystemClock.elapsedRealtime() - started)).coerceAtLeast(1_000L))
         }
     }
 

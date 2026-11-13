@@ -3,9 +3,6 @@ package com.github.ljarka.picfort.ui.events
 import android.content.ActivityNotFoundException
 import android.content.Intent
 import android.net.Uri
-import com.github.ljarka.picfort.core.model.EventRepeat
-import com.github.ljarka.picfort.core.model.EventsSegment
-import com.github.ljarka.picfort.core.model.FamilyEvent
 import androidx.activity.compose.BackHandler
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Text
@@ -26,12 +23,16 @@ import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.repeatOnLifecycle
 import androidx.lifecycle.viewModelScope
+import com.github.ljarka.picfort.core.model.EventRepeat
+import com.github.ljarka.picfort.core.model.DayPhotosProvider
+import com.github.ljarka.picfort.core.model.EventsSegment
+import com.github.ljarka.picfort.core.model.FamilyEvent
 import com.github.ljarka.picfort.core.network.PicfortServerClient
 import com.github.ljarka.picfort.core.network.PicfortServerException
 import com.github.ljarka.picfort.core.model.FamilyMember
 import com.github.ljarka.picfort.core.model.FamilyMemberProvider
+import com.github.ljarka.picfort.core.model.pollEvery
 import dagger.hilt.android.lifecycle.HiltViewModel
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -39,7 +40,6 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
-import com.github.ljarka.picfort.core.model.DayPhotosProvider
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import java.time.LocalDate
@@ -110,9 +110,8 @@ class EventsListViewModel @Inject constructor(
     }
 
     suspend fun keepFresh() {
-        while (true) {
+        pollEvery(intervalMillis = EVENTS_POLL_MILLIS) {
             refresh()
-            delay(EVENTS_POLL_MILLIS)
         }
     }
 

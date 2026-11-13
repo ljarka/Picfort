@@ -6,7 +6,8 @@ Family management vertical slice: member profiles, Immich users syncing, custom 
 
 | File | Purpose |
 |---|---|
-| `ui/family/FamilySettingsScreen.kt` | UI: `FamilySettingsContent`, `AddPersonSheetContent`, `FamilyMemberSheetContent` |
+| `ui/family/FamilySettingsScreen.kt` | UI: `FamilySettingsContent` and member list sections |
+| `ui/family/FamilyMemberSheets.kt` | UI sheets: `AddPersonSheetContent`, `FamilyMemberSheetContent`, `BirthdaySection`, `FamilyMemberEditUi` |
 | `ui/family/FamilySettingsViewModel.kt` | ViewModel: `FamilySettingsViewModel` (member edit, save, delete) |
 | `ui/family/FamilyRepository.kt` | Repository: merges Immich users (`UsersDao`) with Picfort server profiles (`/family`), implements `FamilyMemberProvider` |
 | `ui/family/FamilyModule.kt` | Dagger/Hilt module: binds `FamilyBackend`, `FamilyOfflineCopy`, `PeopleSource`, `FamilyMemberProvider` |
