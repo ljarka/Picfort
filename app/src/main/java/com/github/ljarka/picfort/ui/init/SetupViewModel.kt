@@ -22,7 +22,6 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import kotlinx.serialization.SerializationException
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import retrofit2.HttpException
@@ -169,9 +168,7 @@ class SetupViewModel @Inject constructor(
             e.message ?: "Use https://"
         } catch (e: IOException) {
             "Can't reach the server"
-        } catch (e: SerializationException) {
-            "Login failed: ${e.message}"
-        } catch (e: IllegalStateException) {
+        } catch (e: Exception) { // e.g. unexpected response shape; must not crash the first screen
             "Login failed: ${e.message}"
         }
         _state.update {

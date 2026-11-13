@@ -9,7 +9,6 @@ import androidx.lifecycle.viewModelScope
 import com.github.ljarka.picfort.core.model.FamilyEventsProvider
 import com.github.ljarka.picfort.core.model.FamilyMemberProvider
 import com.github.ljarka.picfort.core.model.pollEvery
-import com.github.ljarka.picfort.core.network.PicfortServerException
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.coroutineScope
@@ -134,7 +133,7 @@ class FamilyWallViewModel @Inject constructor(
             }
         } catch (e: CancellationException) {
             throw e
-        } catch (e: PicfortServerException) {
+        } catch (e: Exception) { // e.g. unexpected JSON or an unreadable photo, not only server errors
             _state.update { s ->
                 if (s.posts.isEmpty()) s.copy(isLoading = false, loadError = e.message)
                 else s.copy(isLoading = false, message = e.message)
@@ -148,7 +147,7 @@ class FamilyWallViewModel @Inject constructor(
             events.refreshUpcoming()
         } catch (e: CancellationException) {
             throw e
-        } catch (_: PicfortServerException) {
+        } catch (_: Exception) {
         }
         updatePanel()
     }
@@ -177,7 +176,7 @@ class FamilyWallViewModel @Inject constructor(
                 _state.update { s -> s.copy(posts = s.posts.map { if (it.id == temp.id) created else it }) }
             } catch (e: CancellationException) {
                 throw e
-            } catch (e: PicfortServerException) {
+            } catch (e: Exception) { // e.g. unexpected JSON or an unreadable photo, not only server errors
                 _state.update { s ->
                     s.copy(posts = s.posts.filterNot { it.id == temp.id }, message = "Couldn't post: ${e.message}")
                 }
@@ -192,7 +191,7 @@ class FamilyWallViewModel @Inject constructor(
                 repository.delete(post.id)
             } catch (e: CancellationException) {
                 throw e
-            } catch (e: PicfortServerException) {
+            } catch (e: Exception) { // e.g. unexpected JSON or an unreadable photo, not only server errors
                 _state.update { s -> s.copy(posts = (s.posts + post), message = "Couldn't delete: ${e.message}") }
             }
         }
@@ -206,7 +205,7 @@ class FamilyWallViewModel @Inject constructor(
                 _state.update { s -> s.copy(posts = s.posts.map { if (it.id == post.id) updated else it }) }
             } catch (e: CancellationException) {
                 throw e
-            } catch (e: PicfortServerException) {
+            } catch (e: Exception) { // e.g. unexpected JSON or an unreadable photo, not only server errors
                 _state.update { s ->
                     s.copy(posts = s.posts.map { if (it.id == post.id) post else it }, message = "Couldn't pin: ${e.message}")
                 }

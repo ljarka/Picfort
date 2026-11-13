@@ -50,18 +50,21 @@ jobs:
       - name: Architecture boundaries check
         run: ./scripts/check-modular-boundaries.sh
 
+      # Blocks wide pull requests; on a push to main (already merged) it only warns,
+      # so the tests, lint and APK below still run.
       - name: Change scope guardrail
         id: scope_guard
+        continue-on-error: ${{ github.event_name == 'push' }}
         run: bash ./scripts/check-agent-change-scope.sh
         env:
-          DIFF_BASE: ${{ github.event.pull_request.base.sha }}
+          DIFF_BASE: ${{ github.event.pull_request.base.sha || github.event.before }}
           DIFF_HEAD: ${{ github.sha }}
 
       - name: Secret scan (diff)
         id: secret_scan
         run: bash ./scripts/check-no-secrets-in-diff.sh
         env:
-          DIFF_BASE: ${{ github.event.pull_request.base.sha }}
+          DIFF_BASE: ${{ github.event.pull_request.base.sha || github.event.before }}
           DIFF_HEAD: ${{ github.sha }}
 
       # verifyPaparazziDebug runs all unit tests and compares the screenshots
@@ -74,7 +77,7 @@ jobs:
         if: always()
         run: python3 ./scripts/collect-agent-kpi.py --output build/agent-kpi/agent-kpi.json
         env:
-          DIFF_BASE: ${{ github.event.pull_request.base.sha }}
+          DIFF_BASE: ${{ github.event.pull_request.base.sha || github.event.before }}
           DIFF_HEAD: ${{ github.sha }}
           SCOPE_GUARD_STATUS: ${{ steps.scope_guard.outcome }}
           SECRET_SCAN_STATUS: ${{ steps.secret_scan.outcome }}
