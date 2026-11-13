@@ -37,8 +37,11 @@ fun formatFileSize(bytes: Long): String = when {
 /** "4032 × 3024 · 12.2 MP" */
 fun formatResolution(width: Int, height: Int): String {
     val mp = width.toLong() * height / 1_000_000.0
-    return if (mp >= 0.1) String.format(Locale.US, "%d × %d · %.1f MP", width, height, mp)
-    else "$width × $height"
+    return if (mp >= 0.1) {
+        String.format(Locale.US, "%d × %d · %.1f MP", width, height, mp)
+    } else {
+        "$width × $height"
+    }
 }
 
 /** "ƒ/1.8 · 1/120 s · 24 mm · ISO 100", skipping unknown parts. */

@@ -12,11 +12,11 @@ import androidx.work.WorkInfo
 import androidx.work.WorkManager
 import androidx.work.WorkQuery
 import dagger.hilt.android.qualifiers.ApplicationContext
-import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.map
 import java.util.concurrent.TimeUnit
 import javax.inject.Inject
 import javax.inject.Singleton
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.map
 
 private const val PERIODIC = "backup-periodic"
 private const val NOW = "backup-now"
@@ -72,11 +72,14 @@ class BackupScheduler @Inject constructor(
             val running = infos.firstOrNull { it.state == WorkInfo.State.RUNNING }
             when {
                 running != null -> BackupStatus.Running(
-                    running.progress.getInt(KEY_DONE, 0), running.progress.getInt(KEY_TOTAL, 0)
+                    running.progress.getInt(KEY_DONE, 0),
+                    running.progress.getInt(KEY_TOTAL, 0),
                 )
+
                 infos.any { NOW in it.tags && it.state == WorkInfo.State.ENQUEUED } -> BackupStatus.Waiting(
-                    if (settings.wifiOnly) "Waiting for Wi-Fi" else "Waiting for network"
+                    if (settings.wifiOnly) "Waiting for Wi-Fi" else "Waiting for network",
                 )
+
                 else -> BackupStatus.Idle
             }
         }

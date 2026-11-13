@@ -1,17 +1,17 @@
 package com.github.ljarka.picfort.network
 
+import com.github.ljarka.picfort.core.network.AccessTokenStore
 import com.github.ljarka.picfort.core.network.AppScope
 import com.github.ljarka.picfort.sync.SyncStore
-import com.github.ljarka.picfort.core.network.AccessTokenStore
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.flow.MutableSharedFlow
-import kotlinx.coroutines.flow.SharedFlow
-import kotlinx.coroutines.flow.asSharedFlow
 import javax.inject.Inject
 import javax.inject.Provider
 import javax.inject.Singleton
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.SharedFlow
+import kotlinx.coroutines.flow.asSharedFlow
+import kotlinx.coroutines.launch
 
 /** Signals that the server no longer accepts our token, so the UI can return to login. */
 @Singleton

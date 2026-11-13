@@ -20,7 +20,10 @@ class TimelineRowsTest {
     private val index = TimelineIndex(listOf(month(2L, 0, 10), month(1L, 10, 3, ratio = 1.5f)))
 
     private fun layout(width: Float = 1080f, height: Float = 2000f) = layoutTimeline(
-        index, Viewport(width, height, spacing = 8f), titleOf = { "month $it" }, urlOf = { "url/${it.id}" },
+        index,
+        Viewport(width, height, spacing = 8f),
+        titleOf = { "month $it" },
+        urlOf = { "url/${it.id}" },
     )
 
     @Test
@@ -67,8 +70,15 @@ class TimelineRowsTest {
         val nov = listOf("2025-11-20", "2025-11-16", "2025-11-10").flatMap { d -> List(3) { asset(d, it) } }
         val oct = List(3) { asset("2025-10-05", it) }
         layoutTimeline(
-            TimelineIndex(listOf(TimelineMonth(monthKey(nov[0].dateTaken), 0, nov), TimelineMonth(monthKey(oct[0].dateTaken), 9, oct))),
-            Viewport(1080f, 2000f, spacing = 8f), titleOf = { "month $it" }, urlOf = { it.id },
+            TimelineIndex(
+                listOf(
+                    TimelineMonth(monthKey(nov[0].dateTaken), 0, nov),
+                    TimelineMonth(monthKey(oct[0].dateTaken), 9, oct),
+                ),
+            ),
+            Viewport(1080f, 2000f, spacing = 8f),
+            titleOf = { "month $it" },
+            urlOf = { it.id },
         )
     }
 

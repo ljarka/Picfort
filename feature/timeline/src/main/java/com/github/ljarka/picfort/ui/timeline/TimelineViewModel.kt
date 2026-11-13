@@ -4,46 +4,46 @@ import android.content.Intent
 import android.content.IntentSender
 import android.os.Build
 import android.util.Log
+import android.util.LruCache
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
 import com.github.ljarka.picfort.assets.AssetActions
 import com.github.ljarka.picfort.assets.SelectedAsset
 import com.github.ljarka.picfort.collections.CollectionsRepository
 import com.github.ljarka.picfort.core.database.AssetType
 import com.github.ljarka.picfort.core.model.FrameResult
 import com.github.ljarka.picfort.core.model.FrameSender
-import com.github.ljarka.picfort.sync.SyncEngine
 import com.github.ljarka.picfort.core.network.AccessTokenStore
-import com.github.ljarka.picfort.core.network.ServerUrlStore
-import kotlinx.coroutines.flow.map
-import android.util.LruCache
 import com.github.ljarka.picfort.core.network.CleartextNotAllowedException
-import kotlinx.coroutines.CancellationException
-import kotlinx.coroutines.channels.Channel
-import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.receiveAsFlow
-import retrofit2.HttpException
-import java.io.IOException
-import androidx.lifecycle.ViewModel
-import androidx.lifecycle.viewModelScope
+import com.github.ljarka.picfort.core.network.ServerUrlStore
+import com.github.ljarka.picfort.sync.SyncEngine
+import com.github.ljarka.picfort.ui.timeline.layout.Viewport
+import com.github.ljarka.picfort.ui.timeline.layout.layoutTimeline
 import dagger.hilt.android.lifecycle.HiltViewModel
+import java.io.IOException
+import java.time.Instant
+import java.time.ZoneOffset
+import java.time.format.DateTimeFormatter
+import java.util.Locale
+import java.util.concurrent.ConcurrentHashMap
+import javax.inject.Inject
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.flowOn
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import java.util.concurrent.ConcurrentHashMap
-import javax.inject.Inject
-import com.github.ljarka.picfort.ui.timeline.layout.layoutTimeline
-import com.github.ljarka.picfort.ui.timeline.layout.Viewport
-import kotlinx.coroutines.flow.flowOn
-import java.util.Locale
-import java.time.format.DateTimeFormatter
-import java.time.ZoneOffset
-import java.time.Instant
+import retrofit2.HttpException
 
 private const val TAG = "TimelineViewModel"
 
@@ -61,7 +61,8 @@ class TimelineViewModel @Inject constructor(
     private val accessTokenStore: AccessTokenStore,
     private val serverUrlStore: ServerUrlStore,
     syncEngine: SyncEngine,
-) : ViewModel(), TimelineGridModel {
+) : ViewModel(),
+    TimelineGridModel {
     /** Lines applied by a running sync, for progress on a still-empty timeline; null when idle. */
     val syncLines: StateFlow<Int?> = syncEngine.linesApplied
 
@@ -75,8 +76,11 @@ class TimelineViewModel @Inject constructor(
 
     /** The whole timeline laid out for the current width, off the main thread. */
     private val layout = combine(timelineRepository.index, viewport) { index, viewport ->
-        if (index == null || viewport == null) null
-        else layoutTimeline(index, viewport, ::formatMonth, timelineRepository::thumbnailUrl)
+        if (index == null || viewport == null) {
+            null
+        } else {
+            layoutTimeline(index, viewport, ::formatMonth, timelineRepository::thumbnailUrl)
+        }
     }.flowOn(Dispatchers.Default)
 
     val state = combine(layout, loadingState) { layout, loadingState ->
@@ -156,11 +160,15 @@ class TimelineViewModel @Inject constructor(
         }
         when (val result = frameRepository.send(asset.id)) {
             FrameResult.Sent -> _messages.send("Sent to frame")
+
             FrameResult.NotConfigured -> _messages.send("Set up the frame first: open a photo and tap ⚙")
+
             FrameResult.Busy -> _messages.send("The frame is still refreshing, try again shortly")
+
             is FrameResult.TooSoon -> _messages.send(
-                "Wait ${result.retryAfterSeconds ?: 30}s before sending another photo"
+                "Wait ${result.retryAfterSeconds ?: 30}s before sending another photo",
             )
+
             is FrameResult.Error -> _messages.send(result.message)
         }
     }
@@ -263,7 +271,7 @@ class TimelineViewModel @Inject constructor(
                         "Can't reach the server, showing saved photos"
                     } else {
                         describe(e)
-                    }
+                    },
                 )
             } finally {
                 loadingState.value = LoadingState.LOADED

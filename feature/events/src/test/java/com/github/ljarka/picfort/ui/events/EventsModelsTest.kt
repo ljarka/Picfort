@@ -1,12 +1,17 @@
 package com.github.ljarka.picfort.ui.events
 
-import com.github.ljarka.picfort.core.model.EventRepeat
+import androidx.compose.ui.graphics.Color
 import com.github.ljarka.picfort.core.model.DayPhoto
+import com.github.ljarka.picfort.core.model.EventRepeat
 import com.github.ljarka.picfort.core.model.FamilyEvent
 import com.github.ljarka.picfort.core.model.FamilyMember
-import androidx.compose.ui.graphics.Color
-import kotlinx.serialization.json.JsonArray
+import java.time.Instant
+import java.time.LocalDate
+import java.time.LocalTime
+import java.time.ZoneId
+import java.util.Locale
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonNull
 import kotlinx.serialization.json.JsonPrimitive
 import org.junit.Assert.assertEquals
@@ -14,21 +19,12 @@ import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
-import java.time.Instant
-import java.time.LocalDate
-import java.time.LocalTime
-import java.time.ZoneId
-import java.util.Locale
 
 class EventsModelsTest {
     private val today = LocalDate.of(2026, 11, 11)
 
-    private fun event(
-        id: Long,
-        start: LocalDate,
-        end: LocalDate? = null,
-        time: LocalTime? = null,
-    ) = FamilyEvent(id = id, title = "e$id", startDate = start, endDate = end, startTime = time)
+    private fun event(id: Long, start: LocalDate, end: LocalDate? = null, time: LocalTime? = null) =
+        FamilyEvent(id = id, title = "e$id", startDate = start, endDate = end, startTime = time)
 
     @Test
     fun ongoingTripIsUnderNowAndOneDayTodayIsNot() {
@@ -97,10 +93,19 @@ class EventsModelsTest {
         val en = Locale.ENGLISH
         assertEquals("24 Dec", formatEventDateRange(LocalDate.of(2026, 12, 24), null, today, en))
         assertEquals("24 Dec", formatEventDateRange(LocalDate.of(2026, 12, 24), LocalDate.of(2026, 12, 24), today, en))
-        assertEquals("10–14 Nov", formatEventDateRange(LocalDate.of(2026, 11, 10), LocalDate.of(2026, 11, 14), today, en))
+        assertEquals(
+            "10–14 Nov",
+            formatEventDateRange(LocalDate.of(2026, 11, 10), LocalDate.of(2026, 11, 14), today, en),
+        )
         assertEquals("3 Jan 2027", formatEventDateRange(LocalDate.of(2027, 1, 3), null, today, en))
-        assertEquals("3–10 Jan 2027", formatEventDateRange(LocalDate.of(2027, 1, 3), LocalDate.of(2027, 1, 10), today, en))
-        assertEquals("1 Nov – 3 Dec", formatEventDateRange(LocalDate.of(2026, 11, 1), LocalDate.of(2026, 12, 3), today, en))
+        assertEquals(
+            "3–10 Jan 2027",
+            formatEventDateRange(LocalDate.of(2027, 1, 3), LocalDate.of(2027, 1, 10), today, en),
+        )
+        assertEquals(
+            "1 Nov – 3 Dec",
+            formatEventDateRange(LocalDate.of(2026, 11, 1), LocalDate.of(2026, 12, 3), today, en),
+        )
         assertEquals(
             "28 Dec 2026 – 3 Jan 2027",
             formatEventDateRange(LocalDate.of(2026, 12, 28), LocalDate.of(2027, 1, 3), today, en),
@@ -112,7 +117,10 @@ class EventsModelsTest {
         // What the M3 DatePicker returns for 11 Nov 2026: midnight UTC.
         val millis = Instant.parse("2026-11-11T00:00:00Z").toEpochMilli()
         // Read in a zone west of UTC this instant is still 10 Nov; the picked date must not shift.
-        assertEquals(LocalDate.of(2026, 11, 10), Instant.ofEpochMilli(millis).atZone(ZoneId.of("America/New_York")).toLocalDate())
+        assertEquals(
+            LocalDate.of(2026, 11, 10),
+            Instant.ofEpochMilli(millis).atZone(ZoneId.of("America/New_York")).toLocalDate(),
+        )
         assertEquals(today, pickerMillisToLocalDate(millis))
         assertEquals(millis, localDateToPickerMillis(today))
         assertEquals(today, pickerMillisToLocalDate(localDateToPickerMillis(today)))
@@ -198,7 +206,10 @@ class EventsModelsTest {
     @Test
     fun seriesIsGroupedAndLabelledByItsOccurrence() {
         val series = FamilyEvent(
-            id = 1, title = "Swimming", startDate = today.plusDays(2), repeat = EventRepeat.WEEKLY,
+            id = 1,
+            title = "Swimming",
+            startDate = today.plusDays(2),
+            repeat = EventRepeat.WEEKLY,
             seriesStartDate = LocalDate.of(2026, 9, 4),
         )
         val sections = groupUpcomingEvents(listOf(series), today)
@@ -209,8 +220,12 @@ class EventsModelsTest {
     @Test
     fun birthdayTextFollowsTheMemberName() {
         val birthday = FamilyEvent(
-            id = 1, title = "Ola's birthday", startDate = today, repeat = EventRepeat.YEARLY,
-            birthdayOf = "ola", turns = 9,
+            id = 1,
+            title = "Ola's birthday",
+            startDate = today,
+            repeat = EventRepeat.YEARLY,
+            birthdayOf = "ola",
+            turns = 9,
         )
         assertEquals("Aleksandra's birthday", birthday.displayTitle { if (it == "ola") "Aleksandra" else null })
         assertEquals("Ola's birthday", birthday.displayTitle { null })
@@ -224,18 +239,31 @@ class EventsModelsTest {
         val weekly = event(1, today).copy(repeat = EventRepeat.WEEKLY)
         assertNull(repeatSummary(event(2, today), today))
         assertEquals("Every week", repeatSummary(weekly, today))
-        assertEquals("Every week · until 20 Dec", repeatSummary(weekly.copy(repeatUntil = LocalDate.of(2026, 12, 20)), today))
-        assertEquals("Every week · until 25 Jun 2027", repeatSummary(weekly.copy(repeatUntil = LocalDate.of(2027, 6, 25)), today))
+        assertEquals(
+            "Every week · until 20 Dec",
+            repeatSummary(weekly.copy(repeatUntil = LocalDate.of(2026, 12, 20)), today),
+        )
+        assertEquals(
+            "Every week · until 25 Jun 2027",
+            repeatSummary(weekly.copy(repeatUntil = LocalDate.of(2027, 6, 25)), today),
+        )
     }
 
     @Test
     fun patchComparesWithTheSeriesAndSendsRepeatChanges() {
         val series = FamilyEvent(
-            id = 1, title = "Swimming", startDate = today.plusDays(2), repeat = EventRepeat.WEEKLY,
-            repeatUntil = LocalDate.of(2027, 6, 25), seriesStartDate = LocalDate.of(2026, 9, 4),
+            id = 1,
+            title = "Swimming",
+            startDate = today.plusDays(2),
+            repeat = EventRepeat.WEEKLY,
+            repeatUntil = LocalDate.of(2027, 6, 25),
+            seriesStartDate = LocalDate.of(2026, 9, 4),
         )
         val same = EventDraft(
-            "Swimming", LocalDate.of(2026, 9, 4), repeat = EventRepeat.WEEKLY, repeatUntil = LocalDate.of(2027, 6, 25),
+            "Swimming",
+            LocalDate.of(2026, 9, 4),
+            repeat = EventRepeat.WEEKLY,
+            repeatUntil = LocalDate.of(2027, 6, 25),
         )
         // The occurrence date differs from the series start, but the form edits the series: nothing changed.
         assertTrue(buildEventPatchJson(series, same).isEmpty())
@@ -268,7 +296,7 @@ class EventsModelsTest {
     @Test
     fun eventDtoReadsMembers() {
         val dto = json.decodeFromString<EventDto>(
-            """{"id":1,"title":"T","start_date":"2026-11-13","members":["ola","kuba"]}"""
+            """{"id":1,"title":"T","start_date":"2026-11-13","members":["ola","kuba"]}""",
         )
         assertEquals(listOf("ola", "kuba"), dto.toEvent().memberIds)
     }
@@ -300,7 +328,8 @@ class EventsModelsTest {
     @Test
     fun birthdayDaysRunFromBirthToToday() {
         val born = LocalDate.of(2017, 11, 16)
-        val ola = FamilyEvent(1, "Ola", LocalDate.of(2026, 11, 16), seriesStartDate = born, birthdayOf = "ola", turns = 9)
+        val ola =
+            FamilyEvent(1, "Ola", LocalDate.of(2026, 11, 16), seriesStartDate = born, birthdayOf = "ola", turns = 9)
 
         val beforeBirthday = birthdayDays(ola, LocalDate.of(2026, 11, 15))
         assertEquals(LocalDate.of(2025, 11, 16) to 8, beforeBirthday.first())
@@ -309,8 +338,14 @@ class EventsModelsTest {
         // On the day, today's photos count too.
         assertEquals(LocalDate.of(2026, 11, 16) to 9, birthdayDays(ola, LocalDate.of(2026, 11, 16)).first())
         // No birth year, or not a birthday: nothing.
-        assertEquals(emptyList<Pair<LocalDate, Int>>(), birthdayDays(ola.copy(turns = null), LocalDate.of(2026, 11, 16)))
-        assertEquals(emptyList<Pair<LocalDate, Int>>(), birthdayDays(ola.copy(birthdayOf = null), LocalDate.of(2026, 11, 16)))
+        assertEquals(
+            emptyList<Pair<LocalDate, Int>>(),
+            birthdayDays(ola.copy(turns = null), LocalDate.of(2026, 11, 16)),
+        )
+        assertEquals(
+            emptyList<Pair<LocalDate, Int>>(),
+            birthdayDays(ola.copy(birthdayOf = null), LocalDate.of(2026, 11, 16)),
+        )
     }
 
     @Test
@@ -328,7 +363,9 @@ class EventsModelsTest {
         val d17 = LocalDate.of(2017, 11, 16)
         val days = listOf(d25 to 8, LocalDate.of(2024, 11, 16) to 7, d17 to 0)
         val photos = listOf(
-            DayPhoto("a", d25, 1f, "u"), DayPhoto("b", d25, 1f, "u"), DayPhoto("c", d17, 1f, "u"),
+            DayPhoto("a", d25, 1f, "u"),
+            DayPhoto("b", d25, 1f, "u"),
+            DayPhoto("c", d17, 1f, "u"),
         )
         val years = birthdayYears(days, photos)
         assertEquals(listOf(8, 0), years.map { it.age })

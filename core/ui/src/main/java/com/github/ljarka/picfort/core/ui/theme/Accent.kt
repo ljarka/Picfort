@@ -40,12 +40,7 @@ enum class BrandAccent(internal val light: AccentColors, internal val dark: Acce
     }
 }
 
-internal data class AccentColors(
-    val accent: Color,
-    val onAccent: Color,
-    val container: Color,
-    val onContainer: Color,
-)
+internal data class AccentColors(val accent: Color, val onAccent: Color, val container: Color, val onContainer: Color)
 
 /** Set by [PicfortTheme]: whether the brand palette is in dark mode, or null with wallpaper colors. */
 internal val LocalBrandDark = staticCompositionLocalOf<Boolean?> { null }

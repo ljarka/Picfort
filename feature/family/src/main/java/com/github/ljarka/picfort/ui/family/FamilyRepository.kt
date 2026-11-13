@@ -4,18 +4,22 @@ import android.content.Context
 import com.github.ljarka.picfort.core.database.UserEntity
 import com.github.ljarka.picfort.core.database.UsersDao
 import com.github.ljarka.picfort.core.model.BirthDate
-import com.github.ljarka.picfort.core.network.PicfortServerException
-import com.github.ljarka.picfort.core.network.FrameSettingsStore
-import com.github.ljarka.picfort.core.network.AccessTokenStore
-import com.github.ljarka.picfort.core.network.ServerUrlStore
 import com.github.ljarka.picfort.core.model.FamilyMember
+import com.github.ljarka.picfort.core.model.FamilyMemberProvider
+import com.github.ljarka.picfort.core.model.ImmichUsersSync
 import com.github.ljarka.picfort.core.model.isTestAccount
 import com.github.ljarka.picfort.core.model.meFirst
-import com.github.ljarka.picfort.core.model.ImmichUsersSync
-import com.github.ljarka.picfort.core.model.FamilyMemberProvider
+import com.github.ljarka.picfort.core.network.AccessTokenStore
+import com.github.ljarka.picfort.core.network.FrameSettingsStore
+import com.github.ljarka.picfort.core.network.PicfortServerException
+import com.github.ljarka.picfort.core.network.ServerUrlStore
 import com.github.ljarka.picfort.core.ui.avatar.avatarColor
 import com.github.ljarka.picfort.core.ui.avatar.isChosenAvatarColor
 import dagger.hilt.android.qualifiers.ApplicationContext
+import java.io.File
+import javax.inject.Inject
+import javax.inject.Provider
+import javax.inject.Singleton
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -25,10 +29,6 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
-import java.io.File
-import javax.inject.Inject
-import javax.inject.Provider
-import javax.inject.Singleton
 
 /** Last `GET /family` response saved on disk so custom names and photos survive a cold start offline (T-032). */
 interface FamilyOfflineCopy {
@@ -38,11 +38,7 @@ interface FamilyOfflineCopy {
 }
 
 @Serializable
-private data class SavedFamilyProfiles(
-    val server: String,
-    val user: String,
-    val raw: String,
-)
+private data class SavedFamilyProfiles(val server: String, val user: String, val raw: String)
 
 @Singleton
 class FileFamilyOfflineCopy @Inject constructor(
@@ -90,8 +86,10 @@ fun mergeFamilyUsers(
     val immichIds = immichUsers.mapTo(HashSet()) { it.id }
     val manualProfiles = profiles.values.filter { it.manual || !immichIds.contains(it.userId) }
     // Members without a picked color get aperture colors in id order: distinct and the same on every phone.
-    val fallbackIndex = (immichUsers.filterNot { isChosenAvatarColor(it.avatarColor) }.map { it.id } +
-        manualProfiles.map { it.userId }).sorted().withIndex().associate { (i, id) -> id to i }
+    val fallbackIndex = (
+        immichUsers.filterNot { isChosenAvatarColor(it.avatarColor) }.map { it.id } +
+            manualProfiles.map { it.userId }
+        ).sorted().withIndex().associate { (i, id) -> id to i }
     val immichList = immichUsers.map { u ->
         val profile = profiles[u.id]
         val shownName = profile?.displayName?.trim()?.takeIf { it.isNotEmpty() } ?: u.name
@@ -178,6 +176,7 @@ class FamilyRepository(
     private val profiles = MutableStateFlow<Map<String, FamilyProfile>>(loadOfflineProfiles())
 
     private val _supported = MutableStateFlow(backend.isConfigured)
+
     /** False when no Picfort server is set or the server is older than T-031 (`404` on `/family`). */
     val supported: StateFlow<Boolean> = _supported.asStateFlow()
 
@@ -298,7 +297,10 @@ class FamilyRepository(
             includeBirthDate = birthDateChanged,
             today = today,
             // A new photo resets the flag on the server.
-            noPhoto = noPhoto.takeIf { user.isImmichUser && pickedPersonId == null && photoBytes == null && it != user.noPhoto },
+            noPhoto = noPhoto.takeIf {
+                user.isImmichUser && pickedPersonId == null && photoBytes == null &&
+                    it != user.noPhoto
+            },
         )
         refresh()
     }

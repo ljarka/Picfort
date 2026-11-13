@@ -7,10 +7,7 @@ import okhttp3.Response
  * Raw body text and its best-effort JSON decode.
  * The body stream is consumed exactly once.
  */
-data class ParsedResponseBody<T>(
-    val text: String,
-    val value: T?,
-)
+data class ParsedResponseBody<T>(val text: String, val value: T?)
 
 inline fun <reified T> Response.readParsedBody(json: Json): ParsedResponseBody<T> {
     val text = body.string()

@@ -12,8 +12,7 @@ import dagger.hilt.components.SingletonComponent
 class TimelineModule {
 
     @Provides
-    fun timelineBucketService(retrofit: retrofit2.Retrofit) =
-        retrofit.create(TimelineBucketsService::class.java)
+    fun timelineBucketService(retrofit: retrofit2.Retrofit) = retrofit.create(TimelineBucketsService::class.java)
 }
 
 @Module

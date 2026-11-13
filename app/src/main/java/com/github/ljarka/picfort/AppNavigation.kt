@@ -96,4 +96,3 @@ internal val Tab.root: Screen
         Tab.SCHOOL -> Screen.School
         Tab.PHOTOS -> Screen.Timeline()
     }
-

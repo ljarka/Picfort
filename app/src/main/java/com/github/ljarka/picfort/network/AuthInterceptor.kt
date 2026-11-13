@@ -4,12 +4,12 @@ import com.github.ljarka.picfort.core.network.AccessTokenStore
 import com.github.ljarka.picfort.core.network.FrameSettingsStore
 import com.github.ljarka.picfort.core.network.ServerUrlStore
 import com.github.ljarka.picfort.core.network.normalizeFrameUrl
+import javax.inject.Inject
+import javax.inject.Provider
 import okhttp3.HttpUrl
 import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
 import okhttp3.Interceptor
 import okhttp3.Response
-import javax.inject.Inject
-import javax.inject.Provider
 
 /** Whether this URL is [base] or below it (same scheme, host and port, path prefix). */
 internal fun HttpUrl.isUnder(base: HttpUrl): Boolean {
@@ -69,7 +69,9 @@ class PicfortAuthInterceptor @Inject constructor(
         val request = chain.request()
         val base = normalizeFrameUrl(frameSettings.get().frameUrl)
         val token = tokenProvider.get().accessToken
-        val family = base != null && PICFORT_FAMILY_PATHS.any { request.url.isUnder(base.newBuilder().addPathSegment(it).build()) }
+        val family =
+            base != null &&
+                PICFORT_FAMILY_PATHS.any { request.url.isUnder(base.newBuilder().addPathSegment(it).build()) }
         if (!family || token.isEmpty()) {
             return chain.proceed(request)
         }

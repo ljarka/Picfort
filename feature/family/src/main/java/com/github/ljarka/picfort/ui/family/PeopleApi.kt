@@ -4,6 +4,11 @@ import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import com.github.ljarka.picfort.core.network.PicfortServerException
 import com.github.ljarka.picfort.core.network.ServerUrlStore
+import java.io.ByteArrayOutputStream
+import java.io.IOException
+import javax.inject.Inject
+import javax.inject.Singleton
+import kotlin.math.min
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.Serializable
@@ -14,23 +19,12 @@ import kotlinx.serialization.json.decodeFromJsonElement
 import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
 import okhttp3.OkHttpClient
 import okhttp3.Request
-import java.io.ByteArrayOutputStream
-import java.io.IOException
-import javax.inject.Inject
-import javax.inject.Singleton
-import kotlin.math.min
 
 @Serializable
-data class ImmichPersonDto(
-    val id: String,
-    val name: String = "",
-    val isHidden: Boolean = false,
-)
+data class ImmichPersonDto(val id: String, val name: String = "", val isHidden: Boolean = false)
 
 @Serializable
-data class ImmichPeopleResponseDto(
-    val people: List<ImmichPersonDto> = emptyList(),
-)
+data class ImmichPeopleResponseDto(val people: List<ImmichPersonDto> = emptyList())
 
 interface PeopleSource {
     /** Named, non-hidden people from the caller's Immich library, sorted by name. */

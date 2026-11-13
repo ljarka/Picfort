@@ -128,10 +128,14 @@ fun FrameContent(
             when {
                 !state.configured -> Centered(
                     "Connect Picfort to your e-paper frame to send photos and run a slideshow.",
-                    "Set server address", onEditAddress,
+                    "Set server address",
+                    onEditAddress,
                 )
+
                 state.loading && state.image == null -> Box(Modifier.padding(64.dp)) { CircularProgressIndicator() }
+
                 state.error != null -> Centered(state.error, "Retry", onRefresh)
+
                 else -> Dashboard(state, onNext, onMode, onAlbum, onInterval, onQuietHours)
             }
         }
@@ -178,11 +182,19 @@ private fun Dashboard(
             contentAlignment = Alignment.Center,
         ) {
             state.image?.let {
-                Image(it, "On the frame", Modifier.fillMaxSize().clip(RoundedCornerShape(2.dp)), contentScale = ContentScale.Fit)
+                Image(
+                    it,
+                    "On the frame",
+                    Modifier.fillMaxSize().clip(RoundedCornerShape(2.dp)),
+                    contentScale = ContentScale.Fit,
+                )
             } ?: Text("Nothing shown yet", style = MaterialTheme.typography.bodySmall, color = Color.Gray)
             if (state.busy) {
                 Surface(shape = RoundedCornerShape(16.dp), color = Color.Black.copy(alpha = 0.6f)) {
-                    Row(Modifier.padding(horizontal = 12.dp, vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Row(
+                        Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
                         CircularProgressIndicator(Modifier.size(14.dp), color = Color.White, strokeWidth = 2.dp)
                         Text("  Refreshing…", color = Color.White, style = MaterialTheme.typography.labelMedium)
                     }
@@ -198,7 +210,12 @@ private fun Dashboard(
         style = MaterialTheme.typography.bodyMedium,
     )
     state.panelError?.let {
-        Text(it, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall, modifier = Modifier.padding(8.dp))
+        Text(
+            it,
+            color = MaterialTheme.colorScheme.error,
+            style = MaterialTheme.typography.bodySmall,
+            modifier = Modifier.padding(8.dp),
+        )
     }
     OutlinedButton(
         onClick = onNext,
@@ -232,7 +249,10 @@ private fun Dashboard(
             )
             DropdownMenu(expanded = open, onDismissRequest = { open = false }) {
                 state.albums.forEach { album ->
-                    DropdownMenuItem(text = { Text(album.name) }, onClick = { open = false; onAlbum(album.id) })
+                    DropdownMenuItem(text = { Text(album.name) }, onClick = {
+                        open = false
+                        onAlbum(album.id)
+                    })
                 }
             }
         }
@@ -267,7 +287,9 @@ private fun Dashboard(
             headlineContent = { Text("Quiet hours") },
             supportingContent = { Text(quietText) },
             trailingContent = {
-                Switch(checked = quiet, onCheckedChange = { on -> if (on) onQuietHours(22, 7) else onQuietHours(null, null) })
+                Switch(checked = quiet, onCheckedChange = { on ->
+                    if (on) onQuietHours(22, 7) else onQuietHours(null, null)
+                })
             },
         )
         if (quietStart != null && quietEnd != null) {
@@ -288,7 +310,10 @@ private fun HourPicker(label: String, hour: Int, onChange: (Int) -> Unit) {
         TextButton(onClick = { open = true }) { Text(hourLabel(hour)) }
         DropdownMenu(expanded = open, onDismissRequest = { open = false }) {
             (0..23).forEach { h ->
-                DropdownMenuItem(text = { Text(hourLabel(h)) }, onClick = { open = false; onChange(h) })
+                DropdownMenuItem(text = { Text(hourLabel(h)) }, onClick = {
+                    open = false
+                    onChange(h)
+                })
             }
         }
     }

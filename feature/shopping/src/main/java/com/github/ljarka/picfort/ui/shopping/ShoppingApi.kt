@@ -4,6 +4,8 @@ import com.github.ljarka.picfort.core.model.ShoppingItem
 import com.github.ljarka.picfort.core.model.ShoppingList
 import com.github.ljarka.picfort.core.network.PicfortServerClient
 import com.github.ljarka.picfort.core.network.PicfortServerException
+import javax.inject.Inject
+import javax.inject.Singleton
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
@@ -14,8 +16,6 @@ import okhttp3.HttpUrl
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.Request
 import okhttp3.RequestBody.Companion.toRequestBody
-import javax.inject.Inject
-import javax.inject.Singleton
 
 @Serializable
 data class ShoppingItemDto(
@@ -45,7 +45,17 @@ data class ShoppingListDto(
 
 private fun ShoppingItem.toDto() = ShoppingItemDto(id, text, checked, position, checkedBy, checkedAt, createdBy)
 
-private fun ShoppingList.toDto() = ShoppingListDto(id, title, archived, revision, createdBy, created, items.map { it.toDto() })
+private fun ShoppingList.toDto() = ShoppingListDto(
+    id,
+    title,
+    archived,
+    revision,
+    createdBy,
+    created,
+    items.map {
+        it.toDto()
+    },
+)
 
 /** A list fetched with If-None-Match: null when it hasn't changed (304). */
 data class ListFetch(val list: ShoppingList?)
@@ -69,10 +79,8 @@ interface ShoppingBackend {
 
 /** Shopping lists on the Picfort server (T-018). */
 @Singleton
-class ShoppingApi @Inject constructor(
-    private val server: PicfortServerClient,
-    private val json: Json,
-) : ShoppingBackend {
+class ShoppingApi @Inject constructor(private val server: PicfortServerClient, private val json: Json) :
+    ShoppingBackend {
 
     override suspend fun lists(archived: Boolean): Pair<List<ShoppingList>, String> {
         val url = lists().apply { if (archived) addQueryParameter("archived", "1") }.build()
@@ -83,8 +91,7 @@ class ShoppingApi @Inject constructor(
     override fun decodeLists(raw: String): List<ShoppingList> =
         json.decodeFromString<List<ShoppingListDto>>(raw).map { it.toList() }
 
-    override fun encodeLists(lists: List<ShoppingList>): String =
-        json.encodeToString(lists.map { it.toDto() })
+    override fun encodeLists(lists: List<ShoppingList>): String = json.encodeToString(lists.map { it.toDto() })
 
     override suspend fun list(id: Long, knownRevision: Long?): ListFetch {
         val request = Request.Builder().url(list(id).build())
@@ -98,10 +105,14 @@ class ShoppingApi @Inject constructor(
         listCall(Request.Builder().url(lists().build()).post(body(buildJsonObject { put("title", title) })).build())
 
     override suspend fun update(id: Long, title: String?, archived: Boolean?) = listCall(
-        Request.Builder().url(list(id).build()).patch(body(buildJsonObject {
-            title?.let { put("title", it) }
-            archived?.let { put("archived", it) }
-        })).build(),
+        Request.Builder().url(list(id).build()).patch(
+            body(
+                buildJsonObject {
+                    title?.let { put("title", it) }
+                    archived?.let { put("archived", it) }
+                },
+            ),
+        ).build(),
         id,
     )
 
@@ -142,8 +153,11 @@ class ShoppingApi @Inject constructor(
         list(listId).addPathSegment("items").addPathSegment("$itemId").build()
 
     private fun notFound(listId: Long?) = {
-        if (listId == null) PicfortServerException.Outdated("shopping lists")
-        else PicfortServerException.Gone("This list or item no longer exists")
+        if (listId == null) {
+            PicfortServerException.Outdated("shopping lists")
+        } else {
+            PicfortServerException.Gone("This list or item no longer exists")
+        }
     }
 
     private suspend fun call(request: Request, listId: Long? = null) = server.execute(request, notFound(listId)).body

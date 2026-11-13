@@ -3,6 +3,7 @@ package com.github.ljarka.picfort.db
 import androidx.room.Room
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
+import java.time.Instant
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
 import org.junit.After
@@ -10,7 +11,6 @@ import org.junit.Assert.assertEquals
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
-import java.time.Instant
 
 private const val ME = "me"
 private const val PARTNER_SHOWN = "partner-shown"
@@ -26,7 +26,8 @@ class RemoteAssetsDaoTest {
     @Before
     fun setUp() {
         db = Room.inMemoryDatabaseBuilder(
-            InstrumentationRegistry.getInstrumentation().targetContext, ImagesDatabase::class.java,
+            InstrumentationRegistry.getInstrumentation().targetContext,
+            ImagesDatabase::class.java,
         ).build()
         dao = db.remoteAssetsDao()
     }
@@ -69,7 +70,7 @@ class RemoteAssetsDaoTest {
                 asset("stack-member", stackId = "stack"),
                 asset("stack-unknown", stackId = "stack-not-synced-yet"),
                 asset("no-date", hasDate = false),
-            )
+            ),
         )
 
         val ids = dao.timelineAll(ME).first().map { it.id }
@@ -88,7 +89,7 @@ class RemoteAssetsDaoTest {
                 asset("b", at = "2026-10-20T10:00:00Z"),
                 asset("next-month", at = "2026-11-01T00:00:00Z"),
                 asset("prev-month", at = "2026-09-30T23:59:59Z"),
-            )
+            ),
         )
 
         val ids = dao.timelineAll(ME).first().map { it.id }

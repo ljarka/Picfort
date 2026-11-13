@@ -1,10 +1,10 @@
 package com.github.ljarka.picfort.sync
 
+import java.time.Instant
 import kotlinx.serialization.json.Json
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
-import java.time.Instant
 
 /**
  * `UserV1` / `UserDeleteV1` (Family Wall members, T-002). The field names follow Immich's sync
@@ -25,7 +25,7 @@ class SyncUsersTest {
     fun `parses a user`() {
         val c = change(
             """{"type":"UserV1","data":{"id":"u1","name":"Mama","email":"mama@example.com","avatarColor":"pink",
-               "deletedAt":null,"hasProfileImage":true,"profileChangedAt":"2026-11-09T17:51:36.681Z"},"ack":"UserV1|1"}"""
+               "deletedAt":null,"hasProfileImage":true,"profileChangedAt":"2026-11-09T17:51:36.681Z"},"ack":"UserV1|1"}""",
         ) as SyncChange.UpsertUser
         with(c.user) {
             assertEquals("u1" to "Mama", id to name)
@@ -49,7 +49,9 @@ class SyncUsersTest {
     fun `deleted users are removed`() {
         assertEquals(
             SyncChange.DeleteUser("u1"),
-            change("""{"type":"UserV1","data":{"id":"u1","name":"x","deletedAt":"2026-11-09T00:00:00.000Z"},"ack":"UserV1|3"}"""),
+            change(
+                """{"type":"UserV1","data":{"id":"u1","name":"x","deletedAt":"2026-11-09T00:00:00.000Z"},"ack":"UserV1|3"}""",
+            ),
         )
         assertEquals(
             SyncChange.DeleteUser("u2"),

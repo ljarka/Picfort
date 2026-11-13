@@ -5,6 +5,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -18,6 +19,7 @@ import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
@@ -25,18 +27,14 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
-import androidx.compose.runtime.Composable
 import androidx.compose.material3.TextButton
-import androidx.compose.foundation.layout.Row
-import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
-import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.rememberModalBottomSheetState
-import com.github.ljarka.picfort.core.model.FamilyMember
-import com.github.ljarka.picfort.core.ui.avatar.MemberCarousel
+import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
@@ -58,6 +56,8 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil3.compose.AsyncImage
+import com.github.ljarka.picfort.core.model.FamilyMember
+import com.github.ljarka.picfort.core.ui.avatar.MemberCarousel
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -135,7 +135,7 @@ fun AlbumsContent(
                                 .fillMaxWidth()
                                 .aspectRatio(1f)
                                 .clip(RoundedCornerShape(12.dp))
-                                .background(Color.LightGray.copy(alpha = 0.3f))
+                                .background(Color.LightGray.copy(alpha = 0.3f)),
                         ) {
                             thumbnail(album)?.let {
                                 AsyncImage(it, null, Modifier.fillMaxSize(), contentScale = ContentScale.Crop)
@@ -270,7 +270,10 @@ fun SearchContent(
                         modifier = Modifier.weight(1f),
                     )
                     if (state.people.size > row.size) {
-                        TextButton(onClick = { keyboard?.hide(); showAllPeople = true }) {
+                        TextButton(onClick = {
+                            keyboard?.hide()
+                            showAllPeople = true
+                        }) {
                             Text("All people (${state.people.size})")
                             Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = null)
                         }
@@ -304,15 +307,22 @@ fun SearchContent(
             when {
                 state.error != null && state.results.isEmpty() ->
                     Message(checkNotNull(state.error), Modifier) { onSearch(state.query) }
+
                 state.isLoading && state.results.isEmpty() ->
                     Box(Modifier.fillMaxSize(), Alignment.Center) { CircularProgressIndicator() }
+
                 state.searched && state.results.isEmpty() ->
                     Message(state.nothingFound(), Modifier)
+
                 !state.searched -> Message(
-                    if (state.people.isEmpty()) "Search your Immich library by describing what's in the photo."
-                    else "Describe what's in the photo, or pick people above.",
+                    if (state.people.isEmpty()) {
+                        "Search your Immich library by describing what's in the photo."
+                    } else {
+                        "Describe what's in the photo, or pick people above."
+                    },
                     Modifier,
                 )
+
                 else -> AssetGrid(
                     assets = state.results,
                     thumbnailUrl = thumbnail,

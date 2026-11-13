@@ -4,8 +4,6 @@ import android.app.Activity
 import android.content.Context
 import android.content.ContextWrapper
 import android.view.WindowManager
-import com.github.ljarka.picfort.core.model.ShoppingItem
-import com.github.ljarka.picfort.core.model.ShoppingList
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -86,10 +84,12 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import com.github.ljarka.picfort.core.model.FamilyMember
+import com.github.ljarka.picfort.core.model.ShoppingItem
+import com.github.ljarka.picfort.core.model.ShoppingList
+import com.github.ljarka.picfort.core.ui.avatar.MemberAvatar
 import com.github.ljarka.picfort.core.ui.component.ServerRequiredContent
 import com.github.ljarka.picfort.core.ui.component.SettingsAction
-import com.github.ljarka.picfort.core.model.FamilyMember
-import com.github.ljarka.picfort.core.ui.avatar.MemberAvatar
 import com.github.ljarka.picfort.core.ui.component.aboveFloatingTabBar
 import com.github.ljarka.picfort.core.ui.theme.AccentTheme
 import com.github.ljarka.picfort.core.ui.theme.BrandAccent
@@ -114,11 +114,17 @@ fun ShoppingListsContent(
 ) {
     val snackbar = remember { SnackbarHostState() }
     LaunchedEffect(state.message) {
-        state.message?.let { snackbar.showSnackbar(it); onMessageShown() }
+        state.message?.let {
+            snackbar.showSnackbar(it)
+            onMessageShown()
+        }
     }
     var creating by rememberSaveable { mutableStateOf(false) }
     if (creating) {
-        NewListDialog(onDismiss = { creating = false }, onCreate = { creating = false; onCreate(it) })
+        NewListDialog(onDismiss = { creating = false }, onCreate = {
+            creating = false
+            onCreate(it)
+        })
     }
     Scaffold(
         topBar = {
@@ -134,7 +140,10 @@ fun ShoppingListsContent(
                         var menu by remember { mutableStateOf(false) }
                         IconButton(onClick = { menu = true }) { Icon(Icons.Default.MoreVert, "More") }
                         DropdownMenu(expanded = menu, onDismissRequest = { menu = false }) {
-                            DropdownMenuItem(text = { Text("Archived lists") }, onClick = { menu = false; onArchivedClick() })
+                            DropdownMenuItem(text = { Text("Archived lists") }, onClick = {
+                                menu = false
+                                onArchivedClick()
+                            })
                         }
                     }
                     if (!archived) SettingsAction(onSettingsClick)
@@ -155,13 +164,19 @@ fun ShoppingListsContent(
     ) { padding ->
         Column(Modifier.fillMaxSize().padding(padding)) {
             when {
-                !state.configured -> ServerRequiredContent("Connect your Picfort server to use shopping lists.", onSetUpServer)
+                !state.configured -> ServerRequiredContent(
+                    "Connect your Picfort server to use shopping lists.",
+                    onSetUpServer,
+                )
+
                 state.isLoading && state.lists.isEmpty() -> Centered { CircularProgressIndicator() }
+
                 state.loadError != null && state.lists.isEmpty() -> Centered {
                     Text(state.loadError, textAlign = TextAlign.Center, style = MaterialTheme.typography.bodyLarge)
                     Spacer(Modifier.height(16.dp))
                     Button(onClick = onRefresh) { Text("Retry") }
                 }
+
                 else -> {
                     state.offlineSince?.let { OfflineBanner(it) }
                     PullToRefreshBox(isRefreshing = false, onRefresh = onRefresh, modifier = Modifier.weight(1f)) {
@@ -203,7 +218,12 @@ private fun ListCard(list: ShoppingList, onClick: () -> Unit) = AccentTheme(Bran
         ),
     ) {
         Column(Modifier.padding(12.dp)) {
-            Text(list.title, style = MaterialTheme.typography.titleMedium, maxLines = 2, overflow = TextOverflow.Ellipsis)
+            Text(
+                list.title,
+                style = MaterialTheme.typography.titleMedium,
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis,
+            )
             Spacer(Modifier.height(6.dp))
             val open = list.unchecked
             if (list.items.isNotEmpty() && open.isEmpty()) {
@@ -243,12 +263,17 @@ private fun NewListDialog(onDismiss: () -> Unit, onCreate: (String) -> Unit) {
                 singleLine = true,
                 label = { Text("Title") },
                 placeholder = { Text("Biedronka") },
-                keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Sentences, imeAction = ImeAction.Done),
+                keyboardOptions = KeyboardOptions(
+                    capitalization = KeyboardCapitalization.Sentences,
+                    imeAction = ImeAction.Done,
+                ),
                 keyboardActions = KeyboardActions(onDone = { if (title.isNotBlank()) onCreate(title.trim()) }),
                 modifier = Modifier.fillMaxWidth().focusRequester(focus),
             )
         },
-        confirmButton = { TextButton(enabled = title.isNotBlank(), onClick = { onCreate(title.trim()) }) { Text("Create") } },
+        confirmButton = {
+            TextButton(enabled = title.isNotBlank(), onClick = { onCreate(title.trim()) }) { Text("Create") }
+        },
         dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } },
     )
 }
@@ -292,11 +317,31 @@ fun ShoppingListContent(
     var dialog by remember { mutableStateOf<ListDialog?>(null) }
     if (list != null) {
         when (dialog) {
-            ListDialog.Rename -> RenameDialog(list.title, onDismiss = { dialog = null }) { dialog = null; onRename(it) }
-            ListDialog.DeleteChecked -> Confirm("Delete checked items?", "${list.checkedCount} checked items are removed from the list.",
-                "Delete", onDismiss = { dialog = null }) { dialog = null; onDeleteChecked() }
-            ListDialog.DeleteList -> Confirm("Delete \"${list.title}\"?", "The list is deleted for the whole family.",
-                "Delete", onDismiss = { dialog = null }) { dialog = null; onDeleteList() }
+            ListDialog.Rename -> RenameDialog(list.title, onDismiss = { dialog = null }) {
+                dialog = null
+                onRename(it)
+            }
+
+            ListDialog.DeleteChecked -> Confirm(
+                "Delete checked items?",
+                "${list.checkedCount} checked items are removed from the list.",
+                "Delete",
+                onDismiss = { dialog = null },
+            ) {
+                dialog = null
+                onDeleteChecked()
+            }
+
+            ListDialog.DeleteList -> Confirm(
+                "Delete \"${list.title}\"?",
+                "The list is deleted for the whole family.",
+                "Delete",
+                onDismiss = { dialog = null },
+            ) {
+                dialog = null
+                onDeleteList()
+            }
+
             null -> Unit
         }
     }
@@ -310,19 +355,36 @@ fun ShoppingListContent(
                         var menu by remember { mutableStateOf(false) }
                         IconButton(onClick = { menu = true }) { Icon(Icons.Default.MoreVert, "More") }
                         DropdownMenu(expanded = menu, onDismissRequest = { menu = false }) {
-                            DropdownMenuItem(text = { Text("Rename") }, onClick = { menu = false; dialog = ListDialog.Rename })
+                            DropdownMenuItem(text = { Text("Rename") }, onClick = {
+                                menu = false
+                                dialog =
+                                    ListDialog.Rename
+                            })
                             if (list.checkedCount > 0) {
-                                DropdownMenuItem(text = { Text("Uncheck all") }, onClick = { menu = false; onUncheckAll() })
-                                DropdownMenuItem(text = { Text("Delete checked items") }, onClick = { menu = false; dialog = ListDialog.DeleteChecked })
+                                DropdownMenuItem(text = { Text("Uncheck all") }, onClick = {
+                                    menu = false
+                                    onUncheckAll()
+                                })
+                                DropdownMenuItem(text = { Text("Delete checked items") }, onClick = {
+                                    menu = false
+                                    dialog =
+                                        ListDialog.DeleteChecked
+                                })
                             }
                             DropdownMenuItem(
                                 text = { Text(if (list.archived) "Unarchive" else "Archive") },
-                                onClick = { menu = false; onArchive(!list.archived) },
+                                onClick = {
+                                    menu = false
+                                    onArchive(!list.archived)
+                                },
                             )
                             if (state.isMine) {
                                 DropdownMenuItem(
                                     text = { Text("Delete list", color = MaterialTheme.colorScheme.error) },
-                                    onClick = { menu = false; dialog = ListDialog.DeleteList },
+                                    onClick = {
+                                        menu = false
+                                        dialog = ListDialog.DeleteList
+                                    },
                                 )
                             }
                         }
@@ -337,7 +399,9 @@ fun ShoppingListContent(
                 list == null && state.loadError != null -> Centered {
                     Text(state.loadError, textAlign = TextAlign.Center, style = MaterialTheme.typography.bodyLarge)
                 }
+
                 list == null -> Centered { CircularProgressIndicator() }
+
                 else -> {
                     state.offlineSince?.let { OfflineBanner(it) }
                     PullToRefreshBox(isRefreshing = false, onRefresh = onRefresh, modifier = Modifier.weight(1f)) {
@@ -362,7 +426,8 @@ private fun ResizeForKeyboard() {
         val before = window.attributes.softInputMode
         @Suppress("DEPRECATION")
         window.setSoftInputMode(
-            (before and WindowManager.LayoutParams.SOFT_INPUT_MASK_STATE) or WindowManager.LayoutParams.SOFT_INPUT_ADJUST_RESIZE,
+            (before and WindowManager.LayoutParams.SOFT_INPUT_MASK_STATE) or
+                WindowManager.LayoutParams.SOFT_INPUT_ADJUST_RESIZE,
         )
         onDispose { window.setSoftInputMode(before) }
     }
@@ -390,8 +455,14 @@ private fun ItemList(
     // One LazyColumn: unchecked rows, "Add item", the checked header and checked rows.
     LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(bottom = 24.dp)) {
         items(list.unchecked, key = { it.id }) { item ->
-            ItemRow(item, state.editable, checker = null, onToggle = { onToggle(item) },
-                onEdit = { onEdit(item, it) }, onDelete = { onDelete(item) })
+            ItemRow(
+                item,
+                state.editable,
+                checker = null,
+                onToggle = { onToggle(item) },
+                onEdit = { onEdit(item, it) },
+                onDelete = { onDelete(item) },
+            )
         }
         if (state.editable) {
             item(key = "add") { AddItemRow(onAdd, focusAdd) }
@@ -418,8 +489,16 @@ private fun ItemList(
             }
             if (showChecked) {
                 items(checked, key = { it.id }) { item ->
-                    ItemRow(item, state.editable, checker = state.memberOf(item.checkedBy), onToggle = { onToggle(item) },
-                        onEdit = { onEdit(item, it) }, onDelete = { onDelete(item) })
+                    ItemRow(
+                        item,
+                        state.editable,
+                        checker = state.memberOf(item.checkedBy),
+                        onToggle = {
+                            onToggle(item)
+                        },
+                        onEdit = { onEdit(item, it) },
+                        onDelete = { onDelete(item) },
+                    )
                 }
             }
         }
@@ -457,7 +536,8 @@ private fun ItemRow(
                 stateDescription = if (item.checked) "checked" else "not checked"
             },
         )
-        val color = if (item.checked) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.onSurface
+        val colors = MaterialTheme.colorScheme
+        val color = if (item.checked) colors.onSurfaceVariant else colors.onSurface
         TextField(
             value = text,
             onValueChange = { text = it.take(200) },
@@ -468,12 +548,18 @@ private fun ItemRow(
                 textDecoration = if (item.checked) TextDecoration.LineThrough else null,
             ),
             colors = TextFieldDefaults.colors(
-                focusedContainerColor = Color.Transparent, unfocusedContainerColor = Color.Transparent,
-                disabledContainerColor = Color.Transparent, focusedIndicatorColor = Color.Transparent,
-                unfocusedIndicatorColor = Color.Transparent, disabledIndicatorColor = Color.Transparent,
+                focusedContainerColor = Color.Transparent,
+                unfocusedContainerColor = Color.Transparent,
+                disabledContainerColor = Color.Transparent,
+                focusedIndicatorColor = Color.Transparent,
+                unfocusedIndicatorColor = Color.Transparent,
+                disabledIndicatorColor = Color.Transparent,
                 disabledTextColor = color,
             ),
-            keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Sentences, imeAction = ImeAction.Done),
+            keyboardOptions = KeyboardOptions(
+                capitalization = KeyboardCapitalization.Sentences,
+                imeAction = ImeAction.Done,
+            ),
             keyboardActions = KeyboardActions(onDone = { if (text.trim() != item.text) onEdit(text.trim()) }),
             modifier = Modifier
                 .weight(1f)
@@ -485,7 +571,12 @@ private fun ItemRow(
         )
         if (checker != null) MemberAvatar(checker, size = 24.dp, ring = 1.dp)
         if (editable) {
-            IconButton(onClick = onDelete, modifier = Modifier.semantics { contentDescription = "Delete ${item.text}" }) {
+            IconButton(
+                onClick = onDelete,
+                modifier = Modifier.semantics {
+                    contentDescription = "Delete ${item.text}"
+                },
+            ) {
                 Icon(Icons.Default.Close, null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
             }
         }
@@ -508,16 +599,23 @@ private fun AddItemRow(onAdd: (String) -> Unit, focusOnStart: Boolean) {
             singleLine = true,
             placeholder = { Text("Add item") },
             colors = TextFieldDefaults.colors(
-                focusedContainerColor = Color.Transparent, unfocusedContainerColor = Color.Transparent,
-                focusedIndicatorColor = Color.Transparent, unfocusedIndicatorColor = Color.Transparent,
+                focusedContainerColor = Color.Transparent,
+                unfocusedContainerColor = Color.Transparent,
+                focusedIndicatorColor = Color.Transparent,
+                unfocusedIndicatorColor = Color.Transparent,
             ),
-            keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Sentences, imeAction = ImeAction.Next),
+            keyboardOptions = KeyboardOptions(
+                capitalization = KeyboardCapitalization.Sentences,
+                imeAction = ImeAction.Next,
+            ),
             // Adds and keeps the keyboard for the next item; on an empty field it closes it.
             keyboardActions = KeyboardActions(onNext = {
                 if (text.isNotBlank()) {
                     onAdd(text.trim())
                     text = ""
-                } else defaultKeyboardAction(ImeAction.Done)
+                } else {
+                    defaultKeyboardAction(ImeAction.Done)
+                }
             }),
             modifier = Modifier.weight(1f).focusRequester(focus),
         )
@@ -554,10 +652,17 @@ private fun RenameDialog(current: String, onDismiss: () -> Unit, onRename: (Stri
         onDismissRequest = onDismiss,
         title = { Text("Rename list") },
         text = {
-            OutlinedTextField(title, { title = it.take(100) }, singleLine = true, label = { Text("Title") },
-                modifier = Modifier.fillMaxWidth())
+            OutlinedTextField(
+                title,
+                { title = it.take(100) },
+                singleLine = true,
+                label = { Text("Title") },
+                modifier = Modifier.fillMaxWidth(),
+            )
         },
-        confirmButton = { TextButton(enabled = title.isNotBlank(), onClick = { onRename(title.trim()) }) { Text("Save") } },
+        confirmButton = {
+            TextButton(enabled = title.isNotBlank(), onClick = { onRename(title.trim()) }) { Text("Save") }
+        },
         dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } },
     )
 }

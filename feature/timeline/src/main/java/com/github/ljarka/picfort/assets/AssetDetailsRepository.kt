@@ -8,12 +8,12 @@ import com.github.ljarka.picfort.local.localImageUri
 import com.github.ljarka.picfort.local.localVideoUri
 import com.github.ljarka.picfort.ui.timeline.formatDuration
 import dagger.hilt.android.qualifiers.ApplicationContext
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.withContext
 import java.time.Instant
 import java.time.ZoneId
 import javax.inject.Inject
 import javax.inject.Provider
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 
 class AssetDetailsRepository @Inject constructor(
     @ApplicationContext private val context: Context,

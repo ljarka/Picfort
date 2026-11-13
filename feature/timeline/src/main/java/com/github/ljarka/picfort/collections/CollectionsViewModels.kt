@@ -4,11 +4,13 @@ import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.navigation.toRoute
-import com.github.ljarka.picfort.ui.timeline.AlbumRoute
 import com.github.ljarka.picfort.UrlProvider
 import com.github.ljarka.picfort.core.database.AssetType
 import com.github.ljarka.picfort.core.network.CleartextNotAllowedException
+import com.github.ljarka.picfort.ui.timeline.AlbumRoute
 import dagger.hilt.android.lifecycle.HiltViewModel
+import java.io.IOException
+import javax.inject.Inject
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -17,8 +19,6 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import retrofit2.HttpException
-import java.io.IOException
-import javax.inject.Inject
 
 sealed interface LoadState<out T> {
     data object Loading : LoadState<Nothing>
@@ -149,8 +149,11 @@ class SearchViewModel @Inject constructor(
             return
         }
         _state.value = SearchUi(
-            query = query.trim(), isLoading = true, searched = true,
-            people = s.people, selectedPeople = s.selectedPeople,
+            query = query.trim(),
+            isLoading = true,
+            searched = true,
+            people = s.people,
+            selectedPeople = s.selectedPeople,
         )
         fetch(page = 1)
     }

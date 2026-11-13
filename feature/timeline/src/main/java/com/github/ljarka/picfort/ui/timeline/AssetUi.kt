@@ -12,9 +12,4 @@ data class AssetUi(
 )
 
 /** An asset's position in the whole timeline, as the full-screen viewer pages through it. */
-data class AssetIndex(
-    val index: Int,
-    val assetId: String,
-    val assetType: AssetType,
-    val isVideo: Boolean = false,
-)
+data class AssetIndex(val index: Int, val assetId: String, val assetType: AssetType, val isVideo: Boolean = false)

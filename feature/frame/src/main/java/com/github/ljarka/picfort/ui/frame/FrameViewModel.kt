@@ -6,6 +6,11 @@ import androidx.compose.ui.graphics.asImageBitmap
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
+import java.time.Instant
+import java.time.ZoneId
+import java.time.format.DateTimeFormatter
+import java.util.Locale
+import javax.inject.Inject
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -16,11 +21,6 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import java.time.Instant
-import java.time.ZoneId
-import java.time.format.DateTimeFormatter
-import java.util.Locale
-import javax.inject.Inject
 
 data class FrameUi(
     val configured: Boolean = true,
@@ -55,9 +55,7 @@ fun nextChangeLabel(state: SlideshowState, zone: ZoneId = ZoneId.systemDefault()
     }
 
 @HiltViewModel
-class FrameViewModel @Inject constructor(
-    private val api: FrameDashboardApi,
-) : ViewModel() {
+class FrameViewModel @Inject constructor(private val api: FrameDashboardApi) : ViewModel() {
     private val _state = MutableStateFlow(FrameUi())
     val state: StateFlow<FrameUi> = _state.asStateFlow()
     private var watchJob: Job? = null

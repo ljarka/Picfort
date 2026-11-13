@@ -1,15 +1,18 @@
 package com.github.ljarka.picfort.ui.wall
 
-import com.github.ljarka.picfort.core.model.FamilyMember
-import com.github.ljarka.picfort.core.ui.avatar.UNKNOWN_MEMBER_COLOR
-
 import android.net.Uri
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.github.ljarka.picfort.core.model.FamilyEventsProvider
+import com.github.ljarka.picfort.core.model.FamilyMember
 import com.github.ljarka.picfort.core.model.FamilyMemberProvider
 import com.github.ljarka.picfort.core.model.pollEvery
+import com.github.ljarka.picfort.core.ui.avatar.UNKNOWN_MEMBER_COLOR
 import dagger.hilt.android.lifecycle.HiltViewModel
+import java.time.Instant
+import java.time.LocalDate
+import java.time.LocalTime
+import javax.inject.Inject
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -17,10 +20,6 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import java.time.Instant
-import java.time.LocalDate
-import java.time.LocalTime
-import javax.inject.Inject
 
 /** How often the open wall asks for new posts. */
 private const val POLL_MILLIS = 60_000L
@@ -53,9 +52,8 @@ data class FamilyWallUiState(
     val photos: List<WallPost> get() = visible.filter { it.photoUrl != null }.ordered()
 
     /** The member who wrote [post], or a stand-in for authors who aren't Immich users. */
-    fun authorOf(post: WallPost): FamilyMember =
-        members.firstOrNull { it.id == post.authorId }
-            ?: FamilyMember(post.authorId, post.authorName, avatarUrl = null, color = UNKNOWN_MEMBER_COLOR)
+    fun authorOf(post: WallPost): FamilyMember = members.firstOrNull { it.id == post.authorId }
+        ?: FamilyMember(post.authorId, post.authorName, avatarUrl = null, color = UNKNOWN_MEMBER_COLOR)
 
     fun isMine(post: WallPost) = post.authorId == myId && post.id > 0
 }
@@ -135,8 +133,11 @@ class FamilyWallViewModel @Inject constructor(
             throw e
         } catch (e: Exception) { // e.g. unexpected JSON or an unreadable photo, not only server errors
             _state.update { s ->
-                if (s.posts.isEmpty()) s.copy(isLoading = false, loadError = e.message)
-                else s.copy(isLoading = false, message = e.message)
+                if (s.posts.isEmpty()) {
+                    s.copy(isLoading = false, loadError = e.message)
+                } else {
+                    s.copy(isLoading = false, message = e.message)
+                }
             }
         }
     }
@@ -198,7 +199,19 @@ class FamilyWallViewModel @Inject constructor(
     }
 
     fun togglePin(post: WallPost) {
-        _state.update { s -> s.copy(posts = s.posts.map { if (it.id == post.id) it.copy(pinned = !it.pinned) else it }) }
+        _state.update { s ->
+            s.copy(
+                posts = s.posts.map {
+                    if (it.id ==
+                        post.id
+                    ) {
+                        it.copy(pinned = !it.pinned)
+                    } else {
+                        it
+                    }
+                },
+            )
+        }
         viewModelScope.launch {
             try {
                 val updated = repository.togglePin(post.id)
@@ -207,7 +220,18 @@ class FamilyWallViewModel @Inject constructor(
                 throw e
             } catch (e: Exception) { // e.g. unexpected JSON or an unreadable photo, not only server errors
                 _state.update { s ->
-                    s.copy(posts = s.posts.map { if (it.id == post.id) post else it }, message = "Couldn't pin: ${e.message}")
+                    s.copy(
+                        posts = s.posts.map {
+                            if (it.id ==
+                                post.id
+                            ) {
+                                post
+                            } else {
+                                it
+                            }
+                        },
+                        message = "Couldn't pin: ${e.message}",
+                    )
                 }
             }
         }

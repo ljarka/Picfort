@@ -86,7 +86,11 @@ fun SetupContent(
                 .padding(horizontal = 24.dp, vertical = 24.dp),
         ) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Image(painterResource(CoreUiR.drawable.icon), contentDescription = null, modifier = Modifier.size(56.dp))
+                Image(
+                    painterResource(CoreUiR.drawable.icon),
+                    contentDescription = null,
+                    modifier = Modifier.size(56.dp),
+                )
                 Spacer(Modifier.size(12.dp))
                 Column {
                     Text("Welcome to Picfort", style = MaterialTheme.typography.headlineSmall)

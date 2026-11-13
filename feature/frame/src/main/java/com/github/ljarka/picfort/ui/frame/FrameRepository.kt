@@ -11,6 +11,10 @@ import com.github.ljarka.picfort.core.network.normalizeFrameUrl
 import com.github.ljarka.picfort.core.network.picfortKey
 import com.github.ljarka.picfort.core.network.readParsedBody
 import dagger.hilt.android.qualifiers.ApplicationContext
+import java.io.IOException
+import javax.inject.Inject
+import javax.inject.Qualifier
+import javax.inject.Singleton
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.SerialName
@@ -22,10 +26,6 @@ import okhttp3.MultipartBody
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.RequestBody.Companion.toRequestBody
-import java.io.IOException
-import javax.inject.Inject
-import javax.inject.Qualifier
-import javax.inject.Singleton
 
 @Qualifier
 @Retention(AnnotationRetention.BINARY)
@@ -108,8 +108,11 @@ class FrameRepository @Inject constructor(
         val base = normalizeFrameUrl(address) ?: return FrameResult.Error("Invalid address")
         val url = base.newBuilder().addPathSegment("status").build()
         return request(url, apiKey) { code, body ->
-            if (code == 200 && body?.status == "ok") FrameResult.Sent
-            else FrameResult.Error("Not a Picfort server (HTTP $code)")
+            if (code == 200 && body?.status == "ok") {
+                FrameResult.Sent
+            } else {
+                FrameResult.Error("Not a Picfort server (HTTP $code)")
+            }
         }
     }
 

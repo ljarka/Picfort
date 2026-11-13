@@ -52,11 +52,15 @@ class FrameScreenshotTest {
                 loading = false,
                 image = samplePhotoImage(),
                 slideshow = SlideshowState(
-                    mode = "album", albumId = "a1", intervalMinutes = 360,
-                    quietStart = 22, quietEnd = 7, nextChangeAt = null,
+                    mode = "album",
+                    albumId = "a1",
+                    intervalMinutes = 360,
+                    quietStart = 22,
+                    quietEnd = 7,
+                    nextChangeAt = null,
                 ),
                 albums = listOf(FrameAlbum("a1", "Frame favourites"), FrameAlbum("a2", "Family")),
-            )
+            ),
         )
     }
 
@@ -77,8 +81,11 @@ class FrameScreenshotTest {
                     ConnectionTest.Failed(WRONG_API_KEY),
                 ).forEach { test ->
                     PicfortServerForm(
-                        address = "192.168.0.105:5000", onAddressChange = {},
-                        apiKey = "", onApiKeyChange = {}, test = test,
+                        address = "192.168.0.105:5000",
+                        onAddressChange = {},
+                        apiKey = "",
+                        onApiKeyChange = {},
+                        test = test,
                     )
                     Spacer(Modifier.height(24.dp))
                 }
@@ -89,7 +96,9 @@ class FrameScreenshotTest {
     @Test
     fun picfort_server_setup() = snap {
         PicfortServerSetupContent(
-            address = "192.168.0.105:5000", onAddressChange = {}, test = wallTestResult(null),
+            address = "192.168.0.105:5000",
+            onAddressChange = {},
+            test = wallTestResult(null),
         )
     }
 }

@@ -33,18 +33,11 @@ data class RemoteAssetEntity(
 )
 
 @Entity(tableName = "remote_stacks")
-data class RemoteStackEntity(
-    @PrimaryKey val id: String,
-    val primaryAssetId: String,
-    val ownerId: String,
-)
+data class RemoteStackEntity(@PrimaryKey val id: String, val primaryAssetId: String, val ownerId: String)
 
 /** A user who shares their library with us. */
 @Entity(tableName = "partners")
-data class PartnerEntity(
-    @PrimaryKey val sharedById: String,
-    val inTimeline: Boolean,
-)
+data class PartnerEntity(@PrimaryKey val sharedById: String, val inTimeline: Boolean)
 
 /**
  * Whose copy the remote tables hold. Kept in the same database so a wipe (schema change)

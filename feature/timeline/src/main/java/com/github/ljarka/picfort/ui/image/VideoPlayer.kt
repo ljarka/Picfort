@@ -25,11 +25,7 @@ import okhttp3.OkHttpClient
  */
 @OptIn(UnstableApi::class)
 @Composable
-fun VideoPlayer(
-    url: String,
-    okHttpClient: OkHttpClient,
-    modifier: Modifier = Modifier,
-) {
+fun VideoPlayer(url: String, okHttpClient: OkHttpClient, modifier: Modifier = Modifier) {
     val context = LocalContext.current
     val player = remember(url) {
         val dataSource = DefaultDataSource.Factory(context, OkHttpDataSource.Factory(okHttpClient))

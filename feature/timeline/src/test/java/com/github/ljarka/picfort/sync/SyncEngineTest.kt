@@ -1,5 +1,8 @@
+@file:Suppress("ktlint:standard:max-line-length") // real sync stream lines, kept verbatim
+
 package com.github.ljarka.picfort.sync
 
+import java.time.Instant
 import kotlinx.coroutines.runBlocking
 import kotlinx.serialization.json.Json
 import okhttp3.ResponseBody
@@ -11,7 +14,6 @@ import org.junit.Assert.assertTrue
 import org.junit.Assert.fail
 import org.junit.Test
 import retrofit2.Response
-import java.time.Instant
 
 // Real lines from Immich v3.3.5 (T-015 live check); the user's name and email are replaced.
 private const val USER = """{"type":"AuthUserV2","data":{"id":"6fedb4d3-2637-4654-817e-bd4d56a6ed73","name":"Test","email":"test@example.com","avatarColor":null,"deletedAt":null,"profileChangedAt":"2026-11-09T17:51:36.681Z","isAdmin":false,"pinCode":null,"oauthId":null,"storageLabel":null,"quotaSizeInBytes":1073741824,"quotaUsageInBytes":5028373,"hasProfileImage":false},"ack":"AuthUserV2|01a1c184-b9bb-7be2-ad12-714222c76a81"}"""
@@ -142,9 +144,14 @@ class SyncEngineTest {
         // Each batch's ack is its own last line, sent right after that batch was stored.
         assertEquals(
             listOf(
-                "apply($SYNC_BATCH)", "ack[AssetV2|ack-%05d]".format(SYNC_BATCH - 1),
-                "apply($SYNC_BATCH)", "ack[AssetV2|ack-%05d]".format(2 * SYNC_BATCH - 1),
-                "apply(7)", "ack[AssetV2|ack-%05d, ${COMPLETE.substringAfter("\"ack\":\"").substringBefore('"')}]".format(count - 1),
+                "apply($SYNC_BATCH)",
+                "ack[AssetV2|ack-%05d]".format(SYNC_BATCH - 1),
+                "apply($SYNC_BATCH)",
+                "ack[AssetV2|ack-%05d]".format(2 * SYNC_BATCH - 1),
+                "apply(7)",
+                "ack[AssetV2|ack-%05d, ${COMPLETE.substringAfter(
+                    "\"ack\":\"",
+                ).substringBefore('"')}]".format(count - 1),
             ),
             recorder.events.drop(1),
         )
@@ -188,7 +195,14 @@ class SyncEngineTest {
         assertTrue(result.wasReset)
         assertEquals(3, result.lines)
         assertEquals(
-            listOf("stream(reset=false)", "clear", "ack[SyncResetV1|reset]", "setOwner", "stream(reset=false)", "apply(2)"),
+            listOf(
+                "stream(reset=false)",
+                "clear",
+                "ack[SyncResetV1|reset]",
+                "setOwner",
+                "stream(reset=false)",
+                "apply(2)",
+            ),
             recorder.events.take(6),
         )
         assertEquals(OWNER, store.owner)

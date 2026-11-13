@@ -87,7 +87,11 @@ fun WhoField(members: List<FamilyMember>, selected: List<String>, onToggle: (Str
                     label = { Text(member.name) },
                     leadingIcon = {
                         if (isOn) {
-                            Icon(Icons.Default.Check, contentDescription = null, Modifier.size(FilterChipDefaults.IconSize))
+                            Icon(
+                                Icons.Default.Check,
+                                contentDescription = null,
+                                Modifier.size(FilterChipDefaults.IconSize),
+                            )
                         } else {
                             MemberAvatar(member, size = 24.dp, ring = 1.dp)
                         }

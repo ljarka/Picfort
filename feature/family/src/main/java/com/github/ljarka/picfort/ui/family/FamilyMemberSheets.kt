@@ -133,7 +133,9 @@ fun FamilyMemberSheetContent(
             placeholder = { Text(if (state.user.isImmichUser) state.user.immichName else "Name") },
             supportingText = if (state.user.isImmichUser) {
                 { Text("Leave empty to use the Immich name (${state.user.immichName})") }
-            } else null,
+            } else {
+                null
+            },
             singleLine = true,
             enabled = !state.saving,
             modifier = Modifier.fillMaxWidth(),
@@ -182,15 +184,18 @@ fun FamilyMemberSheetContent(
                         Modifier.clickable { onShowInFamilyChange(!state.showInFamily) }
                     } else {
                         Modifier
-                    }
+                    },
                 )
                 .padding(vertical = 8.dp),
         ) {
             Column(Modifier.weight(1f)) {
                 Text("Show in the family", style = MaterialTheme.typography.bodyLarge)
                 Text(
-                    if (state.user.isMe) "Your own account is always shown"
-                    else "Hidden accounts and their posts are left out",
+                    if (state.user.isMe) {
+                        "Your own account is always shown"
+                    } else {
+                        "Hidden accounts and their posts are left out"
+                    },
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
@@ -224,7 +229,11 @@ fun FamilyMemberSheetContent(
                 Text("Cancel")
             }
             Spacer(Modifier.width(8.dp))
-            Button(onClick = onSave, enabled = !state.saving && (state.user.isImmichUser || state.displayName.isNotBlank())) {
+            Button(
+                onClick = onSave,
+                enabled =
+                    !state.saving && (state.user.isImmichUser || state.displayName.isNotBlank()),
+            ) {
                 Text(if (state.saving) "Saving…" else "Save")
             }
         }
@@ -328,11 +337,7 @@ fun AddPersonSheetContent(
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun BirthdaySection(
-    birthDate: BirthDate?,
-    onBirthDateChange: (BirthDate?) -> Unit,
-    enabled: Boolean = true,
-) {
+fun BirthdaySection(birthDate: BirthDate?, onBirthDateChange: (BirthDate?) -> Unit, enabled: Boolean = true) {
     var showDatePicker by remember { mutableStateOf(false) }
 
     Column(Modifier.fillMaxWidth()) {
@@ -385,11 +390,11 @@ fun BirthdaySection(
                                     month = date.monthValue,
                                     day = date.dayOfMonth,
                                     year = date.year,
-                                )
+                                ),
                             )
                         }
                         showDatePicker = false
-                    }
+                    },
                 ) { Text("OK") }
             },
             dismissButton = {

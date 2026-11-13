@@ -4,11 +4,11 @@ import android.net.Uri
 import com.github.ljarka.picfort.core.database.AssetType
 import com.github.ljarka.picfort.core.database.RemoteAssetEntity
 import com.github.ljarka.picfort.local.ImageData
+import java.time.Instant
+import java.time.ZoneId
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Test
-import java.time.Instant
-import java.time.ZoneId
 
 class TimelineIndexTest {
 
@@ -22,7 +22,12 @@ class TimelineIndexTest {
     )
 
     private fun local(id: Long, instant: String, w: Int = 3, h: Int = 4) = ImageData(
-        id = id, uri = Uri.EMPTY, fileName = "$id.jpg", dateTaken = t(instant), width = w, height = h,
+        id = id,
+        uri = Uri.EMPTY,
+        fileName = "$id.jpg",
+        dateTaken = t(instant),
+        width = w,
+        height = h,
     )
 
     @Test

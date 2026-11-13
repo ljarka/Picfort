@@ -13,6 +13,10 @@ import com.github.ljarka.picfort.local.localImageUri
 import com.github.ljarka.picfort.local.localVideoUri
 import com.github.ljarka.picfort.ui.timeline.TimelineRepository
 import dagger.hilt.android.qualifiers.ApplicationContext
+import java.io.FileNotFoundException
+import javax.inject.Inject
+import javax.inject.Provider
+import kotlin.coroutines.coroutineContext
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ensureActive
@@ -25,10 +29,6 @@ import okhttp3.RequestBody.Companion.toRequestBody
 import okio.BufferedSink
 import okio.source
 import retrofit2.HttpException
-import java.io.FileNotFoundException
-import javax.inject.Inject
-import javax.inject.Provider
-import kotlin.coroutines.coroutineContext
 
 private const val TAG = "BackupEngine"
 private const val BATCH = 50
@@ -48,8 +48,7 @@ sealed interface BackupOutcome {
 private class QuotaExceededException : Exception()
 
 /** True when an Immich error response says the account's storage quota is full. */
-fun isQuotaExceeded(errorBody: String?): Boolean =
-    errorBody?.contains("quota", ignoreCase = true) == true
+fun isQuotaExceeded(errorBody: String?): Boolean = errorBody?.contains("quota", ignoreCase = true) == true
 
 /**
  * Backs up the phone's photos and videos to Immich:
@@ -121,7 +120,7 @@ class BackupEngine @Inject constructor(
 
                 // 2. Which ones does Immich already have?
                 val results = api.bulkUploadCheck(
-                    BulkUploadCheckRequest(rows.map { BulkUploadCheckItem(it.localId.toString(), it.checksum) })
+                    BulkUploadCheckRequest(rows.map { BulkUploadCheckItem(it.localId.toString(), it.checksum) }),
                 ).results
 
                 // 3. Upload the rest.
@@ -135,16 +134,19 @@ class BackupEngine @Inject constructor(
                             dao.setRemoteId(localId, result.assetId)
                             duplicates++
                         }
+
                         result.action == "reject" -> {
                             dao.setRejected(localId, result.reason ?: "rejected")
                             rejected++
                         }
+
                         else -> when (val remoteId = upload(api, m, row.checksum, serverMajor)) {
                             null -> rejected++
+
                             else -> {
                                 dao.setRemoteId(localId, remoteId)
                                 uploaded++
-                                }
+                            }
                         }
                     }
                 }

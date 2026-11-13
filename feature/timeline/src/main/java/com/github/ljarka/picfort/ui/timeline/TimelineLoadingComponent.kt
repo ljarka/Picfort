@@ -19,10 +19,11 @@ fun TimelineLoadingComponent() {
         CircularProgressIndicator(
             modifier = Modifier
                 .align(Alignment.Center)
-                .size(64.dp)
+                .size(64.dp),
         )
     }
 }
+
 /** Shown while the first sync fills a still-empty timeline. */
 @Composable
 fun TimelineSyncProgress(linesApplied: Int) {

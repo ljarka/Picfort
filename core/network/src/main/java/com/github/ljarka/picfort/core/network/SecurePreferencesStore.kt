@@ -10,11 +10,6 @@ import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import com.github.ljarka.picfort.core.network.AppScope
 import dagger.hilt.android.qualifiers.ApplicationContext
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.CompletableDeferred
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.launch
 import java.nio.charset.StandardCharsets
 import java.security.KeyStore
 import java.util.Base64
@@ -27,12 +22,19 @@ import javax.crypto.SecretKey
 import javax.crypto.spec.GCMParameterSpec
 import javax.inject.Inject
 import javax.inject.Singleton
+import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.launch
 
 private const val KEYSTORE_PROVIDER = "AndroidKeyStore"
 private const val KEY_ALIAS = "picfort.preferences.aes.v1"
 private const val CIPHER_TRANSFORMATION = "AES/GCM/NoPadding"
 
-private val Context.securePreferencesDataStore: DataStore<Preferences> by preferencesDataStore(name = "secure_preferences")
+private val Context.securePreferencesDataStore: DataStore<Preferences> by preferencesDataStore(
+    name = "secure_preferences",
+)
 
 /**
  * Encrypted key-value storage backed by DataStore and Android Keystore.

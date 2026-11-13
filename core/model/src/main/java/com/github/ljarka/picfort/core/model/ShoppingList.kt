@@ -21,11 +21,15 @@ data class ShoppingList(
     val items: List<ShoppingItem> = emptyList(),
 ) {
     /** By position, as the server orders them. */
-    val unchecked: List<ShoppingItem> get() = items.filter { !it.checked }.sortedWith(compareBy({ it.position }, { it.id }))
+    val unchecked: List<ShoppingItem> get() = items.filter {
+        !it.checked
+    }.sortedWith(compareBy({ it.position }, { it.id }))
 
     /** The most recently checked first. */
     val checked: List<ShoppingItem>
-        get() = items.filter { it.checked }.sortedWith(compareByDescending<ShoppingItem> { it.checkedAt }.thenByDescending { it.id })
+        get() = items.filter {
+            it.checked
+        }.sortedWith(compareByDescending<ShoppingItem> { it.checkedAt }.thenByDescending { it.id })
 
     val checkedCount: Int get() = items.count { it.checked }
 }

@@ -33,9 +33,9 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedCard
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.SelectableDates
 import androidx.compose.material3.SegmentedButton
 import androidx.compose.material3.SegmentedButtonDefaults
+import androidx.compose.material3.SelectableDates
 import androidx.compose.material3.SingleChoiceSegmentedButtonRow
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
@@ -53,8 +53,8 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
-import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.vectorResource
 import androidx.compose.ui.text.input.KeyboardCapitalization
@@ -90,7 +90,10 @@ fun EventFormContent(
 ) {
     val snackbar = remember { SnackbarHostState() }
     LaunchedEffect(state.message) {
-        state.message?.let { snackbar.showSnackbar(it); onMessageShown() }
+        state.message?.let {
+            snackbar.showSnackbar(it)
+            onMessageShown()
+        }
     }
     var showDiscardDialog by remember { mutableStateOf(false) }
     var pickingStartDate by remember { mutableStateOf(false) }
@@ -139,7 +142,10 @@ fun EventFormContent(
             title = { Text("Discard changes?") },
             text = { Text("Your unsaved changes to this event will be lost.") },
             confirmButton = {
-                TextButton(onClick = { showDiscardDialog = false; onClose() }) {
+                TextButton(onClick = {
+                    showDiscardDialog = false
+                    onClose()
+                }) {
                     Text("Discard")
                 }
             },
@@ -458,7 +464,10 @@ private fun RepeatField(repeat: EventRepeat?, onChange: (EventRepeat?) -> Unit) 
             (listOf<EventRepeat?>(null) + EventRepeat.entries).forEach { option ->
                 DropdownMenuItem(
                     text = { Text(option?.label ?: "Doesn't repeat") },
-                    onClick = { open = false; onChange(option) },
+                    onClick = {
+                        open = false
+                        onChange(option)
+                    },
                 )
             }
         }

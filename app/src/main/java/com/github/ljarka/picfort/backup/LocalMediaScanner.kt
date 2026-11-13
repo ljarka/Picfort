@@ -4,21 +4,21 @@ import android.content.Context
 import android.os.Build
 import android.provider.MediaStore
 import dagger.hilt.android.qualifiers.ApplicationContext
+import javax.inject.Inject
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
-import javax.inject.Inject
 
 /** Lists every photo and video on the phone, for backup. */
-class LocalMediaScanner @Inject constructor(
-    @ApplicationContext private val context: Context,
-) {
+class LocalMediaScanner @Inject constructor(@ApplicationContext private val context: Context) {
     /** Number of photos and videos on the phone. */
     suspend fun count(): Int = withContext(Dispatchers.IO) {
         context.contentResolver.query(
-            MediaStore.Files.getContentUri("external"), arrayOf(MediaStore.MediaColumns._ID),
+            MediaStore.Files.getContentUri("external"),
+            arrayOf(MediaStore.MediaColumns._ID),
             "${MediaStore.Files.FileColumns.MEDIA_TYPE} IN (" +
                 "${MediaStore.Files.FileColumns.MEDIA_TYPE_IMAGE}, ${MediaStore.Files.FileColumns.MEDIA_TYPE_VIDEO})",
-            null, null,
+            null,
+            null,
         )?.use { it.count } ?: 0
     }
 
@@ -41,7 +41,10 @@ class LocalMediaScanner @Inject constructor(
 
         val result = mutableListOf<LocalMedia>()
         context.contentResolver.query(
-            MediaStore.Files.getContentUri("external"), projection, selection, null,
+            MediaStore.Files.getContentUri("external"),
+            projection,
+            selection,
+            null,
             "${MediaStore.MediaColumns.DATE_TAKEN} DESC",
         )?.use { c ->
             val id = c.getColumnIndexOrThrow(MediaStore.MediaColumns._ID)

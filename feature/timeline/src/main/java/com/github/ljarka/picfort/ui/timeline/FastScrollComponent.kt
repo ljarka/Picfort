@@ -8,7 +8,6 @@ import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyListState
-import com.github.ljarka.picfort.ui.timeline.layout.MonthMarker
 import androidx.compose.material3.Button
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -26,13 +25,14 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import com.github.ljarka.picfort.ui.timeline.layout.MonthMarker
+import kotlin.math.max
+import kotlin.math.min
+import kotlin.math.roundToInt
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import kotlin.math.max
-import kotlin.math.min
-import kotlin.math.roundToInt
 
 @SuppressLint("UnusedBoxWithConstraintsScope")
 @Composable
@@ -45,7 +45,7 @@ fun FastScrollComponent(
     extraTop: Dp = 0.dp,
 ) {
     BoxWithConstraints(
-        modifier = Modifier.fillMaxSize()
+        modifier = Modifier.fillMaxSize(),
     ) {
         var numberOfItems = months.size
         var maxOffset = with(LocalDensity.current) { (maxHeight - 208.dp - extraTop).toPx() }
@@ -60,7 +60,7 @@ fun FastScrollComponent(
             offsetY = (offsetY + delta).toInt()
             index = minOf(
                 maxOf((offsetY / minDelta).roundToInt(), 0),
-                months.size - 1
+                months.size - 1,
             )
 
             currentJob?.cancel()
@@ -101,9 +101,9 @@ fun FastScrollComponent(
                     },
                     onDragStopped = {
                         isDragging = false
-                    }
+                    },
                 ),
-            onClick = {}
+            onClick = {},
 
         ) {
             Text(text = text)

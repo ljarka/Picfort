@@ -1,11 +1,6 @@
 package com.github.ljarka.picfort.ui.events
 
 import android.text.format.DateFormat
-import com.github.ljarka.picfort.core.model.EventsSegment
-import com.github.ljarka.picfort.core.model.DayPhoto
-import com.github.ljarka.picfort.core.model.EventRepeat
-import com.github.ljarka.picfort.core.model.FamilyEvent
-import com.github.ljarka.picfort.core.model.FamilyMember
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -41,7 +36,10 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DatePicker
 import androidx.compose.material3.DatePickerDialog
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -50,9 +48,9 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedCard
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.SelectableDates
 import androidx.compose.material3.SegmentedButton
 import androidx.compose.material3.SegmentedButtonDefaults
+import androidx.compose.material3.SelectableDates
 import androidx.compose.material3.SingleChoiceSegmentedButtonRow
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
@@ -73,7 +71,9 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.vectorResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
@@ -84,13 +84,13 @@ import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
-import androidx.compose.material3.FilledTonalButton
-import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.res.vectorResource
-import com.github.ljarka.picfort.core.ui.avatar.MemberCarousel
+import com.github.ljarka.picfort.core.model.DayPhoto
+import com.github.ljarka.picfort.core.model.EventRepeat
+import com.github.ljarka.picfort.core.model.EventsSegment
+import com.github.ljarka.picfort.core.model.FamilyEvent
+import com.github.ljarka.picfort.core.model.FamilyMember
 import com.github.ljarka.picfort.core.ui.R
+import com.github.ljarka.picfort.core.ui.avatar.MemberCarousel
 import com.github.ljarka.picfort.core.ui.component.ServerRequiredContent
 import com.github.ljarka.picfort.core.ui.component.SettingsAction
 import com.github.ljarka.picfort.core.ui.component.aboveFloatingTabBar
@@ -175,7 +175,10 @@ fun EventsListContent(
 ) {
     val snackbar = remember { SnackbarHostState() }
     LaunchedEffect(state.message) {
-        state.message?.let { snackbar.showSnackbar(it); onMessageShown() }
+        state.message?.let {
+            snackbar.showSnackbar(it)
+            onMessageShown()
+        }
     }
     val selected = state.members.firstOrNull { it.id == state.selectedMemberId }
     val events = (if (state.segment == EventsSegment.UPCOMING) state.upcomingEvents else state.pastEvents)
@@ -242,6 +245,7 @@ fun EventsListContent(
 
             when {
                 state.isLoading && events.isEmpty() -> CenteredBox { CircularProgressIndicator() }
+
                 state.loadError != null && events.isEmpty() -> CenteredBox {
                     Text(
                         state.loadError,
@@ -251,6 +255,7 @@ fun EventsListContent(
                     Spacer(Modifier.height(16.dp))
                     Button(onClick = onRefresh) { Text("Retry") }
                 }
+
                 else -> {
                     PullToRefreshBox(
                         isRefreshing = false,
@@ -263,9 +268,12 @@ fun EventsListContent(
                                     text = when {
                                         selected != null && state.segment == EventsSegment.UPCOMING ->
                                             "Nothing planned for ${selected.name}."
+
                                         selected != null -> "No past events for ${selected.name}."
+
                                         state.segment == EventsSegment.UPCOMING ->
                                             "Nothing planned yet. Add a trip or a birthday."
+
                                         else -> "No past events."
                                     },
                                     style = MaterialTheme.typography.bodyLarge,
@@ -283,7 +291,9 @@ fun EventsListContent(
                                 }
                             }
                             LaunchedEffect(nearEnd, state.segment, state.hasMorePast, state.isLoadingMorePast) {
-                                if (nearEnd && state.segment == EventsSegment.PAST && state.hasMorePast && !state.isLoadingMorePast) {
+                                if (nearEnd && state.segment == EventsSegment.PAST && state.hasMorePast &&
+                                    !state.isLoadingMorePast
+                                ) {
                                     onLoadMorePast()
                                 }
                             }
@@ -382,7 +392,10 @@ private fun EventRow(
             .clearAndSetSemantics {
                 contentDescription = talkBackDesc
                 role = Role.Button
-                onClick { onClick(); true }
+                onClick {
+                    onClick()
+                    true
+                }
             },
         shape = RoundedCornerShape(16.dp),
         color = if (isNow) {
@@ -537,7 +550,10 @@ fun EventDetailContent(
 ) {
     val snackbar = remember { SnackbarHostState() }
     LaunchedEffect(state.message) {
-        state.message?.let { snackbar.showSnackbar(it); onMessageShown() }
+        state.message?.let {
+            snackbar.showSnackbar(it)
+            onMessageShown()
+        }
     }
     var confirmDelete by remember { mutableStateOf(false) }
     if (confirmDelete && state.event != null) {
@@ -546,7 +562,10 @@ fun EventDetailContent(
             title = { Text("Delete event?") },
             text = { Text("\"${state.event.title}\" will be removed for everyone in the family.") },
             confirmButton = {
-                TextButton(onClick = { confirmDelete = false; onDelete() }) {
+                TextButton(onClick = {
+                    confirmDelete = false
+                    onDelete()
+                }) {
                     Text("Delete", color = MaterialTheme.colorScheme.error)
                 }
             },
@@ -586,11 +605,13 @@ fun EventDetailContent(
             state.isLoading && event == null -> CenteredBox(Modifier.padding(padding)) {
                 CircularProgressIndicator()
             }
+
             state.loadError != null && event == null -> CenteredBox(Modifier.padding(padding)) {
                 Text(state.loadError, textAlign = TextAlign.Center, style = MaterialTheme.typography.bodyLarge)
                 Spacer(Modifier.height(16.dp))
                 Button(onClick = onRetry) { Text("Retry") }
             }
+
             event != null -> {
                 val dateRange = remember(event.startDate, event.endDate, state.today, locale) {
                     formatEventDateRange(event.startDate, event.endDate, state.today, locale)
@@ -606,123 +627,124 @@ fun EventDetailContent(
                     onOpenDay = onOpenDay,
                     modifier = Modifier.fillMaxSize().padding(padding),
                 ) {
-                Column(Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 8.dp)) {
-                    if (relLabel != null) {
-                        Surface(
-                            shape = RoundedCornerShape(8.dp),
-                            color = MaterialTheme.colorScheme.primaryContainer,
-                        ) {
-                            Text(
-                                text = relLabel,
-                                style = MaterialTheme.typography.labelMedium,
-                                fontWeight = FontWeight.SemiBold,
-                                color = MaterialTheme.colorScheme.onPrimaryContainer,
-                                modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp),
-                            )
+                    Column(Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 8.dp)) {
+                        if (relLabel != null) {
+                            Surface(
+                                shape = RoundedCornerShape(8.dp),
+                                color = MaterialTheme.colorScheme.primaryContainer,
+                            ) {
+                                Text(
+                                    text = relLabel,
+                                    style = MaterialTheme.typography.labelMedium,
+                                    fontWeight = FontWeight.SemiBold,
+                                    color = MaterialTheme.colorScheme.onPrimaryContainer,
+                                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp),
+                                )
+                            }
+                            Spacer(Modifier.height(10.dp))
                         }
-                        Spacer(Modifier.height(10.dp))
-                    }
-                    Text(
-                        text = event.displayTitle(state.memberNames::get),
-                        style = MaterialTheme.typography.headlineSmall,
-                        fontWeight = FontWeight.SemiBold,
-                    )
-                    Spacer(Modifier.height(16.dp))
-
-                    val turns = turnsLabel(event)
-                    if (event.isBirthday && turns != null) {
-                        DetailLine(R.drawable.ic_cake, turns.replaceFirstChar { it.uppercase() })
-                        Spacer(Modifier.height(14.dp))
-                    }
-
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(
-                            imageVector = Icons.Default.DateRange,
-                            contentDescription = null,
-                            tint = MaterialTheme.colorScheme.primary,
-                        )
-                        Spacer(Modifier.width(12.dp))
                         Text(
-                            text = if (timeStr != null) "$dateRange · $timeStr" else dateRange,
-                            style = MaterialTheme.typography.bodyLarge,
+                            text = event.displayTitle(state.memberNames::get),
+                            style = MaterialTheme.typography.headlineSmall,
+                            fontWeight = FontWeight.SemiBold,
                         )
-                    }
+                        Spacer(Modifier.height(16.dp))
 
-                    val who = membersOf(event.who, state.members)
-                    if (who.isNotEmpty()) {
-                        Spacer(Modifier.height(14.dp))
-                        WhoLine(who)
-                    }
+                        val turns = turnsLabel(event)
+                        if (event.isBirthday && turns != null) {
+                            DetailLine(R.drawable.ic_cake, turns.replaceFirstChar { it.uppercase() })
+                            Spacer(Modifier.height(14.dp))
+                        }
 
-                    val repeatText = remember(event, state.today, locale) { repeatSummary(event, state.today, locale) }
-                    if (repeatText != null && !event.isBirthday) {
-                        Spacer(Modifier.height(14.dp))
-                        DetailLine(R.drawable.ic_repeat, repeatText)
-                    }
-
-                    val location = event.location
-                    if (!location.isNullOrBlank()) {
-                        Spacer(Modifier.height(14.dp))
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .clickable { onLocationClick(location) }
-                                .padding(vertical = 4.dp),
-                            verticalAlignment = Alignment.CenterVertically,
-                        ) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
                             Icon(
-                                imageVector = Icons.Default.Place,
+                                imageVector = Icons.Default.DateRange,
                                 contentDescription = null,
                                 tint = MaterialTheme.colorScheme.primary,
                             )
                             Spacer(Modifier.width(12.dp))
                             Text(
-                                text = location,
+                                text = if (timeStr != null) "$dateRange · $timeStr" else dateRange,
                                 style = MaterialTheme.typography.bodyLarge,
-                                color = MaterialTheme.colorScheme.primary,
                             )
                         }
-                    }
 
-                    val note = event.note
-                    if (!note.isNullOrBlank()) {
-                        Spacer(Modifier.height(20.dp))
-                        Surface(
-                            modifier = Modifier.fillMaxWidth(),
-                            shape = RoundedCornerShape(16.dp),
-                            color = MaterialTheme.colorScheme.surfaceContainerLow,
-                        ) {
-                            Text(
-                                text = note,
-                                style = MaterialTheme.typography.bodyLarge,
-                                modifier = Modifier.padding(16.dp),
-                            )
+                        val who = membersOf(event.who, state.members)
+                        if (who.isNotEmpty()) {
+                            Spacer(Modifier.height(14.dp))
+                            WhoLine(who)
                         }
-                    }
 
-                    albumSlot()
+                        val repeatText =
+                            remember(event, state.today, locale) { repeatSummary(event, state.today, locale) }
+                        if (repeatText != null && !event.isBirthday) {
+                            Spacer(Modifier.height(14.dp))
+                            DetailLine(R.drawable.ic_repeat, repeatText)
+                        }
 
-                    Spacer(Modifier.height(24.dp))
-                    HorizontalDivider()
-                    Spacer(Modifier.height(12.dp))
-                    if (event.isBirthday) {
-                        Text(
-                            text = "Birthdays come from the birth dates in Family settings.",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
+                        val location = event.location
+                        if (!location.isNullOrBlank()) {
+                            Spacer(Modifier.height(14.dp))
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clickable { onLocationClick(location) }
+                                    .padding(vertical = 4.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Place,
+                                    contentDescription = null,
+                                    tint = MaterialTheme.colorScheme.primary,
+                                )
+                                Spacer(Modifier.width(12.dp))
+                                Text(
+                                    text = location,
+                                    style = MaterialTheme.typography.bodyLarge,
+                                    color = MaterialTheme.colorScheme.primary,
+                                )
+                            }
+                        }
+
+                        val note = event.note
+                        if (!note.isNullOrBlank()) {
+                            Spacer(Modifier.height(20.dp))
+                            Surface(
+                                modifier = Modifier.fillMaxWidth(),
+                                shape = RoundedCornerShape(16.dp),
+                                color = MaterialTheme.colorScheme.surfaceContainerLow,
+                            ) {
+                                Text(
+                                    text = note,
+                                    style = MaterialTheme.typography.bodyLarge,
+                                    modifier = Modifier.padding(16.dp),
+                                )
+                            }
+                        }
+
+                        albumSlot()
+
+                        Spacer(Modifier.height(24.dp))
+                        HorizontalDivider()
                         Spacer(Modifier.height(12.dp))
-                        FilledTonalButton(onClick = onEditBirthday) {
-                            Text("Edit in Family settings")
+                        if (event.isBirthday) {
+                            Text(
+                                text = "Birthdays come from the birth dates in Family settings.",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                            Spacer(Modifier.height(12.dp))
+                            FilledTonalButton(onClick = onEditBirthday) {
+                                Text("Edit in Family settings")
+                            }
+                        } else {
+                            Text(
+                                text = "Added by ${state.authorName}",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
                         }
-                    } else {
-                        Text(
-                            text = "Added by ${state.authorName}",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
                     }
-                }
                 }
             }
         }
@@ -743,10 +765,7 @@ private fun DetailLine(icon: Int, text: String) {
 }
 
 @Composable
-private fun CenteredBox(
-    modifier: Modifier = Modifier,
-    content: @Composable ColumnScope.() -> Unit,
-) {
+private fun CenteredBox(modifier: Modifier = Modifier, content: @Composable ColumnScope.() -> Unit) {
     Column(
         modifier = modifier.fillMaxSize().padding(32.dp),
         verticalArrangement = Arrangement.Center,

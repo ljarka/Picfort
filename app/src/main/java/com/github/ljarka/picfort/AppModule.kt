@@ -5,8 +5,8 @@ import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
 import dagger.hilt.components.SingletonComponent
-import kotlinx.coroutines.MainScope
 import javax.inject.Singleton
+import kotlinx.coroutines.MainScope
 
 @Module
 @InstallIn(SingletonComponent::class)
@@ -18,6 +18,8 @@ class AppModule {
     fun appScope() = MainScope()
 
     @Provides
-    fun immichUsersSync(timeline: dagger.Lazy<com.github.ljarka.picfort.ui.timeline.SyncTimelineSource>): com.github.ljarka.picfort.core.model.ImmichUsersSync =
+    fun immichUsersSync(
+        timeline: dagger.Lazy<com.github.ljarka.picfort.ui.timeline.SyncTimelineSource>,
+    ): com.github.ljarka.picfort.core.model.ImmichUsersSync =
         com.github.ljarka.picfort.core.model.ImmichUsersSync { timeline.get().refresh() }
 }

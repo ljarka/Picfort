@@ -1,9 +1,5 @@
 package com.github.ljarka.picfort.ui.wall
 
-import com.github.ljarka.picfort.core.model.FamilyMember
-import com.github.ljarka.picfort.core.ui.avatar.MemberAvatar
-import com.github.ljarka.picfort.core.ui.avatar.MemberCarousel
-
 import android.net.Uri
 import android.text.format.DateUtils
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -77,7 +73,6 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.layout
 import androidx.compose.ui.platform.LocalContext
-import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.compose.ui.res.vectorResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -89,10 +84,14 @@ import androidx.compose.ui.window.DialogProperties
 import androidx.core.content.FileProvider
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.repeatOnLifecycle
 import coil3.compose.AsyncImage
+import com.github.ljarka.picfort.core.model.FamilyMember
 import com.github.ljarka.picfort.core.ui.R
+import com.github.ljarka.picfort.core.ui.avatar.MemberAvatar
+import com.github.ljarka.picfort.core.ui.avatar.MemberCarousel
 import com.github.ljarka.picfort.core.ui.component.ServerRequiredContent
 import com.github.ljarka.picfort.core.ui.component.SettingsAction
 import com.github.ljarka.picfort.core.ui.component.aboveFloatingTabBar
@@ -100,6 +99,7 @@ import java.io.File
 import java.util.UUID
 
 private val CARD_WIDTH = 200.dp
+
 /** Room for the header and two lines of text (90 dp from the spec fits only one). */
 private val CARD_HEIGHT = 104.dp
 private val HERO_HEIGHT = 220.dp
@@ -186,7 +186,10 @@ fun FamilyWallContent(
             title = { Text("Delete this post?") },
             text = { Text("It disappears from the wall for the whole family.") },
             confirmButton = {
-                TextButton(onClick = { confirmDelete = null; onDelete(post) }) {
+                TextButton(onClick = {
+                    confirmDelete = null
+                    onDelete(post)
+                }) {
                     Text("Delete", color = MaterialTheme.colorScheme.error)
                 }
             },
@@ -225,16 +228,20 @@ fun FamilyWallContent(
         Column(
             Modifier
                 .fillMaxSize()
-                .padding(padding)
+                .padding(padding),
         ) {
             when {
                 !state.configured -> ServerRequiredContent(
-                    "Connect your Picfort server to use the Family Wall.", onSetUpServer,
+                    "Connect your Picfort server to use the Family Wall.",
+                    onSetUpServer,
                 )
+
                 state.isLoading && state.posts.isEmpty() -> Box(Modifier.fillMaxSize(), Alignment.Center) {
                     CircularProgressIndicator()
                 }
+
                 state.loadError != null && state.posts.isEmpty() -> Centered(state.loadError, "Retry", onRefresh)
+
                 else -> {
                     if (state.members.isNotEmpty()) {
                         MemberCarousel(
@@ -313,8 +320,13 @@ private fun WallGrid(
         if (messages.isEmpty() && photos.isEmpty()) {
             item(key = "empty", span = StaggeredGridItemSpan.FullLine) {
                 Text(
-                    if (state.selectedMemberId == null) "No posts yet. Write the first one!"
-                    else "No posts from ${state.members.firstOrNull { it.id == state.selectedMemberId }?.name ?: "them"} yet.",
+                    if (state.selectedMemberId == null) {
+                        "No posts yet. Write the first one!"
+                    } else {
+                        "No posts from ${state.members.firstOrNull {
+                            it.id == state.selectedMemberId
+                        }?.name ?: "them"} yet."
+                    },
                     style = MaterialTheme.typography.bodyLarge,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     textAlign = TextAlign.Center,
@@ -510,11 +522,17 @@ private fun PostMenu(
         DropdownMenuItem(
             text = { Text(if (pinned) "Unpin" else "Pin") },
             leadingIcon = { Icon(ImageVector.vectorResource(R.drawable.ic_push_pin), null) },
-            onClick = { onDismiss(); onTogglePin() },
+            onClick = {
+                onDismiss()
+                onTogglePin()
+            },
         )
         DropdownMenuItem(
             text = { Text("Delete", color = MaterialTheme.colorScheme.error) },
-            onClick = { onDismiss(); onDelete() },
+            onClick = {
+                onDismiss()
+                onDelete()
+            },
         )
     }
 }
@@ -538,7 +556,10 @@ private fun ComposeSheet(onDismiss: () -> Unit, onSend: (String, Uri?) -> Unit) 
     val camera = rememberLauncherForActivityResult(ActivityResultContracts.TakePicture()) { taken ->
         if (taken) photo = pendingCamera
     }
-    ModalBottomSheet(onDismissRequest = onDismiss, sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)) {
+    ModalBottomSheet(
+        onDismissRequest = onDismiss,
+        sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
+    ) {
         Column(
             Modifier
                 .fillMaxWidth()

@@ -20,12 +20,7 @@ data class JustifiedRow(val start: Int, val widths: List<Float>, val height: Flo
  * ratio, and row heights stay near [targetHeight]. The last row keeps [targetHeight] and is
  * left ragged. Unknown ratios (null, 0, NaN) count as square.
  */
-fun justify(
-    ratios: List<Float?>,
-    width: Float,
-    targetHeight: Float,
-    spacing: Float,
-): List<JustifiedRow> {
+fun justify(ratios: List<Float?>, width: Float, targetHeight: Float, spacing: Float): List<JustifiedRow> {
     if (ratios.isEmpty() || width <= 0f || targetHeight <= 0f) return emptyList()
     val r = ratios.map { clampRatio(it) }
     val rows = ArrayList<JustifiedRow>()

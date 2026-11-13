@@ -14,24 +14,24 @@ import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.repeatOnLifecycle
 import androidx.lifecycle.viewModelScope
-import com.github.ljarka.picfort.core.network.PicfortServerClient
-import com.github.ljarka.picfort.core.network.PicfortServerException
-import com.github.ljarka.picfort.core.model.pollEvery
+import com.github.ljarka.picfort.core.model.FamilyMemberProvider
 import com.github.ljarka.picfort.core.model.ShoppingItem
 import com.github.ljarka.picfort.core.model.ShoppingList
-import com.github.ljarka.picfort.core.model.FamilyMemberProvider
+import com.github.ljarka.picfort.core.model.pollEvery
+import com.github.ljarka.picfort.core.network.PicfortServerClient
+import com.github.ljarka.picfort.core.network.PicfortServerException
 import dagger.hilt.android.lifecycle.HiltViewModel
+import java.time.Instant
+import java.time.ZoneId
+import java.time.format.DateTimeFormatter
+import java.time.format.FormatStyle
+import javax.inject.Inject
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import java.time.Instant
-import java.time.ZoneId
-import java.time.format.DateTimeFormatter
-import java.time.format.FormatStyle
-import javax.inject.Inject
 
 private const val LISTS_POLL_MILLIS = 60_000L
 private const val LIST_POLL_MILLIS = 10_000L
@@ -111,6 +111,7 @@ class ShoppingListViewModel @Inject constructor(
     private val extra = MutableStateFlow(ShoppingListUi(myId = family.myId))
     private val _state = MutableStateFlow(ShoppingListUi(myId = family.myId))
     val state: StateFlow<ShoppingListUi> = _state.asStateFlow()
+
     /** Set after a delete, for the snackbar's Undo. */
     var undoable: ShoppingItem? = null
         private set
@@ -133,8 +134,13 @@ class ShoppingListViewModel @Inject constructor(
             includeRunTimeInInterval = true,
         ) {
             val error = repository.refreshList(listId)
-            if (error is PicfortServerException.Gone) extra.update { it.copy(loadError = "This list no longer exists") }
-            else if (error != null && repository.lists.value[listId] == null) extra.update { it.copy(loadError = error.message) }
+            if (error is PicfortServerException.Gone) {
+                extra.update { it.copy(loadError = "This list no longer exists") }
+            } else if (error != null &&
+                repository.lists.value[listId] == null
+            ) {
+                extra.update { it.copy(loadError = error.message) }
+            }
         }
     }
 
@@ -184,7 +190,10 @@ fun ShoppingListsScreen(
     LaunchedEffect(lifecycle) { lifecycle.repeatOnLifecycle(Lifecycle.State.STARTED) { viewModel.keepFresh() } }
     var creating by remember { mutableStateOf<String?>(null) }
     LaunchedEffect(creating) {
-        creating?.let { title -> viewModel.create(title)?.let { onOpen(it, true) }; creating = null }
+        creating?.let { title ->
+            viewModel.create(title)?.let { onOpen(it, true) }
+            creating = null
+        }
     }
     ShoppingListsContent(
         state = state,
@@ -219,7 +228,10 @@ fun ShoppingListScreen(onBack: () -> Unit, focusAdd: Boolean) {
         onUncheckAll = { viewModel.uncheckAll() },
         onDeleteChecked = { viewModel.deleteChecked() },
         onArchive = { viewModel.archive(it) },
-        onDeleteList = { viewModel.deleteList(); onBack() },
+        onDeleteList = {
+            viewModel.deleteList()
+            onBack()
+        },
         onRefresh = viewModel::refreshNow,
         onMessageShown = viewModel::messageShown,
         focusAdd = focusAdd,

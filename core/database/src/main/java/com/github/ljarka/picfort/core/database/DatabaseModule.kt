@@ -15,14 +15,12 @@ class DatabaseModule {
 
     @Provides
     @Singleton
-    fun database(@ApplicationContext context: Context): ImagesDatabase {
-        return Room.databaseBuilder(
-            context = context,
-            klass = ImagesDatabase::class.java,
-            name = "images",
-        ).fallbackToDestructiveMigration(dropAllTables = true)
-            .build()
-    }
+    fun database(@ApplicationContext context: Context): ImagesDatabase = Room.databaseBuilder(
+        context = context,
+        klass = ImagesDatabase::class.java,
+        name = "images",
+    ).fallbackToDestructiveMigration(dropAllTables = true)
+        .build()
 
     @Provides
     fun backupDao(database: ImagesDatabase): BackupDao = database.backupDao()

@@ -3,9 +3,9 @@ package com.github.ljarka.picfort.ui.people
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.lazy.grid.rememberLazyGridState
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
-import androidx.compose.foundation.lazy.grid.rememberLazyGridState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.derivedStateOf
@@ -111,7 +111,9 @@ fun PersonPhotosContent(
     } else {
         Column(modifier.fillMaxSize()) {
             header()
-            LoadStateContent(photos, onRetry, Modifier.weight(1f), { it.isEmpty() }, "No photos of $name in your Immich yet") {}
+            LoadStateContent(photos, onRetry, Modifier.weight(1f), {
+                it.isEmpty()
+            }, "No photos of $name in your Immich yet") {}
         }
     }
 }

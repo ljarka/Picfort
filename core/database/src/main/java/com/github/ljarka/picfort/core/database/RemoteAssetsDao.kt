@@ -72,7 +72,7 @@ interface RemoteAssetsDao {
     @Query(
         "SELECT * FROM remote_assets a WHERE $TIMELINE_FILTER AND a.localDateTime >= :fromMillis" +
             " AND strftime('%m-%d', a.localDateTime / 1000, 'unixepoch') IN (:monthDays)" +
-            " ORDER BY a.localDateTime DESC, a.id"
+            " ORDER BY a.localDateTime DESC, a.id",
     )
     suspend fun takenOnMonthDays(userId: String, fromMillis: Long, monthDays: List<String>): List<RemoteAssetEntity>
 

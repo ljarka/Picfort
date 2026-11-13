@@ -7,5 +7,6 @@ import kotlinx.serialization.Serializable
 @Serializable
 @Keep
 enum class AssetType {
-    LOCAL, REMOTE
+    LOCAL,
+    REMOTE,
 }

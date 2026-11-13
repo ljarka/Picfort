@@ -15,5 +15,4 @@ data class FamilyMember(
 
 fun isTestAccount(name: String): Boolean = name.contains("test", ignoreCase = true)
 
-fun List<FamilyMember>.meFirst(myId: String): List<FamilyMember> =
-    sortedBy { if (it.id == myId) 0 else 1 }
+fun List<FamilyMember>.meFirst(myId: String): List<FamilyMember> = sortedBy { if (it.id == myId) 0 else 1 }

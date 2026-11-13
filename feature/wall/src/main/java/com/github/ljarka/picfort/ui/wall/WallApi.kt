@@ -1,9 +1,12 @@
 package com.github.ljarka.picfort.ui.wall
 
+import com.github.ljarka.picfort.core.network.FrameSettingsStore
 import com.github.ljarka.picfort.core.network.PicfortServerClient
 import com.github.ljarka.picfort.core.network.PicfortServerException
 import com.github.ljarka.picfort.core.network.picfortKey
-import com.github.ljarka.picfort.core.network.FrameSettingsStore
+import java.time.Instant
+import javax.inject.Inject
+import javax.inject.Singleton
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
@@ -12,9 +15,6 @@ import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.MultipartBody
 import okhttp3.Request
 import okhttp3.RequestBody.Companion.toRequestBody
-import java.time.Instant
-import javax.inject.Inject
-import javax.inject.Singleton
 
 /** A post as ImageFrameServer returns it (T-001). */
 @Serializable
@@ -47,7 +47,9 @@ data class WallPost(
     val aspectRatio: Float?
         get() = if (photoWidth != null && photoHeight != null && photoWidth > 0 && photoHeight > 0) {
             photoWidth.toFloat() / photoHeight
-        } else null
+        } else {
+            null
+        }
 }
 
 internal fun WallPostDto.toPost(base: HttpUrl) = WallPost(
@@ -104,7 +106,10 @@ class WallApi @Inject constructor(
     private fun base(address: String = settings.frameUrl) = server.base(address)
 
     private suspend fun execute(request: Request): String = server.execute(request) {
-        if (request.url.pathSegments.last() == "wall") PicfortServerException.NoWall()
-        else PicfortServerException.Other("This post no longer exists")
+        if (request.url.pathSegments.last() == "wall") {
+            PicfortServerException.NoWall()
+        } else {
+            PicfortServerException.Other("This post no longer exists")
+        }
     }.body
 }

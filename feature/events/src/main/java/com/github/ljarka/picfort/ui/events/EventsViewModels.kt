@@ -23,29 +23,28 @@ import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.repeatOnLifecycle
 import androidx.lifecycle.viewModelScope
-import com.github.ljarka.picfort.core.model.EventRepeat
 import com.github.ljarka.picfort.core.model.DayPhotosProvider
+import com.github.ljarka.picfort.core.model.EventRepeat
 import com.github.ljarka.picfort.core.model.EventsSegment
 import com.github.ljarka.picfort.core.model.FamilyEvent
-import com.github.ljarka.picfort.core.network.PicfortServerClient
-import com.github.ljarka.picfort.core.network.PicfortServerException
 import com.github.ljarka.picfort.core.model.FamilyMember
 import com.github.ljarka.picfort.core.model.FamilyMemberProvider
 import com.github.ljarka.picfort.core.model.pollEvery
+import com.github.ljarka.picfort.core.network.PicfortServerClient
+import com.github.ljarka.picfort.core.network.PicfortServerException
 import dagger.hilt.android.lifecycle.HiltViewModel
+import java.time.LocalDate
+import java.time.LocalTime
+import javax.inject.Inject
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import java.time.LocalDate
-import java.time.LocalTime
-
-import javax.inject.Inject
 
 private const val EVENTS_POLL_MILLIS = 60_000L
 
@@ -174,7 +173,7 @@ class EventDetailViewModel @Inject constructor(
             event = repository.cachedEvent(eventId),
             today = repository.today.value,
             isLoading = repository.cachedEvent(eventId) == null,
-        )
+        ),
     )
     val state: StateFlow<EventDetailUi> = _state.asStateFlow()
 
@@ -182,8 +181,7 @@ class EventDetailViewModel @Inject constructor(
 
     private var knownUsers: Map<String, String> = emptyMap()
 
-    private fun authorName(event: FamilyEvent?): String =
-        event?.let { knownUsers[it.createdBy] } ?: "Former member"
+    private fun authorName(event: FamilyEvent?): String = event?.let { knownUsers[it.createdBy] } ?: "Former member"
 
     private fun canDelete(event: FamilyEvent?): Boolean =
         event != null && !event.isBirthday && event.createdBy.isNotEmpty() && event.createdBy == family.myId
@@ -218,7 +216,9 @@ class EventDetailViewModel @Inject constructor(
                         _state.update { it.copy(birthdayPhotos = null) }
                         return@collectLatest
                     }
-                    _state.update { it.copy(birthdayPhotos = (it.birthdayPhotos ?: BirthdayPhotosUi()).copy(loading = true)) }
+                    _state.update {
+                        it.copy(birthdayPhotos = (it.birthdayPhotos ?: BirthdayPhotosUi()).copy(loading = true))
+                    }
                     val photos = runCatching { dayPhotos.photosOn(days.map { it.first }.toSet(), photoSource) }
                         .getOrDefault(emptyList())
                     _state.update { it.copy(birthdayPhotos = BirthdayPhotosUi(false, birthdayYears(days, photos))) }
@@ -409,32 +409,31 @@ class EventFormViewModel @Inject constructor(
     }
 
     private companion object {
-        fun initialUi(event: FamilyEvent?, today: LocalDate, isEditing: Boolean): EventFormUi =
-            if (event != null) {
-                EventFormUi(
-                    isEditing = true,
-                    title = event.title,
-                    // The form edits the series, so it starts from the first occurrence.
-                    startDate = event.seriesStartDate,
-                    endDate = event.seriesEndDate,
-                    startTime = event.startTime,
-                    location = event.location.orEmpty(),
-                    note = event.note.orEmpty(),
-                    repeat = event.repeat,
-                    repeatUntil = event.repeatUntil,
-                    editsSeries = event.repeats,
-                    memberIds = event.memberIds,
-                    today = today,
-                    hasUnsavedChanges = false,
-                )
-            } else {
-                EventFormUi(
-                    isEditing = isEditing,
-                    startDate = today,
-                    today = today,
-                    hasUnsavedChanges = false,
-                )
-            }
+        fun initialUi(event: FamilyEvent?, today: LocalDate, isEditing: Boolean): EventFormUi = if (event != null) {
+            EventFormUi(
+                isEditing = true,
+                title = event.title,
+                // The form edits the series, so it starts from the first occurrence.
+                startDate = event.seriesStartDate,
+                endDate = event.seriesEndDate,
+                startTime = event.startTime,
+                location = event.location.orEmpty(),
+                note = event.note.orEmpty(),
+                repeat = event.repeat,
+                repeatUntil = event.repeatUntil,
+                editsSeries = event.repeats,
+                memberIds = event.memberIds,
+                today = today,
+                hasUnsavedChanges = false,
+            )
+        } else {
+            EventFormUi(
+                isEditing = isEditing,
+                startDate = today,
+                today = today,
+                hasUnsavedChanges = false,
+            )
+        }
 
         fun hasChanges(ui: EventFormUi, original: FamilyEvent?): Boolean {
             if (original == null) {
@@ -534,11 +533,7 @@ fun EventDetailScreen(
 }
 
 @Composable
-fun EventFormScreen(
-    onBack: () -> Unit,
-    onSaved: (Long) -> Unit,
-    onEventGone: () -> Unit,
-) {
+fun EventFormScreen(onBack: () -> Unit, onSaved: (Long) -> Unit, onEventGone: () -> Unit) {
     val viewModel = hiltViewModel<EventFormViewModel>()
     val state by viewModel.state.collectAsStateWithLifecycle()
     var confirmDiscardBack by remember { mutableStateOf(false) }
@@ -553,7 +548,10 @@ fun EventFormScreen(
             title = { Text("Discard changes?") },
             text = { Text("Your unsaved changes to this event will be lost.") },
             confirmButton = {
-                TextButton(onClick = { confirmDiscardBack = false; onBack() }) {
+                TextButton(onClick = {
+                    confirmDiscardBack = false
+                    onBack()
+                }) {
                     Text("Discard")
                 }
             },

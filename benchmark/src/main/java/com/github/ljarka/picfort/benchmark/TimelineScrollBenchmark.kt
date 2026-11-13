@@ -43,7 +43,10 @@ class TimelineScrollBenchmark {
             // The app opens on the Family Wall; the timeline is the Photos tab.
             val photosTab = device.wait(Until.findObject(By.text("Photos")), 15_000)
             checkNotNull(photosTab) { "Bottom bar not shown: is the app logged in?" }.click()
-            check(device.wait(Until.hasObject(By.text("Timeline")), 15_000) && device.wait(Until.hasObject(By.scrollable(true)), 15_000)) {
+            check(
+                device.wait(Until.hasObject(By.text("Timeline")), 15_000) &&
+                    device.wait(Until.hasObject(By.scrollable(true)), 15_000),
+            ) {
                 "Timeline not shown after opening the Photos tab"
             }
         },

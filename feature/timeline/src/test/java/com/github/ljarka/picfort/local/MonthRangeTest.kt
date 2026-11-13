@@ -1,12 +1,12 @@
 package com.github.ljarka.picfort.local
 
+import java.time.LocalDateTime
+import java.time.YearMonth
+import java.time.ZoneId
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
-import java.time.LocalDateTime
-import java.time.YearMonth
-import java.time.ZoneId
 
 class MonthRangeTest {
 

@@ -45,29 +45,28 @@ fun PinchToZoom(
                 centerY = it.size.height / 2f
             }
             .pointerInput(scale, offset) {
-                detectTapGestures(
-                    onDoubleTap = { offset ->
-                        if (scale <= ZoomStatus.Zoom1().scale) {
-                            onOffsetChanged(
-                                Offset(
-                                    x = (centerX - offset.x) * scale,
-                                    y = (centerY - offset.y) * scale,
-                                )
-                            )
-                            onScaleChanged(ZoomStatus.Zoom2().scale)
-                        } else if (scale <= ZoomStatus.Zoom2().scale) {
-                            onOffsetChanged(
-                                Offset(
-                                    x = (centerX - offset.x) * scale,
-                                    y = (centerY - offset.y) * scale,
-                                )
-                            )
-                            onScaleChanged(ZoomStatus.Zoom4().scale)
-                        } else {
-                            onScaleChanged(ZoomStatus.Zoom1().scale)
-                            onOffsetChanged(Offset.Zero)
-                        }
-                    })
+                detectTapGestures(onDoubleTap = { offset ->
+                    if (scale <= ZoomStatus.Zoom1().scale) {
+                        onOffsetChanged(
+                            Offset(
+                                x = (centerX - offset.x) * scale,
+                                y = (centerY - offset.y) * scale,
+                            ),
+                        )
+                        onScaleChanged(ZoomStatus.Zoom2().scale)
+                    } else if (scale <= ZoomStatus.Zoom2().scale) {
+                        onOffsetChanged(
+                            Offset(
+                                x = (centerX - offset.x) * scale,
+                                y = (centerY - offset.y) * scale,
+                            ),
+                        )
+                        onScaleChanged(ZoomStatus.Zoom4().scale)
+                    } else {
+                        onScaleChanged(ZoomStatus.Zoom1().scale)
+                        onOffsetChanged(Offset.Zero)
+                    }
+                })
             }
             .pointerInput(scale, offset) {
                 awaitPointerEventScope {
