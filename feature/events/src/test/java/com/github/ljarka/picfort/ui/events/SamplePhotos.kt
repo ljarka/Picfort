@@ -48,7 +48,7 @@ fun samplePhoto(seed: Int, width: Int = 480, height: Int = 480): Bitmap {
             val phase = rnd.nextFloat() * 6f
             var x = 0f
             while (x <= w) {
-                lineTo(x, base - amp * kotlin.math.sin(phase + x / w * 5f).toFloat() - amp * 0.4f * kotlin.math.sin(x / w * 13f).toFloat())
+                lineTo(x, base - amp * kotlin.math.sin(phase + x / w * 5f) - amp * 0.4f * kotlin.math.sin(x / w * 13f))
                 x += 8f
             }
             lineTo(w, h)

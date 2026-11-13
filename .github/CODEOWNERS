@@ -1,0 +1,13 @@
+# Critical areas requiring explicit owner review.
+# Keep this focused: broad ownership stays in regular reviewer assignment.
+
+/app/src/main/java/com/github/ljarka/picfort/MainActivity.kt @ljarka
+/app/src/main/java/com/github/ljarka/picfort/AppNavigation.kt @ljarka
+/core/network/src/main/java/com/github/ljarka/picfort/core/network/ @ljarka
+/ImageFrameServer/app.py @ljarka
+/ImageFrameServer/auth.py @ljarka
+/.github/workflows/ @ljarka
+/scripts/check-modular-boundaries.sh @ljarka
+/scripts/check-agent-change-scope.sh @ljarka
+/scripts/check-no-secrets-in-diff.sh @ljarka
+/docs/decisions/ @ljarka

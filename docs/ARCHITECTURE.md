@@ -100,3 +100,30 @@ Phone MediaStore ──► WorkManager ──► Immich REST API
    receipts, events and school timetables.
 4. **Polling over WebSocket** — polling while a screen is open (60 s for the wall) is
    sufficient for home use and avoids persistent connections.
+
+## AI-agent threat model and controls
+
+Beyond runtime app security, Picfort also treats **agent workflow** as a security surface.
+
+### Main risks
+
+1. **Prompt injection in repository content** — instructions hidden in comments, generated files,
+   or copied snippets that try to change how tooling is used.
+2. **Secret leakage during large edits** — accidental addition of tokens/keys in generated code,
+   tests, or CI snippets.
+3. **Unbounded blast radius** — broad cross-module edits that silently bypass intended review depth.
+4. **Contract drift** — endpoint/path/shape changes that compile but break app ↔ server integration.
+
+### Controls in this repository
+
+- **Scope guardrail in CI:** `scripts/check-agent-change-scope.sh` blocks oversized, cross-module
+  diffs (with explicit override).
+- **Diff secret scan in CI:** `scripts/check-no-secrets-in-diff.sh` scans added lines for
+  high-confidence credential patterns.
+- **Critical-path ownership gates:** `.github/CODEOWNERS` requires owner review for navigation,
+  networking/security, workflows, architecture decisions, and guardrail scripts.
+- **Contract checks for the server API:** `ImageFrameServer/tests/test_api_contract.py` snapshots
+  route methods and key response shapes so accidental API drift fails tests.
+
+These controls complement existing runtime protections (API key, token-based wall auth, private
+cache headers) and reduce both accidental and malicious misuse in AI-assisted changes.

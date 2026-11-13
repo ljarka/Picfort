@@ -9,7 +9,7 @@ Shopping list vertical slice: collaborative checklists, offline caching, and wis
 | `ui/shopping/ShoppingScreens.kt` | UI: `ShoppingListsContent` (cards grid) and `ShoppingListContent` (checklist) |
 | `ui/shopping/ShoppingViewModels.kt` | ViewModels: `ShoppingListsViewModel`, `ShoppingListViewModel`, `ShoppingListsScreen`, `ShoppingListScreen` |
 | `ui/shopping/ShoppingRepository.kt` | Repository: polling, sync, optimistic updates, offline cache file |
-| `ui/shopping/ShoppingApi.kt` | Server HTTP client: `/shopping/lists` endpoints |
+| `ui/shopping/ShoppingApi.kt` | Server HTTP client: `/lists` endpoints |
 | `ui/shopping/ShoppingModels.kt` | UI state: `ShoppingListsUi`, `ShoppingListUi` |
 | `ui/shopping/ShoppingScreenshotTest.kt` | Paparazzi snapshots: cards, empty state, offline banner, list items |
 

@@ -8,10 +8,11 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.github.ljarka.picfort.core.model.FamilyEventsProvider
 import com.github.ljarka.picfort.core.model.FamilyMemberProvider
+import com.github.ljarka.picfort.core.model.pollEvery
+import com.github.ljarka.picfort.core.network.PicfortServerException
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.coroutineScope
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -95,9 +96,8 @@ class FamilyWallViewModel @Inject constructor(
 
     /** Loads now and then every minute; call while the screen is visible. */
     suspend fun keepFresh() {
-        while (true) {
+        pollEvery(intervalMillis = POLL_MILLIS) {
             refresh()
-            delay(POLL_MILLIS)
         }
     }
 
@@ -134,7 +134,7 @@ class FamilyWallViewModel @Inject constructor(
             }
         } catch (e: CancellationException) {
             throw e
-        } catch (e: Exception) {
+        } catch (e: PicfortServerException) {
             _state.update { s ->
                 if (s.posts.isEmpty()) s.copy(isLoading = false, loadError = e.message)
                 else s.copy(isLoading = false, message = e.message)
@@ -148,7 +148,7 @@ class FamilyWallViewModel @Inject constructor(
             events.refreshUpcoming()
         } catch (e: CancellationException) {
             throw e
-        } catch (_: Exception) {
+        } catch (_: PicfortServerException) {
         }
         updatePanel()
     }
@@ -177,7 +177,7 @@ class FamilyWallViewModel @Inject constructor(
                 _state.update { s -> s.copy(posts = s.posts.map { if (it.id == temp.id) created else it }) }
             } catch (e: CancellationException) {
                 throw e
-            } catch (e: Exception) {
+            } catch (e: PicfortServerException) {
                 _state.update { s ->
                     s.copy(posts = s.posts.filterNot { it.id == temp.id }, message = "Couldn't post: ${e.message}")
                 }
@@ -192,7 +192,7 @@ class FamilyWallViewModel @Inject constructor(
                 repository.delete(post.id)
             } catch (e: CancellationException) {
                 throw e
-            } catch (e: Exception) {
+            } catch (e: PicfortServerException) {
                 _state.update { s -> s.copy(posts = (s.posts + post), message = "Couldn't delete: ${e.message}") }
             }
         }
@@ -206,7 +206,7 @@ class FamilyWallViewModel @Inject constructor(
                 _state.update { s -> s.copy(posts = s.posts.map { if (it.id == post.id) updated else it }) }
             } catch (e: CancellationException) {
                 throw e
-            } catch (e: Exception) {
+            } catch (e: PicfortServerException) {
                 _state.update { s ->
                     s.copy(posts = s.posts.map { if (it.id == post.id) post else it }, message = "Couldn't pin: ${e.message}")
                 }

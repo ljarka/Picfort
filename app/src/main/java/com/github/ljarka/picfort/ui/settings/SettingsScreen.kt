@@ -102,6 +102,10 @@ fun SettingsContent(
     onLogout: () -> Unit = {},
     /** Fixed "now" for screenshot tests. */
     now: Long = System.currentTimeMillis(),
+    relativeTimeSpan: (lastRunAt: Long, now: Long) -> CharSequence =
+        { lastRunAt, currentNow ->
+            DateUtils.getRelativeTimeSpanString(lastRunAt, currentNow, DateUtils.MINUTE_IN_MILLIS)
+        },
 ) {
     var confirmLogout by remember { mutableStateOf(false) }
     if (confirmLogout) {
@@ -160,7 +164,7 @@ fun SettingsContent(
                     )
                 }
                 backup.lastResult?.let {
-                    val ago = DateUtils.getRelativeTimeSpanString(backup.lastRunAt, now, DateUtils.MINUTE_IN_MILLIS)
+                    val ago = relativeTimeSpan(backup.lastRunAt, now)
                     Text("Last backup $ago: $it", style = MaterialTheme.typography.bodySmall)
                 }
                 Button(

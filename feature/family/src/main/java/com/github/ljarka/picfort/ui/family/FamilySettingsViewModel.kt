@@ -4,9 +4,9 @@ import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.github.ljarka.picfort.core.model.BirthDate
+import com.github.ljarka.picfort.core.model.pollEvery
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.CancellationException
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -50,14 +50,13 @@ class FamilySettingsViewModel @Inject constructor(
     }
 
     suspend fun keepFresh() {
-        while (true) {
+        pollEvery(intervalMillis = POLL_MILLIS) {
             val error = repository.refresh()
             if (error != null && _state.value.users.isEmpty()) {
                 _state.update { it.copy(isLoading = false, message = error.message) }
             } else {
                 _state.update { it.copy(isLoading = false) }
             }
-            delay(POLL_MILLIS)
         }
     }
 

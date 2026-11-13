@@ -22,6 +22,7 @@ import com.github.ljarka.picfort.core.ui.avatar.avatarColor
 import com.github.ljarka.picfort.core.ui.theme.PicfortTheme
 import org.junit.Rule
 import org.junit.Test
+import java.util.Locale
 
 class FamilyScreenshotTest {
 
@@ -29,11 +30,21 @@ class FamilyScreenshotTest {
     val paparazzi = Paparazzi(deviceConfig = DeviceConfig.PIXEL_6, maxPercentDifference = 0.1)
 
     private fun snap(dark: Boolean = false, content: @Composable () -> Unit) {
-        if (dark) paparazzi.unsafeUpdateConfig(DeviceConfig.PIXEL_6.copy(nightMode = NightMode.NIGHT))
-        paparazzi.snapshot {
-            PicfortTheme(darkTheme = dark, dynamicColor = false) {
-                content()
+        val previousLocale = Locale.getDefault()
+        Locale.setDefault(Locale.ENGLISH)
+        paparazzi.unsafeUpdateConfig(
+            DeviceConfig.PIXEL_6.copy(
+                nightMode = if (dark) NightMode.NIGHT else NightMode.NOTNIGHT,
+            )
+        )
+        try {
+            paparazzi.snapshot {
+                PicfortTheme(darkTheme = dark, dynamicColor = false) {
+                    content()
+                }
             }
+        } finally {
+            Locale.setDefault(previousLocale)
         }
     }
 

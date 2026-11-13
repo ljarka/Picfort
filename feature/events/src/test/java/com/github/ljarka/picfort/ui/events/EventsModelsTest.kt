@@ -267,7 +267,7 @@ class EventsModelsTest {
 
     @Test
     fun eventDtoReadsMembers() {
-        val dto = Json { ignoreUnknownKeys = true }.decodeFromString<EventDto>(
+        val dto = json.decodeFromString<EventDto>(
             """{"id":1,"title":"T","start_date":"2026-11-13","members":["ola","kuba"]}"""
         )
         assertEquals(listOf("ola", "kuba"), dto.toEvent().memberIds)
