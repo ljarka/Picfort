@@ -6,7 +6,7 @@ Immich photo timeline, gallery, full-screen viewer, collections, and media sync 
 
 | File | Purpose |
 |---|---|
-| `ui/timeline/TimelineScreen.kt` | UI: `TimelineScreen`, `TimeLineContent`, month groupings, fast scroll |
+| `ui/timeline/TimelineScreen.kt` | UI: `TimelineScreen`, `TimeLineContent`, month groupings, fast scroll; selection sheet padded above the floating tab bar |
 | `ui/timeline/TimelineViewModel.kt` | ViewModel: layout engine, viewports, selection mode, asset actions |
 | `ui/timeline/layout/JustifiedLayout.kt` | Justified photo grid layout computation |
 | `ui/timeline/layout/TimelineRows.kt` | Row measurement and tile placement |
@@ -45,4 +45,5 @@ Immich photo timeline, gallery, full-screen viewer, collections, and media sync 
 ./gradlew :feature:timeline:testDebugUnitTest
 ./gradlew :feature:timeline:verifyPaparazziDebug
 ./gradlew :feature:timeline:recordPaparazziDebug # on intentional UI changes
+DEVICE=emulator-5556 ./scripts/maestro-smoke.sh maestro/timeline-selection.yaml  # sheet above the tab bar
 ```
