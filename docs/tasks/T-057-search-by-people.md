@@ -1,6 +1,6 @@
 # T-057 — Photos: search by Immich people
 
-**Status:** done (COMMIT; mockup `docs/wireframes/search-people-v2.png` approved 2026-11-13)  
+**Status:** done (60d882a; mockup `docs/wireframes/search-people-v2.png` approved 2026-11-13)  
 **Component:** Android app (`:feature:timeline`, `:core:ui`)  
 **Depends on:** T-052 (metadata search by person), Immich v2+ (`/api/people`, `personIds` in search)
 
