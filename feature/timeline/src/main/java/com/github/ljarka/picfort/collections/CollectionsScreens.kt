@@ -30,6 +30,13 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.material3.TextButton
+import androidx.compose.foundation.layout.Row
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
+import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.rememberModalBottomSheetState
+import com.github.ljarka.picfort.core.model.FamilyMember
+import com.github.ljarka.picfort.core.ui.avatar.MemberCarousel
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
@@ -192,10 +199,13 @@ fun SearchScreen(onBack: () -> Unit, onAssetClick: (asset: GridAsset, index: Int
         onBack = onBack,
         onSearch = viewModel::search,
         onLoadMore = viewModel::loadMore,
+        personThumbnail = viewModel::personThumbnail,
+        onTogglePerson = viewModel::togglePerson,
         onAssetClick = { asset, index -> onAssetClick(asset, index, viewModel.source) },
     )
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SearchContent(
     state: SearchUi,
@@ -204,8 +214,12 @@ fun SearchContent(
     onSearch: (String) -> Unit = {},
     onLoadMore: () -> Unit = {},
     onAssetClick: (GridAsset, Int) -> Unit = { _, _ -> },
+    personThumbnail: (String) -> String? = { null },
+    /** A person tapped above the results, with the text in the field. */
+    onTogglePerson: (id: String, query: String) -> Unit = { _, _ -> },
 ) {
     var query by rememberSaveable { mutableStateOf(state.query) }
+    var showAllPeople by rememberSaveable { mutableStateOf(false) }
     val keyboard = LocalSoftwareKeyboardController.current
     val focus = remember { FocusRequester() }
     val gridState = rememberLazyGridState()
@@ -238,15 +252,67 @@ fun SearchContent(
                     .padding(horizontal = 12.dp, vertical = 8.dp)
                     .focusRequester(focus),
             )
+            if (state.people.isNotEmpty()) {
+                val accent = MaterialTheme.colorScheme.primary
+                // Many people in Immich: the row has the picked ones and those in most photos.
+                val row = remember(state.people, state.selectedPeople, accent) {
+                    peopleRow(state.people, state.selectedPeople)
+                        .map { FamilyMember(it.id, it.name, personThumbnail(it.id), accent) }
+                }
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.fillMaxWidth().padding(start = 16.dp, end = 4.dp),
+                ) {
+                    Text(
+                        "People",
+                        style = MaterialTheme.typography.labelLarge,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.weight(1f),
+                    )
+                    if (state.people.size > row.size) {
+                        TextButton(onClick = { keyboard?.hide(); showAllPeople = true }) {
+                            Text("All people (${state.people.size})")
+                            Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = null)
+                        }
+                    }
+                }
+                MemberCarousel(
+                    members = row,
+                    selectedId = null,
+                    selectedIds = state.selectedPeople,
+                    onSelect = { id ->
+                        keyboard?.hide()
+                        if (id != null) onTogglePerson(id, query)
+                    },
+                    onEditMember = null,
+                )
+            }
+            if (showAllPeople) {
+                ModalBottomSheet(
+                    onDismissRequest = { showAllPeople = false },
+                    sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
+                ) {
+                    PeoplePickerContent(
+                        people = state.people,
+                        selected = state.selectedPeople,
+                        personThumbnail = personThumbnail,
+                        onToggle = { onTogglePerson(it, query) },
+                        onDone = { showAllPeople = false },
+                    )
+                }
+            }
             when {
                 state.error != null && state.results.isEmpty() ->
                     Message(checkNotNull(state.error), Modifier) { onSearch(state.query) }
                 state.isLoading && state.results.isEmpty() ->
                     Box(Modifier.fillMaxSize(), Alignment.Center) { CircularProgressIndicator() }
                 state.searched && state.results.isEmpty() ->
-                    Message("Nothing found for \"${state.query}\"", Modifier)
-                !state.searched ->
-                    Message("Search your Immich library by describing what's in the photo.", Modifier)
+                    Message(state.nothingFound(), Modifier)
+                !state.searched -> Message(
+                    if (state.people.isEmpty()) "Search your Immich library by describing what's in the photo."
+                    else "Describe what's in the photo, or pick people above.",
+                    Modifier,
+                )
                 else -> AssetGrid(
                     assets = state.results,
                     thumbnailUrl = thumbnail,

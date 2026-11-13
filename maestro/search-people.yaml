@@ -1,0 +1,39 @@
+# T-057: Search by Immich people. Test account only: the script tags 14 people "Osoba 01".."14"
+# by hand (01 on two photos, 02 together with 01 on one of them).
+appId: com.github.ljarka.immich.android2
+name: Photos — search by people (T-057)
+---
+- runScript:
+    file: scripts/test-data.js
+    env:
+      PEOPLE: "1"
+- runFlow: subflows/open-app.yaml
+- tapOn: "Photos"
+- tapOn: "Search"
+- extendedWaitUntil:
+    visible: "People"
+    timeout: 10000
+- hideKeyboard
+- assertVisible: "Describe what's in the photo, or pick people above."
+# One person: their photos
+- tapOn: "Osoba 01"
+- extendedWaitUntil:
+    notVisible: "Describe what's in the photo, or pick people above."
+    timeout: 10000
+- assertNotVisible: "No photos of Osoba 01"
+# All people: find by part of the name (case ignored), add a second person
+- tapOn: "All people.*"
+- assertVisible: "All people · 1 picked"
+- tapOn: "Find a person"
+- inputText: "SOBA 02"
+- hideKeyboard
+- assertNotVisible: "Osoba 03"
+- tapOn: "Osoba 02"
+- assertVisible: "All people · 2 picked"
+- tapOn: "Done"
+- assertNotVisible: "No photos of Osoba 01 and Osoba 02 together"
+# A third person not on that photo: nothing together
+- tapOn: "Osoba 03"
+- extendedWaitUntil:
+    visible: "No photos of Osoba 01, Osoba 02 and Osoba 03 together"
+    timeout: 10000

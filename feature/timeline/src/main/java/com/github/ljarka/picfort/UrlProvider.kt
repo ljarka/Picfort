@@ -19,6 +19,9 @@ class UrlProvider @Inject constructor(
         }
     }
 
+    /** An Immich person's face (Search by people). */
+    fun personThumbnail(personId: String): String = "${serverUrlStore.serverUrl}/api/people/$personId/thumbnail"
+
     fun getThumbnail(assetId: String, type: AssetType, isVideo: Boolean = false): String {
         return when (type) {
             AssetType.LOCAL ->

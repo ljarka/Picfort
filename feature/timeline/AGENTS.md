@@ -13,7 +13,8 @@ Immich photo timeline, gallery, full-screen viewer, collections, and media sync 
 | `ui/timeline/SyncTimelineSource.kt` | Local copy of Immich assets kept fresh via sync stream |
 | `ui/image/ImageDetailsScreen.kt` | Full-screen photo/video viewer, shared element transition |
 | `ui/image/ImageDetailsViewModel.kt` | Viewer ViewModel: zoom, EXIF metadata, pushing photo to frame via `FrameSender` |
-| `collections/CollectionsScreens.kt` | Albums list, album view, search screen |
+| `collections/CollectionsScreens.kt` | Albums list, album view, search screen (text + Immich people, T-057) |
+| `collections/SearchPeople.kt` | `peopleRow` (picked first, 12), `filterPeople` (case/accents), `PeoplePickerContent` ("All people" sheet) |
 | `sync/SyncEngine.kt` | Immich delta sync engine |
 | `local/LocalImagesProvider.kt` | Device MediaStore photo reader |
 | `ui/people/PeopleFilterViewModel.kt`, `PersonPhotosContent.kt` | Family carousel on Photos, photos of one person via `search/metadata` (T-052) |
@@ -46,4 +47,5 @@ Immich photo timeline, gallery, full-screen viewer, collections, and media sync 
 ./gradlew :feature:timeline:verifyPaparazziDebug
 ./gradlew :feature:timeline:recordPaparazziDebug # on intentional UI changes
 DEVICE=emulator-5556 ./scripts/maestro-smoke.sh maestro/timeline-selection.yaml  # sheet above the tab bar
+DEVICE=emulator-5556 ./scripts/maestro-smoke.sh maestro/search-people.yaml       # T-057, tags test people
 ```

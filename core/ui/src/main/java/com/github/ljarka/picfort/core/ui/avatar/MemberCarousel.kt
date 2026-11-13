@@ -53,16 +53,19 @@ fun MemberCarousel(
     selectedId: String?,
     onSelect: (String?) -> Unit,
     modifier: Modifier = Modifier,
-    onEditMember: (String) -> Unit = {},
+    /** Long-press "Edit"; null: no menu (e.g. Immich people in Search). */
+    onEditMember: ((String) -> Unit)? = {},
     dimmedIds: Set<String> = emptySet(),
     onOpenFamily: (() -> Unit)? = null,
+    /** Several selected at once (Search, people together); overrides [selectedId]. */
+    selectedIds: Set<String> = setOfNotNull(selectedId),
 ) {
     LazyRow(
         contentPadding = PaddingValues(horizontal = 8.dp, vertical = 8.dp),
         modifier = modifier.fillMaxWidth(),
     ) {
         items(members, key = { it.id }) { member ->
-            val selected = member.id == selectedId
+            val selected = member.id in selectedIds
             var menu by remember { mutableStateOf(false) }
             Box {
                 Column(
@@ -73,7 +76,7 @@ fun MemberCarousel(
                         .background(if (selected) member.color.copy(alpha = 0.18f) else Color.Transparent)
                         .combinedClickable(
                             onClick = { onSelect(member.id) },
-                            onLongClick = { menu = true },
+                            onLongClick = if (onEditMember != null) ({ menu = true }) else null,
                         )
                         .padding(horizontal = 4.dp, vertical = 6.dp)
                         .alpha(if (member.id in dimmedIds) 0.4f else 1f),
@@ -94,7 +97,7 @@ fun MemberCarousel(
                 DropdownMenu(expanded = menu, onDismissRequest = { menu = false }) {
                     DropdownMenuItem(
                         text = { Text("Edit") },
-                        onClick = { menu = false; onEditMember(member.id) },
+                        onClick = { menu = false; onEditMember?.invoke(member.id) },
                     )
                 }
             }
