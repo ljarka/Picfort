@@ -121,10 +121,13 @@ fun TimelineScreen(
     scrollToTop: Int = 0,
     /** A photo in "Photos of Ola" (T-052): the viewer pages through [source]. */
     onPersonAssetClick: (asset: GridAsset, index: Int, source: String) -> Unit = { _, _, _ -> },
-    /** "Link" on a member who isn't linked yet: their sheet in Family settings. */
-    onEditMember: (String) -> Unit = {},
-    /** The "Family" circle at the end of the carousel. */
-    onOpenFamily: () -> Unit = {},
+    /**
+     * "Link" on a member who isn't linked yet, and long-press "Edit": their sheet in Family settings.
+     * Null without a Picfort server (Family settings need it): no menu, no "Link".
+     */
+    onEditMember: ((String) -> Unit)? = null,
+    /** The "+ Family" circle at the end of the carousel; null without a Picfort server. */
+    onOpenFamily: (() -> Unit)? = null,
     /** Opened on a day (a birthday's year, T-056): scrolled there once, when the timeline is laid out. */
     scrollToDate: LocalDate? = null,
 ) {
@@ -159,10 +162,10 @@ fun TimelineScreen(
             peopleViewModel.notLinked.collect { member ->
                 val result = scaffoldState.snackbarHostState.showSnackbar(
                     message = "${member.name} isn't linked to your Immich people",
-                    actionLabel = "Link",
+                    actionLabel = if (onEditMember != null) "Link" else null,
                     duration = SnackbarDuration.Short,
                 )
-                if (result == SnackbarResult.ActionPerformed) onEditMember(member.id)
+                if (result == SnackbarResult.ActionPerformed) onEditMember?.invoke(member.id)
             }
         }
         val header: (@Composable () -> Unit)? = if (people.members.isEmpty()) null else {

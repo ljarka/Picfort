@@ -24,7 +24,7 @@ Immich photo timeline, gallery, full-screen viewer, collections, and media sync 
 ## Public Contract / Navigation Entry Points
 
 - `TimelineScreen(onImageClick, onSearchClick, onAlbumsClick, onSettingsClick, onPersonAssetClick, onEditMember, onOpenFamily, scrollToDate)`; `onOpenFamily` = the "+ Family" circle
-  at the end of the carousel; `scrollToDate` (T-056) scrolls once to `TimelineLayout.rowIndexOf(day)`
+  at the end of the carousel; `onEditMember`/`onOpenFamily` null without a Picfort server (no way into Family settings); `scrollToDate` (T-056) scrolls once to `TimelineLayout.rowIndexOf(day)`
   (newest photo of the day, or its month header; flag kept in `rememberSaveable`)
 - `ImageDetailsScreen(sharedTransitionScope, animatedVisibilityScope, onDismissRequest, assetId, assetType, imageIndex, frameSettingsDialog)`
 - `AlbumsScreen(onAlbumClick, onBack)`

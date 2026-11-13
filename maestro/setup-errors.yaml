@@ -55,6 +55,20 @@ name: Setup — errors on the one-page setup (T-058)
 - extendedWaitUntil:
     notVisible: "Welcome to Picfort"
     timeout: 10000
+# Without a Picfort server there is no way into Family settings (adding people needs it)
+- tapOn: "Photos"
+- tapOn:
+    text: "Allow all"
+    optional: true
+- extendedWaitUntil:
+    visible: "Timeline"
+    timeout: 20000
+- takeScreenshot: photos-no-server
+- assertNotVisible: "Family"
+- tapOn: "Settings"
+- assertVisible: "Not set"
+- assertNotVisible: "Names, photos and hidden accounts"
+- back
 
 # Back to the usual state for the other flows
 - launchApp:

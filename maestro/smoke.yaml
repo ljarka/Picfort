@@ -41,6 +41,8 @@ name: Smoke — login and all tabs
     timeout: 20000
 - assertVisible: "Search"
 - assertVisible: "Albums"
+# With the Picfort server: the carousel ends with "+ Family" (Family settings)
+- assertVisible: "Family"
 
 # Settings → Family, Settings → Picture frame
 - tapOn: "Settings"
