@@ -1,6 +1,6 @@
 # T-056 — Events: a birthday's year opens Photos on that day
 
-**Status:** done (COMMIT; mockup `docs/wireframes/events-birthday-to-timeline-v1.png` approved 2026-11-13)  
+**Status:** done (5df6956; mockup `docs/wireframes/events-birthday-to-timeline-v1.png` approved 2026-11-13)  
 **Component:** Android app (`:feature:events`, `:feature:timeline`, `:app`)  
 **Depends on:** T-055 (birthday photos), ADR 0011 (amendment 2026-11-13)
 
