@@ -1,6 +1,6 @@
 # T-055 — Events: photos from past birthdays
 
-**Status:** in-progress (mockup `docs/wireframes/events-birthday-photos-v1.png` approved 2026-11-13)  
+**Status:** done (c7681d7; mockup `docs/wireframes/events-birthday-photos-v1.png` approved 2026-11-13)  
 **Component:** Android app (`:feature:events`, `:feature:timeline`, `:core:model`, `:core:ui`, `:core:database`)  
 **Depends on:** T-037 (birthdays), T-016 (justified timeline rows), ADR 0011 (amendment 2026-11-13)
 
