@@ -63,6 +63,7 @@ import threading
 import time
 
 from flask import Flask, g, jsonify, request, send_file
+from waitress import serve
 from werkzeug.exceptions import RequestEntityTooLarge
 
 import frame
@@ -604,7 +605,10 @@ if __name__ == "__main__":
     api_key = os.environ.get("PICFORT_API_KEY", "").strip()
     if not api_key:
         log.info("PICFORT_API_KEY is not set: anyone who can reach this server can use it.")
-    create_app(frame_controller, show_slideshow, immich_client, family_wall, wall_auth, api_key,
-               shopping_store, family_store, event_store).run(
-        host="0.0.0.0", port=int(os.environ.get("PORT", "5000")), threaded=True
-    )
+    app = create_app(frame_controller, show_slideshow, immich_client, family_wall, wall_auth, api_key,
+                     shopping_store, family_store, event_store)
+    port = int(os.environ.get("PORT", "5000"))
+    log.info("Listening on port %s", port)
+    # waitress, not Flask's development server: made for long-running use, and it handles
+    # slow or broken clients without tying up the server.
+    serve(app, host="0.0.0.0", port=port, threads=8, ident="picfort")

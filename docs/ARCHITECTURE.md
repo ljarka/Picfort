@@ -125,5 +125,9 @@ Beyond runtime app security, Picfort also treats **agent workflow** as a securit
 - **Contract checks for the server API:** `picfort-server/tests/test_api_contract.py` snapshots
   route methods and key response shapes so accidental API drift fails tests.
 
+- **Server hardening:** the Docker image runs the server as an unprivileged user (no capabilities)
+  on waitress, a production WSGI server; Python dependencies are pinned to exact versions
+  (`picfort-server/requirements*.txt`) and updated through Dependabot PRs that CI tests.
+
 These controls complement existing runtime protections (API key, token-based wall auth, private
 cache headers) and reduce both accidental and malicious misuse in AI-assisted changes.

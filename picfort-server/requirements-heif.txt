@@ -1,0 +1,3 @@
+# Optional: HEIC/HEIF originals from iPhones. Installed in the Docker image;
+# without it the server falls back to Immich's preview image.
+pillow-heif==1.8.1
