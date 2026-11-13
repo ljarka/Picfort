@@ -18,3 +18,4 @@ Each file in this directory documents one major technical decision.
 | [0010](0010-family-members-birthdays-recurring-events.md) | Manual members, birthdays, recurring events with additive migrations |
 | [0011](0011-modular-architecture.md) | Multi-module architecture for focused, agent-friendly development |
 | [0012](0012-serial-ksp.md) | One KSP task at a time (KSP2 in parallel left modules without Hilt code) |
+| [0013](0013-ktlint.md) | ktlint for Kotlin code style, checked in CI |
