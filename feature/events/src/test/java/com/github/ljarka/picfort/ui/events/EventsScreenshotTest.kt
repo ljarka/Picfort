@@ -312,4 +312,36 @@ class EventsScreenshotTest {
             )
         )
     }
+
+    // --- T-054: filter by member ---
+
+    @Test
+    fun events_upcoming_filter_ola() = snap {
+        EventsListContent(
+            EventsListUi(
+                today = sampleToday, upcomingEvents = withWho, memberNames = members, members = family,
+                selectedMemberId = "ola",
+            )
+        )
+    }
+
+    @Test
+    fun events_upcoming_filter_ola_dark() = snap(dark = true) {
+        EventsListContent(
+            EventsListUi(
+                today = sampleToday, upcomingEvents = withWho, memberNames = members, members = family,
+                selectedMemberId = "ola",
+            )
+        )
+    }
+
+    @Test
+    fun events_upcoming_filter_empty() = snap {
+        EventsListContent(
+            EventsListUi(
+                today = sampleToday, upcomingEvents = withWho.drop(1), memberNames = members, members = family,
+                selectedMemberId = "tata",
+            )
+        )
+    }
 }

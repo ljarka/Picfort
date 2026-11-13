@@ -24,6 +24,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import com.github.ljarka.picfort.core.model.FamilyEvent
 import com.github.ljarka.picfort.core.model.FamilyMember
 import com.github.ljarka.picfort.core.ui.avatar.MemberAvatar
 
@@ -107,3 +108,7 @@ fun WhoLine(members: List<FamilyMember>) {
         Text(members.joinToString(", ") { it.name }, style = MaterialTheme.typography.bodyLarge)
     }
 }
+
+/** Events about [memberId] (birthdays included, see [FamilyEvent.who]); all of them when null. */
+fun List<FamilyEvent>.forMember(memberId: String?): List<FamilyEvent> =
+    if (memberId == null) this else filter { memberId in it.who }
