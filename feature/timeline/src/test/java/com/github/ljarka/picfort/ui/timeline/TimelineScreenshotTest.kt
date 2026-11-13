@@ -26,6 +26,8 @@ import com.github.ljarka.picfort.collections.GridAsset
 import com.github.ljarka.picfort.collections.LoadState
 import com.github.ljarka.picfort.collections.SearchContent
 import com.github.ljarka.picfort.collections.SearchUi
+import com.github.ljarka.picfort.collections.SearchPerson
+import com.github.ljarka.picfort.collections.PeoplePickerContent
 import com.github.ljarka.picfort.core.ui.theme.PicfortTheme
 import com.github.ljarka.picfort.core.model.FamilyMember
 import com.github.ljarka.picfort.core.ui.avatar.avatarColor
@@ -183,6 +185,52 @@ class TimelineScreenshotTest {
     fun search() = snap {
         SearchContent(
             state = SearchUi(query = "sunset over the hills", results = photos.drop(4), searched = true),
+            thumbnail = { it.id },
+        )
+    }
+
+    private val searchPeople = listOf(
+        SearchPerson("p1", "Ola"), SearchPerson("p2", "Kuba"), SearchPerson("p3", "Monika"),
+        SearchPerson("p4", "Łukasz"), SearchPerson("p5", "Babcia Ela"), SearchPerson("p6", "Dziadek"),
+    ) + listOf(
+        "Ania", "Bartek", "Celina", "Darek", "Ewa Nowak", "Franek", "Gosia", "Henryk", "Iza", "Janek",
+        "Kasia z przedszkola", "Lena", "Marek", "Natalia", "Oskar", "Paweł", "Róża", "Staś", "Tomek", "Wiktoria",
+    ).mapIndexed { i, name -> SearchPerson("q$i", name) }
+
+    @Test
+    fun search_all_people() = snap {
+        androidx.compose.material3.Surface(color = androidx.compose.material3.MaterialTheme.colorScheme.surfaceContainerLow) {
+            PeoplePickerContent(
+                people = searchPeople, selected = setOf("p1", "p5"), personThumbnail = { null }, onToggle = {}, onDone = {},
+            )
+        }
+    }
+
+    @Test
+    fun search_people() = snap {
+        SearchContent(state = SearchUi(people = searchPeople), thumbnail = { it.id })
+    }
+
+    @Test
+    fun search_people_selected() = snap {
+        SearchContent(
+            state = SearchUi(results = photos, searched = true, people = searchPeople, selectedPeople = setOf("p1", "p2")),
+            thumbnail = { it.id },
+        )
+    }
+
+    @Test
+    fun search_people_with_text() = snap {
+        SearchContent(
+            state = SearchUi(query = "beach", results = photos.drop(6), searched = true, people = searchPeople, selectedPeople = setOf("p1")),
+            thumbnail = { it.id },
+        )
+    }
+
+    @Test
+    fun search_people_nothing() = snap {
+        SearchContent(
+            state = SearchUi(searched = true, people = searchPeople, selectedPeople = setOf("p1", "p5")),
             thumbnail = { it.id },
         )
     }

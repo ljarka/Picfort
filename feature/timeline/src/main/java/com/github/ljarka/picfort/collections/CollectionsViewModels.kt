@@ -96,7 +96,25 @@ data class SearchUi(
     val nextPage: Int? = null,
     val error: String? = null,
     val searched: Boolean = false,
+    /** Named people in Immich, shown above the results; empty while loading or if it failed. */
+    val people: List<SearchPerson> = emptyList(),
+    /** Photos must have all of them; alone or with [query]. */
+    val selectedPeople: Set<String> = emptySet(),
 )
+
+/** "Ola", "Ola and Kuba", "Ola, Kuba and Staś" (the people picked, in the row's order). */
+fun SearchUi.selectedNames(): String {
+    val names = people.filter { it.id in selectedPeople }.map { it.name }
+    return if (names.size <= 1) names.joinToString() else names.dropLast(1).joinToString() + " and " + names.last()
+}
+
+/** Shown when nothing matched: what was searched for, in words. */
+fun SearchUi.nothingFound(): String = when {
+    selectedPeople.isEmpty() -> "Nothing found for \"$query\""
+    query.isEmpty() && selectedPeople.size == 1 -> "No photos of ${selectedNames()}"
+    query.isEmpty() -> "No photos of ${selectedNames()} together"
+    else -> "Nothing found for \"$query\" with ${selectedNames()}"
+}
 
 @HiltViewModel
 class SearchViewModel @Inject constructor(
@@ -107,13 +125,42 @@ class SearchViewModel @Inject constructor(
     val state: StateFlow<SearchUi> = _state.asStateFlow()
     private var job: Job? = null
 
-    val source: String get() = "search:${_state.value.query}"
+    val source: String get() = _state.value.let { "search:${it.query}:${it.selectedPeople.sorted().joinToString(",")}" }
+
+    init {
+        viewModelScope.launch {
+            // Without people the row is just not shown; text search still works.
+            val people = try {
+                repository.people()
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                emptyList()
+            }
+            _state.update { it.copy(people = people) }
+        }
+    }
 
     fun search(query: String) {
-        if (query.isBlank()) return
+        val s = _state.value
         job?.cancel()
-        _state.value = SearchUi(query = query.trim(), isLoading = true, searched = true)
+        if (query.isBlank() && s.selectedPeople.isEmpty()) {
+            _state.value = SearchUi(people = s.people)
+            return
+        }
+        _state.value = SearchUi(
+            query = query.trim(), isLoading = true, searched = true,
+            people = s.people, selectedPeople = s.selectedPeople,
+        )
         fetch(page = 1)
+    }
+
+    /** Picks or drops a person and searches again with the text in the field. */
+    fun togglePerson(id: String, query: String) {
+        _state.update { s ->
+            s.copy(selectedPeople = if (id in s.selectedPeople) s.selectedPeople - id else s.selectedPeople + id)
+        }
+        search(query)
     }
 
     /** Called when the user scrolls near the end. */
@@ -126,12 +173,14 @@ class SearchViewModel @Inject constructor(
 
     private fun fetch(page: Int) {
         val query = _state.value.query
+        val people = _state.value.selectedPeople
+        val source = source
         job = viewModelScope.launch {
             try {
-                val result = repository.search(query, page)
+                val result = repository.search(query, page, people)
                 _state.update {
                     val all = (if (page == 1) emptyList() else it.results) + result.assets
-                    repository.putList("search:$query", all)
+                    repository.putList(source, all)
                     it.copy(results = all, nextPage = result.nextPage, isLoading = false, error = null)
                 }
             } catch (e: CancellationException) {
@@ -141,6 +190,8 @@ class SearchViewModel @Inject constructor(
             }
         }
     }
+
+    fun personThumbnail(id: String) = urlProvider.personThumbnail(id)
 
     fun thumbnail(asset: GridAsset) = urlProvider.getThumbnail(asset.id, AssetType.REMOTE, asset.isVideo)
 }

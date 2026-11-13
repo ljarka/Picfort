@@ -7,6 +7,7 @@ import retrofit2.http.GET
 import retrofit2.http.POST
 import retrofit2.http.PUT
 import retrofit2.http.Path
+import retrofit2.http.Query
 
 @Serializable
 data class AlbumDto(
@@ -25,8 +26,21 @@ data class BulkIdsRequest(val ids: List<String>)
 @Serializable
 data class BulkIdResult(val id: String, val success: Boolean = false, val error: String? = null)
 
+/** [personIds]: only photos with all of them (null is left out: the app's Json skips defaults). */
 @Serializable
-data class SmartSearchRequest(val query: String, val page: Int = 1, val size: Int = 100)
+data class SmartSearchRequest(
+    val query: String,
+    val page: Int = 1,
+    val size: Int = 100,
+    val personIds: List<String>? = null,
+)
+
+/** A face group in Immich ("people"); unnamed ones have an empty name. */
+@Serializable
+data class PersonDto(val id: String, val name: String = "", val isHidden: Boolean = false)
+
+@Serializable
+data class PeopleResponse(val people: List<PersonDto> = emptyList(), val hasNextPage: Boolean = false)
 
 /** Photos with a person (T-052). No default values: the app's Json doesn't encode defaults. */
 @Serializable
@@ -68,6 +82,14 @@ interface CollectionsService {
     /** CLIP "smart" search: natural-language queries like "dog on the beach". */
     @POST("/api/search/smart")
     suspend fun smartSearch(@Body body: SmartSearchRequest): SearchResponse
+
+    /** Immich's order: favourites first, then those in the most photos. */
+    @GET("/api/people")
+    suspend fun people(
+        @Query("page") page: Int,
+        @Query("size") size: Int = 500,
+        @Query("withHidden") withHidden: Boolean = false,
+    ): PeopleResponse
 
     @POST("/api/search/metadata")
     suspend fun metadataSearch(@Body body: MetadataSearchRequest): SearchResponse

@@ -119,6 +119,7 @@ Android task except T-017 and T-026 starts with a mockup the owner approves.
 | [T-054](tasks/T-054-events-member-filter.md) | Events — filter the list by family member | `done` |
 | [T-055](tasks/T-055-birthday-photos.md) | Events — photos from past birthdays in a birthday's detail | `done` |
 | [T-056](tasks/T-056-birthday-year-to-timeline.md) | Events — a birthday's year opens Photos on that day | `done` |
+| [T-057](tasks/T-057-search-by-people.md) | Photos — search by Immich people | `done` |
 
 ### Phase 8 — Modular Architecture (Agentic Pair Programming)
 Deconstruct monolithic `:app` into isolated feature slices and core foundations (ADR 0011).

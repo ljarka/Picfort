@@ -29,6 +29,12 @@ data class GridAsset(
 
 data class SearchPage(val assets: List<GridAsset>, val nextPage: Int?)
 
+/** Up to 5000 face groups; a library with more has them named mostly in the first ones anyway. */
+private const val MAX_PEOPLE_PAGES = 10
+
+/** A named person (face group) in Immich, for searching by people. */
+data class SearchPerson(val id: String, val name: String)
+
 @Singleton
 class CollectionsRepository @Inject constructor(
     private val service: Provider<CollectionsService>,
@@ -72,14 +78,35 @@ class CollectionsRepository @Inject constructor(
         }.awaitAll().flatten()
     }
 
-    suspend fun search(query: String, page: Int): SearchPage {
-        val response = service.get().smartSearch(SmartSearchRequest(query.trim(), page)).assets
+    /**
+     * Search: by text (CLIP), with the [personIds] in it (all of them), or only by people, newest
+     * first. At least one of them must be given.
+     */
+    suspend fun search(query: String, page: Int, personIds: Set<String> = emptySet()): SearchPage {
+        val text = query.trim()
+        val response = if (text.isEmpty()) {
+            service.get().metadataSearch(MetadataSearchRequest(personIds.toList(), page = page, size = 100, order = "desc"))
+        } else {
+            service.get().smartSearch(SmartSearchRequest(text, page, personIds = personIds.toList().ifEmpty { null }))
+        }.assets
         return SearchPage(
             assets = response.items.map { item ->
                 GridAsset(item.id, isVideo = item.type == "VIDEO", durationMs = parseSearchDuration(item.duration))
             },
             nextPage = response.nextPage?.toIntOrNull(),
         )
+    }
+
+    /** Named, visible people in my Immich library, in Immich's order (most photos first). */
+    suspend fun people(): List<SearchPerson> {
+        val all = ArrayList<PersonDto>()
+        var page = 1
+        do {
+            val response = service.get().people(page)
+            all += response.people
+            page++
+        } while (response.hasNextPage && page <= MAX_PEOPLE_PAGES)
+        return all.filter { !it.isHidden && it.name.isNotBlank() }.map { SearchPerson(it.id, it.name.trim()) }
     }
 
     /** Photos of one person in my Immich library, newest first (T-052). */

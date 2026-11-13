@@ -11,6 +11,7 @@ import com.github.ljarka.picfort.collections.MetadataSearchRequest
 import com.github.ljarka.picfort.collections.SearchAssetDto
 import com.github.ljarka.picfort.collections.SearchAssetsPage
 import com.github.ljarka.picfort.collections.SearchResponse
+import com.github.ljarka.picfort.collections.PeopleResponse
 import com.github.ljarka.picfort.collections.SmartSearchRequest
 import com.github.ljarka.picfort.core.model.FamilyMember
 import kotlinx.coroutines.runBlocking
@@ -46,6 +47,7 @@ class PeopleFilterTest {
             override suspend fun createAlbum(body: CreateAlbumRequest) = error("unused")
             override suspend fun addToAlbum(albumId: String, body: BulkIdsRequest): List<BulkIdResult> = emptyList()
             override suspend fun smartSearch(body: SmartSearchRequest) = SearchResponse()
+            override suspend fun people(page: Int, size: Int, withHidden: Boolean) = PeopleResponse()
             override suspend fun metadataSearch(body: MetadataSearchRequest): SearchResponse {
                 requests += body
                 return SearchResponse(
