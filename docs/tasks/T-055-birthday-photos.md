@@ -35,3 +35,4 @@ screen scrolls.
   2023): "Turned 1 · 22 Dec 2023" and "Born · 22 Dec 2022", each with its photo; the whole screen
   scrolls. Tapping the first opens the viewer; swiping shows the second. Birth date restored after.
 - 12 Nov 2017 (no photos on those days): "No photos from these days in Immich yet." No crashes.
+- Repeatable: `maestro/events-birthday-photos.yaml` (Maestro; sets up its own test data, 2026-11-13).

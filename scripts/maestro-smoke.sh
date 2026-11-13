@@ -23,6 +23,8 @@ export MAESTRO_IMMICH_URL="$PICFORT_TEST_IMMICH_URL"
 export MAESTRO_IMMICH_EMAIL="$PICFORT_TEST_IMMICH_EMAIL"
 export MAESTRO_IMMICH_PASSWORD="$PICFORT_TEST_IMMICH_PASSWORD"
 export MAESTRO_PICFORT_SERVER="http://$PICFORT_TEST_SERVER_ADDRESS"
+# The same test server seen from this computer, for maestro/scripts/test-data.js.
+export MAESTRO_PICFORT_SERVER_HOST="http://localhost:$PICFORT_TEST_SERVER_PORT"
 
 if ! curl -s -m 3 -o /dev/null "http://localhost:$PICFORT_TEST_SERVER_PORT/"; then
   echo "Test server not reachable on :$PICFORT_TEST_SERVER_PORT. Start it: docker start picfort_test" >&2

@@ -27,6 +27,8 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import coil3.compose.AsyncImage
@@ -172,8 +174,10 @@ internal fun EventDetailList(
 
 @Composable
 private fun PhotoTileView(photo: DayPhoto, modifier: Modifier, onClick: () -> Unit) {
+    val label = (if (photo.isVideo) "Video, " else "Photo, ") + photo.day.format(YEAR_DATE)
     androidx.compose.foundation.layout.Box(
         modifier
+            .semantics { contentDescription = label }
             .clip(RoundedCornerShape(8.dp))
             .background(MaterialTheme.colorScheme.surfaceVariant)
             .clickable(onClick = onClick),
@@ -187,7 +191,7 @@ private fun PhotoTileView(photo: DayPhoto, modifier: Modifier, onClick: () -> Un
         if (photo.isVideo) {
             Icon(
                 Icons.Default.PlayArrow,
-                contentDescription = "Video",
+                contentDescription = null,
                 tint = Color.White,
                 modifier = Modifier
                     .align(Alignment.TopEnd)
