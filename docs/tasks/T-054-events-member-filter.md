@@ -1,6 +1,6 @@
 # T-054 — Events: filter by family member
 
-**Status:** in-progress (mockup `docs/wireframes/events-filter-v1.png` approved 2026-11-13)  
+**Status:** done (4880c43; mockup `docs/wireframes/events-filter-v1.png` approved 2026-11-13)  
 **Component:** Android app  
 **Depends on:** T-053 (who the event is for), `MemberCarousel` (core:ui)
 

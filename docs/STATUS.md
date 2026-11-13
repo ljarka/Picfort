@@ -116,7 +116,7 @@ Android task except T-017 and T-026 starts with a mockup the owner approves.
 | [T-042](tasks/T-042-wishlist-android.md) | Wishlist carousel & event linking — Android | `ready` |
 | [T-052](tasks/T-052-photos-family-carousel.md) | Photos — family carousel, photos of one person (per-parent link to Immich people) | `in-progress` |
 | [T-053](tasks/T-053-events-who.md) | Events — who the event is for (family members on an event) | `done` |
-| [T-054](tasks/T-054-events-member-filter.md) | Events — filter the list by family member | `in-progress` |
+| [T-054](tasks/T-054-events-member-filter.md) | Events — filter the list by family member | `done` |
 
 ### Phase 8 — Modular Architecture (Agentic Pair Programming)
 Deconstruct monolithic `:app` into isolated feature slices and core foundations (ADR 0011).
