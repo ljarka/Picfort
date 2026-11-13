@@ -50,7 +50,7 @@ sealed interface PeopleTap {
 fun PeopleFilterRow(
     state: PeopleFilterUi,
     onSelect: (String?) -> Unit,
-    onEditMember: (String) -> Unit = {},
+    onEditMember: ((String) -> Unit)? = null,
     onOpenFamily: (() -> Unit)? = null,
 ) {
     MemberCarousel(
@@ -71,7 +71,7 @@ fun PersonPhotosContent(
     thumbnail: (GridAsset) -> String,
     modifier: Modifier = Modifier,
     onSelect: (String?) -> Unit = {},
-    onEditMember: (String) -> Unit = {},
+    onEditMember: ((String) -> Unit)? = null,
     onOpenFamily: (() -> Unit)? = null,
     onRetry: () -> Unit = {},
     onLoadMore: () -> Unit = {},

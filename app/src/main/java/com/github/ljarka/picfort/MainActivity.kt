@@ -62,6 +62,10 @@ import com.github.ljarka.picfort.ui.timeline.TimelineScreen
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.serialization.Serializable
 import java.time.LocalDate
+import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.compose.LifecycleEventEffect
+import com.github.ljarka.picfort.ui.shell.ServerStatusViewModel
 import javax.inject.Inject
 
 sealed interface Screen {
@@ -310,6 +314,9 @@ class MainActivity : ComponentActivity() {
                             }
                             navigation<TabGraph.Photos>(startDestination = Screen.Timeline()) {
                                 composable<Screen.Timeline> { entry ->
+                                    val picfortServer = hiltViewModel<ServerStatusViewModel>()
+                                    // Back from Settings, where the address may have been set or removed.
+                                    LifecycleEventEffect(Lifecycle.Event.ON_START) { picfortServer.recheck() }
                                     TabRoot {
                                         TimelineScreen(
                                             sharedTransitionScope = this@SharedTransitionLayout,
@@ -330,8 +337,13 @@ class MainActivity : ComponentActivity() {
                                                     ImageDetailsRoute(asset.id, AssetType.REMOTE, index, source)
                                                 )
                                             },
-                                            onEditMember = { id -> navController.navigate(Screen.FamilySettings(id)) },
-                                            onOpenFamily = { navController.navigate(Screen.FamilySettings()) },
+                                            // Family settings need the Picfort server: no way in without one.
+                                            onEditMember = if (picfortServer.configured) {
+                                                { id -> navController.navigate(Screen.FamilySettings(id)) }
+                                            } else null,
+                                            onOpenFamily = if (picfortServer.configured) {
+                                                { navController.navigate(Screen.FamilySettings()) }
+                                            } else null,
                                             scrollToDate = entry.toRoute<Screen.Timeline>().date?.let(LocalDate::parse),
                                         )
                                     }
