@@ -34,7 +34,7 @@ def module_of(path: str) -> str:
     parts = path.split("/")
     if len(parts) >= 2 and parts[0] in {"feature", "core"}:
         return f"{parts[0]}/{parts[1]}"
-    if parts[0] in {"app", "ImageFrameServer", "docs", "scripts", ".github"}:
+    if parts[0] in {"app", "picfort-server", "docs", "scripts", ".github"}:
         return parts[0]
     return parts[0]
 

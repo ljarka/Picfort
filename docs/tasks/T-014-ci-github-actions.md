@@ -22,7 +22,7 @@ initial project setup. CI is already running and covers all requirements below.
 
 ### Frame server job (matrix: Python 3.11 + 3.13)
 - Runs `pip install -r requirements.txt` → `python -m unittest discover -s tests -t tests -v`
-- Working directory: `ImageFrameServer/`
+- Working directory: `picfort-server/`
 
 ### `.github/workflows/release.yml`
 - Triggered by version tags (`v*`)

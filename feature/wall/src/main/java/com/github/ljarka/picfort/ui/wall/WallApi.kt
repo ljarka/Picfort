@@ -16,7 +16,7 @@ import okhttp3.MultipartBody
 import okhttp3.Request
 import okhttp3.RequestBody.Companion.toRequestBody
 
-/** A post as ImageFrameServer returns it (T-001). */
+/** A post as the Picfort server returns it (T-001). */
 @Serializable
 data class WallPostDto(
     val id: Int,
@@ -64,7 +64,7 @@ internal fun WallPostDto.toPost(base: HttpUrl) = WallPost(
     created = runCatching { Instant.parse(created) }.getOrDefault(Instant.EPOCH),
 )
 
-/** Family Wall calls to the Picfort server (ImageFrameServer, T-001). */
+/** Family Wall calls to the Picfort server (T-001). */
 @Singleton
 class WallApi @Inject constructor(
     private val server: PicfortServerClient,

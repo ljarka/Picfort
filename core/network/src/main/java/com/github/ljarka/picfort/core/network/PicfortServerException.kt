@@ -10,8 +10,8 @@ sealed class PicfortServerException(message: String) : Exception(message) {
     /** 401: the server didn't accept our Immich login (e.g. it uses another Immich). */
     class NotAccepted : PicfortServerException("The Picfort server didn't accept your Immich login")
 
-    /** 404 on `/wall`: an ImageFrameServer without the wall. */
-    class NoWall : PicfortServerException("This Picfort server has no Family Wall yet, update ImageFrameServer")
+    /** 404 on `/wall`: a Picfort server without the wall. */
+    class NoWall : PicfortServerException("This Picfort server has no Family Wall yet, update it")
 
     /** 404 on a feature's root (`/lists`, …): a server older than that feature. */
     class Outdated(feature: String) : PicfortServerException("This Picfort server has no $feature yet, update it")

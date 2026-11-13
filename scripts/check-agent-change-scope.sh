@@ -50,7 +50,7 @@ extract_module() {
     feature/*/*) echo "$(cut -d/ -f1-2 <<< "$path")" ;;
     core/*/*) echo "$(cut -d/ -f1-2 <<< "$path")" ;;
     app/*) echo "app" ;;
-    ImageFrameServer/*) echo "ImageFrameServer" ;;
+    picfort-server/*) echo "picfort-server" ;;
     .github/*) echo ".github" ;;
     scripts/*) echo "scripts" ;;
     docs/*) echo "docs" ;;
@@ -65,7 +65,7 @@ CRITICAL_PATHS=(
   "app/src/main/java/com/github/ljarka/picfort/MainActivity.kt"
   "app/src/main/java/com/github/ljarka/picfort/AppNavigation.kt"
   "core/network/src/main/java/com/github/ljarka/picfort/core/network/"
-  "ImageFrameServer/app.py"
+  "picfort-server/app.py"
   ".github/workflows/"
 )
 

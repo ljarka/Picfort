@@ -60,7 +60,7 @@ Do not load the whole project. Each module's `AGENTS.md` tells you what to read.
 ## Environment
 
 - JDK 21, Android SDK (API 37 compileSdk, 26 minSdk).
-- ImageFrameServer (Python) in `ImageFrameServer/`.
+- Picfort server (Python) in `picfort-server/`.
 - Device smoke test: `./scripts/maestro-smoke.sh` (Maestro flows in `maestro/`; test account from
   `~/.config/picfort/test.env`, test server `picfort_test` on :5051 — never the family's server).
   Feature flows set up their own data with `maestro/scripts/test-data.js` (test server only).

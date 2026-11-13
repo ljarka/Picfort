@@ -98,7 +98,7 @@ jobs:
             org.opencontainers.image.description=Family Wall and picture frame server for Picfort
       - uses: docker/build-push-action@v7
         with:
-          context: ImageFrameServer
+          context: picfort-server
           platforms: linux/amd64,linux/arm64
           push: true
           tags: ${{ steps.meta.outputs.tags }}
