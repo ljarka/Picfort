@@ -9,3 +9,6 @@ build/
 .externalNativeBuild
 .cxx
 local.properties
+
+# Obsidian vault settings (docs/ opened as a vault)
+.obsidian/
