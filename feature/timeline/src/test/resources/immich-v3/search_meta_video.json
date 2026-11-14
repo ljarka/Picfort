@@ -1,0 +1,47 @@
+{
+ "albums": {
+  "total": 0,
+  "count": 0,
+  "items": [],
+  "facets": []
+ },
+ "assets": {
+  "total": 1,
+  "count": 1,
+  "items": [
+   {
+    "id": "14d603b0-ba4b-46f1-b752-2e383768bd34",
+    "createdAt": "2026-11-14T08:11:42.643Z",
+    "ownerId": "6fedb4d3-2637-4654-817e-bd4d56a6ed73",
+    "libraryId": null,
+    "type": "VIDEO",
+    "originalPath": "/data/x",
+    "originalFileName": "T062_video.mp4",
+    "originalMimeType": "video/mp4",
+    "thumbhash": "dfgJBAIIaHh3d3iXh3h1YGgJlw==",
+    "fileCreatedAt": "2026-11-14T08:02:29.000Z",
+    "fileModifiedAt": "2026-11-14T08:00:00.000Z",
+    "localDateTime": "2026-11-14T08:02:29.000Z",
+    "updatedAt": "2026-11-14T08:11:42.839Z",
+    "isFavorite": false,
+    "isArchived": false,
+    "isTrashed": false,
+    "visibility": "timeline",
+    "duration": 2692,
+    "livePhotoVideoId": null,
+    "people": [],
+    "checksum": "iNhXZMAcHm8V3oecn+4czvu+7tg=",
+    "isOffline": false,
+    "hasMetadata": true,
+    "duplicateId": null,
+    "resized": true,
+    "width": 320,
+    "height": 640,
+    "isEdited": false
+   }
+  ],
+  "facets": [],
+  "nextPage": null,
+  "nextCursor": null
+ }
+}

@@ -22,6 +22,7 @@ Immich photo timeline, gallery, full-screen viewer, collections, and media sync 
 | `local/LocalImagesProvider.kt` | Device MediaStore photo reader |
 | `ui/people/PeopleFilterViewModel.kt`, `PersonPhotosContent.kt` | Family carousel on Photos, photos of one person via `search/metadata` (T-052) |
 | `ui/timeline/DayPhotosRepository.kt` | `DayPhotosProvider` (bound in `TimelineBindingsModule`): photos of given days from the local copy; registers the viewer list under `source` (T-055) |
+| `contract/ImmichV3ContractTest.kt` | Real Immich 3.3 responses (`test/resources/immich-v3/`) read with the app's DTOs; refresh on a new major (T-062) |
 | `ui/timeline/TimelineScreenshotTest.kt` | Paparazzi snapshots: timeline layouts, empty state, album, search, details, family carousel |
 
 ## Public Contract / Navigation Entry Points

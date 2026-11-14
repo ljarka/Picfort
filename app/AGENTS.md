@@ -33,4 +33,7 @@ Thin Android application shell, navigation root, and Hilt root assembler.
 ./gradlew :app:verifyPaparazziDebug
 ./scripts/maestro-smoke.sh   # on a device: clean install, login, every tab (maestro/smoke.yaml)
 ./scripts/maestro-smoke.sh maestro/setup-errors.yaml   # T-058: setup errors, https:// default, Skip
+# Room filter test on a device (not in CI; uninstalls the app afterwards, log in again with smoke.yaml):
+./gradlew :app:connectedDebugAndroidTest -Pandroid.testInstrumentationRunnerArguments.class=com.github.ljarka.picfort.db.RemoteAssetsDaoTest
 ```
+`test/.../contract/ImmichV3AppContractTest`: login and backup responses of Immich 3.3 (T-062).

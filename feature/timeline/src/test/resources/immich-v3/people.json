@@ -1,0 +1,43 @@
+{
+ "people": [
+  {
+   "id": "fe72ecd0-020f-46e2-843a-6da16db20546",
+   "name": "Osoba 01",
+   "birthDate": null,
+   "thumbnailPath": "/data/x",
+   "isHidden": false,
+   "isFavorite": false,
+   "updatedAt": "2026-11-13T14:18:31.343711+00:00",
+   "otherPeople": [],
+   "sharedBy": [],
+   "sharedWith": []
+  },
+  {
+   "id": "a670103f-e997-45d3-bef1-c538b204dc3e",
+   "name": "Osoba 02",
+   "birthDate": null,
+   "thumbnailPath": "/data/x",
+   "isHidden": false,
+   "isFavorite": false,
+   "updatedAt": "2026-11-13T14:18:43.514223+00:00",
+   "otherPeople": [],
+   "sharedBy": [],
+   "sharedWith": []
+  },
+  {
+   "id": "a062cdce-aed0-456f-8ef1-98e489cde25c",
+   "name": "Osoba 03",
+   "birthDate": null,
+   "thumbnailPath": "/data/x",
+   "isHidden": false,
+   "isFavorite": false,
+   "updatedAt": "2026-11-13T14:18:43.607064+00:00",
+   "otherPeople": [],
+   "sharedBy": [],
+   "sharedWith": []
+  }
+ ],
+ "hasNextPage": false,
+ "total": 14,
+ "hidden": 0
+}

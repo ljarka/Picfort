@@ -1,5 +1,6 @@
 package com.github.ljarka.picfort.collections
 
+import android.util.Log
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -26,11 +27,21 @@ sealed interface LoadState<out T> {
     data class Error(val message: String) : LoadState<Nothing>
 }
 
+/**
+ * What to show for a failed load. An unexpected error (e.g. a response the app can't read after a
+ * server update, T-061) is logged and named, so a screenshot is enough to tell what broke.
+ */
 fun describeError(e: Exception): String = when (e) {
     is CleartextNotAllowedException -> e.message ?: "Use https://"
+
     is IOException -> "Can't reach the server"
+
     is HttpException -> "Server error (HTTP ${e.code()})"
-    else -> "Something went wrong"
+
+    else -> {
+        Log.w("Picfort", "Unexpected error", e)
+        "Something went wrong (${e.javaClass.simpleName})"
+    }
 }
 
 private suspend fun <T> load(block: suspend () -> T): LoadState<T> = try {

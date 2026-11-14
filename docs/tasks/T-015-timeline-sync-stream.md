@@ -116,9 +116,13 @@ Check these with a second account before relying on them.
 - [ ] Timeline benchmark (`:benchmark`) passes. Compare frame times with `main` interleaved
       (emulator noise is large, see PR #25).
       _2026-11-11: the benchmark now opens the Photos tab (the app starts on the Wall) and passes on the emulator (frame CPU P90 10.5 ms, overrun P90 1.6 ms). The interleaved comparison with the pre-T-015 build is still to do._
-- [ ] Unit tests: line parsing, ack batching (latest per type, ≤ 1000), reset handling and the
+- [x] Unit tests: line parsing, ack batching (latest per type, ≤ 1000), reset handling and the
       timeline filter query (Room in-memory DB).
-      _Parsing, ack batching and reset are covered by `SyncEngineTest`; the timeline filter query has no Room in-memory test._
+      _Parsing, ack batching and reset: `SyncEngineTest`. Filter query: `RemoteAssetsDaoTest`
+      (`:app` androidTest, 4/4 on the emulator 2026-11-14; it hadn't compiled since the
+      `:core:database` split, fixed in T-062)._
+- [x] Video duration (`AssetV2.duration`) is milliseconds: a 2.7 s clip comes as 2692 and shows
+      "0:02" on the timeline (emulator, Immich 3.3, 2026-11-14, T-062).
 
 ## Notes for implementing agent
 
