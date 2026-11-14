@@ -142,6 +142,14 @@ def _periods(body) -> list:
     return sorted(periods)
 
 
+def _member_id(value):
+    """The family member the child is (`immich_user_id`: an Immich user's id or a manual member's,
+    both UUIDs from /family), or None."""
+    if value is not None and (not isinstance(value, str) or not UUID_RE.match(value)):
+        raise StoreError("immich_user_id must be a UUID or null")
+    return value
+
+
 def _inspect_photo(data: bytes) -> str:
     if not data:
         raise StoreError("A photo file is required")
@@ -185,11 +193,13 @@ class SchoolStore(SqliteStore):
     def create_child(self, actor_id: str, body: dict) -> dict:
         name = _text(body, "name", MAX_NAME, required=True)
         color = _color(body.get("color"))
+        member_id = _member_id(body.get("immich_user_id"))
         now = self.clock()
         with closing(self.connect()) as conn, conn:
             cur = conn.execute(
-                "INSERT INTO children (name, color, created_by, created, updated) VALUES (?, ?, ?, ?, ?)",
-                (name, color, actor_id, now, now),
+                "INSERT INTO children (name, color, immich_user_id, created_by, created, updated)"
+                " VALUES (?, ?, ?, ?, ?, ?)",
+                (name, color, member_id, actor_id, now, now),
             )
             return self._child(conn, cur.lastrowid, actor_id)
 
@@ -200,10 +210,7 @@ class SchoolStore(SqliteStore):
         if "color" in body:
             changes["color"] = _color(body["color"])
         if "immich_user_id" in body:
-            value = body["immich_user_id"]
-            if value is not None and (not isinstance(value, str) or not UUID_RE.match(value)):
-                raise StoreError("immich_user_id must be a UUID or null")
-            changes["immich_user_id"] = value
+            changes["immich_user_id"] = _member_id(body["immich_user_id"])
         with closing(self.connect()) as conn, conn:
             self._require_child(conn, child_id)
             if changes:

@@ -18,6 +18,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -52,15 +53,17 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.focus.FocusRequester
-import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import com.github.ljarka.picfort.core.model.FamilyMember
+import com.github.ljarka.picfort.core.ui.avatar.MemberAvatar
 import com.github.ljarka.picfort.core.ui.avatar.avatarColor
 import java.time.DayOfWeek
 import java.time.LocalTime
@@ -83,85 +86,138 @@ private fun FormColumn(content: @Composable () -> Unit) {
 
 // --- Child ---
 
-/** Add or edit a child: name, color, the bell schedule, delete. [child] null adds one. */
+/**
+ * Pick who goes to school from the family (not everyone does). The faces as in the Wall's row;
+ * members already in School are left out.
+ */
+@Composable
+fun AddChildForm(candidates: List<FamilyMember>, saving: Boolean, onPick: (FamilyMember) -> Unit) {
+    FormColumn {
+        Text("Who goes to school?", style = MaterialTheme.typography.titleLarge)
+        if (candidates.isEmpty()) {
+            Text(
+                "Everyone in the family is already here. Add someone in Settings → Family first.",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        } else {
+            FlowRow(
+                horizontalArrangement = Arrangement.spacedBy(4.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                candidates.forEach { member ->
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(16.dp))
+                            .clickable(enabled = !saving, onClickLabel = "Add ${member.name}") { onPick(member) }
+                            .padding(horizontal = 6.dp, vertical = 6.dp),
+                    ) {
+                        MemberAvatar(member, size = 56.dp)
+                        Text(
+                            member.name,
+                            style = MaterialTheme.typography.labelSmall,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                            textAlign = TextAlign.Center,
+                            modifier = Modifier.width(64.dp).padding(top = 4.dp),
+                        )
+                    }
+                }
+            }
+            Text(
+                "Someone missing? Add them in Settings → Family.",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+    }
+}
+
+/**
+ * A child in School: the bell schedule and removing them. A child linked to a family member takes
+ * name and face from Family; an older one (added by name) can still be renamed and recolored.
+ */
 @Composable
 fun ChildForm(
-    child: Child?,
-    takenColors: List<String>,
+    child: Child,
+    avatar: FamilyMember,
+    linked: Boolean,
     saving: Boolean,
     onSave: (name: String, color: String) -> Unit,
     onBells: () -> Unit,
     onDelete: (Long) -> Unit,
 ) {
-    var name by remember { mutableStateOf(child?.name.orEmpty()) }
-    var color by remember { mutableStateOf(child?.color ?: defaultChildColor(takenColors)) }
+    var name by remember { mutableStateOf(child.name) }
+    var color by remember { mutableStateOf(child.color) }
     var confirmDelete by remember { mutableStateOf(false) }
-    val focus = remember { FocusRequester() }
-    // A new child starts with typing the name.
-    LaunchedEffect(Unit) { if (child == null) focus.requestFocus() }
     FormColumn {
-        Text(if (child == null) "Add child" else child.name, style = MaterialTheme.typography.titleLarge)
-        OutlinedTextField(
-            value = name,
-            onValueChange = { name = it.take(50) },
-            label = { Text("Name") },
-            singleLine = true,
-            keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Words),
-            modifier = Modifier.fillMaxWidth().focusRequester(focus),
-        )
-        Text("Color", style = MaterialTheme.typography.labelLarge)
-        FlowRow(
-            horizontalArrangement = Arrangement.spacedBy(10.dp),
-            verticalArrangement = Arrangement.spacedBy(10.dp),
-        ) {
-            CHILD_COLORS.forEach { c ->
-                val picked = c == color
-                Box(
-                    contentAlignment = Alignment.Center,
-                    modifier = Modifier
-                        .size(36.dp)
-                        .clip(CircleShape)
-                        .background(avatarColor(c))
-                        .border(if (picked) 3.dp else 0.dp, MaterialTheme.colorScheme.onSurface, CircleShape)
-                        .clickable { color = c }
-                        .semantics {
-                            contentDescription = c
-                            selected = picked
-                        },
-                ) {
-                    if (picked) Icon(Icons.Default.Check, contentDescription = null, tint = Color.White)
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            MemberAvatar(avatar, size = 48.dp)
+            Spacer(Modifier.width(12.dp))
+            Text(child.name, style = MaterialTheme.typography.titleLarge)
+        }
+        if (!linked) {
+            OutlinedTextField(
+                value = name,
+                onValueChange = { name = it.take(50) },
+                label = { Text("Name") },
+                singleLine = true,
+                keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Words),
+                modifier = Modifier.fillMaxWidth(),
+            )
+            FlowRow(
+                horizontalArrangement = Arrangement.spacedBy(10.dp),
+                verticalArrangement = Arrangement.spacedBy(10.dp),
+            ) {
+                CHILD_COLORS.forEach { c ->
+                    val picked = c == color
+                    Box(
+                        contentAlignment = Alignment.Center,
+                        modifier = Modifier
+                            .size(36.dp)
+                            .clip(CircleShape)
+                            .background(avatarColor(c))
+                            .border(if (picked) 3.dp else 0.dp, MaterialTheme.colorScheme.onSurface, CircleShape)
+                            .clickable { color = c }
+                            .semantics {
+                                contentDescription = c
+                                selected = picked
+                            },
+                    ) {
+                        if (picked) Icon(Icons.Default.Check, contentDescription = null, tint = Color.White)
+                    }
                 }
             }
         }
         Row(verticalAlignment = Alignment.CenterVertically) {
-            if (child != null) {
-                OutlinedButton(onClick = onBells) {
-                    Text(
-                        if (child.periods.isEmpty()) "Set up lesson times" else "Bell schedule · ${child.periods.size}",
-                    )
-                }
+            OutlinedButton(onClick = onBells) {
+                Text(if (child.periods.isEmpty()) "Set up lesson times" else "Bell schedule · ${child.periods.size}")
             }
             Spacer(Modifier.weight(1f))
-            Button(onClick = { onSave(name, color) }, enabled = name.isNotBlank() && !saving) {
-                Text(if (child == null) "Add" else "Save")
+            if (!linked) {
+                Button(onClick = { onSave(name, color) }, enabled = name.isNotBlank() && !saving) { Text("Save") }
             }
         }
-        if (child != null) {
-            HorizontalDivider()
-            TextButton(onClick = { confirmDelete = true }) {
-                Text("Delete child", color = MaterialTheme.colorScheme.error)
-            }
+        HorizontalDivider()
+        TextButton(onClick = { confirmDelete = true }) {
+            Text("Remove from School", color = MaterialTheme.colorScheme.error)
         }
     }
-    if (confirmDelete && child != null) {
+    if (confirmDelete) {
         AlertDialog(
             onDismissRequest = { confirmDelete = false },
-            text = { Text("Delete ${child.name} and the whole timetable? This is for everyone in the family.") },
+            text = {
+                Text(
+                    "Remove ${child.name} from School? The whole timetable is deleted, for everyone in the family. " +
+                        "${child.name} stays in the family.",
+                )
+            },
             confirmButton = {
                 TextButton(onClick = {
                     confirmDelete = false
                     onDelete(child.id)
-                }) { Text("Delete", color = MaterialTheme.colorScheme.error) }
+                }) { Text("Remove", color = MaterialTheme.colorScheme.error) }
             },
             dismissButton = { TextButton(onClick = { confirmDelete = false }) { Text("Cancel") } },
         )

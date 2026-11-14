@@ -1,5 +1,6 @@
-# T-029: add a child, set the bell schedule, enter a day with "Save and add next", copy it to
-# Tuesday, then delete the child. Test server only: scripts/test-data.js removes "Ala T029" first.
+# T-029, T-066: add a family member to School with "+", set the bell schedule, enter a day with
+# "Save and add next", copy it to Tuesday, then remove them from School.
+# Test server only: scripts/test-data.js empties School first; the family has "Ola" and "Kuba".
 appId: com.github.ljarka.immich.android2
 name: School — timetable (T-029)
 ---
@@ -10,23 +11,20 @@ name: School — timetable (T-029)
 - runFlow: subflows/open-app.yaml
 - tapOn: "School"
 
-# Add the child (the "+" chip, or the empty state's button)
-- runFlow:
-    when:
-      visible: "Add child"
-    commands:
-      - tapOn: "Add child"
-- tapOn: "Name"
-- inputText: "Ala T029"
-- hideKeyboard
-- tapOn: "^Add$"
+# Only "+" at first; it lists the family
 - extendedWaitUntil:
-    visible: "No school today"
+    visible: "Tap \\+ to add who goes to school"
+    timeout: 10000
+- tapOn: "Add"
+- assertVisible: "Who goes to school\\?"
+- tapOn: "Ola"
+- extendedWaitUntil:
+    visible: "No school today|.*finish.*school.*"
     timeout: 10000
 
-# Bell schedule: edit mode, tap the selected chip, Fill in
+# Bell schedule: edit mode, tap the selected child, Fill in
 - tapOn: "Edit timetable"
-- tapOn: "Ala T029"
+- tapOn: "Ola"
 - tapOn: "Set up lesson times"
 - scrollUntilVisible:
     element: "^Fill in$"
@@ -72,13 +70,15 @@ name: School — timetable (T-029)
     visible: "Period 1, .*Maths.*"
     timeout: 10000
 
-# Read only outside edit mode; then delete the child
+# Read only outside edit mode; then remove Ola from School (she stays in the family)
 - tapOn: "Done editing"
 - assertNotVisible: "Add lesson or activity"
 - tapOn: "Edit timetable"
-- tapOn: "Ala T029"
+- tapOn: "Ola"
 - scrollUntilVisible:
-    element: "Delete child"
-- tapOn: "Delete child"
-- tapOn: "Delete"
-- assertNotVisible: "Ala T029"
+    element: "Remove from School"
+- tapOn: "Remove from School"
+- tapOn: "^Remove$"
+- extendedWaitUntil:
+    visible: "Tap \\+ to add who goes to school"
+    timeout: 10000

@@ -1,5 +1,5 @@
-# T-029: two children, switching, the chosen child after a restart, swiping days, rename and
-# recolor, another phone's change within 60 s. Test server only: scripts/test-data.js sets it up.
+# T-029, T-066: two children (family members), switching, the chosen child after a restart, swiping days,
+# "+" leaving out who is already in School, another phone's change within 60 s. Test server only: scripts/test-data.js sets it up.
 appId: com.github.ljarka.immich.android2
 name: School — two children, restart, swipe, polling (T-029)
 ---
@@ -15,12 +15,12 @@ name: School — two children, restart, swipe, polling (T-029)
 - tapOn: "School"
 
 # Two children, different timetables; switching is one tap
-- tapOn: "Ala T029"
+- tapOn: "Ola"
 - tapOn: "Mon.*"
 - extendedWaitUntil:
     visible: "Period 1, .*Maths T029.*"
     timeout: 10000
-- tapOn: "Bartek T029"
+- tapOn: "Kuba"
 - assertVisible: "Activity, Chess club T029.*"
 - assertNotVisible: "Period 1, .*Maths T029.*"
 
@@ -34,7 +34,7 @@ name: School — two children, restart, swipe, polling (T-029)
     timeout: 10000
 
 # Swiping: Monday → Tuesday
-- tapOn: "Ala T029"
+- tapOn: "Ola"
 - tapOn: "Mon.*"
 - assertVisible: "Period 1, .*Maths T029.*"
 - swipe:
@@ -59,17 +59,13 @@ name: School — two children, restart, swipe, polling (T-029)
     visible: "Period 2, .*Music T029.*"
     timeout: 75000
 
-# Rename and recolor
-- tapOn: "Edit timetable"
-- tapOn: "Ala T029"
-- tapOn: "Ala T029"
-- eraseText: 20
-- inputText: "Ola T029"
-- hideKeyboard
-- tapOn: "green"
-- tapOn: "^Save$"
-- extendedWaitUntil:
-    visible: "Ola T029"
-    timeout: 10000
-- assertNotVisible: "Ala T029"
-- tapOn: "Done editing"
+# "+" offers only family members not in School yet
+- tapOn: "Add"
+- assertVisible: "Who goes to school\\?"
+- assertNotVisible:
+    text: "Ola"
+    below: "Who goes to school\\?"
+- assertNotVisible:
+    text: "Kuba"
+    below: "Who goes to school\\?"
+- pressKey: back
