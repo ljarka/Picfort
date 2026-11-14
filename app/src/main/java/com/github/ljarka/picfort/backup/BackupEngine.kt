@@ -26,6 +26,7 @@ import okhttp3.MediaType.Companion.toMediaTypeOrNull
 import okhttp3.MultipartBody
 import okhttp3.RequestBody
 import okhttp3.RequestBody.Companion.toRequestBody
+import okio.Buffer
 import okio.BufferedSink
 import okio.source
 import retrofit2.HttpException
@@ -64,6 +65,7 @@ class BackupEngine @Inject constructor(
     private val serverUrlStore: ServerUrlStore,
     private val accessTokenStore: AccessTokenStore,
     private val timelineRepository: Provider<TimelineRepository>,
+    private val queue: BackupQueue,
 ) {
     suspend fun run(onProgress: suspend (BackupProgress) -> Unit = {}): BackupOutcome {
         if (!accessTokenStore.hasData() || !serverUrlStore.hasData()) return BackupOutcome.NotLoggedIn
@@ -81,8 +83,6 @@ class BackupEngine @Inject constructor(
         val present = media.mapTo(HashSet()) { it.id }
         known.keys.filter { it !in present }.chunked(500).forEach { dao.delete(it) }
 
-        fun isUnchanged(m: LocalMedia, row: LocalBackupEntity?) =
-            row != null && row.dateModified == m.dateModified && row.size == m.size
         val todo = media.filter { m ->
             val row = known[m.id]
             !isUnchanged(m, row) || (row?.remoteId == null && row?.rejected == null)
@@ -91,6 +91,22 @@ class BackupEngine @Inject constructor(
         onProgress(BackupProgress(alreadyBackedUp, media.size))
         if (todo.isEmpty()) return BackupOutcome.Done(0, 0, 0)
 
+        queue.start(todo.map { QueuedMedia(it.id, it.isVideo) })
+        try {
+            return uploadAll(todo, known, alreadyBackedUp, media.size, onProgress)
+        } finally {
+            queue.clear()
+        }
+    }
+
+    /** Hash → ask Immich which it has → upload the rest, batch by batch. */
+    private suspend fun uploadAll(
+        todo: List<LocalMedia>,
+        known: Map<Long, LocalBackupEntity>,
+        alreadyBackedUp: Int,
+        total: Int,
+        onProgress: suspend (BackupProgress) -> Unit,
+    ): BackupOutcome {
         val api = service.get()
         val serverMajor = api.version().major
         var uploaded = 0
@@ -149,8 +165,11 @@ class BackupEngine @Inject constructor(
                             }
                         }
                     }
+                    queue.finished(listOf(localId))
                 }
-                onProgress(BackupProgress(alreadyBackedUp + uploaded + duplicates + rejected, media.size))
+                // Found in Immich, refused, or deleted since the scan: out of the queue too.
+                queue.finished(batch.map { it.id })
+                onProgress(BackupProgress(alreadyBackedUp + uploaded + duplicates + rejected, total))
             }
         } catch (e: QuotaExceededException) {
             // Stop: every further upload would fail too. Files stay pending, not rejected,
@@ -174,7 +193,10 @@ class BackupEngine @Inject constructor(
     private suspend fun upload(api: BackupService, m: LocalMedia, checksum: String, serverMajor: Int): String? {
         val fields = uploadFields(m, serverMajor, settings.deviceId)
             .mapValues { (_, v) -> v.toRequestBody(MultipartBody.FORM) }
-        val body = ContentUriRequestBody(context.contentResolver, uriOf(m), m.mimeType.toMediaTypeOrNull(), m.size)
+        queue.uploading(m.id)
+        val body = ContentUriRequestBody(context.contentResolver, uriOf(m), m.mimeType.toMediaTypeOrNull(), m.size) {
+            queue.progress(m.id, it)
+        }
         val part = MultipartBody.Part.createFormData("assetData", m.fileName, body)
         return try {
             api.upload(checksum, fields, part).id
@@ -195,17 +217,41 @@ class BackupEngine @Inject constructor(
     private fun uriOf(m: LocalMedia): Uri = if (m.isVideo) localVideoUri(m.id) else localImageUri(m.id)
 }
 
-/** Streams a content:// file into the request without loading it into memory. */
+private fun isUnchanged(m: LocalMedia, row: LocalBackupEntity?) =
+    row != null && row.dateModified == m.dateModified && row.size == m.size
+
+/**
+ * Streams a content:// file into the request without loading it into memory, reporting the share
+ * sent (0..1, in whole percents) when the size is known.
+ */
 private class ContentUriRequestBody(
     private val resolver: ContentResolver,
     private val uri: Uri,
     private val type: MediaType?,
     private val size: Long,
+    private val onProgress: (Float) -> Unit = {},
 ) : RequestBody() {
     override fun contentType() = type
     override fun contentLength() = if (size > 0) size else -1
     override fun writeTo(sink: BufferedSink) {
         val input = resolver.openInputStream(uri) ?: throw FileNotFoundException(uri.toString())
-        input.source().use { sink.writeAll(it) }
+        input.source().use { source ->
+            val buffer = Buffer()
+            var sent = 0L
+            var percent = -1
+            while (true) {
+                val read = source.read(buffer, 64 * 1024L)
+                if (read < 0) break
+                sink.write(buffer, read)
+                sent += read
+                if (size > 0) {
+                    val now = (sent * 100 / size).toInt()
+                    if (now != percent) {
+                        percent = now
+                        onProgress(now / 100f)
+                    }
+                }
+            }
+        }
     }
 }

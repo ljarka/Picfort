@@ -13,8 +13,8 @@ Thin Android application shell, navigation root, and Hilt root assembler.
 | `ui/shell/AppShell.kt` | Floating navigation bar (`TabBar`), `TabRoot`, `ComingSoonScreen`; `Tab.accent` (Wall coral, Shopping mint, Events amber, School sky, Photos periwinkle), applied in `MainActivity` via `AccentTheme` |
 | `ui/init/*` | `InitScreen` (signed in → app) and the one-page setup (T-058): `SetupScreen`/`SetupContent`, `SetupViewModel` (Immich ping → login → `PicfortServerCheck`), `picfortSuggestion` (same host :5000) |
 | `ui/login/*` | `LoginService` (`/api/auth/login`, via `Provider`: Retrofit reads the base URL when built) |
-| `ui/settings/*` | App settings, server info, backup status; `AppearanceSettingsStore` ("Colors from wallpaper", off by default → brand palette) |
-| `backup/*` | Android WorkManager periodic background photo backup |
+| `ui/settings/*` | App settings, server info, backup status (`countInImmich` with the timeline's match, `BackupQueueRow`, Stop; T-063); `AppearanceSettingsStore` ("Colors from wallpaper", off by default → brand palette) |
+| `backup/*` | Android WorkManager periodic background photo backup; `BackupQueue` (what uploads now/next, T-063), `BackupScheduler.stop()` |
 
 ## Architecture & Rules
 

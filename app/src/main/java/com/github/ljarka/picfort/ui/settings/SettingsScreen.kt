@@ -6,7 +6,9 @@ import android.text.format.DateUtils
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -23,6 +25,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
@@ -38,6 +41,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.github.ljarka.picfort.backup.BackupQueueState
 import com.github.ljarka.picfort.backup.BackupStatus
 import com.github.ljarka.picfort.local.RequestMediaPermission
 
@@ -47,6 +51,7 @@ fun SettingsScreen(onBack: () -> Unit, onFrameClick: () -> Unit, onFamilyClick: 
     val viewModel: SettingsViewModel = hiltViewModel()
     val backup by viewModel.backup.collectAsStateWithLifecycle()
     val status by viewModel.status.collectAsStateWithLifecycle()
+    val queue by viewModel.queue.collectAsStateWithLifecycle()
     val showFamily by viewModel.showFamily.collectAsStateWithLifecycle()
     val wallpaperColors by viewModel.wallpaperColors.collectAsStateWithLifecycle()
 
@@ -64,6 +69,7 @@ fun SettingsScreen(onBack: () -> Unit, onFrameClick: () -> Unit, onFamilyClick: 
     SettingsContent(
         backup = backup,
         status = status,
+        queue = queue,
         serverUrl = viewModel.serverUrl,
         picfortServer = viewModel.picfortServer,
         showFamily = showFamily,
@@ -76,6 +82,7 @@ fun SettingsScreen(onBack: () -> Unit, onFrameClick: () -> Unit, onFamilyClick: 
         onWifiOnly = viewModel::setWifiOnly,
         onChargingOnly = viewModel::setChargingOnly,
         onBackUpNow = viewModel::backUpNow,
+        onStopBackup = viewModel::stopBackup,
         onLogout = viewModel::logout,
     )
 }
@@ -86,6 +93,8 @@ fun SettingsContent(
     backup: BackupSettingsUi,
     status: BackupStatus,
     serverUrl: String,
+    /** What the running backup uploads now and next; empty when idle. */
+    queue: BackupQueueState = BackupQueueState(),
     /** Picfort server address, "" when not set. */
     picfortServer: String = "",
     showFamily: Boolean = false,
@@ -99,6 +108,7 @@ fun SettingsContent(
     onWifiOnly: (Boolean) -> Unit = {},
     onChargingOnly: (Boolean) -> Unit = {},
     onBackUpNow: () -> Unit = {},
+    onStopBackup: () -> Unit = {},
     onLogout: () -> Unit = {},
     /** Fixed "now" for screenshot tests. */
     now: Long = System.currentTimeMillis(),
@@ -149,13 +159,14 @@ fun SettingsContent(
             Column(Modifier.padding(horizontal = 16.dp, vertical = 8.dp)) {
                 when (val s = status) {
                     is BackupStatus.Running -> {
+                        val done = backupDone(s, queue)
                         Text(
-                            if (s.total > 0) "Backing up… ${s.done} of ${s.total}" else "Preparing backup…",
+                            if (s.total > 0) "Backing up… $done of ${s.total}" else "Preparing backup…",
                             style = MaterialTheme.typography.bodyMedium,
                         )
                         if (s.total > 0) {
                             LinearProgressIndicator(
-                                progress = { s.done.toFloat() / s.total },
+                                progress = { done.toFloat() / s.total },
                                 modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
                             )
                         } else {
@@ -174,12 +185,15 @@ fun SettingsContent(
                     val ago = relativeTimeSpan(backup.lastRunAt, now)
                     Text("Last backup $ago: $it", style = MaterialTheme.typography.bodySmall)
                 }
-                Button(
-                    onClick = onBackUpNow,
-                    enabled = status !is BackupStatus.Running && backup.hasMediaAccess,
-                    modifier = Modifier.padding(top = 8.dp),
-                ) { Text("Back up now") }
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.padding(top = 8.dp)) {
+                    Button(
+                        onClick = onBackUpNow,
+                        enabled = status !is BackupStatus.Running && backup.hasMediaAccess,
+                    ) { Text("Back up now") }
+                    if (status !is BackupStatus.Idle) OutlinedButton(onClick = onStopBackup) { Text("Stop") }
+                }
             }
+            BackupQueueRow(queue, Modifier.padding(bottom = 8.dp))
 
             HorizontalDivider(Modifier.padding(vertical = 8.dp))
             SectionTitle("Picfort server")
@@ -237,3 +251,10 @@ private fun SwitchRow(title: String, subtitle: String?, checked: Boolean, onChan
         trailingContent = { Switch(checked = checked, onCheckedChange = onChange) },
     )
 }
+
+/**
+ * Files done: the worker reports once per batch of 50, the queue after every file (T-063), so
+ * whichever is further on.
+ */
+fun backupDone(status: BackupStatus.Running, queue: BackupQueueState): Int =
+    if (queue.pending.isEmpty()) status.done else maxOf(status.done, status.total - queue.pending.size)

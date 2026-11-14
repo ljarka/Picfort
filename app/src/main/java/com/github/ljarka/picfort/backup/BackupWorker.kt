@@ -54,8 +54,11 @@ class BackupWorker @AssistedInject constructor(
                 Result.failure() to "Server refused backup (HTTP ${e.code()})"
             }
         }
-        settings.lastResult = message
-        settings.lastRunAt = System.currentTimeMillis()
+        // Stopped by the user (BackupScheduler.stop): keep its "Stopped", not the cut-off upload's error.
+        if (!isStopped) {
+            settings.lastResult = message
+            settings.lastRunAt = System.currentTimeMillis()
+        }
         return result
     }
 

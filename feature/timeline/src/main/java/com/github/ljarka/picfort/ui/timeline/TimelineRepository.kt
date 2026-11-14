@@ -13,14 +13,18 @@ import javax.inject.Inject
 import javax.inject.Singleton
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.flowOn
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import retrofit2.HttpException
+
+private class Merged(val index: TimelineIndex, val onServer: Set<Long>)
 
 /** The phone's media and what Picfort's backup knows of it: Immich ids and SHA-1s (hex). */
 private class LocalSnapshot(
@@ -45,13 +49,27 @@ class TimelineRepository @Inject constructor(
     /** Null until the phone's media has been read once. */
     private val local = MutableStateFlow<LocalSnapshot?>(null)
 
-    /** Null until the first build; then the current timeline. */
-    val index: StateFlow<TimelineIndex?> = combine(remote.assets(), local.filterNotNull()) { assets, snapshot ->
+    private val merged: StateFlow<Merged?> = combine(remote.assets(), local.filterNotNull()) { assets, snapshot ->
         val zone = ZoneId.systemDefault()
         val onServer = localIdsOnServer(assets, snapshot.media, snapshot.backupLinks, snapshot.checksums, zone)
-        buildTimelineIndex(assets, snapshot.media, onServer, zone)
+        Merged(buildTimelineIndex(assets, snapshot.media, onServer, zone), onServer)
     }.flowOn(Dispatchers.Default)
         .stateIn(coroutineScope, SharingStarted.Eagerly, null)
+
+    /** Null until the first build; then the current timeline. */
+    val index: StateFlow<TimelineIndex?> =
+        merged.map { it?.index }.stateIn(coroutineScope, SharingStarted.Eagerly, null)
+
+    /**
+     * Phone media already in Immich, however it got there (see [localIdsOnServer]); null until the
+     * phone's media has been read. Settings counts backed-up items with it.
+     */
+    val phoneOnServer: Flow<Set<Long>?> = merged.map { it?.onServer }
+
+    /** Reads the phone's media if nothing has yet (e.g. Settings opened before Photos). No network. */
+    suspend fun loadPhoneMediaIfNeeded() {
+        if (local.value == null) reloadLocal()
+    }
 
     fun getAssetsCount(): Int = index.value?.size ?: 0
 
