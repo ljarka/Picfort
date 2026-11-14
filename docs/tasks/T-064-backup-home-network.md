@@ -1,6 +1,6 @@
 # T-064 — Backup: large videos through the home network
 
-**Status:** in-progress  
+**Status:** done (bd6f484)  
 **Component:** Android app (`:app`, `:core:database`)  
 **Depends on:** T-063
 
