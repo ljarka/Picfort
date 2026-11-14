@@ -26,7 +26,7 @@ Gaps documented in the [README](../README.md#known-limitations) that affect day-
 |------|-------------|--------|
 | [T-004](tasks/T-004-phone-only-to-frame.md) | Send phone-only photos to frame | `ready` |
 | [T-005](tasks/T-005-backup-album-filter.md) | Backup: filter by album | `ready` |
-| [T-006](tasks/T-006-backup-foreground-service.md) | Backup: fix Android 12+ 10-min background limit | `ready` |
+| [T-006](tasks/T-006-backup-foreground-service.md) | Backup: fix Android 12+ 10-min background limit | `in-progress` |
 
 ### Phase 3 — Content discovery
 Surface more of what Immich already knows.
