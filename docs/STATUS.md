@@ -127,6 +127,7 @@ Android task except T-017 and T-026 starts with a mockup the owner approves.
 | [T-062](tasks/T-062-immich-v3-contract.md) | Immich v3 contract tests (real 3.3 responses), unexpected errors named and logged | `done` |
 | [T-063](tasks/T-063-backup-count-queue-stop.md) | Backup — right "in Immich" count, upload queue with thumbnails, Stop | `done` |
 | [T-064](tasks/T-064-backup-home-network.md) | Backup — large videos via the home-network address (Cloudflare 100 MB limit); debug logger OOM fix | `done` |
+| [T-065](tasks/T-065-wall-waits-for-timeline-sync.md) | Family Wall slow after an update: no longer waits for the Immich users sync | `done` |
 
 ### Phase 8 — Modular Architecture (Agentic Pair Programming)
 Deconstruct monolithic `:app` into isolated feature slices and core foundations (ADR 0011).
