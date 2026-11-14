@@ -37,3 +37,15 @@ name: Photos — search by people (T-057)
 - extendedWaitUntil:
     visible: "No photos of Osoba 01, Osoba 02 and Osoba 03 together"
     timeout: 10000
+# T-060: someone from All people beyond the row joins at its end, scrolled into view
+- assertNotVisible: "Osoba 14"
+- tapOn: "All people.*"
+- tapOn: "Find a person"
+- inputText: "Osoba 14"
+- hideKeyboard
+- tapOn:
+    text: "Osoba 14"
+    index: 1
+- tapOn: "Done"
+- waitForAnimationToEnd
+- assertVisible: "Osoba 14"

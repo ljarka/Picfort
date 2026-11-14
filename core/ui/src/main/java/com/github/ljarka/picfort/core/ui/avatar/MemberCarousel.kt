@@ -12,8 +12,10 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -59,8 +61,11 @@ fun MemberCarousel(
     onOpenFamily: (() -> Unit)? = null,
     /** Several selected at once (Search, people together); overrides [selectedId]. */
     selectedIds: Set<String> = setOfNotNull(selectedId),
+    /** For scrolling from outside, e.g. to a person who just joined the row. */
+    state: LazyListState = rememberLazyListState(),
 ) {
     LazyRow(
+        state = state,
         contentPadding = PaddingValues(horizontal = 8.dp, vertical = 8.dp),
         modifier = modifier.fillMaxWidth(),
     ) {
