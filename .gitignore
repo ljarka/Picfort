@@ -12,3 +12,8 @@ local.properties
 
 # Obsidian vault settings (docs/ opened as a vault)
 .obsidian/
+
+# AI tooling
+.copilot/
+.claude/
+copilot/
