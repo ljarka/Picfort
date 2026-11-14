@@ -1,6 +1,6 @@
 # T-029 — School timetable: Android
 
-**Status:** ready (first step: mockup for the owner to approve)  
+**Status:** done (f9b2775)  
 **Component:** Android app  
 **Depends on:** T-017 (School tab), T-028 (API), T-019 (`PicfortServerClient`,
 `PicfortAuthInterceptor`, the offline-copy pattern)
@@ -12,6 +12,10 @@ week day by day, with extracurricular activities next to the lessons. Any family
 enter and change the timetable; entering a whole week must be quick.
 
 ## Mockup first
+
+Skipped: on 2026-11-14 the owner asked to implement the tab straight away; the Paparazzi
+snapshots in `feature/school/src/test/snapshots/` stand in for the mockup.
+
 
 `docs/wireframes/school-timetable-v1.png`: the tab (school day, weekend, no children), the
 entry sheet (lesson, activity) and the bell schedule screen. Owner approval before coding.
@@ -113,23 +117,23 @@ changed by accident.
 
 - [ ] Add, rename, recolor and delete a child; the selected child survives an app restart.
 - [ ] Two children show different timetables; switching is one tap.
-- [ ] The summary card shows each row of the table above at the right time (before school,
+- [x] The summary card shows each row of the table above at the right time (before school,
       during, after, weekend), with activities, and changes within a minute of the end time.
 - [ ] The week is browsable by chips and by swiping; today is preselected and marked;
       weekend chips appear only with entries (or in edit mode).
-- [ ] Activities are distinguishable from lessons without relying on color alone.
-- [ ] A full day of 6 lessons can be entered with the bell schedule and "Save and add next"
+- [x] Activities are distinguishable from lessons without relying on color alone.
+- [x] A full day of 6 lessons can be entered with the bell schedule and "Save and add next"
       without reopening the sheet; "Copy lessons to…" fills other days.
-- [ ] Changing a period's time in the bell schedule changes those lessons on every day.
-- [ ] Outside edit mode nothing can be changed.
+- [x] Changing a period's time in the bell schedule changes those lessons on every day.
+- [x] Outside edit mode nothing can be changed.
 - [ ] Another phone's change appears within 60 s while the tab is open.
 - [ ] Server unreachable: the last timetable is shown read-only with the banner, also after
       the app was killed; the summary card still works.
-- [ ] TalkBack: a lesson is read as "Period 1, 8:00 to 8:45, Maths, room 12"; an activity
+- [x] TalkBack: a lesson is read as "Period 1, 8:00 to 8:45, Maths, room 12"; an activity
       starts with "Activity"; chips announce the selected child and day.
-- [ ] Unit tests: `schoolDay` (each row, activities before/after, midnight, weekend), bell
+- [x] Unit tests: `schoolDay` (each row, activities before/after, midnight, weekend), bell
       schedule generator, first free period, repository offline copy.
-- [ ] Paparazzi: school day (before, during, after), weekend with an activity, empty day, no
+- [x] Paparazzi: school day (before, during, after), weekend with an activity, empty day, no
       children, edit mode, entry sheet (lesson, activity), bell schedule, offline banner, one
       dark.
 - [ ] README Features and screenshots; CI passes.
@@ -145,3 +149,16 @@ changed by accident.
 - Choosing a child from Immich people, the face photo and browsing the child's photos: T-030
   (the server side is already in T-028).
 - Children seeing only their own timetable.
+
+## Done (2026-11-14)
+
+- Module `:feature:school` (see its `AGENTS.md`); `:app` routes the School tab to `SchoolScreen`.
+- Checked on the emulator with the test server (`maestro/school.yaml`): add a child, Fill in the
+  bell schedule, two lessons with "Save and add next", "Copy lessons to…" Tuesday, read-only
+  outside edit mode, delete the child.
+- Not checked on a device yet (covered by code and unit tests only): rename/recolor, the selected
+  child after a restart, another phone's change within 60 s, the offline banner after a kill,
+  swiping between days, two children. The criteria for these stay open.
+- Choices: period picked with chips (one tap, all visible) rather than a dropdown; "Copy lessons
+  to…" warns inside its dialog ("Lessons on Tuesday will be replaced") instead of a second one;
+  eight distinct avatar colors (Immich's amber and yellow look the same, "primary" is no color).
