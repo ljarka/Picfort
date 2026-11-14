@@ -1,6 +1,6 @@
 # T-060 — Search: the people row keeps its order
 
-**Status:** in-progress  
+**Status:** done (5da8590)  
 **Component:** Android app (`:feature:timeline`)  
 **Depends on:** T-057
 
