@@ -1,6 +1,6 @@
 # T-063 — Backup: right count, the upload queue, Stop
 
-**Status:** in-progress  
+**Status:** done (bdab0cf)  
 **Component:** Android app (`:app`, `:feature:timeline`, `:core:database`)  
 **Depends on:** T-059
 
