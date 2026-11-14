@@ -1,5 +1,5 @@
-# T-029, T-066: add a family member to School with "+", set the bell schedule, enter a day with
-# "Save and add next", copy it to Tuesday, then remove them from School.
+# T-029, T-068: "+" → Family → "Goes to school" adds a child, set the bell schedule, enter a day with
+# "Save and add next", copy it to Tuesday, then switch "Goes to school" off.
 # Test server only: scripts/test-data.js empties School first; the family has "Ola" and "Kuba".
 appId: com.github.ljarka.immich.android2
 name: School — timetable (T-029)
@@ -11,24 +11,24 @@ name: School — timetable (T-029)
 - runFlow: subflows/open-app.yaml
 - tapOn: "School"
 
-# Only "+" at first; it lists the family
+# Only "+" at first; it opens Family settings, where "Goes to school" is switched on (T-068).
+# Kuba is a person added by hand (not an Immich user).
 - extendedWaitUntil:
-    visible: "Tap \\+ to add who goes to school"
+    visible: "Tap \\+ and switch on .*Goes to school.* for each child"
     timeout: 10000
-- tapOn: "Add"
-- assertVisible: "Who goes to school\\?"
-# Both Immich users (Ola) and people added by hand (Kuba) are offered (T-066)
-- assertVisible:
-    text: "Kuba"
-    below: "Who goes to school\\?"
-- tapOn: "Ola"
+- tapOn: "Family settings"
+- tapOn: "Kuba"
+- tapOn: "Goes to school"
+- tapOn: "^Save$"
+- pressKey: back
 - extendedWaitUntil:
     visible: "No school today|.*finish.*school.*"
     timeout: 10000
+- assertVisible: "Kuba"
 
 # Bell schedule: edit mode, tap the selected child, Fill in
 - tapOn: "Edit timetable"
-- tapOn: "Ola"
+- tapOn: "Kuba"
 - tapOn: "Set up lesson times"
 - scrollUntilVisible:
     element: "^Fill in$"
@@ -74,15 +74,15 @@ name: School — timetable (T-029)
     visible: "Period 1, .*Maths.*"
     timeout: 10000
 
-# Read only outside edit mode; then remove Ola from School (she stays in the family)
+# Read only outside edit mode; then switch "Goes to school" off in Family (Kuba stays in the family)
 - tapOn: "Done editing"
 - assertNotVisible: "Add lesson or activity"
-- tapOn: "Edit timetable"
-- tapOn: "Ola"
-- scrollUntilVisible:
-    element: "Remove from School"
-- tapOn: "Remove from School"
-- tapOn: "^Remove$"
+- tapOn: "Family settings"
+- tapOn: "Kuba"
+- tapOn: "Goes to school"
+- assertVisible: "Their timetable is deleted when you save"
+- tapOn: "^Save$"
+- pressKey: back
 - extendedWaitUntil:
-    visible: "Tap \\+ to add who goes to school"
+    visible: "Tap \\+ and switch on .*Goes to school.* for each child"
     timeout: 10000

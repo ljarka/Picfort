@@ -64,7 +64,7 @@ name: Setup — errors on the one-page setup (T-058)
     visible: "Timeline"
     timeout: 20000
 - takeScreenshot: photos-no-server
-- assertNotVisible: "Family"
+- assertNotVisible: "Family settings"
 - tapOn: "Settings"
 - assertVisible: "Not set"
 - assertNotVisible: "Names, photos and hidden accounts"

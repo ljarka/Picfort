@@ -151,6 +151,7 @@ class FamilyScreenshotTest {
                         hasCustomPhoto = true,
                         showInFamily = true,
                         birthDate = BirthDate(month = 9, day = 3, year = 2018),
+                        goesToSchool = true,
                     ),
                 )
             },
@@ -167,6 +168,9 @@ class FamilyScreenshotTest {
                         user = familyUsers.first { !it.isImmichUser }, // Staś: no Immich account
                         previewAvatarUrl = "avatar-stas",
                         hasCustomPhoto = true,
+                        // Switched off here, in School on the server: the timetable warning (T-068).
+                        goesToSchool = false,
+                        wasInSchool = true,
                     ),
                 )
             },

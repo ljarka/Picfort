@@ -37,7 +37,8 @@ Family management vertical slice: member profiles, Immich users syncing, custom 
 
 ## Dependencies & Boundaries
 
-- Depends on `:core:model` (`FamilyMember`, `BirthDate`, `FamilyMemberProvider`, `ImmichUsersSync`).
+- Depends on `:core:model` (`FamilyMember`, `BirthDate`, `FamilyMemberProvider`, `ImmichUsersSync`, `SchoolMembership`).
+- Member sheet "Goes to school" (T-068): saved with Save via `SchoolMembership` (`:feature:school`); off warns the timetable goes.
 - Depends on `:core:ui` (`PicfortTheme`, `MemberAvatar`).
 - Depends on `:core:network` (`PicfortServerClient`, `PicfortServerException`, `ServerUrlStore`, `AccessTokenStore`, `FrameSettingsStore`).
 - Depends on `:core:database` (`UsersDao`, `UserEntity`).

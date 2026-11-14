@@ -1,5 +1,5 @@
 # T-029, T-066: two children (family members), switching, the chosen child after a restart, swiping days,
-# "+" leaving out who is already in School, another phone's change within 60 s. Test server only: scripts/test-data.js sets it up.
+# another phone's change within 60 s. Test server only: scripts/test-data.js sets it up.
 appId: com.github.ljarka.immich.android2
 name: School — two children, restart, swipe, polling (T-029)
 ---
@@ -58,14 +58,3 @@ name: School — two children, restart, swipe, polling (T-029)
 - extendedWaitUntil:
     visible: "Period 2, .*Music T029.*"
     timeout: 75000
-
-# "+" offers only family members not in School yet
-- tapOn: "Add"
-- assertVisible: "Who goes to school\\?"
-- assertNotVisible:
-    text: "Ola"
-    below: "Who goes to school\\?"
-- assertNotVisible:
-    text: "Kuba"
-    below: "Who goes to school\\?"
-- pressKey: back

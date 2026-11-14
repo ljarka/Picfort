@@ -60,6 +60,9 @@ data class FamilyMemberEditUi(
     val clearPhoto: Boolean = false,
     val noPhoto: Boolean = user.noPhoto,
     val showInFamily: Boolean = !user.hidden,
+    /** On the School tab (T-068); [wasInSchool] is what the server has, for the delete warning. */
+    val goesToSchool: Boolean = false,
+    val wasInSchool: Boolean = goesToSchool,
     val birthDate: BirthDate? = user.birthDate,
     val clearBirthDate: Boolean = false,
     val confirmDelete: Boolean = false,
@@ -75,6 +78,7 @@ fun FamilyMemberSheetContent(
     /** Initials instead of any picture. */
     onClearPhoto: () -> Unit = {},
     onShowInFamilyChange: (Boolean) -> Unit = {},
+    onGoesToSchoolChange: (Boolean) -> Unit = {},
     onBirthDateChange: (BirthDate?) -> Unit = {},
     onAskDelete: () -> Unit = {},
     onCancelDelete: () -> Unit = {},
@@ -206,6 +210,27 @@ fun FamilyMemberSheetContent(
                 onCheckedChange = onShowInFamilyChange,
                 enabled = !state.user.isMe && !state.saving,
             )
+        }
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier
+                .fillMaxWidth()
+                .then(
+                    if (!state.saving) Modifier.clickable { onGoesToSchoolChange(!state.goesToSchool) } else Modifier,
+                )
+                .padding(vertical = 8.dp),
+        ) {
+            Column(Modifier.weight(1f)) {
+                Text("Goes to school", style = MaterialTheme.typography.bodyLarge)
+                val removing = state.wasInSchool && !state.goesToSchool
+                Text(
+                    if (removing) "Their timetable is deleted when you save" else "Shown on the School tab",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = with(MaterialTheme.colorScheme) { if (removing) error else onSurfaceVariant },
+                )
+            }
+            Spacer(Modifier.width(16.dp))
+            Switch(checked = state.goesToSchool, onCheckedChange = onGoesToSchoolChange, enabled = !state.saving)
         }
         if (!state.user.isImmichUser) {
             Spacer(Modifier.height(8.dp))
