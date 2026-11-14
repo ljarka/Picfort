@@ -24,7 +24,7 @@ data class RemoteAssetEntity(
     val width: Int?,
     val height: Int?,
     val thumbhash: String?,
-    /** `AssetV2.duration`. Unit not verified yet (no videos on the test account), see T-015. */
+    /** `AssetV2.duration` in milliseconds (checked on Immich 3.3, T-062). */
     val duration: Long?,
     val livePhotoVideoId: String?,
     val stackId: String?,

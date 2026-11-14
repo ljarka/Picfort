@@ -65,7 +65,7 @@ fun buildTimelineIndex(
             dateTaken = taken,
             ratio = ratioOf(a.width, a.height),
             isVideo = a.isVideo,
-            // AssetV2.duration is an int; milliseconds assumed, not verified yet (T-015).
+            // AssetV2.duration is milliseconds (Immich 3.3, T-062).
             durationMs = a.duration?.takeIf { a.isVideo && it > 0 },
             thumbhash = a.thumbhash,
         )

@@ -124,6 +124,7 @@ Android task except T-017 and T-026 starts with a mockup the owner approves.
 | [T-059](tasks/T-059-timeline-local-duplicates.md) | Photos — phone copies already in Immich show once (checksum, name + time) | `done` |
 | [T-060](tasks/T-060-search-people-row-order.md) | Search — people row keeps its order; picks from "All people" join at the end | `done` |
 | [T-061](tasks/T-061-album-video-duration.md) | Albums with a video wouldn't open (bucket duration in ms since Immich v3) | `done` |
+| [T-062](tasks/T-062-immich-v3-contract.md) | Immich v3 contract tests (real 3.3 responses), unexpected errors named and logged | `done` |
 
 ### Phase 8 — Modular Architecture (Agentic Pair Programming)
 Deconstruct monolithic `:app` into isolated feature slices and core foundations (ADR 0011).

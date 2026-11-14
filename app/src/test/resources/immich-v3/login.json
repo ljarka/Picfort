@@ -1,0 +1,10 @@
+{
+ "accessToken": "token",
+ "userId": "6fedb4d3-2637-4654-817e-bd4d56a6ed73",
+ "userEmail": "test@example.com",
+ "name": "Test User",
+ "isAdmin": false,
+ "profileImagePath": "",
+ "shouldChangePassword": true,
+ "isOnboarded": true
+}

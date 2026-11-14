@@ -1,0 +1,74 @@
+{
+ "duration": [
+  2692,
+  null
+ ],
+ "id": [
+  "14d603b0-ba4b-46f1-b752-2e383768bd34",
+  "ce25e9a2-96e8-4400-a48e-6912b7bebaeb"
+ ],
+ "visibility": [
+  "timeline",
+  "timeline"
+ ],
+ "isFavorite": [
+  false,
+  false
+ ],
+ "isImage": [
+  false,
+  true
+ ],
+ "isTrashed": [
+  false,
+  false
+ ],
+ "livePhotoVideoId": [
+  null,
+  null
+ ],
+ "fileCreatedAt": [
+  "2026-11-14T08:02:29",
+  "2026-11-08T12:00:00"
+ ],
+ "localOffsetHours": [
+  0,
+  0
+ ],
+ "createdAt": [
+  "2026-11-14T08:11:42.643275",
+  "2026-11-09T20:02:13.718045"
+ ],
+ "ownerId": [
+  "6fedb4d3-2637-4654-817e-bd4d56a6ed73",
+  "6fedb4d3-2637-4654-817e-bd4d56a6ed73"
+ ],
+ "projectionType": [
+  null,
+  null
+ ],
+ "ratio": [
+  0.5,
+  1.0
+ ],
+ "status": [
+  "active",
+  "active"
+ ],
+ "thumbhash": [
+  "dfgJBAIIaHh3d3iXh3h1YGgJlw==",
+  "ZlgBRwh3V4nHb1f3NHc2WHdZ+PiHyvoM"
+ ],
+ "city": [
+  null,
+  null
+ ],
+ "country": [
+  null,
+  null
+ ],
+ "stack": [
+  null,
+  null
+ ]
+}

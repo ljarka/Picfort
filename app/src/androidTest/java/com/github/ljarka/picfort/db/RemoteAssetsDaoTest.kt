@@ -3,6 +3,11 @@ package com.github.ljarka.picfort.db
 import androidx.room.Room
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
+import com.github.ljarka.picfort.core.database.ImagesDatabase
+import com.github.ljarka.picfort.core.database.PartnerEntity
+import com.github.ljarka.picfort.core.database.RemoteAssetEntity
+import com.github.ljarka.picfort.core.database.RemoteAssetsDao
+import com.github.ljarka.picfort.core.database.RemoteStackEntity
 import java.time.Instant
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking

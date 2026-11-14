@@ -1,0 +1,28 @@
+{
+ "albumName": "T062 test",
+ "description": "",
+ "albumThumbnailAssetId": "ce25e9a2-96e8-4400-a48e-6912b7bebaeb",
+ "createdAt": "2026-11-14T08:11:42.812Z",
+ "updatedAt": "2026-11-14T08:11:42.812Z",
+ "id": "2ff09e54-f749-411f-9d3e-b082b506d8a6",
+ "albumUsers": [
+  {
+   "user": {
+    "id": "6fedb4d3-2637-4654-817e-bd4d56a6ed73",
+    "email": "test@example.com",
+    "name": "Test User",
+    "profileImagePath": "",
+    "avatarColor": "green",
+    "profileChangedAt": "2026-11-09T17:51:36.681245+00:00"
+   },
+   "role": "owner"
+  }
+ ],
+ "shared": false,
+ "hasSharedLink": false,
+ "startDate": "2026-11-08T12:00:00+00:00",
+ "endDate": "2026-11-08T12:00:00+00:00",
+ "assetCount": 1,
+ "isActivityEnabled": true,
+ "order": "desc"
+}
