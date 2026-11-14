@@ -104,7 +104,7 @@ fun SchoolScreen(onSettingsClick: () -> Unit, onSetUpServer: () -> Unit = onSett
     val context = LocalContext.current
     SchoolContent(
         state = state,
-        locale = LocalConfiguration.current.locales[0] ?: Locale.getDefault(),
+        locale = LocalConfiguration.current.locales[0],
         is24Hour = DateFormat.is24HourFormat(context),
         actions = SchoolActions(
             onSelectChild = viewModel::selectChild,
