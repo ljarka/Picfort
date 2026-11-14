@@ -1,0 +1,18 @@
+# T-029: with the test server stopped, a fresh start shows the last timetable read only.
+# Run after school-family.yaml, with the server down:
+#   docker stop picfort_test
+#   SKIP_SERVER_CHECK=1 ./scripts/maestro-smoke.sh maestro/school-offline.yaml
+#   docker start picfort_test
+appId: com.github.ljarka.immich.android2
+name: School — offline copy (T-029)
+---
+- runFlow: subflows/open-app.yaml
+- tapOn: "School"
+- extendedWaitUntil:
+    visible: "Offline. Timetable from .*"
+    timeout: 15000
+- tapOn: "Ola T029"
+- tapOn: "Mon.*"
+- assertVisible: "Period 1, .*Maths T029.*"
+- assertNotVisible: "Edit timetable"
+- assertVisible: ".*finish.*school.*|No school today"

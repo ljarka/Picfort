@@ -82,6 +82,18 @@ fun schoolDay(entries: List<SchoolEntry>, day: DayOfWeek, now: LocalTime): Schoo
     return SchoolDay(status, activities)
 }
 
+/** "8:00–8:45" or, on a 12-hour clock, "8:00–8:45 AM" (the AM/PM said once when both share it). */
+fun timeRange(start: LocalTime, end: LocalTime, time: (LocalTime) -> String): String {
+    val a = time(start)
+    val b = time(end)
+    val suffix = b.substringAfterLast(' ', "")
+    val shared = suffix.isNotEmpty() && suffix.none(Char::isDigit) && a.endsWith(" $suffix")
+    return (if (shared) a.removeSuffix(" $suffix") else a) + "–" + b
+}
+
+/** Whether [time] writes AM/PM. */
+fun isTwelveHour(time: (LocalTime) -> String): Boolean = time(LocalTime.of(13, 0)).any(Char::isLetter)
+
 /** The card's lines: "Today Ola finishes school at 13:40", "Starts at 08:00", "then Swimming …". */
 fun summaryLines(name: String, day: SchoolDay, time: (LocalTime) -> String): List<String> {
     val lines = when (val s = day.status) {
@@ -96,7 +108,7 @@ fun summaryLines(name: String, day: SchoolDay, time: (LocalTime) -> String): Lis
     }
     val withLessons = day.status != SchoolStatus.NoSchool
     val activities = day.activities.mapIndexed { i, a ->
-        val text = "${a.title} ${time(a.start)}–${time(a.end)}" + (a.place?.let { " ($it)" } ?: "")
+        val text = "${a.title} ${timeRange(a.start, a.end, time)}" + (a.place?.let { " ($it)" } ?: "")
         if (withLessons && i == 0) "then $text" else text
     }
     return lines + activities

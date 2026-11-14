@@ -146,6 +146,16 @@ class SchoolRepositoryTest {
     }
 
     @Test
+    fun aRenameReachesTheOfflineCopy() = runBlocking {
+        val ala = repository.addChild("Ala", "pink")
+        repository.updateChild(ala.id, "Ola", "green")
+        backend.down = true
+        val restarted = SchoolRepository(backend, copy)
+        restarted.refresh()
+        assertEquals(listOf("Ola"), restarted.children.value.map { it.name })
+    }
+
+    @Test
     fun somethingDeletedElsewhereReloadsQuietly() = runBlocking {
         val ola = repository.addChild("Ola", "pink")
         repository.addChild("Staś", "blue")

@@ -103,7 +103,10 @@ class SchoolRepository @Inject constructor(
         e
     }
 
-    suspend fun addChild(name: String, color: String): Child = backend.addChild(name.trim(), color).also(::put)
+    suspend fun addChild(name: String, color: String): Child = backend.addChild(name.trim(), color).also {
+        put(it)
+        refresh()
+    }
 
     suspend fun updateChild(id: Long, name: String, color: String) = change {
         backend.updateChild(id, name.trim(), color)
@@ -133,19 +136,21 @@ class SchoolRepository @Inject constructor(
     /** A change answered with the child: the answer replaces it. */
     private suspend fun change(call: suspend () -> Child) = quietlyGone { put(call()) }
 
-    /** A change answered with an entry only: everything is loaded again. */
-    private suspend fun reloading(call: suspend () -> Unit) = quietlyGone {
-        call()
-        refresh()
-    }
+    /** A change answered with an entry only: the reload afterwards shows it. */
+    private suspend fun reloading(call: suspend () -> Unit) = quietlyGone(call)
 
-    /** A 404 means someone else deleted the child or entry: show the server's version, no error. */
+    /**
+     * Runs a change, then loads everything again: that also keeps the offline copy current (a
+     * rename shown on screen but missing from the copy would come back offline). A 404 means
+     * someone else deleted the child or entry: the reload shows the server's version, no error.
+     */
     private suspend fun quietlyGone(block: suspend () -> Unit) {
         try {
             block()
         } catch (e: PicfortServerException.Gone) {
-            refresh()
+            // reloaded below
         }
+        refresh()
     }
 
     private fun put(child: Child) {

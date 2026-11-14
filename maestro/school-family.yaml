@@ -1,0 +1,75 @@
+# T-029: two children, switching, the chosen child after a restart, swiping days, rename and
+# recolor, another phone's change within 60 s. Test server only: scripts/test-data.js sets it up.
+appId: com.github.ljarka.immich.android2
+name: School — two children, restart, swipe, polling (T-029)
+---
+- runScript:
+    file: scripts/test-data.js
+    env:
+      SCHOOL: "1"
+- runScript:
+    file: scripts/test-data.js
+    env:
+      SCHOOL: "2"
+- runFlow: subflows/open-app.yaml
+- tapOn: "School"
+
+# Two children, different timetables; switching is one tap
+- tapOn: "Ala T029"
+- tapOn: "Mon.*"
+- extendedWaitUntil:
+    visible: "Period 1, .*Maths T029.*"
+    timeout: 10000
+- tapOn: "Bartek T029"
+- assertVisible: "Activity, Chess club T029.*"
+- assertNotVisible: "Period 1, .*Maths T029.*"
+
+# The chosen child survives a restart
+- launchApp:
+    stopApp: true
+- tapOn: "School"
+- tapOn: "Mon.*"
+- extendedWaitUntil:
+    visible: "Activity, Chess club T029.*"
+    timeout: 10000
+
+# Swiping: Monday → Tuesday
+- tapOn: "Ala T029"
+- tapOn: "Mon.*"
+- assertVisible: "Period 1, .*Maths T029.*"
+- swipe:
+    direction: LEFT
+    from: "Period 1, .*Maths T029.*"
+- extendedWaitUntil:
+    visible: "Period 1, .*Art T029.*"
+    timeout: 5000
+- swipe:
+    direction: RIGHT
+    from: "Period 1, .*Art T029.*"
+- extendedWaitUntil:
+    visible: "Period 1, .*Maths T029.*"
+    timeout: 5000
+
+# Another phone adds a lesson: it shows up within a minute while the tab is open
+- runScript:
+    file: scripts/test-data.js
+    env:
+      SCHOOL_ADD: "Music T029"
+- extendedWaitUntil:
+    visible: "Period 2, .*Music T029.*"
+    timeout: 75000
+
+# Rename and recolor
+- tapOn: "Edit timetable"
+- tapOn: "Ala T029"
+- tapOn: "Ala T029"
+- eraseText: 20
+- inputText: "Ola T029"
+- hideKeyboard
+- tapOn: "green"
+- tapOn: "^Save$"
+- extendedWaitUntil:
+    visible: "Ola T029"
+    timeout: 10000
+- assertNotVisible: "Ala T029"
+- tapOn: "Done editing"

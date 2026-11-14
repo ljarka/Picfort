@@ -26,7 +26,8 @@ export MAESTRO_PICFORT_SERVER="http://$PICFORT_TEST_SERVER_ADDRESS"
 # The same test server seen from this computer, for maestro/scripts/test-data.js.
 export MAESTRO_PICFORT_SERVER_HOST="http://localhost:$PICFORT_TEST_SERVER_PORT"
 
-if ! curl -s -m 3 -o /dev/null "http://localhost:$PICFORT_TEST_SERVER_PORT/"; then
+# SKIP_SERVER_CHECK=1: for flows that need the server down (maestro/school-offline.yaml).
+if [ -z "${SKIP_SERVER_CHECK:-}" ] && ! curl -s -m 3 -o /dev/null "http://localhost:$PICFORT_TEST_SERVER_PORT/"; then
   echo "Test server not reachable on :$PICFORT_TEST_SERVER_PORT. Start it: docker start picfort_test" >&2
   exit 1
 fi

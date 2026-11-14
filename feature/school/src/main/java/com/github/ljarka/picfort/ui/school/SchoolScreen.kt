@@ -649,10 +649,12 @@ private fun EntryRow(entry: SchoolEntry, rowTime: RowTime, time: (LocalTime) -> 
                 }
             }
             Text(
-                "${time(entry.start)}–${time(entry.end)}",
+                timeRange(entry.start, entry.end, time),
                 style = MaterialTheme.typography.bodyMedium,
                 color = onContainer.copy(alpha = 0.75f),
-                modifier = Modifier.width(96.dp).padding(start = 4.dp),
+                maxLines = 1,
+                // "11:40 AM–12:25 PM" needs more room than "11:40–12:25".
+                modifier = Modifier.width(if (isTwelveHour(time)) 140.dp else 96.dp).padding(start = 4.dp),
             )
             Column(Modifier.weight(1f)) {
                 Text(

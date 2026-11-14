@@ -1,7 +1,9 @@
 // Puts the test server into a known state for the Events flows (T-054, T-055) and Search (T-057).
 // Runs on the computer, so it talks to the test server on localhost, never the family's server.
 // Inputs (runScript env): BIRTH_DATE for Ola ("YYYY-MM-DD"); EVENTS=1 to ensure the filter events;
-// SCHOOL=1 to delete the School flow's child "Ala T029" (the flow adds it again);
+// SCHOOL=1 to delete the School flows' children "Ala T029" and "Bartek T029"; SCHOOL=2 also creates
+// both with known timetables (Ala: Maths Mon, Art Tue; Bartek: Chess club Mon); SCHOOL_ADD=<title>
+// adds a Monday lesson to Ala, as another phone would;
 // PEOPLE=1 to ensure 14 Immich people "Osoba 01".."Osoba 14" on the test account (faces tagged by
 // hand on its photos: 01 on two photos, 02 on the first of them, the others on one photo each).
 // Credentials come from MAESTRO_* (scripts/maestro-smoke.sh); nothing is logged.
@@ -57,9 +59,33 @@ if (typeof EVENTS !== "undefined" && EVENTS === "1") {
 
 if (typeof SCHOOL !== "undefined" && SCHOOL === "1") {
   const school = check(http.get(server + "/school", { headers: headers }), "GET /school")
-  school.children.filter(function (c) { return c.name === "Ala T029" }).forEach(function (c) {
+  school.children.filter(function (c) { return c.name.indexOf("T029") >= 0 }).forEach(function (c) {
     check(http.request(server + "/school/children/" + c.id, { method: "DELETE", headers: headers }), "DELETE child")
   })
+}
+
+function schoolPost(path, body) {
+  return check(http.post(server + "/school" + path, { headers: headers, body: JSON.stringify(body) }), "POST " + path)
+}
+
+if (typeof SCHOOL !== "undefined" && SCHOOL === "2") {
+  const ala = schoolPost("/children", { name: "Ala T029", color: "pink" })
+  check(http.request(server + "/school/children/" + ala.id + "/periods", {
+    method: "PUT", headers: headers,
+    body: JSON.stringify([{ number: 1, start_time: "08:00", end_time: "08:45" }, { number: 2, start_time: "08:55", end_time: "09:40" }]),
+  }), "PUT periods")
+  schoolPost("/children/" + ala.id + "/entries", { kind: "lesson", weekday: 1, period: 1, title: "Maths T029" })
+  schoolPost("/children/" + ala.id + "/entries", { kind: "lesson", weekday: 2, period: 1, title: "Art T029" })
+  const bartek = schoolPost("/children", { name: "Bartek T029", color: "blue" })
+  schoolPost("/children/" + bartek.id + "/entries", {
+    kind: "activity", weekday: 1, title: "Chess club T029", start_time: "15:00", end_time: "16:00",
+  })
+}
+
+if (typeof SCHOOL_ADD !== "undefined" && SCHOOL_ADD) {
+  const ala = check(http.get(server + "/school", { headers: headers }), "GET /school").children
+    .find(function (c) { return c.name === "Ala T029" })
+  schoolPost("/children/" + ala.id + "/entries", { kind: "lesson", weekday: 1, period: 2, title: SCHOOL_ADD })
 }
 
 if (typeof PEOPLE !== "undefined" && PEOPLE === "1") {
