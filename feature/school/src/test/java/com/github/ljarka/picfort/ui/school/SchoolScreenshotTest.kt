@@ -95,7 +95,6 @@ class SchoolScreenshotTest {
         editing = editing,
         offlineSince = offline,
         family = family,
-        visibleFamily = family,
     )
 
     @Test
@@ -114,7 +113,7 @@ class SchoolScreenshotTest {
     fun empty_day() = snap { SchoolContent(day("09:00", WEDNESDAY)) }
 
     @Test
-    fun no_children() = snap { SchoolContent(SchoolUi(family = family, visibleFamily = family)) }
+    fun no_children() = snap { SchoolContent(SchoolUi(family = family)) }
 
     @Test
     fun add_child_from_family() = sheet {
@@ -158,7 +157,6 @@ class SchoolScreenshotTest {
     @Test
     fun child_sheet() = sheet {
         val ui = day("09:00")
-        ChildForm(ola, ui.avatarOf(ola), linked = true, saving = false, onSave = { _, _ ->
-        }, onBells = {}, onDelete = {})
+        ChildForm(ola, ui.avatarOf(ola), onBells = {}, onDelete = {})
     }
 }

@@ -135,21 +135,11 @@ fun AddChildForm(candidates: List<FamilyMember>, saving: Boolean, onPick: (Famil
 }
 
 /**
- * A child in School: the bell schedule and removing them. A child linked to a family member takes
- * name and face from Family; an older one (added by name) can still be renamed and recolored.
+ * A child in School: the bell schedule and removing them. Name and face come from Family (edit
+ * them there).
  */
 @Composable
-fun ChildForm(
-    child: Child,
-    avatar: FamilyMember,
-    linked: Boolean,
-    saving: Boolean,
-    onSave: (name: String, color: String) -> Unit,
-    onBells: () -> Unit,
-    onDelete: (Long) -> Unit,
-) {
-    var name by remember { mutableStateOf(child.name) }
-    var color by remember { mutableStateOf(child.color) }
+fun ChildForm(child: Child, avatar: FamilyMember, onBells: () -> Unit, onDelete: (Long) -> Unit) {
     var confirmDelete by remember { mutableStateOf(false) }
     FormColumn {
         Row(verticalAlignment = Alignment.CenterVertically) {
@@ -157,46 +147,9 @@ fun ChildForm(
             Spacer(Modifier.width(12.dp))
             Text(child.name, style = MaterialTheme.typography.titleLarge)
         }
-        if (!linked) {
-            OutlinedTextField(
-                value = name,
-                onValueChange = { name = it.take(50) },
-                label = { Text("Name") },
-                singleLine = true,
-                keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Words),
-                modifier = Modifier.fillMaxWidth(),
-            )
-            FlowRow(
-                horizontalArrangement = Arrangement.spacedBy(10.dp),
-                verticalArrangement = Arrangement.spacedBy(10.dp),
-            ) {
-                CHILD_COLORS.forEach { c ->
-                    val picked = c == color
-                    Box(
-                        contentAlignment = Alignment.Center,
-                        modifier = Modifier
-                            .size(36.dp)
-                            .clip(CircleShape)
-                            .background(avatarColor(c))
-                            .border(if (picked) 3.dp else 0.dp, MaterialTheme.colorScheme.onSurface, CircleShape)
-                            .clickable { color = c }
-                            .semantics {
-                                contentDescription = c
-                                selected = picked
-                            },
-                    ) {
-                        if (picked) Icon(Icons.Default.Check, contentDescription = null, tint = Color.White)
-                    }
-                }
-            }
-        }
         Row(verticalAlignment = Alignment.CenterVertically) {
             OutlinedButton(onClick = onBells) {
                 Text(if (child.periods.isEmpty()) "Set up lesson times" else "Bell schedule · ${child.periods.size}")
-            }
-            Spacer(Modifier.weight(1f))
-            if (!linked) {
-                Button(onClick = { onSave(name, color) }, enabled = name.isNotBlank() && !saving) { Text("Save") }
             }
         }
         HorizontalDivider()

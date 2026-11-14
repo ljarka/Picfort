@@ -48,14 +48,15 @@ data class SchoolUi(
     val now: LocalTime = LocalTime.NOON,
     /** A change is being saved: forms wait. */
     val saving: Boolean = false,
-    /** Everyone in the family (hidden ones too): children's names and faces come from them. */
+    /**
+     * The family as shown everywhere (`allMembers`: Immich users and people added by hand, not the
+     * hidden ones): the children's names and faces, and who can be added.
+     */
     val family: List<FamilyMember> = emptyList(),
-    /** Family members shown in the app (not hidden): who can be added to School. */
-    val visibleFamily: List<FamilyMember> = emptyList(),
 ) {
     /** Family members who aren't in School yet (not everyone goes to school). */
     val candidates: List<FamilyMember>
-        get() = visibleFamily.filter { m -> children.none { it.memberId == m.id } }
+        get() = family.filter { m -> children.none { it.memberId == m.id } }
 
     /** The family member [child] is, if any. */
     fun memberOf(child: Child): FamilyMember? = family.firstOrNull { it.id == child.memberId }
@@ -103,9 +104,6 @@ class SchoolViewModel @Inject constructor(
             }.collect { _state.value = it }
         }
         viewModelScope.launch { familyMembers.allMembers.collect { all -> local.update { it.copy(family = all) } } }
-        viewModelScope.launch {
-            familyMembers.members.collect { shown -> local.update { it.copy(visibleFamily = shown) } }
-        }
     }
 
     /** Polls the server every minute while the tab is visible. */
@@ -170,9 +168,6 @@ class SchoolViewModel @Inject constructor(
         )
         selectChild(child.id)
     }
-
-    fun updateChild(id: Long, name: String, color: String, done: () -> Unit) =
-        save(done) { repository.updateChild(id, name, color) }
 
     fun deleteChild(id: Long, done: () -> Unit) = save(done) { repository.deleteChild(id) }
 
