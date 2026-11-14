@@ -10,7 +10,7 @@ This directory stores one implementation brief per task (`T-xxx-*.md`).
 ## Conventions
 
 - File naming: `T-<number>-<slug>.md`
-- Status values: `draft`, `ready`, `in-progress`, `done`
+- Status values: `draft`, `ready`, `in-progress`, `done`, `closed` (dropped without being built; the task says why)
 - `ready` means an agent can implement the task without additional product decisions.
 
 When a task is completed, update its status in `docs/STATUS.md` and keep the task file as the implementation record.

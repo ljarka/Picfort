@@ -19,7 +19,7 @@ A shared digital board for the family: notes, photos, fridge-magnet-style messag
 |------|-------------|--------|
 | [T-001](tasks/T-001-family-wall-backend.md) | Family Wall — ImageFrameServer backend | `done` |
 | [T-002](tasks/T-002-family-wall-android.md) | Family Wall — Android screen (approved mockup, members = Immich users) | `done` |
-| [T-003](tasks/T-003-frame-mode-tablet.md) | Frame mode on Android tablet (parent's account, settings from the Picfort server) | `ready` |
+| [T-003](tasks/T-003-frame-mode-tablet.md) | Frame mode on Android tablet (parent's account, settings from the Picfort server) — closed, replaced by the browser frame (T-072) | `closed` |
 
 ### Phase 2 — Fix known limitations
 Gaps documented in the README that affect day-to-day use.
@@ -86,55 +86,55 @@ largest block. M3 and M4 are independent of each other and can swap. Server task
 T-022, T-028 and T-031 need T-018's foundations (`store.py`, token auth for the new paths). Every
 Android task except T-017 and T-026 starts with a mockup the owner approves.
 
-| Task | Description | Status |
-|------|-------------|--------|
-| [T-017](tasks/T-017-app-shell-bottom-nav.md) | App shell: Wall as home, bottom navigation (5 tabs) | `done` |
-| [T-018](tasks/T-018-shopping-lists-backend.md) | Shopping lists — server API, `shopping.db`, shared store/auth foundations | `done` |
-| [T-019](tasks/T-019-shopping-lists-android.md) | Shopping lists — Android, Keep-like checklist, read-only offline copy | `done` |
-| [T-020](tasks/T-020-receipts-backend.md) | Receipts + `/spending` — server, totals typed by hand | `ready` |
-| [T-021](tasks/T-021-receipts-android.md) | Receipts — Android: add to a list, check, correct | `ready` |
-| [T-022](tasks/T-022-events-backend.md) | Events — server API (`events.db`) | `done` |
-| [T-023](tasks/T-023-events-android.md) | Events — Android: upcoming / past, add, edit | `done` |
-| [T-024](tasks/T-024-receipt-reading-gemini.md) | Receipts — read shop, date, total with Gemini (server, opt-in) | `ready` |
-| [T-025](tasks/T-025-spending-summary-android.md) | Spending summary — Android: month, 6-month bars, by shop and person | `ready` |
-| [T-026](tasks/T-026-event-albums-android.md) | Events — link or create a family-shared Immich album (Android) | `ready` |
-| [T-027](tasks/T-027-wall-today-panel.md) | Family Wall — today panel: date and the day's event | `done` |
-| [T-028](tasks/T-028-school-timetable-backend.md) | School timetable — server API (`school.db`): children, bell schedule, lessons, activities | `done` |
-| [T-029](tasks/T-029-school-timetable-android.md) | School timetable — Android: child chips, "finishes at", week by day, editing | `done` |
-| [T-030](tasks/T-030-children-immich-people.md) | Children from Immich people: face photo, per-parent link, "Photos of Ola" | `ready` |
-| [T-031](tasks/T-031-family-profiles-backend.md) | Family profiles — server (`family.db`): display name, photo, hidden, per Immich user | `done` |
-| [T-032](tasks/T-032-family-settings-android.md) | Family settings — Android: rename, photo from Immich people, hide; one source of members | `done` |
-| [T-033](tasks/T-033-family-members-birthdays-server.md) | Family members without Immich + birth dates — server (`family.db` v2) | `done` |
-| [T-034](tasks/T-034-family-add-members-birthday-android.md) | Family settings — Android: add people, Immich badge, birth date | `done` |
-| [T-035](tasks/T-035-recurring-events-server.md) | Recurring events — server (weekly / monthly / yearly, end date; `events.db` v2) | `done` |
-| [T-036](tasks/T-036-birthday-events-server.md) | Birthdays as events — server (`events.db` v3) | `done` |
-| [T-037](tasks/T-037-events-repeat-birthdays-android.md) | Events — Android: repeat, birthdays with age | `done` |
-| [T-038](tasks/T-038-visual-rebranding-and-icon.md) | Visual rebranding — app icon, warm palette & floating nav bar | `done` |
-| [T-039](tasks/T-039-event-reminders-android.md) | Event & birthday reminders — Android notifications | `ready` |
-| [T-040](tasks/T-040-shopping-reminders-android.md) | Shopping list reminders — Android notifications | `ready` |
-| [T-041](tasks/T-041-wishlist-backend.md) | Wishlist & link preview — server API (`shopping.db` v2) | `ready` |
-| [T-042](tasks/T-042-wishlist-android.md) | Wishlist carousel & event linking — Android | `ready` |
-| [T-052](tasks/T-052-photos-family-carousel.md) | Photos — family carousel, photos of one person (per-parent link to Immich people) | `in-progress` |
-| [T-053](tasks/T-053-events-who.md) | Events — who the event is for (family members on an event) | `done` |
-| [T-054](tasks/T-054-events-member-filter.md) | Events — filter the list by family member | `done` |
-| [T-055](tasks/T-055-birthday-photos.md) | Events — photos from past birthdays in a birthday's detail | `done` |
-| [T-056](tasks/T-056-birthday-year-to-timeline.md) | Events — a birthday's year opens Photos on that day | `done` |
-| [T-057](tasks/T-057-search-by-people.md) | Photos — search by Immich people | `done` |
-| [T-058](tasks/T-058-one-page-setup.md) | First start on one screen (Immich + Picfort server); https:// by default | `done` |
-| [T-059](tasks/T-059-timeline-local-duplicates.md) | Photos — phone copies already in Immich show once (checksum, name + time) | `done` |
-| [T-060](tasks/T-060-search-people-row-order.md) | Search — people row keeps its order; picks from "All people" join at the end | `done` |
-| [T-061](tasks/T-061-album-video-duration.md) | Albums with a video wouldn't open (bucket duration in ms since Immich v3) | `done` |
-| [T-062](tasks/T-062-immich-v3-contract.md) | Immich v3 contract tests (real 3.3 responses), unexpected errors named and logged | `done` |
-| [T-063](tasks/T-063-backup-count-queue-stop.md) | Backup — right "in Immich" count, upload queue with thumbnails, Stop | `done` |
-| [T-064](tasks/T-064-backup-home-network.md) | Backup — large videos via the home-network address (Cloudflare 100 MB limit); debug logger OOM fix | `done` |
-| [T-065](tasks/T-065-wall-waits-for-timeline-sync.md) | Family Wall slow after an update: no longer waits for the Immich users sync | `done` |
-| [T-066](tasks/T-066-school-children-from-family.md) | School: children picked from family members, avatar row with "+" as on the Wall | `done` |
-| [T-067](tasks/T-067-backup-original-files.md) | Backup uploads originals (ACCESS_MEDIA_LOCATION): no duplicates, locations kept | `done` |
-| [T-068](tasks/T-068-goes-to-school-in-family.md) | "Goes to school" switch in Family settings; School's "+" opens Family; "+" without caption | `done` |
-| [T-069](tasks/T-069-school-weekend-flicker.md) | School: no flicker after editing with Saturday/Sunday chosen | `done` |
-| [T-070](tasks/T-070-delete-album.md) | Photos: delete an Immich album (⋮ in the album, owner only; photos stay) | `done` |
-| [T-071](tasks/T-071-search-media-type.md) | Search: All / Photos / Videos switch (with text, people, or alone) | `done` |
-| [T-072](tasks/T-072-browser-frame.md) | The frame in a web browser (`/frame`, full colour, behind the server key; tablet as a second frame) | `done` |
+| Task                                                        | Description                                                                                         | Status        |
+| ----------------------------------------------------------- | --------------------------------------------------------------------------------------------------- | ------------- |
+| [T-017](tasks/T-017-app-shell-bottom-nav.md)                | App shell: Wall as home, bottom navigation (5 tabs)                                                 | `done`        |
+| [T-018](tasks/T-018-shopping-lists-backend.md)              | Shopping lists — server API, `shopping.db`, shared store/auth foundations                           | `done`        |
+| [T-019](tasks/T-019-shopping-lists-android.md)              | Shopping lists — Android, Keep-like checklist, read-only offline copy                               | `done`        |
+| [T-020](tasks/T-020-receipts-backend.md)                    | Receipts + `/spending` — server, totals typed by hand                                               | `ready`       |
+| [T-021](tasks/T-021-receipts-android.md)                    | Receipts — Android: add to a list, check, correct                                                   | `ready`       |
+| [T-022](tasks/T-022-events-backend.md)                      | Events — server API (`events.db`)                                                                   | `done`        |
+| [T-023](tasks/T-023-events-android.md)                      | Events — Android: upcoming / past, add, edit                                                        | `done`        |
+| [T-024](tasks/T-024-receipt-reading-gemini.md)              | Receipts — read shop, date, total with Gemini (server, opt-in)                                      | `ready`       |
+| [T-025](tasks/T-025-spending-summary-android.md)            | Spending summary — Android: month, 6-month bars, by shop and person                                 | `ready`       |
+| [T-026](tasks/T-026-event-albums-android.md)                | Events — link or create a family-shared Immich album (Android)                                      | `ready`       |
+| [T-027](tasks/T-027-wall-today-panel.md)                    | Family Wall — today panel: date and the day's event                                                 | `done`        |
+| [T-028](tasks/T-028-school-timetable-backend.md)            | School timetable — server API (`school.db`): children, bell schedule, lessons, activities           | `done`        |
+| [T-029](tasks/T-029-school-timetable-android.md)            | School timetable — Android: child chips, "finishes at", week by day, editing                        | `done`        |
+| [T-030](tasks/T-030-children-immich-people.md)              | Children from Immich people: face photo, per-parent link, "Photos of Ola"                           | `ready`       |
+| [T-031](tasks/T-031-family-profiles-backend.md)             | Family profiles — server (`family.db`): display name, photo, hidden, per Immich user                | `done`        |
+| [T-032](tasks/T-032-family-settings-android.md)             | Family settings — Android: rename, photo from Immich people, hide; one source of members            | `done`        |
+| [T-033](tasks/T-033-family-members-birthdays-server.md)     | Family members without Immich + birth dates — server (`family.db` v2)                               | `done`        |
+| [T-034](tasks/T-034-family-add-members-birthday-android.md) | Family settings — Android: add people, Immich badge, birth date                                     | `done`        |
+| [T-035](tasks/T-035-recurring-events-server.md)             | Recurring events — server (weekly / monthly / yearly, end date; `events.db` v2)                     | `done`        |
+| [T-036](tasks/T-036-birthday-events-server.md)              | Birthdays as events — server (`events.db` v3)                                                       | `done`        |
+| [T-037](tasks/T-037-events-repeat-birthdays-android.md)     | Events — Android: repeat, birthdays with age                                                        | `done`        |
+| [T-038](tasks/T-038-visual-rebranding-and-icon.md)          | Visual rebranding — app icon, warm palette & floating nav bar                                       | `done`        |
+| [T-039](tasks/T-039-event-reminders-android.md)             | Event & birthday reminders — Android notifications                                                  | `ready`       |
+| [T-040](tasks/T-040-shopping-reminders-android.md)          | Shopping list reminders — Android notifications                                                     | `ready`       |
+| [T-041](tasks/T-041-wishlist-backend.md)                    | Wishlist & link preview — server API (`shopping.db` v2)                                             | `ready`       |
+| [T-042](tasks/T-042-wishlist-android.md)                    | Wishlist carousel & event linking — Android                                                         | `ready`       |
+| [T-052](tasks/T-052-photos-family-carousel.md)              | Photos — family carousel, photos of one person (per-parent link to Immich people)                   | `in-progress` |
+| [T-053](tasks/T-053-events-who.md)                          | Events — who the event is for (family members on an event)                                          | `done`        |
+| [T-054](tasks/T-054-events-member-filter.md)                | Events — filter the list by family member                                                           | `done`        |
+| [T-055](tasks/T-055-birthday-photos.md)                     | Events — photos from past birthdays in a birthday's detail                                          | `done`        |
+| [T-056](tasks/T-056-birthday-year-to-timeline.md)           | Events — a birthday's year opens Photos on that day                                                 | `done`        |
+| [T-057](tasks/T-057-search-by-people.md)                    | Photos — search by Immich people                                                                    | `done`        |
+| [T-058](tasks/T-058-one-page-setup.md)                      | First start on one screen (Immich + Picfort server); https:// by default                            | `done`        |
+| [T-059](tasks/T-059-timeline-local-duplicates.md)           | Photos — phone copies already in Immich show once (checksum, name + time)                           | `done`        |
+| [T-060](tasks/T-060-search-people-row-order.md)             | Search — people row keeps its order; picks from "All people" join at the end                        | `done`        |
+| [T-061](tasks/T-061-album-video-duration.md)                | Albums with a video wouldn't open (bucket duration in ms since Immich v3)                           | `done`        |
+| [T-062](tasks/T-062-immich-v3-contract.md)                  | Immich v3 contract tests (real 3.3 responses), unexpected errors named and logged                   | `done`        |
+| [T-063](tasks/T-063-backup-count-queue-stop.md)             | Backup — right "in Immich" count, upload queue with thumbnails, Stop                                | `done`        |
+| [T-064](tasks/T-064-backup-home-network.md)                 | Backup — large videos via the home-network address (Cloudflare 100 MB limit); debug logger OOM fix  | `done`        |
+| [T-065](tasks/T-065-wall-waits-for-timeline-sync.md)        | Family Wall slow after an update: no longer waits for the Immich users sync                         | `done`        |
+| [T-066](tasks/T-066-school-children-from-family.md)         | School: children picked from family members, avatar row with "+" as on the Wall                     | `done`        |
+| [T-067](tasks/T-067-backup-original-files.md)               | Backup uploads originals (ACCESS_MEDIA_LOCATION): no duplicates, locations kept                     | `done`        |
+| [T-068](tasks/T-068-goes-to-school-in-family.md)            | "Goes to school" switch in Family settings; School's "+" opens Family; "+" without caption          | `done`        |
+| [T-069](tasks/T-069-school-weekend-flicker.md)              | School: no flicker after editing with Saturday/Sunday chosen                                        | `done`        |
+| [T-070](tasks/T-070-delete-album.md)                        | Photos: delete an Immich album (⋮ in the album, owner only; photos stay)                            | `done`        |
+| [T-071](tasks/T-071-search-media-type.md)                   | Search: All / Photos / Videos switch (with text, people, or alone)                                  | `done`        |
+| [T-072](tasks/T-072-browser-frame.md)                       | The frame in a web browser (`/frame`, full colour, behind the server key; tablet as a second frame) | `done`        |
 
 ### Phase 8 — Modular Architecture (Agentic Pair Programming)
 Deconstruct monolithic `:app` into isolated feature slices and core foundations (ADR 0011).

@@ -43,3 +43,6 @@ the live Family Wall feed.
   it holds the Family Wall (ADR 0002) and the slideshow settings, which the tablet reads, so
   the family changes them from their phones. The tablet picks and shows the photos itself.
   It is logged in with a parent's Immich account.
+- Update 2026-11-14: T-003 (frame mode in the Android app) was closed without being built.
+  A tablet shows the frame in a web browser instead (T-072, ADR 0014): what the e-paper frame
+  shows, in full colour. The Family Wall on a tablet is not covered by that page.

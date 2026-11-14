@@ -1,8 +1,15 @@
 # T-003 — Frame mode (kiosk display on Android tablet)
 
-**Status:** ready  
+**Status:** closed (2026-11-14, not implemented: replaced by T-072)  
 **Component:** Android app  
 **Depends on:** T-001, T-002 (done), T-015 (local copy of the library)
+
+## Closed (2026-11-14)
+
+The owner closed this task. A tablet now shows the frame through the browser page from
+[T-072](T-072-browser-frame.md) (`/frame`, [ADR 0014](../decisions/0014-browser-frame.md)):
+the same photo as the e-paper frame, in full colour, with no app to install or lock down.
+The design below is kept for reference only; a later tablet task should start from T-072.
 
 ## Summary
 
