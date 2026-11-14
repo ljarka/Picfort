@@ -1,7 +1,5 @@
 # Picfort — Roadmap & Status
 
-Last updated: 2026-11-11
-
 ## Vision
 
 Privacy-first family photo ecosystem. Unified timeline of Immich + phone photos,
@@ -17,12 +15,12 @@ A shared digital board for the family: notes, photos, fridge-magnet-style messag
 
 | Task | Description | Status |
 |------|-------------|--------|
-| [T-001](tasks/T-001-family-wall-backend.md) | Family Wall — ImageFrameServer backend | `done` |
+| [T-001](tasks/T-001-family-wall-backend.md) | Family Wall — Picfort server backend | `done` |
 | [T-002](tasks/T-002-family-wall-android.md) | Family Wall — Android screen (approved mockup, members = Immich users) | `done` |
 | [T-003](tasks/T-003-frame-mode-tablet.md) | Frame mode on Android tablet (parent's account, settings from the Picfort server) — closed, replaced by the browser frame (T-072) | `closed` |
 
 ### Phase 2 — Fix known limitations
-Gaps documented in the README that affect day-to-day use.
+Gaps documented in the [README](../README.md#known-limitations) that affect day-to-day use.
 
 | Task | Description | Status |
 |------|-------------|--------|
@@ -196,8 +194,8 @@ Decided by the owner (2026-11-11), as recommended:
 
 | ADR | Decision |
 |-----|----------|
-| [0001](decisions/0001-architecture-overview.md) | Three-tier architecture: Immich + Android + ImageFrameServer |
-| [0002](decisions/0002-family-wall-storage.md) | Family Wall lives in ImageFrameServer SQLite |
+| [0001](decisions/0001-architecture-overview.md) | Three-tier architecture: Immich + Android + Picfort server |
+| [0002](decisions/0002-family-wall-storage.md) | Family Wall lives in the Picfort server's SQLite |
 | [0003](decisions/0003-display-strategy.md) | Tablet as primary display target; e-paper as secondary |
 | [0004](decisions/0004-network-auth.md) | No auth on the frame endpoints (trusted local network; see 0006, 0007) |
 | [0005](decisions/0005-timeline-sync-stream.md) | Timeline from a local copy synced with Immich's sync stream |

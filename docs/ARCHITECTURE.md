@@ -28,14 +28,31 @@ The **Picfort server** (`picfort-server/`) was called ImageFrameServer until 202
 
 ## Component Responsibilities
 
-### Android app (`app/`)
+### Android app
 - Browse photos: unified timeline (Immich + phone MediaStore). Immich assets come from a local
   Room copy kept up to date with Immich's sync stream (ADR 0005, T-015)
 - Backup phone photos to Immich via WorkManager
 - Control the picture frame (send photo, configure slideshow)
-- Family Wall: post and read messages/photos shared with family
+- Family hub: Family Wall, shopping lists, events, school timetables, family members
 
 Tech stack: Kotlin, Jetpack Compose, Room, Hilt, Retrofit, WorkManager, Media3
+
+#### Modules ([ADR 0011](decisions/0011-modular-architecture.md))
+
+```
+:app  (thin shell: MainActivity, root navigation, Hilt assembly)
+  └─► :feature:{wall, shopping, events, family, frame, school, timeline}
+        └─► :core:ui, :core:database, :core:network
+              └─► :core:model  (domain models + cross-feature contracts)
+```
+
+- Features never depend on each other. They talk through interfaces in `:core:model`
+  (`FamilyMemberProvider`, `FamilyEventsProvider`, `FrameSender`, `DayPhotosProvider`, …),
+  bound to implementations by Hilt in `:app`.
+- `:core:model` has no UI, network or database dependencies; `:core:ui` has no network or
+  database dependencies.
+- `./scripts/check-modular-boundaries.sh` enforces these rules. Each module's scope, files
+  and tests are in its own `AGENTS.md` (module map in the root [`AGENTS.md`](../AGENTS.md)).
 
 ### Immich
 External self-hosted photo server. Picfort uses its REST API for:
@@ -58,7 +75,8 @@ Tech stack: Python, Flask, SQLite, Pillow, Waveshare e-paper driver (optional)
 ### Display device
 One of:
 - Waveshare e-paper panel connected to the Raspberry Pi via SPI
-- Android tablet in kiosk/frame mode running Picfort directly
+- Any screen with a web browser (e.g. a tablet) showing `/frame`, behind the server key
+  ([ADR 0014](decisions/0014-browser-frame.md), T-072)
 - Any HDMI display connected to the Raspberry Pi
 
 ## Data flows
