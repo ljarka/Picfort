@@ -132,6 +132,14 @@ class SchoolModelsTest {
     }
 
     @Test
+    fun timeRangeSaysAmPmOnceWhenShared() {
+        val twelve = timeFormatter(false, java.util.Locale.US)
+        assertEquals("8:00–8:45 AM", timeRange(t("08:00"), t("08:45"), twelve))
+        assertEquals("11:40 AM–12:25 PM", timeRange(t("11:40"), t("12:25"), twelve))
+        assertEquals("8:00–8:45", timeRange(t("08:00"), t("08:45"), timeFormatter(true, java.util.Locale.US)))
+    }
+
+    @Test
     fun newChildrenGetDifferentColors() {
         assertEquals("pink", defaultChildColor(emptyList()))
         assertEquals("red", defaultChildColor(listOf("pink")))
