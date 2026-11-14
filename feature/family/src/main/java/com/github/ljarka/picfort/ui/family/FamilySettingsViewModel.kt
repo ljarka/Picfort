@@ -120,7 +120,6 @@ class FamilySettingsViewModel @Inject constructor(
             s.copy(
                 editing = edit.copy(
                     pickedPersonId = null,
-                    pickedPhotoBytes = null,
                     clearPhoto = true,
                     noPhoto = edit.user.isImmichUser,
                     previewAvatarUrl = null,
@@ -182,7 +181,6 @@ class FamilySettingsViewModel @Inject constructor(
                     peoplePicker = null,
                     addingPerson = adding.copy(
                         pickedPersonId = person.id,
-                        photoBytes = null,
                         previewAvatarUrl = person.thumbnailUrl,
                         // An empty name takes the person's name from Immich.
                         name = adding.name.ifBlank { person.name.take(50) },
@@ -220,14 +218,10 @@ class FamilySettingsViewModel @Inject constructor(
         _state.update { s -> s.copy(addingPerson = s.addingPerson?.copy(birthDate = date)) }
     }
 
-    fun updateAddPersonPhoto(bytes: ByteArray?) {
-        _state.update { s -> s.copy(addingPerson = s.addingPerson?.copy(photoBytes = bytes)) }
-    }
-
     fun removeAddPersonPhoto() {
         _state.update { s ->
             s.copy(
-                addingPerson = s.addingPerson?.copy(pickedPersonId = null, photoBytes = null, previewAvatarUrl = null),
+                addingPerson = s.addingPerson?.copy(pickedPersonId = null, previewAvatarUrl = null),
             )
         }
     }
@@ -241,7 +235,6 @@ class FamilySettingsViewModel @Inject constructor(
                 repository.addMember(
                     displayName = add.name.trim(),
                     birthDate = add.birthDate,
-                    photoBytes = add.photoBytes,
                     pickedPersonId = add.pickedPersonId,
                 )
                 _state.update { it.copy(addingPerson = null) }
@@ -262,13 +255,6 @@ class FamilySettingsViewModel @Inject constructor(
         _state.update { s ->
             val edit = s.editing ?: return@update s
             s.copy(editing = edit.copy(birthDate = date, clearBirthDate = date == null))
-        }
-    }
-
-    fun clearMemberBirthDate() {
-        _state.update { s ->
-            val edit = s.editing ?: return@update s
-            s.copy(editing = edit.copy(birthDate = null, clearBirthDate = true))
         }
     }
 
@@ -311,7 +297,6 @@ class FamilySettingsViewModel @Inject constructor(
                     user = edit.user,
                     displayName = edit.displayName,
                     pickedPersonId = edit.pickedPersonId,
-                    photoBytes = edit.pickedPhotoBytes,
                     clearPhoto = edit.clearPhoto,
                     showInFamily = edit.showInFamily,
                     birthDate = edit.birthDate,

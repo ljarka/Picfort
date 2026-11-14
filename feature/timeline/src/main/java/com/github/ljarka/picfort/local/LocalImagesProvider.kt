@@ -27,17 +27,6 @@ data class ImageData(
     val durationMs: Long? = null,
 )
 
-/**
- * [start, end) in epoch millis covering the whole calendar month in [zone].
- * Photos' DATE_TAKEN is wall-clock time where they were taken, so months are
- * bounded in the device's zone, matching how Immich buckets by local date.
- */
-fun monthRangeMillis(month: YearMonth, zone: ZoneId): LongRange {
-    val start = month.atDay(1).atStartOfDay(zone).toInstant().toEpochMilli()
-    val end = month.plusMonths(1).atDay(1).atStartOfDay(zone).toInstant().toEpochMilli()
-    return start until end
-}
-
 private val FILES_URI: Uri get() = MediaStore.Files.getContentUri("external")
 
 private val ALL_SELECTION =

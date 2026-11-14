@@ -170,9 +170,6 @@ class FamilyStore(SqliteStore):
             rows = conn.execute("SELECT * FROM profiles ORDER BY user_id").fetchall()
         return [self._json(r) for r in rows]
 
-    def _today(self) -> date:
-        return date.fromisoformat(self.clock()[:10])
-
     def add_member(self, actor_id: str, body: dict, today: str = None) -> dict:
         """A member who isn't an Immich user: the server makes the id."""
         today_str = _parse_today(today, body)

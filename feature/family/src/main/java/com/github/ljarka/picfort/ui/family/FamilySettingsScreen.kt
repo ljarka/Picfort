@@ -103,7 +103,6 @@ data class AddPersonUi(
     val name: String = "",
     val birthDate: BirthDate? = null,
     val previewAvatarUrl: String? = null,
-    val photoBytes: ByteArray? = null,
     /** Immich person whose face becomes the photo (T-034 follow-up: manual members too). */
     val pickedPersonId: String? = null,
     val saving: Boolean = false,
