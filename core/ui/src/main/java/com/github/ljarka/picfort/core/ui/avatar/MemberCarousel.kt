@@ -35,6 +35,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -46,8 +48,8 @@ private val AVATAR_SIZE = 56.dp
 /**
  * The family's avatar row (Wall, Photos): tap selects one member (tap again to clear, the caller
  * decides), long-press offers "Edit". Members in [dimmedIds] are drawn faded (e.g. not linked).
- * With [onOpenFamily], a last "+" circle (labelled [addLabel], "Family" by default) opens Family
- * settings, or whatever the screen adds people with (School: pick a child).
+ * With [onOpenFamily], a last "+" circle (no caption; "Family settings" for TalkBack) opens Family
+ * settings, where people are added (and, for School, marked "Goes to school").
  */
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
@@ -60,8 +62,6 @@ fun MemberCarousel(
     onEditMember: ((String) -> Unit)? = {},
     dimmedIds: Set<String> = emptySet(),
     onOpenFamily: (() -> Unit)? = null,
-    addLabel: String = "Family",
-    addClickLabel: String = "Family settings",
     /** Several selected at once (Search, people together); overrides [selectedId]. */
     selectedIds: Set<String> = setOfNotNull(selectedId),
     /** For scrolling from outside, e.g. to a person who just joined the row. */
@@ -114,44 +114,28 @@ fun MemberCarousel(
             }
         }
         if (onOpenFamily != null) {
-            item(key = "picfort:family-settings") { AddCircle(addLabel, addClickLabel, onOpenFamily) }
+            item(key = "picfort:family-settings") { AddCircle(onOpenFamily) }
         }
     }
 }
 
 @Composable
-private fun AddCircle(label: String, clickLabel: String, onClick: () -> Unit) {
-    Column(
-        horizontalAlignment = Alignment.CenterHorizontally,
+private fun AddCircle(onClick: () -> Unit) {
+    Box(
+        contentAlignment = Alignment.Center,
         modifier = Modifier
-            .padding(horizontal = 4.dp)
-            .clip(RoundedCornerShape(16.dp))
-            .clickable(onClickLabel = clickLabel, onClick = onClick)
-            .padding(horizontal = 4.dp, vertical = 6.dp),
+            .padding(horizontal = 8.dp, vertical = 6.dp)
+            .size(AVATAR_SIZE)
+            .clip(CircleShape)
+            .background(MaterialTheme.colorScheme.surfaceVariant)
+            .border(2.dp, MaterialTheme.colorScheme.outlineVariant, CircleShape)
+            .clickable(onClick = onClick)
+            .semantics { contentDescription = "Family settings" },
     ) {
-        Box(
-            contentAlignment = Alignment.Center,
-            modifier = Modifier
-                .size(AVATAR_SIZE)
-                .clip(CircleShape)
-                .background(MaterialTheme.colorScheme.surfaceVariant)
-                .border(2.dp, MaterialTheme.colorScheme.outlineVariant, CircleShape),
-        ) {
-            Icon(
-                Icons.Default.Add,
-                contentDescription = null,
-                tint = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-        }
-        Text(
-            label,
-            style = MaterialTheme.typography.labelSmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            maxLines = 1,
-            textAlign = TextAlign.Center,
-            modifier = Modifier
-                .width(AVATAR_SIZE + 8.dp)
-                .padding(top = 4.dp),
+        Icon(
+            Icons.Default.Add,
+            contentDescription = null,
+            tint = MaterialTheme.colorScheme.onSurfaceVariant,
         )
     }
 }

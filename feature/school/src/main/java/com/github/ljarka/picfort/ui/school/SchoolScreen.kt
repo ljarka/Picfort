@@ -93,7 +93,7 @@ import kotlinx.coroutines.launch
 
 /** The School tab (T-029): one child's timetable, today's summary, the week day by day. */
 @Composable
-fun SchoolScreen(onSettingsClick: () -> Unit, onSetUpServer: () -> Unit = onSettingsClick) {
+fun SchoolScreen(onSettingsClick: () -> Unit, onOpenFamily: () -> Unit, onSetUpServer: () -> Unit = onSettingsClick) {
     val viewModel = hiltViewModel<SchoolViewModel>()
     val state by viewModel.state.collectAsStateWithLifecycle()
     val lifecycle = LocalLifecycleOwner.current.lifecycle
@@ -116,7 +116,7 @@ fun SchoolScreen(onSettingsClick: () -> Unit, onSetUpServer: () -> Unit = onSett
             onMessageShown = viewModel::messageShown,
             onSettingsClick = onSettingsClick,
             onSetUpServer = onSetUpServer,
-            onAddChild = viewModel::addChild,
+            onOpenFamily = onOpenFamily,
             onDeleteChild = viewModel::deleteChild,
             onSavePeriods = viewModel::savePeriods,
             onCopyPeriods = viewModel::copyPeriods,
@@ -136,7 +136,8 @@ data class SchoolActions(
     val onMessageShown: () -> Unit = {},
     val onSettingsClick: () -> Unit = {},
     val onSetUpServer: () -> Unit = {},
-    val onAddChild: (member: FamilyMember, done: () -> Unit) -> Unit = { _, _ -> },
+    /** "+": Family settings, where "Goes to school" is switched on (T-068). */
+    val onOpenFamily: () -> Unit = {},
     val onDeleteChild: (id: Long, done: () -> Unit) -> Unit = { _, _ -> },
     val onSavePeriods: (childId: Long, periods: List<Period>, done: () -> Unit) -> Unit = { _, _, _ -> },
     val onCopyPeriods: (childId: Long, fromChild: Long, done: () -> Unit) -> Unit = { _, _, _ -> },
@@ -148,9 +149,6 @@ data class SchoolActions(
 /** Which form is open over the timetable. */
 private sealed interface Sheet {
     data class ChildSheet(val child: Child) : Sheet
-
-    /** Pick who goes to school from the family. */
-    data object AddChild : Sheet
 
     data class EntrySheet(val entry: SchoolEntry?, val day: DayOfWeek) : Sheet
 
@@ -233,7 +231,7 @@ fun SchoolContent(
                 else -> {
                     state.offlineSince?.let { OfflineBanner(it) }
                     if (child == null) {
-                        NoChildren(state, onAdd = { sheet = Sheet.AddChild })
+                        NoChildren(state, onAdd = actions.onOpenFamily)
                     } else {
                         Timetable(
                             state = state,
@@ -243,7 +241,7 @@ fun SchoolContent(
                             time = time,
                             actions = actions,
                             onEditChild = { sheet = Sheet.ChildSheet(it) },
-                            onAddChild = { sheet = Sheet.AddChild },
+                            onAddChild = actions.onOpenFamily,
                             onOpenEntry = { sheet = Sheet.EntrySheet(it, it.weekday) },
                             onCopyDay = { sheet = Sheet.CopyDay(it) },
                         )
@@ -292,12 +290,6 @@ private fun SchoolSheet(
                 avatar = state.avatarOf(open.child),
                 onBells = { onOpen(Sheet.Bells) },
                 onDelete = { id -> actions.onDeleteChild(id, close) },
-            )
-
-            Sheet.AddChild -> AddChildForm(
-                candidates = state.candidates,
-                saving = state.saving,
-                onPick = { actions.onAddChild(it, close) },
             )
 
             is Sheet.EntrySheet -> if (child != null) {
@@ -403,8 +395,8 @@ fun SchoolUi.avatarOf(child: Child): FamilyMember {
 }
 
 /**
- * The children as the family's avatar row (same as the Wall), with a last "+" that adds someone
- * from the family. In edit mode, tapping the chosen child (or long-press "Edit") opens its sheet.
+ * The children as the family's avatar row (same as the Wall), with a last "+" to Family settings
+ * ("Goes to school", T-068). In edit mode, tapping the chosen child (or long-press "Edit") opens its sheet.
  */
 @Composable
 private fun ChildrenRow(
@@ -425,8 +417,6 @@ private fun ChildrenRow(
         },
         onEditMember = if (editing) ({ id -> byId[id]?.let(onEdit) }) else null,
         onOpenFamily = if (state.canEdit) onAdd else null,
-        addLabel = "Add",
-        addClickLabel = "Add child",
     )
 }
 
@@ -640,7 +630,7 @@ private fun NoChildren(state: SchoolUi, onAdd: () -> Unit) {
     ChildrenRow(state, selectedId = null, editing = false, onSelect = {}, onEdit = {}, onAdd = onAdd)
     Centered {
         Text(
-            if (state.canEdit) "Tap + to add who goes to school" else "No one in School yet",
+            if (state.canEdit) "Tap + and switch on “Goes to school” for each child" else "No one in School yet",
             style = MaterialTheme.typography.bodyLarge,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             textAlign = TextAlign.Center,

@@ -116,11 +116,6 @@ class SchoolScreenshotTest {
     fun no_children() = snap { SchoolContent(SchoolUi(family = family)) }
 
     @Test
-    fun add_child_from_family() = sheet {
-        AddChildForm(day("09:00").candidates, saving = false, onPick = {})
-    }
-
-    @Test
     fun edit_mode() = snap { SchoolContent(day("09:10", editing = true)) }
 
     @Test

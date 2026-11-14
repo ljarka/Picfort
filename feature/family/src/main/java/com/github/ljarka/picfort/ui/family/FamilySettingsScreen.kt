@@ -117,6 +117,8 @@ data class FamilySettingsUi(
     val addingPerson: AddPersonUi? = null,
     val peoplePicker: PeoplePickerUi? = null,
     val message: String? = null,
+    /** Members on the School tab (T-068). */
+    val schoolIds: Set<String> = emptySet(),
 ) {
     /** Visible members first, then hidden accounts last. */
     val orderedUsers: List<FamilyUserUi>
@@ -148,6 +150,7 @@ fun FamilySettingsScreen(onBack: () -> Unit) {
                 onChooseFromPeople = viewModel::openPeoplePicker,
                 onClearPhoto = viewModel::clearPhoto,
                 onShowInFamilyChange = viewModel::updateShowInFamily,
+                onGoesToSchoolChange = viewModel::updateGoesToSchool,
                 onBirthDateChange = viewModel::updateMemberBirthDate,
                 onAskDelete = viewModel::askDeleteMember,
                 onCancelDelete = viewModel::cancelDeleteMember,

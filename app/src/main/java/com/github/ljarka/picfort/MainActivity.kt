@@ -221,7 +221,10 @@ class MainActivity : ComponentActivity() {
                                     navigation<TabGraph.School>(startDestination = Screen.School) {
                                         composable<Screen.School> {
                                             TabRoot {
-                                                SchoolScreen(onSettingsClick = openSettings)
+                                                SchoolScreen(
+                                                    onSettingsClick = openSettings,
+                                                    onOpenFamily = { navController.navigate(Screen.FamilySettings()) },
+                                                )
                                             }
                                         }
                                     }

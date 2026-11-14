@@ -54,10 +54,6 @@ data class SchoolUi(
      */
     val family: List<FamilyMember> = emptyList(),
 ) {
-    /** Family members who aren't in School yet (not everyone goes to school). */
-    val candidates: List<FamilyMember>
-        get() = family.filter { m -> children.none { it.memberId == m.id } }
-
     /** The family member [child] is, if any. */
     fun memberOf(child: Child): FamilyMember? = family.firstOrNull { it.id == child.memberId }
 
@@ -154,20 +150,6 @@ class SchoolViewModel @Inject constructor(
     fun toggleEditing() = local.update { it.copy(editing = !it.editing) }
 
     fun messageShown() = local.update { it.copy(message = null) }
-
-    /** Adds [member] to School; the server keeps their name too (offline copy, other phones). */
-    fun addChild(member: FamilyMember, done: () -> Unit) = save(done) {
-        val child = repository.addChild(
-            member.name,
-            defaultChildColor(
-                local.value.children.map {
-                    it.color
-                },
-            ),
-            member.id,
-        )
-        selectChild(child.id)
-    }
 
     fun deleteChild(id: Long, done: () -> Unit) = save(done) { repository.deleteChild(id) }
 

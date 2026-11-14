@@ -4,6 +4,7 @@ import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.github.ljarka.picfort.core.model.BirthDate
+import com.github.ljarka.picfort.core.model.SchoolMembership
 import com.github.ljarka.picfort.core.model.pollEvery
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
@@ -19,6 +20,7 @@ private const val POLL_MILLIS = 60_000L
 @HiltViewModel
 class FamilySettingsViewModel @Inject constructor(
     private val repository: FamilyRepository,
+    private val school: SchoolMembership,
     savedState: SavedStateHandle,
 ) : ViewModel() {
 
@@ -37,8 +39,18 @@ class FamilySettingsViewModel @Inject constructor(
                     s.copy(
                         users = users,
                         isLoading = false,
-                        editing = s.editing ?: autoEdit?.let { FamilyMemberEditUi(user = it) },
+                        editing = s.editing ?: autoEdit?.let { s.editOf(it) },
                     )
+                }
+            }
+        }
+        viewModelScope.launch {
+            school.memberIds.collect { ids ->
+                _state.update { s ->
+                    // An open sheet the user hasn't touched follows the server.
+                    val edit = s.editing?.takeIf { it.goesToSchool == it.wasInSchool && !it.saving }
+                        ?.let { it.copy(goesToSchool = it.user.id in ids, wasInSchool = it.user.id in ids) }
+                    s.copy(schoolIds = ids, editing = edit ?: s.editing)
                 }
             }
         }
@@ -51,6 +63,7 @@ class FamilySettingsViewModel @Inject constructor(
 
     suspend fun keepFresh() {
         pollEvery(intervalMillis = POLL_MILLIS) {
+            viewModelScope.launch { school.refresh() }
             val error = repository.refresh()
             if (error != null && _state.value.users.isEmpty()) {
                 _state.update { it.copy(isLoading = false, message = error.message) }
@@ -61,7 +74,7 @@ class FamilySettingsViewModel @Inject constructor(
     }
 
     fun openMember(user: FamilyUserUi) {
-        _state.update { it.copy(editing = FamilyMemberEditUi(user = user), peoplePicker = null) }
+        _state.update { it.copy(editing = it.editOf(user), peoplePicker = null) }
     }
 
     fun dismissMember() {
@@ -78,6 +91,10 @@ class FamilySettingsViewModel @Inject constructor(
             val edit = s.editing ?: return@update s
             if (edit.user.isMe) s else s.copy(editing = edit.copy(showInFamily = show))
         }
+    }
+
+    fun updateGoesToSchool(goes: Boolean) {
+        _state.update { s -> s.copy(editing = s.editing?.copy(goesToSchool = goes)) }
     }
 
     fun useImmichPhoto() {
@@ -301,6 +318,9 @@ class FamilySettingsViewModel @Inject constructor(
                     clearBirthDate = edit.clearBirthDate,
                     noPhoto = edit.noPhoto,
                 )
+                if (edit.goesToSchool != edit.wasInSchool) {
+                    school.setGoesToSchool(edit.user.id, edit.displayName.ifBlank { edit.user.name }, edit.goesToSchool)
+                }
                 _state.update { it.copy(editing = null, peoplePicker = null) }
             } catch (e: CancellationException) {
                 throw e
@@ -319,3 +339,6 @@ class FamilySettingsViewModel @Inject constructor(
         _state.update { it.copy(message = null) }
     }
 }
+
+private fun FamilySettingsUi.editOf(user: FamilyUserUi) =
+    FamilyMemberEditUi(user = user, goesToSchool = user.id in schoolIds)

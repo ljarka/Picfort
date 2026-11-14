@@ -12,7 +12,8 @@ Server API: T-028 (`picfort-server/school.py`, `/school`, `school.db`).
 | `ui/school/SchoolRepository.kt` | `children` StateFlow, offline copy (`school.json`, tied to server + user), not optimistic |
 | `ui/school/SchoolViewModel.kt` | `SchoolUi`; selected child in SharedPreferences `school`; minute clock (`tick`), 60 s poll |
 | `ui/school/SchoolScreen.kt` | `SchoolScreen`/`SchoolContent`: child chips, summary card, day chips + `HorizontalPager`, rows, sheets |
-| `ui/school/SchoolForms.kt` | `AddChildForm` (pick from the family), `ChildForm` (bells, remove), `EntryForm` ("Save and add next"), `BellsForm` (Fill in, Copy from), `CopyDayDialog`, `TimeField` |
+| `ui/school/SchoolMembershipImpl.kt` | `SchoolMembership` for Family's "Goes to school" switch (T-068) |
+| `ui/school/SchoolForms.kt` | `ChildForm` (bells, remove), `EntryForm` ("Save and add next"), `BellsForm` (Fill in, Copy from), `CopyDayDialog`, `TimeField` |
 
 ## Rules
 
@@ -24,13 +25,15 @@ Server API: T-028 (`picfort-server/school.py`, `/school`, `school.db`).
 - Activities differ from lessons by container color **and** a star icon. Today's current row is
   highlighted, finished ones dimmed. Weekend chips only with entries (always while editing).
 - Times: `H:mm` or `h:mm a` from the device setting (`timeFormatter`), ranges via `timeRange`; day names from the locale.
-- Children are family members (T-066): `Child.memberId` (server `immich_user_id`); name and face from
-  `FamilyMemberProvider`; row = `MemberCarousel` with "+" (`addLabel`); `SchoolUi.candidates` for the picker.
+- Children are family members (T-066, T-068): `Child.memberId` (server `immich_user_id`); name and face
+  from `FamilyMemberProvider.allMembers`; row = `MemberCarousel`; its "+" opens Family settings, where
+  "Goes to school" adds/removes the child (`SchoolMembership`).
 - Out of scope here: children from Immich people, face photo, "Photos of Ola" (T-030).
 
 ## Public Contract
 
-- `SchoolScreen(onSettingsClick: () -> Unit, onSetUpServer: () -> Unit = onSettingsClick)`
+- `SchoolScreen(onSettingsClick, onOpenFamily, onSetUpServer = onSettingsClick)`
+- Provides `SchoolMembership` (Hilt `SchoolModule`) to `:feature:family`.
 
 ## Dependencies & Boundaries
 

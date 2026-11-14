@@ -87,54 +87,6 @@ private fun FormColumn(content: @Composable () -> Unit) {
 // --- Child ---
 
 /**
- * Pick who goes to school from the family (not everyone does). The faces as in the Wall's row;
- * members already in School are left out.
- */
-@Composable
-fun AddChildForm(candidates: List<FamilyMember>, saving: Boolean, onPick: (FamilyMember) -> Unit) {
-    FormColumn {
-        Text("Who goes to school?", style = MaterialTheme.typography.titleLarge)
-        if (candidates.isEmpty()) {
-            Text(
-                "Everyone in the family is already here. Add someone in Settings → Family first.",
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-        } else {
-            FlowRow(
-                horizontalArrangement = Arrangement.spacedBy(4.dp),
-                verticalArrangement = Arrangement.spacedBy(8.dp),
-            ) {
-                candidates.forEach { member ->
-                    Column(
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                        modifier = Modifier
-                            .clip(RoundedCornerShape(16.dp))
-                            .clickable(enabled = !saving, onClickLabel = "Add ${member.name}") { onPick(member) }
-                            .padding(horizontal = 6.dp, vertical = 6.dp),
-                    ) {
-                        MemberAvatar(member, size = 56.dp)
-                        Text(
-                            member.name,
-                            style = MaterialTheme.typography.labelSmall,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis,
-                            textAlign = TextAlign.Center,
-                            modifier = Modifier.width(64.dp).padding(top = 4.dp),
-                        )
-                    }
-                }
-            }
-            Text(
-                "Someone missing? Add them in Settings → Family.",
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-        }
-    }
-}
-
-/**
  * A child in School: the bell schedule and removing them. Name and face come from Family (edit
  * them there).
  */

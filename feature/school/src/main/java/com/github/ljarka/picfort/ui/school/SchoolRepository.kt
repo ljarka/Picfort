@@ -1,6 +1,7 @@
 package com.github.ljarka.picfort.ui.school
 
 import android.content.Context
+import com.github.ljarka.picfort.core.model.SchoolMembership
 import com.github.ljarka.picfort.core.network.AccessTokenStore
 import com.github.ljarka.picfort.core.network.FrameSettingsStore
 import com.github.ljarka.picfort.core.network.PicfortServerException
@@ -65,6 +66,9 @@ abstract class SchoolModule {
 
     @Binds
     abstract fun offlineCopy(file: FileSchoolOfflineCopy): SchoolOfflineCopy
+
+    @Binds
+    abstract fun membership(impl: SchoolMembershipImpl): SchoolMembership
 }
 
 /**
