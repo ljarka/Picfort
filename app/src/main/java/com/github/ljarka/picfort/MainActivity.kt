@@ -287,8 +287,8 @@ class MainActivity : ComponentActivity() {
                                         composable<Screen.Albums> {
                                             AlbumsScreen(
                                                 onBack = { navController.popBackStack() },
-                                                onAlbumClick = { id, name ->
-                                                    navController.navigate(AlbumRoute(id, name))
+                                                onAlbumClick = { id, name, canDelete ->
+                                                    navController.navigate(AlbumRoute(id, name, canDelete))
                                                 },
                                             )
                                         }

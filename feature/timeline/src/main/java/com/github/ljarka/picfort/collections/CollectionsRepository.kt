@@ -13,11 +13,15 @@ import javax.inject.Singleton
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.SharedFlow
+import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.sync.Semaphore
 import kotlinx.coroutines.sync.withPermit
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.longOrNull
+import retrofit2.HttpException
 import retrofit2.Retrofit
 
 /** An Immich asset in an album or search result. */
@@ -44,6 +48,11 @@ class CollectionsRepository @Inject constructor(
     fun putList(source: String, assets: List<GridAsset>) {
         lists[source] = assets
     }
+
+    private val _deletedAlbums = MutableSharedFlow<String>(extraBufferCapacity = 8)
+
+    /** Ids of albums deleted in the app; the albums list drops them without a reload. */
+    val deletedAlbums: SharedFlow<String> = _deletedAlbums.asSharedFlow()
 
     suspend fun albums(): List<AlbumDto> = service.get().albums().sortedBy { it.albumName.lowercase() }
 
@@ -124,6 +133,14 @@ class CollectionsRepository @Inject constructor(
 
     suspend fun createAlbum(name: String, assetIds: List<String>): AlbumDto =
         service.get().createAlbum(CreateAlbumRequest(name.trim(), assetIds))
+
+    /** Deletes the album (not its photos); throws [HttpException] when refused (403: not the owner). */
+    suspend fun deleteAlbum(albumId: String) {
+        val response = service.get().deleteAlbum(albumId)
+        if (!response.isSuccessful) throw HttpException(response)
+        lists.remove("album:$albumId")
+        _deletedAlbums.emit(albumId)
+    }
 
     /** Returns how many were added (already-present ones count as not added). */
     suspend fun addToAlbum(albumId: String, assetIds: List<String>): Int =

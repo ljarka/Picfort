@@ -4,7 +4,7 @@ import com.github.ljarka.picfort.core.database.AssetType
 import kotlinx.serialization.Serializable
 
 @Serializable
-data class AlbumRoute(val id: String, val name: String)
+data class AlbumRoute(val id: String, val name: String, val canDelete: Boolean = false)
 
 @Serializable
 data class ImageDetailsRoute(

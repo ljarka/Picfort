@@ -17,7 +17,8 @@ Immich photo timeline, gallery, full-screen viewer, collections, and media sync 
 | `ui/image/ImageDetailsScreen.kt` | Full-screen photo/video viewer, shared element transition |
 | `ui/image/ImageDetailsViewModel.kt` | Viewer ViewModel: zoom, EXIF metadata, pushing photo to frame via `FrameSender` |
 | `collections/CollectionsScreens.kt` | Albums list, album view, search screen (text + Immich people, T-057) |
-| `collections/CollectionsRepository.kt` | Album contents via `timeline/bucket?albumId`; durations text or ms (`parseSearchDuration`, T-061) |
+| `collections/CollectionsRepository.kt` | Album contents via `timeline/bucket?albumId`; durations text or ms (`parseSearchDuration`, T-061); `deleteAlbum` (T-070) |
+| `collections/CollectionsService.kt` | Immich albums/search API; `AlbumDto.ownerId` (albumUsers role "owner"), `canDelete(myId)`: ⋮ → "Delete album" for the owner only (photos stay) |
 | `collections/SearchPeople.kt` | `peopleRow` (first 12 in Immich's order stay put; picks from "All people" appended and scrolled to, T-060), `filterPeople` (case/accents), `PeoplePickerContent` ("All people" sheet) |
 | `sync/SyncEngine.kt` | Immich delta sync engine |
 | `local/LocalImagesProvider.kt` | Device MediaStore photo reader |
@@ -34,7 +35,8 @@ Immich photo timeline, gallery, full-screen viewer, collections, and media sync 
   (newest photo of the day, or its month header; flag kept in `rememberSaveable`)
 - `ImageDetailsScreen(sharedTransitionScope, animatedVisibilityScope, onDismissRequest, assetId, assetType, imageIndex, frameSettingsDialog)`
 - `AlbumsScreen(onAlbumClick, onBack)`
-- `AlbumScreen(onBack, onAssetClick)`
+- `AlbumsScreen` gives `onAlbumClick(id, name, canDelete)`; `AlbumRoute(id, name, canDelete)`
+- `AlbumScreen(onBack, onAssetClick)`: closes itself after a delete; the albums list drops it (`deletedAlbums`)
 - `SearchScreen(onBack, onAssetClick)`
 
 ## Dependencies & Boundaries
@@ -54,4 +56,5 @@ Immich photo timeline, gallery, full-screen viewer, collections, and media sync 
 ./gradlew :feature:timeline:recordPaparazziDebug # on intentional UI changes
 DEVICE=emulator-5556 ./scripts/maestro-smoke.sh maestro/timeline-selection.yaml  # sheet above the tab bar
 DEVICE=emulator-5556 ./scripts/maestro-smoke.sh maestro/search-people.yaml       # T-057, tags test people
+DEVICE=emulator-5556 ./scripts/maestro-smoke.sh maestro/album-delete.yaml        # T-070, test account album
 ```
