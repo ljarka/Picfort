@@ -65,6 +65,9 @@ class FrameDashboardApi @Inject constructor(
     val isConfigured: Boolean get() = normalizeFrameUrl(settings.frameUrl) != null
     val address: String get() = settings.frameUrl
 
+    /** The browser frame (`/frame`, T-072) works only on a server with a key. */
+    val hasKey: Boolean get() = settings.apiKey.isNotBlank()
+
     suspend fun status(): FrameStatus = json.decodeFromString(call("GET", "status"))
 
     suspend fun albums(): List<FrameAlbum> = json.decodeFromString(call("GET", "albums"))

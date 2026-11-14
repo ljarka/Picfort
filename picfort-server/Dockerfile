@@ -20,7 +20,7 @@ WORKDIR /app
 COPY requirements.txt requirements-heif.txt ./
 # requirements-heif.txt: HEIC originals from iPhones (optional outside Docker).
 RUN pip install --no-cache-dir -r requirements.txt -r requirements-heif.txt
-COPY *.py ./
+COPY *.py frame_page.html ./
 COPY docker-entrypoint.sh /usr/local/bin/
 
 # The server runs as this user, not root (docker-entrypoint.sh drops root after fixing /data).

@@ -73,6 +73,7 @@ picfort-server/        Python service for the picture frame
   immich.py              Immich API client used by the slideshow
   tests/                 unittest suite (no hardware or Immich needed)
   frame.py               Fetches from Immich, renders for the panel, drives the display
+  browser_frame.py       The frame in a web browser (/frame, frame_page.html), behind the key
   wall.py, auth.py       Family Wall storage and Immich token check
   Dockerfile             Server image (ghcr.io/ljarka/picfort-server)
 docker/                  docker-compose.yml and example.env for installing the server
@@ -219,6 +220,19 @@ With [Cloudflare Tunnel](https://developers.cloudflare.com/cloudflare-one/connec
 
 Every request needs the key; the Family Wall also still needs your Immich login. With a key set the server marks all responses `Cache-Control: private`, so Cloudflare doesn't keep wall photos at its edge.
 
+### Frame in a browser
+
+A tablet or computer can show the frame too: open `https://picfort.example.com/frame` (or `http://<server>:5000/frame` at home). It shows the frame's current photo in full colour and follows it as it changes. It works only on a server with `PICFORT_API_KEY` (ADR 0014): the page asks for the key once and the browser remembers it ("Forget key" at the bottom, shown on a tap). Tap the photo for full screen.
+
+- Over `https://` the page keeps the screen on (Screen Wake Lock). Over plain `http://`, keep it on with the device's power settings.
+- Windows tablet (e.g. Surface) as a dedicated frame: Settings → System → Power → screen and sleep **Never**, then start Edge full screen, for example from a shortcut in the Startup folder:
+  ```
+  msedge --start-fullscreen https://picfort.example.com/frame
+  ```
+  This is your normal Edge profile, so the key entered once stays. Edge's kiosk mode (`--kiosk … --edge-kiosk-type=fullscreen`) also works, but it may not keep the key between starts.
+- 10 wrong keys from one address within 15 minutes block that address for a while.
+- The app shows the link under **Settings → Picture frame → Frame in a browser**.
+
 ### Install without Docker
 
 Use Python 3.11+ (same versions as CI: 3.11 and 3.13).
@@ -286,7 +300,7 @@ The frame uses Waveshare's 13.3" E Ink Spectra 6 panel (1200×1600, 6 colours, a
 | `CHILD_PHOTOS_PATH` | `child_photos` | Directory for children's photos (school timetables) |
 | `FRAME_PREVIEW_PATH` | `last_frame.png` | Where the last rendered frame is saved (shown at `/current`) |
 | `PORT` | `5000` | HTTP port |
-| `PICFORT_API_KEY` | (empty) | When set, every request needs `X-Picfort-Key: <key>` (enter it in the app next to the address). Required before exposing the server outside your network (ADR 0007). |
+| `PICFORT_API_KEY` | (empty) | When set, every request needs `X-Picfort-Key: <key>` (enter it in the app next to the address). Required before exposing the server outside your network (ADR 0007) and for the browser frame (ADR 0014). |
 
 HEIC originals need `pip install -r requirements-heif.txt` (included in the Docker image). Otherwise the server falls back to Immich's preview image.
 
