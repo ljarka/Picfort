@@ -13,11 +13,11 @@ picture frame control, and a shared Family Wall — all without any cloud servic
 The defining feature that sets Picfort apart from every other Immich client.
 A shared digital board for the family: notes, photos, fridge-magnet-style messages.
 
-| Task | Description | Status |
-|------|-------------|--------|
-| [T-001](tasks/T-001-family-wall-backend.md) | Family Wall — Picfort server backend | `done` |
-| [T-002](tasks/T-002-family-wall-android.md) | Family Wall — Android screen (approved mockup, members = Immich users) | `done` |
-| [T-003](tasks/T-003-frame-mode-tablet.md) | Frame mode on Android tablet (parent's account, settings from the Picfort server) — closed, replaced by the browser frame (T-072) | `closed` |
+| Task                                        | Description                                                                                                                       | Status   |
+| ------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------- | -------- |
+| [T-001](tasks/T-001-family-wall-backend.md) | Family Wall — Picfort server backend                                                                                              | `done`   |
+| [T-002](tasks/T-002-family-wall-android.md) | Family Wall — Android screen (approved mockup, members = Immich users)                                                            | `done`   |
+| [T-003](tasks/T-003-frame-mode-tablet.md)   | Frame mode on Android tablet (parent's account, settings from the Picfort server) — closed, replaced by the browser frame (T-072) | `closed` |
 
 ### Phase 2 — Fix known limitations
 Gaps documented in the [README](../README.md#known-limitations) that affect day-to-day use.
