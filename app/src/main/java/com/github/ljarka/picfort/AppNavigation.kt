@@ -33,7 +33,6 @@ sealed interface Screen {
     @Serializable
     object PicfortServerSetup : Screen
 
-    /** School stays a placeholder until T-029. */
     @Serializable
     object Shopping : Screen
 

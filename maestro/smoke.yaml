@@ -26,9 +26,9 @@ name: Smoke — login and all tabs
 - assertVisible: "Upcoming"
 - assertVisible: "Add event"
 
-# School (placeholder until T-029)
+# School (T-029): the empty state, or a child's summary card
 - tapOn: "School"
-- assertVisible: "School timetables are coming soon."
+- assertVisible: "(Add a child to start a timetable|No school today|.*finish.*school.*)"
 
 # Photos: timeline, no logo in the app bar
 - tapOn: "Photos"

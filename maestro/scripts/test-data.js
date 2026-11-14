@@ -1,6 +1,7 @@
 // Puts the test server into a known state for the Events flows (T-054, T-055) and Search (T-057).
 // Runs on the computer, so it talks to the test server on localhost, never the family's server.
 // Inputs (runScript env): BIRTH_DATE for Ola ("YYYY-MM-DD"); EVENTS=1 to ensure the filter events;
+// SCHOOL=1 to delete the School flow's child "Ala T029" (the flow adds it again);
 // PEOPLE=1 to ensure 14 Immich people "Osoba 01".."Osoba 14" on the test account (faces tagged by
 // hand on its photos: 01 on two photos, 02 on the first of them, the others on one photo each).
 // Credentials come from MAESTRO_* (scripts/maestro-smoke.sh); nothing is logged.
@@ -52,6 +53,13 @@ if (typeof EVENTS !== "undefined" && EVENTS === "1") {
   }
   ensure("Basen T054", [ola, kuba])
   ensure("Wspolne T054", [])
+}
+
+if (typeof SCHOOL !== "undefined" && SCHOOL === "1") {
+  const school = check(http.get(server + "/school", { headers: headers }), "GET /school")
+  school.children.filter(function (c) { return c.name === "Ala T029" }).forEach(function (c) {
+    check(http.request(server + "/school/children/" + c.id, { method: "DELETE", headers: headers }), "DELETE child")
+  })
 }
 
 if (typeof PEOPLE !== "undefined" && PEOPLE === "1") {

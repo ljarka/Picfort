@@ -1,0 +1,84 @@
+# T-029: add a child, set the bell schedule, enter a day with "Save and add next", copy it to
+# Tuesday, then delete the child. Test server only: scripts/test-data.js removes "Ala T029" first.
+appId: com.github.ljarka.immich.android2
+name: School — timetable (T-029)
+---
+- runScript:
+    file: scripts/test-data.js
+    env:
+      SCHOOL: "1"
+- runFlow: subflows/open-app.yaml
+- tapOn: "School"
+
+# Add the child (the "+" chip, or the empty state's button)
+- runFlow:
+    when:
+      visible: "Add child"
+    commands:
+      - tapOn: "Add child"
+- tapOn: "Name"
+- inputText: "Ala T029"
+- hideKeyboard
+- tapOn: "^Add$"
+- extendedWaitUntil:
+    visible: "No school today"
+    timeout: 10000
+
+# Bell schedule: edit mode, tap the selected chip, Fill in
+- tapOn: "Edit timetable"
+- tapOn: "Ala T029"
+- tapOn: "Set up lesson times"
+- scrollUntilVisible:
+    element: "^Fill in$"
+- tapOn: "^Fill in$"
+- assertVisible: "Remove period 8"
+- scrollUntilVisible:
+    element: "^Save$"
+- tapOn: "^Save$"
+- extendedWaitUntil:
+    notVisible: "Generate times"
+    timeout: 10000
+
+# Monday: two lessons without closing the form
+- tapOn: "Mon.*"
+- tapOn: "Add lesson or activity"
+- tapOn: "Subject"
+- inputText: "Maths"
+- hideKeyboard
+- scrollUntilVisible:
+    element: "Save and add next"
+- tapOn: "Save and add next"
+- scrollUntilVisible:
+    element: "Added 1 · next on Monday"
+    direction: UP
+    timeout: 10000
+- tapOn: "Subject"
+- inputText: "Polish"
+- hideKeyboard
+- scrollUntilVisible:
+    element: "^Save$"
+- tapOn: "^Save$"
+- extendedWaitUntil:
+    visible: "Period 2, .*Polish.*"
+    timeout: 10000
+- assertVisible: "Period 1, .*Maths.*"
+
+# Copy Monday to Tuesday
+- tapOn: "Copy lessons to…"
+- tapOn: "Tuesday"
+- tapOn: "Copy"
+- tapOn: "Tue.*"
+- extendedWaitUntil:
+    visible: "Period 1, .*Maths.*"
+    timeout: 10000
+
+# Read only outside edit mode; then delete the child
+- tapOn: "Done editing"
+- assertNotVisible: "Add lesson or activity"
+- tapOn: "Edit timetable"
+- tapOn: "Ala T029"
+- scrollUntilVisible:
+    element: "Delete child"
+- tapOn: "Delete child"
+- tapOn: "Delete"
+- assertNotVisible: "Ala T029"
