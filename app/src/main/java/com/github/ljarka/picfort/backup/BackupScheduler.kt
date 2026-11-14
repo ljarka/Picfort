@@ -19,7 +19,6 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 
 private const val PERIODIC = "backup-periodic"
-private const val NOW = "backup-now"
 
 sealed interface BackupStatus {
     data object Idle : BackupStatus
@@ -32,6 +31,12 @@ class BackupScheduler @Inject constructor(
     @ApplicationContext context: Context,
     private val settings: BackupSettingsStore,
 ) {
+    companion object {
+        /** The tag (and unique name) of "Back up now" runs. */
+        const val NOW_TAG = "backup-now"
+        private const val NOW = NOW_TAG
+    }
+
     private val workManager = WorkManager.getInstance(context)
 
     private fun constraints() = Constraints.Builder()

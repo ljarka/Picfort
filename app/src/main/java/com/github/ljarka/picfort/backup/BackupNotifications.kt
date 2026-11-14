@@ -5,6 +5,7 @@ import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.PendingIntent
 import android.content.Context
+import android.content.Intent
 import android.content.pm.PackageManager
 import android.content.pm.ServiceInfo
 import android.os.Build
@@ -15,6 +16,7 @@ import com.github.ljarka.picfort.core.ui.R as CoreUiR
 private const val CHANNEL_ID = "backup"
 private const val NOTIFICATION_ID = 1001
 private const val QUOTA_NOTIFICATION_ID = 1002
+private const val FINISHED_NOTIFICATION_ID = 1003
 
 private fun ensureChannel(context: Context) {
     val manager = context.getSystemService(NotificationManager::class.java)
@@ -29,15 +31,9 @@ private fun ensureChannel(context: Context) {
 
 /** Backup stopped because the Immich account is out of space; only an admin can fix it. */
 fun showQuotaExceededNotification(context: Context) {
-    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
-        context.checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED
-    ) {
-        return // Settings still shows the reason
-    }
+    if (!canNotify(context)) return // Settings still shows the reason
     ensureChannel(context)
-    val open = context.packageManager.getLaunchIntentForPackage(context.packageName)?.let {
-        PendingIntent.getActivity(context, 0, it, PendingIntent.FLAG_IMMUTABLE)
-    }
+    val open = openApp(context)
     val text = "Your storage quota on the server is full. Ask your Immich admin to raise it."
     val notification = NotificationCompat.Builder(context, CHANNEL_ID)
         .setSmallIcon(CoreUiR.drawable.ic_cloud)
@@ -50,14 +46,47 @@ fun showQuotaExceededNotification(context: Context) {
     context.getSystemService(NotificationManager::class.java).notify(QUOTA_NOTIFICATION_ID, notification)
 }
 
-/** Ongoing "Backing up… 12 of 340" notification for the backup worker's foreground service. */
+private fun canNotify(context: Context) = Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU ||
+    context.checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) == PackageManager.PERMISSION_GRANTED
+
+private fun openApp(context: Context) = context.packageManager.getLaunchIntentForPackage(context.packageName)?.let {
+    PendingIntent.getActivity(context, 0, it, PendingIntent.FLAG_IMMUTABLE)
+}
+
+/**
+ * How a "Back up now" run ended (T-006): its summary stays in the notifications, since the
+ * progress notification goes away with the run. The same line as in Settings.
+ */
+fun showBackupFinishedNotification(context: Context, title: String, text: String) {
+    if (!canNotify(context)) return
+    ensureChannel(context)
+    val notification = NotificationCompat.Builder(context, CHANNEL_ID)
+        .setSmallIcon(CoreUiR.drawable.ic_cloud)
+        .setContentTitle(title)
+        .setContentText(text)
+        .setStyle(NotificationCompat.BigTextStyle().bigText(text))
+        .setContentIntent(openApp(context))
+        .setAutoCancel(true)
+        .build()
+    context.getSystemService(NotificationManager::class.java).notify(FINISHED_NOTIFICATION_ID, notification)
+}
+
+/** Ongoing "Backing up… 12 of 340" notification for the backup worker's foreground service, with Stop. */
 fun backupForegroundInfo(context: Context, done: Int, total: Int): ForegroundInfo {
     ensureChannel(context)
+    val stop = PendingIntent.getBroadcast(
+        context,
+        0,
+        Intent(context, BackupStopReceiver::class.java),
+        PendingIntent.FLAG_IMMUTABLE,
+    )
     val notification = NotificationCompat.Builder(context, CHANNEL_ID)
         .setSmallIcon(CoreUiR.drawable.ic_cloud)
         .setContentTitle("Backing up to Immich")
         .setContentText(if (total > 0) "$done of $total" else "Preparing…")
         .setProgress(total, done, total == 0)
+        .setContentIntent(openApp(context))
+        .addAction(0, "Stop", stop)
         .setOngoing(true)
         .setOnlyAlertOnce(true)
         .setSilent(true)

@@ -48,6 +48,11 @@
             android:foregroundServiceType="dataSync"
             tools:node="merge" />
 
+        <!-- "Stop" on the backup notification (T-006). -->
+        <receiver
+            android:name=".backup.BackupStopReceiver"
+            android:exported="false" />
+
         <!-- WorkManager is initialised by PicfortApplication (Hilt worker factory). -->
         <provider
             android:name="androidx.startup.InitializationProvider"

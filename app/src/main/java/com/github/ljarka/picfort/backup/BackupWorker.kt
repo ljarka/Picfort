@@ -24,15 +24,15 @@ class BackupWorker @AssistedInject constructor(
 ) : CoroutineWorker(context, params) {
 
     override suspend fun doWork(): Result {
+        var outcome: BackupOutcome? = null
         val (result, message) = try {
             promoteToForeground(0, 0)
-            val outcome = engine.run {
+            outcome = engine.run {
                 setProgress(workDataOf(KEY_DONE to it.done, KEY_TOTAL to it.total))
                 promoteToForeground(it.done, it.total)
             }
-            when (outcome) {
-                is BackupOutcome.Done -> Result.success(workDataOf(KEY_UPLOADED to outcome.uploaded)) to
-                    summary(outcome)
+            when (val o = outcome) {
+                is BackupOutcome.Done -> Result.success(workDataOf(KEY_UPLOADED to o.uploaded)) to summary(o)
 
                 BackupOutcome.NoMediaAccess -> Result.failure() to "Allow access to photos and videos"
 
@@ -42,7 +42,7 @@ class BackupWorker @AssistedInject constructor(
                 BackupOutcome.NotLoggedIn -> Result.failure() to "Log in to back up"
 
                 is BackupOutcome.QuotaExceeded -> Result.failure() to buildString {
-                    if (outcome.uploaded > 0) append("Uploaded ${outcome.uploaded} · ")
+                    if (o.uploaded > 0) append("Uploaded ${o.uploaded} · ")
                     append("Storage quota on the server is full. Ask your Immich admin to raise it.")
                 }.also { showQuotaExceededNotification(applicationContext) }
             }
@@ -61,6 +61,11 @@ class BackupWorker @AssistedInject constructor(
         if (!isStopped) {
             settings.lastResult = message
             settings.lastRunAt = System.currentTimeMillis()
+            if (BackupScheduler.NOW_TAG in tags) {
+                backupFinishedTitle(outcome, retrying = result == Result.retry())?.let {
+                    showBackupFinishedNotification(applicationContext, it, message)
+                }
+            }
         }
         return result
     }
@@ -79,6 +84,16 @@ class BackupWorker @AssistedInject constructor(
     }
 
     private fun summary(o: BackupOutcome.Done) = backupSummary(o, homeAddressSet = settings.homeUrl.isNotBlank())
+}
+
+/**
+ * The title of the notification a "Back up now" run leaves when it ends (T-006), above the same
+ * line as in Settings. None while it will retry, or when the quota has its own notification.
+ */
+fun backupFinishedTitle(outcome: BackupOutcome?, retrying: Boolean): String? = when {
+    retrying || outcome is BackupOutcome.QuotaExceeded -> null
+    outcome is BackupOutcome.Done -> "Backup complete"
+    else -> "Backup didn't finish"
 }
 
 /** The last backup's line in Settings. */

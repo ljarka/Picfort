@@ -39,6 +39,7 @@ class NetworkModule {
             // Coil loads Family Wall photos with this client too.
             .addInterceptor(wallAuthInterceptor)
             .addInterceptor(picfortKeyInterceptor)
+            .addInterceptor(UploadTimeoutInterceptor())
         if (BuildConfig.DEBUG) {
             // Debug only: bodies include the login password. Added last so it
             // sees the final request, with credentials redacted.
