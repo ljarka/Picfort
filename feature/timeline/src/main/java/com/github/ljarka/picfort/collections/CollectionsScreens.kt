@@ -14,6 +14,7 @@ import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.lazy.grid.rememberLazyGridState
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
@@ -38,6 +39,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -259,6 +261,13 @@ fun SearchContent(
                     peopleRow(state.people, state.addedToRow)
                         .map { FamilyMember(it.id, it.name, personThumbnail(it.id), accent) }
                 }
+                // Someone picked under "All people" joins at the end: scroll there so they're seen.
+                val rowState = rememberLazyListState()
+                var addedSeen by rememberSaveable { mutableIntStateOf(state.addedToRow.size) }
+                LaunchedEffect(state.addedToRow.size) {
+                    if (state.addedToRow.size > addedSeen) rowState.animateScrollToItem(row.lastIndex)
+                    addedSeen = state.addedToRow.size
+                }
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
                     modifier = Modifier.fillMaxWidth().padding(start = 16.dp, end = 4.dp),
@@ -288,6 +297,7 @@ fun SearchContent(
                         if (id != null) onTogglePerson(id, query)
                     },
                     onEditMember = null,
+                    state = rowState,
                 )
             }
             if (showAllPeople) {
