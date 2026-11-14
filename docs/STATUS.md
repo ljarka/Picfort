@@ -36,7 +36,7 @@ Surface more of what Immich already knows.
 | [T-007](tasks/T-007-memories-screen.md) | Memories screen ("On This Day") | `ready` |
 | [T-008](tasks/T-008-people-screen.md) | People screen (browse by face) | `ready` |
 | [T-009](tasks/T-009-map-view.md) | Map view (photos by location) | `ready` |
-| [T-015](tasks/T-015-timeline-sync-stream.md) | Timeline from Immich's sync stream (local copy, offline; code merged, check on a device) | `in-progress` |
+| [T-015](tasks/T-015-timeline-sync-stream.md) | Timeline from Immich's sync stream (local copy, offline) | `done` |
 | [T-016](tasks/T-016-justified-timeline-layout.md) | Justified timeline layout from known aspect ratios (after T-015) | `done` |
 
 ### Phase 4 — Frame enhancements

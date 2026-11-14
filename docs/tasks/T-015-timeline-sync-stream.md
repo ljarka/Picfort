@@ -1,6 +1,6 @@
 # T-015 — Timeline from Immich's sync stream
 
-**Status:** in-progress (code merged in PR #27; check the criteria below on a device)  
+**Status:** done (`7c35b78`, PR #27; device checks finished 2026-11-14)  
 **Component:** Android app  
 **Depends on:** — (decision: [ADR 0005](../decisions/0005-timeline-sync-stream.md))
 
@@ -110,14 +110,16 @@ Check these with a second account before relying on them.
 - [x] Killing the app during the first sync and starting it again continues without
       duplicates or gaps.
       _Emulator 2026-11-11: killed 0.4 s into the stream; the test account (261 assets) fits one batch, so a half-applied copy is covered only by `SyncEngineTest`._
-- [ ] A `SyncResetV1` from the server rebuilds the copy, and a client-requested `reset: true`
+- [x] A `SyncResetV1` from the server rebuilds the copy, and a client-requested `reset: true`
       wipes the copy first (no `SyncResetV1` comes for it).
-      _Emulator 2026-11-11: the client-requested half passes (empty copy → `"reset":true`, no `SyncResetV1`). A server-sent `SyncResetV1` was not triggered (needs a flag in the Immich DB)._
+      _Emulator 2026-11-11: the client-requested half passes (empty copy → `"reset":true`, no `SyncResetV1`). A server-sent `SyncResetV1` was not triggered (needs a flag in the Immich DB).
+      The owner accepted `SyncEngineTest` for the server-sent half (2026-11-14): triggering it means
+      editing the Immich database by hand._
 - [x] Logout, then log in as another user: no assets of the first user remain.
 - ~~On a v1 server the old path still works.~~ Dropped: Immich older than v2 is not supported.
-- [ ] Timeline benchmark (`:benchmark`) passes. Compare frame times with `main` interleaved
+- [x] Timeline benchmark (`:benchmark`) passes. Compare frame times with `main` interleaved
       (emulator noise is large, see PR #25).
-      _2026-11-11: the benchmark now opens the Photos tab (the app starts on the Wall) and passes on the emulator (frame CPU P90 10.5 ms, overrun P90 1.6 ms). The interleaved comparison with the pre-T-015 build is still to do._
+      _2026-11-11: the benchmark now opens the Photos tab (the app starts on the Wall) and passes on the emulator (frame CPU P90 10.5 ms, overrun P90 1.6 ms). The owner dropped the interleaved comparison with the pre-T-015 build (2026-11-14)._
 - [x] Unit tests: line parsing, ack batching (latest per type, ≤ 1000), reset handling and the
       timeline filter query (Room in-memory DB).
       _Parsing, ack batching and reset: `SyncEngineTest`. Filter query: `RemoteAssetsDaoTest`
