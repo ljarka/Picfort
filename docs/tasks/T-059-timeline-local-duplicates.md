@@ -1,6 +1,6 @@
 # T-059 — Photos: phone copies already in Immich show once
 
-**Status:** in-progress  
+**Status:** done (85cdf30; device check pending)  
 **Component:** Android app (`:feature:timeline`, `:core:database`)  
 **Depends on:** ADR 0005 (sync stream), T-015
 
