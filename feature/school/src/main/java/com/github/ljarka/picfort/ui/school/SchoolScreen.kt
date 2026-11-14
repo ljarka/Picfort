@@ -364,7 +364,9 @@ private fun Timetable(
     }
     LaunchedEffect(state.day, days) {
         val index = days.indexOf(state.day)
-        if (index >= 0 && index != pager.currentPage) pager.scrollToPage(index)
+        if (index >= 0 && index != pager.currentPage && !pager.isScrollInProgress) {
+            pager.scrollToPage(index)
+        }
     }
     DayChips(days, state.day, state.today, locale) { day ->
         actions.onSelectDay(day)

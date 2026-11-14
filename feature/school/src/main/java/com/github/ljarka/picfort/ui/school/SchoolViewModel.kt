@@ -76,7 +76,10 @@ class SchoolViewModel @Inject constructor(
             combine(local, repository.children, repository.offlineSince) { ui, children, offline ->
                 val withChildren = ui.copy(children = children, offlineSince = offline?.let(::savedAt))
                 // Today's page, or Monday when today has no chip (weekend without entries).
-                withChildren.copy(day = withChildren.day.takeIf { it in withChildren.days } ?: DayOfWeek.MONDAY)
+                withChildren.copy(
+                    day = withChildren.day.takeIf { it in withChildren.days }
+                        ?: startDay(withChildren.today, withChildren.days),
+                )
             }.collect { _state.value = it }
         }
     }
@@ -90,7 +93,7 @@ class SchoolViewModel @Inject constructor(
     suspend fun tick() {
         while (true) {
             local.update { it.withClock() }
-            val now = LocalTime.now()
+            val now = LocalDateTime.now()
             delay(ChronoUnit.MILLIS.between(now, now.truncatedTo(ChronoUnit.MINUTES).plusMinutes(1)).coerceAtLeast(1))
         }
     }

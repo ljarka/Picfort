@@ -195,7 +195,9 @@ fun EntryForm(
     var period by remember {
         mutableStateOf(if (entry == null) firstFreePeriod(child, day) else entry.period)
     }
-    var custom by remember { mutableStateOf(entry != null && entry.period == null) }
+    var custom by remember {
+        mutableStateOf(entry?.let { it.period == null } ?: (firstFreePeriod(child, day) == null))
+    }
     var start by remember { mutableStateOf(entry?.start) }
     var end by remember { mutableStateOf(entry?.end) }
     var added by remember { mutableStateOf(0) }
@@ -222,7 +224,13 @@ fun EntryForm(
         teacher = ""
         note = ""
         if (byPeriod) {
-            period = firstFreePeriod(child, day, after = previous)
+            val next = firstFreePeriod(child, day, after = previous)
+            if (next != null) {
+                period = next
+            } else {
+                period = null
+                custom = true
+            }
         } else if (end != null) {
             val length = java.time.Duration.between(start, end)
             start = end
@@ -268,7 +276,19 @@ fun EntryForm(
                             label = { Text("${p.number} · ${time(p.start)}") },
                         )
                     }
-                    FilterChip(selected = custom, onClick = { custom = true }, label = { Text("Custom time") })
+                    FilterChip(
+                        selected = custom,
+                        onClick = {
+                            custom = true
+                            if (start == null || end == null) {
+                                child.periods.firstOrNull { it.number == period }?.let {
+                                    if (start == null) start = it.start
+                                    if (end == null) end = it.end
+                                }
+                            }
+                        },
+                        label = { Text("Custom time") },
+                    )
                 }
             }
         }
@@ -384,11 +404,15 @@ fun BellsForm(
             }
         }
         if (!valid) Text("Each period must end after it starts", color = MaterialTheme.colorScheme.error)
-        TextButton(onClick = {
-            val last = periods.lastOrNull()
-            val start = last?.end?.plusMinutes(10) ?: LocalTime.of(8, 0)
-            periods += Period((last?.number ?: 0) + 1, start, start.plusMinutes(45))
-        }) { Text("Add period") }
+        val canAddPeriod = (periods.lastOrNull()?.number ?: 0) < 15
+        TextButton(
+            onClick = {
+                val last = periods.lastOrNull()
+                val start = last?.end?.plusMinutes(10) ?: LocalTime.of(8, 0)
+                periods += Period((last?.number ?: 0) + 1, start, start.plusMinutes(45))
+            },
+            enabled = canAddPeriod,
+        ) { Text("Add period") }
 
         HorizontalDivider()
         Text("Generate times", style = MaterialTheme.typography.titleMedium)
