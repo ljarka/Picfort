@@ -1,6 +1,6 @@
 # T-070 — Delete an Immich album
 
-**Status:** done (pending)  
+**Status:** done (9588713)  
 **Component:** Android app (`:feature:timeline`, `:app` navigation)  
 **Depends on:** T-062 (Immich 3 contract)
 
