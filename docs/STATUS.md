@@ -114,7 +114,7 @@ Android task except T-017 and T-026 starts with a mockup the owner approves.
 | [T-040](tasks/T-040-shopping-reminders-android.md)          | Shopping list reminders — Android notifications                                                     | `ready`       |
 | [T-041](tasks/T-041-wishlist-backend.md)                    | Wishlist & link preview — server API (`shopping.db` v2)                                             | `ready`       |
 | [T-042](tasks/T-042-wishlist-android.md)                    | Wishlist carousel & event linking — Android                                                         | `ready`       |
-| [T-052](tasks/T-052-photos-family-carousel.md)              | Photos — family carousel, photos of one person (per-parent link to Immich people)                   | `in-progress` |
+| [T-052](tasks/T-052-photos-family-carousel.md)              | Photos — family carousel, photos of one person (per-parent link to Immich people)                   | `done`        |
 | [T-053](tasks/T-053-events-who.md)                          | Events — who the event is for (family members on an event)                                          | `done`        |
 | [T-054](tasks/T-054-events-member-filter.md)                | Events — filter the list by family member                                                           | `done`        |
 | [T-055](tasks/T-055-birthday-photos.md)                     | Events — photos from past birthdays in a birthday's detail                                          | `done`        |

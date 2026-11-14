@@ -1,6 +1,6 @@
 # T-052 — Photos: the family carousel, photos of one person
 
-**Status:** in-progress (mockup approved 2026-11-12: `docs/wireframes/photos-people-v1.png`, frames 1–3;
+**Status:** done (`9cf5731`; mockup approved 2026-11-12: `docs/wireframes/photos-people-v1.png`, frames 1–3;
 the "In my photos" section of frames 4–5 was dropped: choosing a face already links)  
 **Component:** Android app + server (`family.db` v4)  
 **Depends on:** T-032/T-034 (members, Immich people picker), ADR 0010
@@ -37,5 +37,6 @@ with that person (newest first); tapping again goes back to the whole timeline.
 - [x] Picking a face links the member (repository test); the carousel shows on Photos, faded when not linked.
 - [x] Not linked → snackbar above the tab bar → Link opens the member's sheet (checked on the emulator).
 - [x] Request shape of `search/metadata` accepted by Immich (checked on the test account).
-- [ ] A linked member shows their photos on a device (needs named people; the test account has none).
+- [x] A linked member shows their photos on a device (checked by the owner on their phone, 2026-11-14;
+      the test account has no named people).
 - [x] Paparazzi: Photos with the carousel, a person's photos, not linked.
