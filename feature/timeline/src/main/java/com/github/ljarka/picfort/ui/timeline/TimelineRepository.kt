@@ -22,8 +22,12 @@ import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.stateIn
 import retrofit2.HttpException
 
-/** The phone's media and which of it is already backed up (local id → Immich id). */
-private class LocalSnapshot(val media: List<ImageData>, val backups: Map<Long, String>)
+/** The phone's media and what Picfort's backup knows of it: Immich ids and SHA-1s (hex). */
+private class LocalSnapshot(
+    val media: List<ImageData>,
+    val backupLinks: Map<Long, String>,
+    val checksums: Map<Long, String>,
+)
 
 /**
  * The whole timeline as one in-memory [TimelineIndex]: the synced Immich copy (Room) merged
@@ -43,9 +47,9 @@ class TimelineRepository @Inject constructor(
 
     /** Null until the first build; then the current timeline. */
     val index: StateFlow<TimelineIndex?> = combine(remote.assets(), local.filterNotNull()) { assets, snapshot ->
-        val remoteIds = assets.mapTo(HashSet()) { it.id }
-        val backedUp = snapshot.backups.filterValues { it in remoteIds }.keys
-        buildTimelineIndex(assets, snapshot.media, backedUp, ZoneId.systemDefault())
+        val zone = ZoneId.systemDefault()
+        val onServer = localIdsOnServer(assets, snapshot.media, snapshot.backupLinks, snapshot.checksums, zone)
+        buildTimelineIndex(assets, snapshot.media, onServer, zone)
     }.flowOn(Dispatchers.Default)
         .stateIn(coroutineScope, SharingStarted.Eagerly, null)
 
@@ -75,8 +79,12 @@ class TimelineRepository @Inject constructor(
 
     private suspend fun reloadLocal() {
         val media = LocalImagesProvider().getAll(context)
-        val backups = backupDao.getAll().mapNotNull { row -> row.remoteId?.let { row.localId to it } }.toMap()
-        local.value = LocalSnapshot(media, backups)
+        val rows = backupDao.getAll()
+        local.value = LocalSnapshot(
+            media = media,
+            backupLinks = rows.mapNotNull { row -> row.remoteId?.let { row.localId to it } }.toMap(),
+            checksums = rows.associate { it.localId to it.checksum },
+        )
     }
 
     private fun TimelineAsset.toAssetUi() = AssetUi(

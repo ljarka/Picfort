@@ -121,6 +121,7 @@ Android task except T-017 and T-026 starts with a mockup the owner approves.
 | [T-056](tasks/T-056-birthday-year-to-timeline.md) | Events — a birthday's year opens Photos on that day | `done` |
 | [T-057](tasks/T-057-search-by-people.md) | Photos — search by Immich people | `done` |
 | [T-058](tasks/T-058-one-page-setup.md) | First start on one screen (Immich + Picfort server); https:// by default | `done` |
+| [T-059](tasks/T-059-timeline-local-duplicates.md) | Photos — phone copies already in Immich show once (checksum, name + time) | `done` |
 
 ### Phase 8 — Modular Architecture (Agentic Pair Programming)
 Deconstruct monolithic `:app` into isolated feature slices and core foundations (ADR 0011).

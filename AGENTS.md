@@ -31,7 +31,7 @@ Do not load the whole project. Each module's `AGENTS.md` tells you what to read.
 |---|---|---|
 | `:core:model` | Pure domain models (`FamilyMember`, `ShoppingList`, `FamilyEvent`, provider interfaces) | done |
 | `:core:ui` | Design tokens, `PicfortTheme`, `MemberAvatar`, `ServerRequiredContent`, shared drawables | done |
-| `:core:database` | Room DB v22, DAOs (`ShoppingDao`, `UsersDao`, `EventsDao`), Entities | done |
+| `:core:database` | Room DB v23, DAOs (`ShoppingDao`, `UsersDao`, `EventsDao`), Entities | done |
 | `:core:network` | `PicfortServerClient`, `ServerUrlStore`, `AccessTokenStore`, `FrameSettingsStore` | done |
 | `:feature:wall` | Family Wall posts feed, photo posting, reactions, today summary panel | done |
 | `:feature:shopping` | Shared shopping lists, checklist items, categories, receipts & wishlist | done |

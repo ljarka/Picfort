@@ -11,6 +11,7 @@ Immich photo timeline, gallery, full-screen viewer, collections, and media sync 
 | `ui/timeline/TimelineViewModel.kt` | ViewModel: layout engine, viewports, selection mode, asset actions |
 | `core/ui/src/main/java/com/github/ljarka/picfort/core/ui/layout/JustifiedLayout.kt` | Shared justified row computation (`justify`) used by timeline layout |
 | `ui/timeline/layout/TimelineRows.kt` | Row measurement and tile placement |
+| `ui/timeline/LocalDuplicates.kt` | `localIdsOnServer`: phone media already in Immich (backup link, SHA-1, or file name + time taken ± zone offset) is hidden, shown once as the Immich copy |
 | `ui/timeline/SyncTimelineSource.kt` | Local copy of Immich assets kept fresh via sync stream |
 | `ui/image/ImageDetailsScreen.kt` | Full-screen photo/video viewer, shared element transition |
 | `ui/image/ImageDetailsViewModel.kt` | Viewer ViewModel: zoom, EXIF metadata, pushing photo to frame via `FrameSender` |

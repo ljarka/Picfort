@@ -29,7 +29,10 @@ data class RemoteAssetEntity(
     val livePhotoVideoId: String?,
     val stackId: String?,
     val isFavorite: Boolean,
+    /** SHA-1, base64. */
     val checksum: String,
+    /** As uploaded; with the time taken it recognises phone photos backed up by another app. */
+    val originalFileName: String? = null,
 )
 
 @Entity(tableName = "remote_stacks")

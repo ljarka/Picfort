@@ -47,13 +47,13 @@ class TimelineIndex(val months: List<TimelineMonth>) {
 }
 
 /**
- * Merges the synced Immich assets with the phone's media. Phone media already backed up to
- * one of [remote] ([backedUpLocalIds]) is left out, so it shows once, as the Immich copy.
+ * Merges the synced Immich assets with the phone's media. Phone media already on the server
+ * ([onServerLocalIds], see [localIdsOnServer]) is left out, so it shows once, as the Immich copy.
  */
 fun buildTimelineIndex(
     remote: List<RemoteAssetEntity>,
     local: List<ImageData>,
-    backedUpLocalIds: Set<Long>,
+    onServerLocalIds: Set<Long>,
     zone: ZoneId,
 ): TimelineIndex {
     val assets = ArrayList<TimelineAsset>(remote.size + local.size)
@@ -71,13 +71,11 @@ fun buildTimelineIndex(
         )
     }
     local.forEach { m ->
-        if (m.id in backedUpLocalIds) return@forEach
-        val instant = Instant.ofEpochMilli(m.dateTaken)
+        if (m.id in onServerLocalIds) return@forEach
         assets += TimelineAsset(
             id = m.id.toString(),
             type = AssetType.LOCAL,
-            // DATE_TAKEN is a real instant; shift it to wall-clock time like Immich's localDateTime.
-            dateTaken = m.dateTaken + zone.rules.getOffset(instant).totalSeconds * 1000L,
+            dateTaken = wallClock(m.dateTaken, zone),
             ratio = ratioOf(m.width, m.height),
             isVideo = m.isVideo,
             durationMs = m.durationMs,
