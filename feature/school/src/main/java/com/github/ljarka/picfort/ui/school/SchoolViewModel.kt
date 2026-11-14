@@ -92,12 +92,13 @@ class SchoolViewModel @Inject constructor(
                         ?: child
                 }
                 val withChildren = ui.copy(children = named, offlineSince = offline?.let(::savedAt))
-                // Today's page, or Monday when today has no chip (weekend without entries).
-                withChildren.copy(
-                    day = withChildren.day.takeIf { it in withChildren.days }
-                        ?: startDay(withChildren.today, withChildren.days),
-                )
-            }.collect { _state.value = it }
+                withChildren.copy(day = shownDay(withChildren.day, withChildren.today, withChildren.days))
+            }.collect { shown ->
+                _state.value = shown
+                // The chosen day's chip is gone (e.g. Saturday after editing): remember the day shown,
+                // so the pager and the chosen day can't chase each other (T-069).
+                local.update { if (it.day != shown.day && it.day !in shown.days) it.copy(day = shown.day) else it }
+            }
         }
         viewModelScope.launch { familyMembers.allMembers.collect { all -> local.update { it.copy(family = all) } } }
     }

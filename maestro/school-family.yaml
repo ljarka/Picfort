@@ -50,6 +50,22 @@ name: School — two children, restart, swipe, polling (T-029)
     visible: "Period 1, .*Maths T029.*"
     timeout: 5000
 
+# Saturday chosen while editing, then Done: its chip goes and the screen settles on a weekday (T-069,
+# it used to flicker between two days); a chip tap then sticks
+- tapOn: "Edit timetable"
+- tapOn: "Sat.*"
+- tapOn: "Done editing"
+- extendedWaitUntil:
+    notVisible: "Sat.*"
+    timeout: 5000
+- tapOn: "Tue.*"
+- extendedWaitUntil:
+    visible: "Period 1, .*Art T029.*"
+    timeout: 5000
+- waitForAnimationToEnd
+- assertVisible: "Period 1, .*Art T029.*"
+- tapOn: "Mon.*"
+
 # Another phone adds a lesson: it shows up within a minute while the tab is open
 - runScript:
     file: scripts/test-data.js

@@ -24,6 +24,8 @@ Server API: T-028 (`picfort-server/school.py`, `/school`, `school.db`).
 - Edit mode (✎) gates every change except adding a child; tap the selected chip (or long-press) to edit it.
 - Activities differ from lessons by container color **and** a star icon. Today's current row is
   highlighted, finished ones dimmed. Weekend chips only with entries (always while editing).
+- One chosen day: when its chip goes (`shownDay`), the ViewModel stores the fallback too, and the pager
+  sits in `key(days)` (a new pager per list of days); else the two fight and the screen flickers (T-069).
 - Times: `H:mm` or `h:mm a` from the device setting (`timeFormatter`), ranges via `timeRange`; day names from the locale.
 - Children are family members (T-066, T-068): `Child.memberId` (server `immich_user_id`); name and face
   from `FamilyMemberProvider.allMembers`; row = `MemberCarousel`; its "+" opens Family settings, where
