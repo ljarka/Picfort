@@ -102,8 +102,10 @@ Check these with a second account before relying on them.
 - [x] Scrolling the whole timeline makes no `/timeline/bucket` requests (check OkHttp logs).
 - [x] Deleting, archiving or uploading an asset in the Immich web UI shows up after
       pull-to-refresh.
-- [ ] Partners with "show in timeline" appear, and disappear when the setting is turned off.
-      _Not checked: needs another Immich user sharing with the test account._
+- [x] Partners with "show in timeline" appear, and disappear when the setting is turned off.
+      _Emulator 2026-11-14: a second test user shares 3 photos dated December 2026 with the test
+      account; "December, 2026" tops the timeline after pull-to-refresh with `inTimeline: true`
+      and is gone after turning it off (`PUT /api/partners/{id}`). The sharing stays set up, off._
 - [x] Stacked assets show once (primary only).
 - [x] Killing the app during the first sync and starting it again continues without
       duplicates or gaps.
