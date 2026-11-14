@@ -22,6 +22,7 @@ This file is the index. Keep it short (< 150 lines); details live where the tabl
 | Architecture decisions | [docs/decisions/](docs/decisions/README.md) (ADRs) |
 | Roadmap & Status | [docs/STATUS.md](docs/STATUS.md) |
 | Module scope & details | `<module>/AGENTS.md` |
+| Procedures: device test, new feature module, finishing a task | [.agents/skills/](.agents/skills/) (`picfort-*`, [Agent Skills](https://agentskills.io) format) |
 
 Do not load the whole project. Each module's `AGENTS.md` tells you what to read.
 
