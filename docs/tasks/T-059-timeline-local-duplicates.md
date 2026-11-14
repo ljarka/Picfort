@@ -1,6 +1,6 @@
 # T-059 — Photos: phone copies already in Immich show once
 
-**Status:** done (85cdf30; device check pending)  
+**Status:** done (85cdf30)  
 **Component:** Android app (`:feature:timeline`, `:core:database`)  
 **Depends on:** ADR 0005 (sync stream), T-015
 
@@ -26,4 +26,12 @@ left out and shows once, as the Immich copy.
 
 - [x] Unit tests: name + time match (case, sub-second, zone shift), different time/year not matched,
   checksum and backup-link match, hex → base64 (`LocalDuplicatesTest`).
-- [ ] Device check: a photo uploaded with Immich's app shows once on the timeline.
+- [x] Device check: a photo uploaded with Immich's app shows once on the timeline.
+
+## Device check (2026-11-14, emulator, test account)
+
+- Phone: `T059_SAME.jpg` (red, EXIF 12:00 +01:00) and `T059_PHONE_ONLY.jpg` (green). Immich:
+  `T059_SAME.jpg` with other pixels (blue, so another checksum), uploaded straight through the API.
+- Before (old build): red and blue both on the timeline. After: blue only, green still there.
+  Backup was off, so the match came from name + time. Test files removed afterwards.
+- Note: MediaStore leaves `datetaken` empty for a JPEG without `OffsetTimeOriginal`.
