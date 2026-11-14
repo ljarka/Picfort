@@ -130,6 +130,7 @@ Android task except T-017 and T-026 starts with a mockup the owner approves.
 | [T-065](tasks/T-065-wall-waits-for-timeline-sync.md) | Family Wall slow after an update: no longer waits for the Immich users sync | `done` |
 | [T-066](tasks/T-066-school-children-from-family.md) | School: children picked from family members, avatar row with "+" as on the Wall | `done` |
 | [T-067](tasks/T-067-backup-original-files.md) | Backup uploads originals (ACCESS_MEDIA_LOCATION): no duplicates, locations kept | `done` |
+| [T-068](tasks/T-068-goes-to-school-in-family.md) | "Goes to school" switch in Family settings; School's "+" opens Family; "+" without caption | `done` |
 
 ### Phase 8 — Modular Architecture (Agentic Pair Programming)
 Deconstruct monolithic `:app` into isolated feature slices and core foundations (ADR 0011).
