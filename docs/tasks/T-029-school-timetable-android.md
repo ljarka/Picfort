@@ -136,7 +136,7 @@ changed by accident.
 - [x] Paparazzi: school day (before, during, after), weekend with an activity, empty day, no
       children, edit mode, entry sheet (lesson, activity), bell schedule, offline banner, one
       dark.
-- [ ] README Features and screenshots; CI passes.
+- [x] README Features and screenshots; CI passes.
 
 ## Out of scope
 
