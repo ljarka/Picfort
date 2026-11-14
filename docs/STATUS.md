@@ -100,7 +100,7 @@ Android task except T-017 and T-026 starts with a mockup the owner approves.
 | [T-026](tasks/T-026-event-albums-android.md) | Events — link or create a family-shared Immich album (Android) | `ready` |
 | [T-027](tasks/T-027-wall-today-panel.md) | Family Wall — today panel: date and the day's event | `done` |
 | [T-028](tasks/T-028-school-timetable-backend.md) | School timetable — server API (`school.db`): children, bell schedule, lessons, activities | `done` |
-| [T-029](tasks/T-029-school-timetable-android.md) | School timetable — Android: child chips, "finishes at", week by day, editing | `ready` |
+| [T-029](tasks/T-029-school-timetable-android.md) | School timetable — Android: child chips, "finishes at", week by day, editing | `done` |
 | [T-030](tasks/T-030-children-immich-people.md) | Children from Immich people: face photo, per-parent link, "Photos of Ola" | `ready` |
 | [T-031](tasks/T-031-family-profiles-backend.md) | Family profiles — server (`family.db`): display name, photo, hidden, per Immich user | `done` |
 | [T-032](tasks/T-032-family-settings-android.md) | Family settings — Android: rename, photo from Immich people, hide; one source of members | `done` |
