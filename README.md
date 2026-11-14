@@ -183,7 +183,7 @@ docker compose up -d
 
 Then in the app: **Settings → Picfort server**, enter `<this machine's IP>:5000` and tap **Test**.
 
-- The Family Wall and its photos, the shopping lists, the family profiles, the events and the slideshow settings are stored in `./data` (`DATA_LOCATION` in `.env`). Back up that folder.
+- The Family Wall and its photos, the shopping lists, the family profiles, the events, the school timetables and the slideshow settings are stored in `./data` (`DATA_LOCATION` in `.env`). Back up that folder.
 - Update: `docker compose pull && docker compose up -d`. Pin a version with `PICFORT_VERSION=v0.3.0` in `.env`.
 - Logs: `docker compose logs -f`.
 - The image is built for `amd64` and `arm64` (64-bit Raspberry Pi OS). Any variable from the table below can go in `.env`.
@@ -281,6 +281,8 @@ The frame uses Waveshare's 13.3" E Ink Spectra 6 panel (1200×1600, 6 colours, a
 | `FAMILY_DB_PATH` | `family.db` | Family member profiles (SQLite) |
 | `PROFILE_PHOTOS_PATH` | `profile_photos` | Directory for family profile photos |
 | `EVENTS_DB_PATH` | `events.db` | Family events (SQLite) |
+| `SCHOOL_DB_PATH` | `school.db` | School timetables (SQLite) |
+| `CHILD_PHOTOS_PATH` | `child_photos` | Directory for children's photos (school timetables) |
 | `FRAME_PREVIEW_PATH` | `last_frame.png` | Where the last rendered frame is saved (shown at `/current`) |
 | `PORT` | `5000` | HTTP port |
 | `PICFORT_API_KEY` | (empty) | When set, every request needs `X-Picfort-Key: <key>` (enter it in the app next to the address). Required before exposing the server outside your network (ADR 0007). |
@@ -367,6 +369,27 @@ Family events (trips, holidays, birthdays) with plain calendar dates, recurrence
 | `DELETE /events/<id>` | `204`. The creator only (`403`). `409` on birthday events. Does not touch the Immich album. |
 
 An event looks like `{"id","title","start_date","end_date","start_time","location","note","album_id","repeat","repeat_until","kind","member_id","occurrence_start","occurrence_end","turns","created_by","created","updated"}` (unset fields are `null`; an `end_date` equal to `start_date` is stored as `null`). Events are stored in `events.db` (ADR 0008, ADR 0010); additive migrations keep `events.db.v<old>.bak`.
+
+#### School timetables
+
+A weekly timetable per child: a bell schedule (period times) and lessons and extracurricular activities per day of the week. Anyone in the family can add, change and delete (T-028, ADR 0008). Auth as `/wall`.
+
+| Endpoint | Result |
+|---|---|
+| `GET /school` | `{"children": [child, …]}` by name, each with its `periods` and `entries`. |
+| `POST /school/children` | `{"name", "color"}` (an Immich avatar color: primary, pink, red, yellow, blue, green, purple, orange, gray, amber) → `201` child. |
+| `PATCH /school/children/<id>` | `{"name"?, "color"?, "immich_user_id"?}`. Returns the child. |
+| `DELETE /school/children/<id>` | `204`; with its bell schedule, entries, links and photo. |
+| `PUT /school/children/<id>/photo` | `multipart/form-data` `photo` (JPEG or PNG, max 2 MB); replaces the old one. `DELETE` removes it (`204`). |
+| `GET /school/children/photo/<file>` | The photo (`photo_url`), `Cache-Control: private`. |
+| `PUT /school/children/<id>/person` | `{"person_id"}`: the caller's link to a person in their own Immich library (returned as `my_person_id`, only to that caller). `DELETE` removes the caller's link (`204`). |
+| `PUT /school/children/<id>/periods` | `[{"number", "start_time", "end_time"}, …]` (`number` 0–15, `HH:MM`). Replaces the bell schedule: lessons on a kept period get its new times; lessons on a removed one keep their times and lose the period. Returns the child. |
+| `POST /school/children/<id>/entries` | `{"kind": "lesson"\|"activity", "weekday": 1–7, "title", "period"? or "start_time" + "end_time", "place"?, "teacher"?, "note"?}` → `201` entry. A lesson with a `period` takes its times from the bell schedule. At most 20 entries a day. |
+| `PATCH /school/children/<id>/entries/<entry>` | Same fields (`null` clears an optional one); `DELETE` → `204`. |
+| `POST /school/children/<id>/copy-day` | `{"from", "to", "kinds"?}`: replaces the `to` day's entries of those kinds (default lessons) with copies of the `from` day's. Returns the child. |
+| `POST /school/children/<id>/copy-periods` | `{"from_child"}`: copies another child's bell schedule. Returns the child. |
+
+A child looks like `{"id","name","color","immich_user_id","photo_url","my_person_id","created_by","updated","periods","entries"}`; an entry like `{"id","kind","weekday","start_time","end_time","title","period","place","teacher","note"}`. Times are local wall-clock times. Stored in `school.db` and `child_photos/` (ADR 0008).
 
 Run the tests with `cd picfort-server && python3 -m unittest discover -s tests -t tests`.
 

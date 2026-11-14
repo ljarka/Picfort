@@ -12,7 +12,9 @@ ENV PYTHONUNBUFFERED=1 \
     SHOPPING_DB_PATH=/data/shopping.db \
     FAMILY_DB_PATH=/data/family.db \
     PROFILE_PHOTOS_PATH=/data/profile_photos \
-    EVENTS_DB_PATH=/data/events.db
+    EVENTS_DB_PATH=/data/events.db \
+    SCHOOL_DB_PATH=/data/school.db \
+    CHILD_PHOTOS_PATH=/data/child_photos
 
 WORKDIR /app
 COPY requirements.txt requirements-heif.txt ./
