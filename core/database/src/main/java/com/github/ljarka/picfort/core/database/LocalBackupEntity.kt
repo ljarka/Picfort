@@ -36,6 +36,10 @@ interface BackupDao {
     @Upsert
     suspend fun upsert(rows: List<LocalBackupEntity>)
 
+    /** Forgets files not in Immich yet, so they are hashed again (T-067: from the originals). */
+    @Query("DELETE FROM local_backup WHERE remoteId IS NULL")
+    suspend fun deleteNotUploaded()
+
     @Query("UPDATE local_backup SET remoteId = :remoteId, rejected = NULL WHERE localId = :localId")
     suspend fun setRemoteId(localId: Long, remoteId: String)
 

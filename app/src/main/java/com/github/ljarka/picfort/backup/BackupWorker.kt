@@ -36,6 +36,9 @@ class BackupWorker @AssistedInject constructor(
 
                 BackupOutcome.NoMediaAccess -> Result.failure() to "Allow access to photos and videos"
 
+                BackupOutcome.NoLocationAccess ->
+                    Result.failure() to "Open Picfort and allow photo locations: backup keeps them"
+
                 BackupOutcome.NotLoggedIn -> Result.failure() to "Log in to back up"
 
                 is BackupOutcome.QuotaExceeded -> Result.failure() to buildString {

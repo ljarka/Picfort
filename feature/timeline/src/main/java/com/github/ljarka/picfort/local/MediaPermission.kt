@@ -27,12 +27,27 @@ val mediaPermissions: Array<String> = when {
     else -> arrayOf(Manifest.permission.READ_EXTERNAL_STORAGE)
 }
 
+/**
+ * Photo and video locations (Android 10+). Without it Android strips GPS from what the app reads,
+ * so backup's checksums don't match the originals in Immich: duplicates, and copies with no place
+ * (T-067). Granted with media access; asked for again where it's missing.
+ */
+val locationPermission: String? =
+    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) Manifest.permission.ACCESS_MEDIA_LOCATION else null
+
+/** Whether the original files (with their location) can be read. */
+fun hasOriginalAccess(context: Context): Boolean = locationPermission == null ||
+    ContextCompat.checkSelfPermission(context, locationPermission) == PackageManager.PERMISSION_GRANTED
+
 /** True if at least some photos are readable (full or Android 14 partial access). */
 fun hasMediaAccess(context: Context): Boolean = mediaPermissions.any {
     ContextCompat.checkSelfPermission(context, it) == PackageManager.PERMISSION_GRANTED
 }
 
-/** Asks for media access once per screen entry if it's missing; [onGranted] runs after a grant. */
+/**
+ * Asks for media access (and photo locations) once per screen entry if missing; [onGranted] runs
+ * after a grant.
+ */
 @Composable
 fun RequestMediaPermission(onGranted: () -> Unit) {
     val context = LocalContext.current
@@ -41,6 +56,8 @@ fun RequestMediaPermission(onGranted: () -> Unit) {
     ) { result -> if (result.values.any { it }) onGranted() }
 
     LaunchedEffect(Unit) {
-        if (!hasMediaAccess(context)) launcher.launch(mediaPermissions)
+        if (!hasMediaAccess(context) || !hasOriginalAccess(context)) {
+            launcher.launch(mediaPermissions + listOfNotNull(locationPermission))
+        }
     }
 }

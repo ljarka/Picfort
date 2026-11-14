@@ -3,12 +3,15 @@ package com.github.ljarka.picfort.backup
 import android.content.ContentResolver
 import android.content.Context
 import android.net.Uri
+import android.os.Build
+import android.provider.MediaStore
 import android.util.Log
 import com.github.ljarka.picfort.core.database.BackupDao
 import com.github.ljarka.picfort.core.database.LocalBackupEntity
 import com.github.ljarka.picfort.core.network.AccessTokenStore
 import com.github.ljarka.picfort.core.network.ServerUrlStore
 import com.github.ljarka.picfort.local.hasMediaAccess
+import com.github.ljarka.picfort.local.hasOriginalAccess
 import com.github.ljarka.picfort.local.localImageUri
 import com.github.ljarka.picfort.local.localVideoUri
 import com.github.ljarka.picfort.ui.timeline.TimelineRepository
@@ -46,6 +49,9 @@ sealed interface BackupOutcome {
         val viaHomeNetwork: Boolean = false,
     ) : BackupOutcome
     data object NoMediaAccess : BackupOutcome
+
+    /** No ACCESS_MEDIA_LOCATION: uploads would lose their GPS and not match Immich's copies (T-067). */
+    data object NoLocationAccess : BackupOutcome
     data object NotLoggedIn : BackupOutcome
 
     /** The account's storage quota on the server is full; nothing more can be uploaded. */
@@ -78,6 +84,14 @@ class BackupEngine @Inject constructor(
     suspend fun run(onProgress: suspend (BackupProgress) -> Unit = {}): BackupOutcome {
         if (!accessTokenStore.hasData() || !serverUrlStore.hasData()) return BackupOutcome.NotLoggedIn
         if (!hasMediaAccess(context)) return BackupOutcome.NoMediaAccess
+        if (!hasOriginalAccess(context)) return BackupOutcome.NoLocationAccess
+
+        // Checksums from before T-067 were of the location-stripped files: hash the files not yet
+        // in Immich again from the originals. Uploaded ones keep theirs (re-uploading would duplicate).
+        if (!settings.originalChecksums) {
+            dao.deleteNotUploaded()
+            settings.originalChecksums = true
+        }
 
         // Links to Immich assets only hold for the server and account they came from.
         val owner = "${serverUrlStore.serverUrl}|${accessTokenStore.userId}"
@@ -137,7 +151,7 @@ class BackupEngine @Inject constructor(
                         val row = known[m.id]
                         if (isUnchanged(m, row)) return@mapNotNull row
                         val checksum = try {
-                            context.contentResolver.openInputStream(uriOf(m))?.use(::sha1Hex)
+                            context.contentResolver.openInputStream(originalUriOf(m))?.use(::sha1Hex)
                         } catch (e: FileNotFoundException) {
                             null // deleted since the scan
                         } ?: return@mapNotNull null
@@ -228,9 +242,10 @@ class BackupEngine @Inject constructor(
         val fields = uploadFields(m, serverMajor, settings.deviceId)
             .mapValues { (_, v) -> v.toRequestBody(MultipartBody.FORM) }
         queue.uploading(m.id)
-        val body = ContentUriRequestBody(context.contentResolver, uriOf(m), m.mimeType.toMediaTypeOrNull(), m.size) {
-            queue.progress(m.id, it)
-        }
+        val body =
+            ContentUriRequestBody(context.contentResolver, originalUriOf(m), m.mimeType.toMediaTypeOrNull(), m.size) {
+                queue.progress(m.id, it)
+            }
         val part = MultipartBody.Part.createFormData("assetData", m.fileName, body)
         return try {
             UploadResult.Uploaded(api.upload(checksum, fields, part).id)
@@ -258,6 +273,13 @@ class BackupEngine @Inject constructor(
     }
 
     private fun uriOf(m: LocalMedia): Uri = if (m.isVideo) localVideoUri(m.id) else localImageUri(m.id)
+
+    /**
+     * The file as taken, GPS included: what Immich's own app uploads, so checksums match and Immich
+     * spots duplicates (T-067). Needs ACCESS_MEDIA_LOCATION, checked in [run].
+     */
+    private fun originalUriOf(m: LocalMedia): Uri =
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) MediaStore.setRequireOriginal(uriOf(m)) else uriOf(m)
 }
 
 private fun isUnchanged(m: LocalMedia, row: LocalBackupEntity?) =

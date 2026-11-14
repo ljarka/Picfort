@@ -21,6 +21,7 @@ Immich photo timeline, gallery, full-screen viewer, collections, and media sync 
 | `collections/SearchPeople.kt` | `peopleRow` (first 12 in Immich's order stay put; picks from "All people" appended and scrolled to, T-060), `filterPeople` (case/accents), `PeoplePickerContent` ("All people" sheet) |
 | `sync/SyncEngine.kt` | Immich delta sync engine |
 | `local/LocalImagesProvider.kt` | Device MediaStore photo reader |
+| `local/MediaPermission.kt` | Media permissions + `ACCESS_MEDIA_LOCATION` (`hasOriginalAccess`, backup reads originals, T-067) |
 | `ui/people/PeopleFilterViewModel.kt`, `PersonPhotosContent.kt` | Family carousel on Photos, photos of one person via `search/metadata` (T-052) |
 | `ui/timeline/DayPhotosRepository.kt` | `DayPhotosProvider` (bound in `TimelineBindingsModule`): photos of given days from the local copy; registers the viewer list under `source` (T-055) |
 | `contract/ImmichV3ContractTest.kt` | Real Immich 3.3 responses (`test/resources/immich-v3/`) read with the app's DTOs; refresh on a new major (T-062) |
