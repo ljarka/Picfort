@@ -1,0 +1,193 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex">
+<meta name="theme-color" content="#000000">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<title>Picfort frame</title>
+<!-- T-072: the Picfort frame in a browser. Shows what the frame shows, in full colour. -->
+<style>
+  :root { color-scheme: dark; }
+  html, body { margin: 0; height: 100%; background: #000; color: #eee; overflow: hidden;
+    font: 16px/1.4 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+  body.idle { cursor: none; }
+  .photo { position: fixed; inset: 0; width: 100%; height: 100%; object-fit: cover;
+    opacity: 0; transition: opacity 1.5s ease; }
+  .photo.contain { object-fit: contain; }
+  .photo.on { opacity: 1; }
+  #note { position: fixed; left: 50%; top: 50%; transform: translate(-50%, -50%);
+    text-align: center; color: #aaa; max-width: 80vw; }
+  #offline { position: fixed; right: 16px; bottom: 16px; padding: 4px 10px; border-radius: 12px;
+    background: rgba(0,0,0,.55); color: #ddd; font-size: 13px; display: none; }
+  #bar { position: fixed; left: 50%; bottom: 24px; transform: translateX(-50%); display: flex; gap: 8px;
+    padding: 8px; border-radius: 24px; background: rgba(20,20,20,.8); transition: opacity .4s; }
+  body.idle #bar { opacity: 0; pointer-events: none; }
+  button { font: inherit; color: #fff; background: #333; border: 0; border-radius: 18px; padding: 8px 16px; cursor: pointer; }
+  button.primary { background: #5b7cfa; }
+  #login { position: fixed; inset: 0; display: none; align-items: center; justify-content: center; background: #111; }
+  #login form { display: flex; flex-direction: column; gap: 12px; width: min(360px, 86vw); }
+  #login h1 { font-size: 22px; font-weight: 600; margin: 0; }
+  #login p { margin: 0; color: #aaa; font-size: 14px; }
+  #login input { font: inherit; padding: 12px; border-radius: 10px; border: 1px solid #444; background: #1c1c1c; color: #fff; }
+  #error { color: #ff8a80; min-height: 1.4em; }
+  body.login #bar, body.login #note, body.login #offline { display: none; }
+  body.login #login { display: flex; }
+</style>
+</head>
+<body class="idle">
+<img class="photo" id="a" alt="">
+<img class="photo" id="b" alt="">
+<div id="note">Connecting…</div>
+<div id="offline">Offline · showing the last photo</div>
+<div id="bar">
+  <button class="primary" id="full" type="button">Full screen</button>
+  <button id="forget" type="button">Forget key</button>
+</div>
+<div id="login">
+  <form id="form">
+    <h1>Picfort frame</h1>
+    <p>Enter the Picfort server key (the same as in the app). This browser remembers it.</p>
+    <input id="key" type="password" autocomplete="current-password" placeholder="Server key" required>
+    <div id="error"></div>
+    <button class="primary" type="submit">Show the frame</button>
+  </form>
+</div>
+<script>
+(() => {
+  const STORE = "picfortFrameKey", POLL_MS = 15000, OFFLINE_AFTER = 4;
+  const $ = (id) => document.getElementById(id);
+  const layers = [$("a"), $("b")];
+  let front = 0, key = read(), shownVersion = null, shownSize = "", failures = 0, timer = null, busy = false;
+
+  function read() { try { return localStorage.getItem(STORE) || ""; } catch (e) { return ""; } }
+  function write(v) { try { v ? localStorage.setItem(STORE, v) : localStorage.removeItem(STORE); } catch (e) {} }
+
+  class KeyError extends Error {}
+  async function api(path) {
+    const r = await fetch(path, { headers: { "X-Picfort-Key": key }, cache: "no-store" });
+    if (r.status === 401) throw new KeyError("Wrong key");
+    if (r.status === 429) throw new KeyError("Too many wrong keys. Try again in a few minutes.");
+    return r;
+  }
+
+  function askForKey(message) {
+    clearTimeout(timer);
+    document.body.classList.add("login");
+    $("error").textContent = message || "";
+    $("key").value = "";
+    $("key").focus();
+  }
+
+  function screenSize() {
+    const dpr = window.devicePixelRatio || 1;
+    return [Math.round(innerWidth * dpr), Math.round(innerHeight * dpr)];
+  }
+
+  async function showPhoto(version, fit) {
+    const [w, h] = screenSize();
+    const r = await api(`/frame/photo?w=${w}&h=${h}&v=${version}`);
+    if (!r.ok) throw new Error(`HTTP ${r.status}`);
+    const url = URL.createObjectURL(await r.blob());
+    const next = layers[1 - front], old = layers[front];
+    next.classList.toggle("contain", fit === "contain");
+    next.src = url;
+    try { await next.decode(); } catch (e) {}
+    next.classList.add("on");
+    old.classList.remove("on");
+    setTimeout(() => { if (old.src.startsWith("blob:")) URL.revokeObjectURL(old.src); old.removeAttribute("src"); }, 2000);
+    front = 1 - front;
+    shownVersion = version;
+    shownSize = `${w}x${h}`;
+  }
+
+  async function poll() {
+    if (busy) return;
+    busy = true;
+    try {
+      const state = await (await api("/frame/state")).json();
+      failures = 0;
+      $("offline").style.display = "none";
+      if (!state.shown) {
+        $("note").textContent = "Nothing on the frame yet";
+      } else {
+        const [w, h] = screenSize();
+        if (state.version !== shownVersion || `${w}x${h}` !== shownSize) await showPhoto(state.version, state.fit);
+        $("note").textContent = "";
+      }
+    } catch (e) {
+      if (e instanceof KeyError) { busy = false; askForKey(e.message); return; }
+      failures++;
+      if (failures >= OFFLINE_AFTER && shownVersion !== null) $("offline").style.display = "block";
+      if (shownVersion === null) $("note").textContent = "Can't reach the Picfort server. Trying again…";
+    }
+    busy = false;
+    clearTimeout(timer);
+    timer = setTimeout(poll, POLL_MS);
+  }
+
+  $("form").addEventListener("submit", (e) => {
+    e.preventDefault();
+    key = $("key").value.trim();
+    if (!key) return;
+    write(key);
+    document.body.classList.remove("login");
+    $("note").textContent = "Connecting…";
+    shownVersion = null;
+    poll();
+  });
+  $("forget").addEventListener("click", (e) => {
+    e.stopPropagation();
+    write("");
+    key = "";
+    askForKey();
+  });
+
+  // Full screen needs a tap; the screen stays on while the page is visible (Wake Lock, HTTPS only).
+  let wakeLock = null;
+  async function keepAwake() {
+    if (!("wakeLock" in navigator) || document.visibilityState !== "visible" || wakeLock) return;
+    try {
+      wakeLock = await navigator.wakeLock.request("screen");
+      wakeLock.addEventListener("release", () => { wakeLock = null; });
+    } catch (e) {}
+  }
+  function fullScreen() {
+    const el = document.documentElement;
+    if (!document.fullscreenElement && el.requestFullscreen) el.requestFullscreen().catch(() => {});
+    keepAwake();
+  }
+  $("full").addEventListener("click", (e) => { e.stopPropagation(); fullScreen(); });
+  document.addEventListener("fullscreenchange", () => {
+    $("full").style.display = document.fullscreenElement ? "none" : "";
+  });
+  document.addEventListener("visibilitychange", () => {
+    keepAwake();
+    if (document.visibilityState === "visible" && !document.body.classList.contains("login")) poll();
+  });
+
+  // The buttons show on a tap or mouse move, then hide with the cursor.
+  let idleTimer = null;
+  function wake() {
+    document.body.classList.remove("idle");
+    clearTimeout(idleTimer);
+    idleTimer = setTimeout(() => document.body.classList.add("idle"), 4000);
+  }
+  document.addEventListener("pointermove", wake);
+  document.addEventListener("pointerdown", (e) => {
+    if (!document.body.classList.contains("login") && e.target.tagName !== "BUTTON") fullScreen();
+    wake();
+  });
+
+  let resizeTimer = null;
+  addEventListener("resize", () => { clearTimeout(resizeTimer); resizeTimer = setTimeout(poll, 800); });
+
+  keepAwake();
+  wake();
+  if (key) poll(); else askForKey();
+})();
+</script>
+</body>
+</html>

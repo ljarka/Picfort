@@ -65,6 +65,19 @@ class FrameScreenshotTest {
     }
 
     @Test
+    fun frame_browser_link() = snap {
+        FrameContent(
+            FrameUi(
+                address = "https://picfort.example.com",
+                hasKey = true,
+                loading = false,
+                image = samplePhotoImage(),
+                slideshow = SlideshowState(mode = "off", nextChangeAt = null),
+            ),
+        )
+    }
+
+    @Test
     fun frame_not_configured() = snap {
         FrameContent(FrameUi(configured = false, loading = false))
     }

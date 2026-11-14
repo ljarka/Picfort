@@ -25,6 +25,8 @@ import kotlinx.coroutines.withContext
 data class FrameUi(
     val configured: Boolean = true,
     val address: String = "",
+    /** The server has a key, so its browser frame is on (T-072). */
+    val hasKey: Boolean = false,
     val loading: Boolean = true,
     /** Couldn't reach the frame at all. */
     val error: String? = null,
@@ -36,6 +38,9 @@ data class FrameUi(
     val image: ImageBitmap? = null,
     val message: String? = null,
 )
+
+/** Where the frame shows in a browser: the server address + `/frame` (T-072). */
+val FrameUi.browserFrameUrl: String get() = address.trimEnd('/') + "/frame"
 
 fun intervalLabel(minutes: Int): String = when {
     minutes < 60 -> "$minutes min"
@@ -69,7 +74,9 @@ class FrameViewModel @Inject constructor(private val api: FrameDashboardApi) : V
             _state.value = FrameUi(configured = false, loading = false)
             return
         }
-        _state.update { it.copy(configured = true, address = api.address, loading = true, error = null) }
+        _state.update {
+            it.copy(configured = true, address = api.address, hasKey = api.hasKey, loading = true, error = null)
+        }
         viewModelScope.launch {
             try {
                 val status = api.status()

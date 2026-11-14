@@ -1,5 +1,6 @@
 package com.github.ljarka.picfort.ui.frame
 
+import android.content.ClipData
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -47,16 +48,20 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.ClipEntry
+import androidx.compose.ui.platform.LocalClipboard
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import kotlinx.coroutines.launch
 
 @Composable
 fun FrameScreen(onBack: () -> Unit) {
@@ -299,7 +304,43 @@ private fun Dashboard(
             }
         }
     }
+    BrowserFrame(state)
     Box(Modifier.padding(bottom = 24.dp))
+}
+
+/** The same photos on a tablet or computer: the server's `/frame` page (T-072). */
+@Composable
+private fun BrowserFrame(state: FrameUi) {
+    val clipboard = LocalClipboard.current
+    val scope = rememberCoroutineScope()
+    HorizontalDivider(Modifier.padding(vertical = 8.dp))
+    ListItem(
+        headlineContent = { Text("Frame in a browser") },
+        supportingContent = {
+            Text(
+                if (state.hasKey) {
+                    "Open ${state.browserFrameUrl} on a tablet or computer. It asks for the server key " +
+                        "once and shows the frame's photo in full colour; tap it for full screen."
+                } else {
+                    "Needs a server key: set PICFORT_API_KEY on the Picfort server and enter it in the " +
+                        "server settings (⚙)."
+                },
+            )
+        },
+        trailingContent = if (state.hasKey) {
+            {
+                TextButton(onClick = {
+                    scope.launch {
+                        clipboard.setClipEntry(
+                            ClipEntry(ClipData.newPlainText("Picfort frame", state.browserFrameUrl)),
+                        )
+                    }
+                }) { Text("Copy link") }
+            }
+        } else {
+            null
+        },
+    )
 }
 
 @Composable

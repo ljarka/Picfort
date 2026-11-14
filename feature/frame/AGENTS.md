@@ -6,7 +6,7 @@ Ambient e-paper frame mode and Picfort server setup/pairing vertical slice.
 
 | File | Purpose |
 |---|---|
-| `ui/frame/FrameScreen.kt` | UI: `FrameScreen`, `FrameContent`, slideshow controls, interval selector |
+| `ui/frame/FrameScreen.kt` | UI: `FrameScreen`, `FrameContent`, slideshow controls, interval selector; "Frame in a browser" link (`browserFrameUrl`, only with a key, T-072) |
 | `ui/frame/FrameViewModel.kt` | ViewModel: frame status, polling, interval/mode settings, next photo trigger |
 | `ui/frame/FrameRepository.kt` | Repository & implementation of `FrameSender`: runs photo push to frame |
 | `ui/frame/FrameDashboardApi.kt` | HTTP client for frame management endpoints (`/status`, `/slideshow`, `/albums`) |

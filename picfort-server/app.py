@@ -10,6 +10,9 @@
     PUT  /slideshow             -> update settings (JSON body, same shape as GET)
     POST /next                  -> show the next slideshow photo now
     GET  /albums                -> [{"id", "name"}] for choosing a slideshow album
+    GET  /frame                 -> the frame as a web page (browser_frame.py, T-072); needs PICFORT_API_KEY
+    GET  /frame/state           -> {"version", "shown", "fit"}: what the frame shows, a new version per photo
+    GET  /frame/photo?w=&h=     -> that photo in full colour, scaled for a w x h screen (JPEG)
 
 With PICFORT_API_KEY set, every call also needs `X-Picfort-Key: <key>`; without it: 401 with
 `WWW-Authenticate: Picfort-Key` (so the app can tell it from a rejected Immich token).
@@ -65,6 +68,7 @@ School timetables (see school.py, T-028), same token auth; anyone can edit or de
 """
 
 import hmac
+import json
 import logging
 import math
 import os
@@ -78,6 +82,7 @@ from waitress import serve
 from werkzeug.exceptions import RequestEntityTooLarge
 
 import frame
+from browser_frame import FRAME_PAGE_PATH, register_browser_frame
 from auth import Authenticator, AuthError, AuthUnavailable, immich_lookup
 from events import DEFAULT_LIMIT as EVENTS_DEFAULT_LIMIT, EventStore
 from family import FamilyStore
@@ -114,6 +119,36 @@ class FrameController:
         self.current_asset = None
         self.last_error = None
         self.on_shown = lambda: None  # set by the slideshow
+        # The browser frame (T-072): a new version per photo shown; a photo from the phone kept as sent.
+        self.version = 0
+        self.local_photo = None
+        state_dir = os.path.dirname(os.path.abspath(config.preview_path))
+        self._state_path = os.path.join(state_dir, "frame_current.json")
+        self._local_path = os.path.join(state_dir, "frame_local.img")
+        self._restore()
+
+    def _restore(self):
+        """What was on the frame before a restart (the panel keeps it; so does the browser frame)."""
+        try:
+            with open(self._state_path) as f:
+                asset = json.load(f).get("asset")
+            if asset == "local":
+                with open(self._local_path, "rb") as f:
+                    self.local_photo = f.read()
+            if asset:
+                self.current_asset, self.version = asset, 1
+        except (OSError, ValueError, AttributeError):
+            pass
+
+    def _remember(self, asset_id, data):
+        try:
+            if data is not None:
+                with open(self._local_path, "wb") as f:
+                    f.write(data)
+            with open(self._state_path, "w") as f:
+                json.dump({"asset": asset_id}, f)
+        except OSError as e:
+            log.warning("Could not save the current photo: %s", e)
 
     def show(self, asset_id: str):
         """Fetch + render now (raises Rejected / frame.FrameError), refresh the panel in the background."""
@@ -135,11 +170,14 @@ class FrameController:
         threading.Thread(target=self._refresh, args=(img, asset_id), daemon=True).start()
         self.on_shown()
 
-    def _refresh(self, img, asset_id):
+    def _refresh(self, img, asset_id, data=None):
         try:
             self._display(img)
             with self.lock:
                 self.current_asset, self.last_error = asset_id, None
+                self.local_photo = data
+                self.version += 1
+            self._remember(asset_id, data)
             log.info("Displayed %s", asset_id)
         except Exception as e:
             log.exception("Display failed")
@@ -166,7 +204,7 @@ class FrameController:
             raise
         with self.lock:
             self.last_run = self.clock()
-        threading.Thread(target=self._refresh, args=(img, "local"), daemon=True).start()
+        threading.Thread(target=self._refresh, args=(img, "local", data), daemon=True).start()
         self.on_shown()
 
     def try_show(self, asset_id: str) -> bool:
@@ -203,10 +241,12 @@ def settings_json(slideshow: Slideshow):
 def create_app(controller: FrameController, slideshow: Slideshow, immich: ImmichClient,
                wall: WallStore = None, auth: Authenticator = None, api_key: str = "",
                shopping: ShoppingStore = None, family: FamilyStore = None,
-               events: EventStore = None, school: SchoolStore = None) -> Flask:
+               events: EventStore = None, school: SchoolStore = None,
+               frame_fetch=None, clock=time.monotonic) -> Flask:
     app = Flask(__name__)
     if api_key:
-        require_api_key(app, api_key)
+        # The browser frame's page itself has no secrets: it asks for the key (T-072).
+        require_api_key(app, api_key, open_paths={FRAME_PAGE_PATH}, clock=clock)
     # The photo plus a little room for the text fields; larger requests get 413.
     app.config["MAX_CONTENT_LENGTH"] = MAX_PHOTO_BYTES + 64 * 1024
     controller.on_shown = slideshow.photo_changed
@@ -304,6 +344,7 @@ def create_app(controller: FrameController, slideshow: Slideshow, immich: Immich
     def store_error(e):
         return error(str(e), e.status)
 
+    register_browser_frame(app, controller, enabled=bool(api_key), fetch=frame_fetch)
     if auth is not None:
         register_auth(app, auth)
     if wall is not None:
@@ -325,15 +366,45 @@ def create_app(controller: FrameController, slideshow: Slideshow, immich: Immich
 API_KEY_HEADER = "X-Picfort-Key"
 
 
-def require_api_key(app: Flask, api_key: str):
+# Wrong keys: after MAX_WRONG_KEYS from one address within WRONG_KEY_WINDOW seconds, that address
+# gets 429 (even with the right key) until the window passes (T-072: the server is on the internet).
+MAX_WRONG_KEYS = 10
+WRONG_KEY_WINDOW = 15 * 60
+
+
+def client_address() -> str:
+    # Behind the Cloudflare tunnel every request comes from cloudflared; Cloudflare names the caller.
+    return request.headers.get("CF-Connecting-IP") or request.remote_addr or "?"
+
+
+def require_api_key(app: Flask, api_key: str, open_paths=frozenset(), clock=time.monotonic):
     """Every request needs the server's key (for a server reachable from outside, e.g. a tunnel)."""
     expected = api_key.encode()
+    wrong = {}  # address -> times of wrong keys within the window
+    wrong_lock = threading.Lock()
 
     @app.before_request
     def check_api_key():
+        if request.path in open_paths:
+            return None
+        now = clock()
+        address = client_address()
+        with wrong_lock:
+            recent = [t for t in wrong.get(address, []) if now - t < WRONG_KEY_WINDOW]
+            if recent:
+                wrong[address] = recent
+            else:
+                wrong.pop(address, None)
+            if len(recent) >= MAX_WRONG_KEYS:
+                retry = math.ceil(WRONG_KEY_WINDOW - (now - recent[0]))
+                return error("Too many wrong keys, try again later", 429, retry_after=retry)
         given = (request.headers.get(API_KEY_HEADER) or "").strip().encode()
         if given and hmac.compare_digest(given, expected):
             return None
+        if given:
+            with wrong_lock:
+                wrong.setdefault(address, []).append(now)
+            log.warning("Wrong Picfort key from %s", address)
         resp, status = error("Missing or wrong Picfort server API key", 401)
         resp.headers["WWW-Authenticate"] = "Picfort-Key"
         return resp, status
