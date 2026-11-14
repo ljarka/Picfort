@@ -1,0 +1,40 @@
+# T-070: delete an Immich album from its ⋮ menu; its photo stays in Immich.
+# Test account only: scripts/test-data.js creates the album "Album T070" with the newest photo.
+appId: com.github.ljarka.immich.android2
+name: Photos — delete an album (T-070)
+---
+- runScript:
+    file: scripts/test-data.js
+    env:
+      ALBUM: "Album T070"
+- runFlow: subflows/open-app.yaml
+- tapOn: "Photos"
+- tapOn:
+    text: "Allow all"
+    optional: true
+- tapOn: "Albums"
+- extendedWaitUntil:
+    visible: "Album T070"
+    timeout: 10000
+- tapOn: "Album T070"
+
+# Cancel keeps it
+- tapOn: "Album options"
+- tapOn: "Delete album"
+- assertVisible: "Delete album “Album T070”?"
+- tapOn: "Cancel"
+- assertVisible: "Album T070"
+
+# Delete: back on Albums, gone there and in Immich; the photo stays
+- tapOn: "Album options"
+- tapOn: "Delete album"
+- tapOn: "^Delete$"
+- extendedWaitUntil:
+    visible: "Albums"
+    timeout: 10000
+- assertNotVisible: "Album T070"
+- runScript:
+    file: scripts/test-data.js
+    env:
+      ALBUM_GONE: "Album T070"
+      PHOTO: ${output.albumPhoto}

@@ -5,7 +5,9 @@
 // and Kuba with known timetables (Ola: Maths Mon, Art Tue; Kuba: Chess club Mon); SCHOOL_ADD=<title>
 // adds a Monday lesson to Ola, as another phone would;
 // PEOPLE=1 to ensure 14 Immich people "Osoba 01".."Osoba 14" on the test account (faces tagged by
-// hand on its photos: 01 on two photos, 02 on the first of them, the others on one photo each).
+// hand on its photos: 01 on two photos, 02 on the first of them, the others on one photo each);
+// ALBUM=<name> to create an Immich album <name> with the newest photo on the test account (T-070);
+// ALBUM_GONE=<name> to check no album <name> is left while that photo still is.
 // Credentials come from MAESTRO_* (scripts/maestro-smoke.sh); nothing is logged.
 
 function check(res, what) {
@@ -108,5 +110,27 @@ if (typeof PEOPLE !== "undefined" && PEOPLE === "1") {
     if (i === 1) { face(person.id, photos[0].id); face(person.id, photos[1].id) }
     else if (i === 2) face(person.id, photos[0].id)
     else face(person.id, photos[i].id)
+  }
+}
+
+if (typeof ALBUM !== "undefined" && ALBUM) {
+  const albums = check(http.get(immich + "/api/albums", { headers: headers }), "GET albums")
+  albums.filter(function (a) { return a.albumName === ALBUM }).forEach(function (a) {
+    check(http.request(immich + "/api/albums/" + a.id, { method: "DELETE", headers: headers }), "DELETE old album")
+  })
+  const newest = check(http.post(immich + "/api/search/metadata", {
+    headers: headers, body: JSON.stringify({ type: "IMAGE", size: 1, order: "desc" }),
+  }), "search photos").assets.items[0]
+  check(http.post(immich + "/api/albums", {
+    headers: headers, body: JSON.stringify({ albumName: ALBUM, assetIds: [newest.id] }),
+  }), "POST album")
+  output.albumPhoto = newest.id
+}
+
+if (typeof ALBUM_GONE !== "undefined" && ALBUM_GONE) {
+  const albums = check(http.get(immich + "/api/albums", { headers: headers }), "GET albums")
+  if (albums.some(function (a) { return a.albumName === ALBUM_GONE })) throw new Error("Album " + ALBUM_GONE + " is still in Immich")
+  if (typeof PHOTO !== "undefined" && PHOTO) {
+    check(http.get(immich + "/api/assets/" + PHOTO, { headers: headers }), "the album's photo is still in Immich")
   }
 }

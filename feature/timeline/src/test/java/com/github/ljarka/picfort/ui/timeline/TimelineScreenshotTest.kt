@@ -28,6 +28,7 @@ import com.github.ljarka.picfort.assets.ExifInfo
 import com.github.ljarka.picfort.assets.PersonInfo
 import com.github.ljarka.picfort.assets.toDetails
 import com.github.ljarka.picfort.collections.AlbumContent
+import com.github.ljarka.picfort.collections.AlbumDeleteUi
 import com.github.ljarka.picfort.collections.AlbumDto
 import com.github.ljarka.picfort.collections.AlbumsContent
 import com.github.ljarka.picfort.collections.GridAsset
@@ -176,6 +177,18 @@ class TimelineScreenshotTest {
     @Test
     fun album() = snap {
         AlbumContent(name = "Summer in Kraków", assets = LoadState.Loaded(photos), thumbnail = { it.id })
+    }
+
+    @Test
+    fun album_delete() = snap {
+        AlbumContent(
+            name = "Summer in Kraków",
+            assets = LoadState.Loaded(photos),
+            thumbnail = { it.id },
+            canDelete = true,
+            confirmingDelete = true,
+            delete = AlbumDeleteUi(error = "Only the album's owner can delete it"),
+        )
     }
 
     @Test

@@ -7,6 +7,7 @@ import androidx.lifecycle.viewModelScope
 import androidx.navigation.toRoute
 import com.github.ljarka.picfort.UrlProvider
 import com.github.ljarka.picfort.core.database.AssetType
+import com.github.ljarka.picfort.core.model.FamilyMemberProvider
 import com.github.ljarka.picfort.core.network.CleartextNotAllowedException
 import com.github.ljarka.picfort.ui.timeline.AlbumRoute
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -56,13 +57,23 @@ private suspend fun <T> load(block: suspend () -> T): LoadState<T> = try {
 class AlbumsViewModel @Inject constructor(
     private val repository: CollectionsRepository,
     private val urlProvider: UrlProvider,
+    private val family: FamilyMemberProvider,
 ) : ViewModel() {
     private val _albums = MutableStateFlow<LoadState<List<AlbumDto>>>(LoadState.Loading)
     val albums: StateFlow<LoadState<List<AlbumDto>>> = _albums.asStateFlow()
 
     init {
         reload()
+        viewModelScope.launch {
+            repository.deletedAlbums.collect { id ->
+                _albums.update { state ->
+                    if (state is LoadState.Loaded) LoadState.Loaded(state.value.filterNot { it.id == id }) else state
+                }
+            }
+        }
     }
+
+    fun canDelete(album: AlbumDto): Boolean = album.canDelete(family.myId)
 
     fun reload() {
         _albums.value = LoadState.Loading
@@ -82,6 +93,10 @@ class AlbumViewModel @Inject constructor(
     private val route = savedStateHandle.toRoute<AlbumRoute>()
     val name: String = route.name
     val source = "album:${route.id}"
+    val canDelete: Boolean = route.canDelete
+
+    private val _delete = MutableStateFlow(AlbumDeleteUi())
+    val delete: StateFlow<AlbumDeleteUi> = _delete.asStateFlow()
 
     private val _assets = MutableStateFlow<LoadState<List<GridAsset>>>(LoadState.Loading)
     val assets: StateFlow<LoadState<List<GridAsset>>> = _assets.asStateFlow()
@@ -98,6 +113,32 @@ class AlbumViewModel @Inject constructor(
     }
 
     fun thumbnail(asset: GridAsset) = urlProvider.getThumbnail(asset.id, AssetType.REMOTE, asset.isVideo)
+
+    fun deleteAlbum() {
+        if (_delete.value.deleting) return
+        _delete.value = AlbumDeleteUi(deleting = true)
+        viewModelScope.launch {
+            _delete.value = try {
+                repository.deleteAlbum(route.id)
+                AlbumDeleteUi(deleted = true)
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                AlbumDeleteUi(error = deleteError(e))
+            }
+        }
+    }
+
+    fun deleteErrorShown() = _delete.update { it.copy(error = null) }
+}
+
+/** Deleting an album: in progress, refused (shown in the dialog) or done (the screen closes). */
+data class AlbumDeleteUi(val deleting: Boolean = false, val error: String? = null, val deleted: Boolean = false)
+
+fun deleteError(e: Exception): String = when {
+    e is HttpException && e.code() == 403 -> "Only the album's owner can delete it"
+    e is HttpException && e.code() == 404 -> "The album is already gone"
+    else -> describeError(e)
 }
 
 data class SearchUi(

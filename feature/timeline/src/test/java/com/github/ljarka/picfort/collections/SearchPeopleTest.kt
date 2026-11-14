@@ -11,6 +11,7 @@ class SearchPeopleTest {
     private val service = object : CollectionsService {
         override suspend fun albums(): List<AlbumDto> = emptyList()
         override suspend fun createAlbum(body: CreateAlbumRequest) = error("unused")
+        override suspend fun deleteAlbum(albumId: String) = retrofit2.Response.success(Unit)
         override suspend fun addToAlbum(albumId: String, body: BulkIdsRequest): List<BulkIdResult> = emptyList()
         override suspend fun smartSearch(body: SmartSearchRequest): SearchResponse {
             smart += body

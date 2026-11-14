@@ -5,6 +5,7 @@ import com.github.ljarka.picfort.collections.AlbumDto
 import com.github.ljarka.picfort.collections.BulkIdResult
 import com.github.ljarka.picfort.collections.PeopleResponse
 import com.github.ljarka.picfort.collections.SearchResponse
+import com.github.ljarka.picfort.collections.ownerId
 import com.github.ljarka.picfort.collections.parseSearchDuration
 import com.github.ljarka.picfort.sync.SyncChange
 import com.github.ljarka.picfort.sync.SyncLine
@@ -30,6 +31,8 @@ class ImmichV3ContractTest {
     fun albums() {
         val albums = json.decodeFromString<List<AlbumDto>>(read("albums.json"))
         assertTrue(albums.single().assetCount >= 2)
+        // T-070: the owner comes from albumUsers (Immich 3 has no ownerId on albums)
+        assertEquals("6fedb4d3-2637-4654-817e-bd4d56a6ed73", albums.single().ownerId)
         assertEquals("T062 test", json.decodeFromString<AlbumDto>(read("album_create.json")).albumName)
         assertTrue(json.decodeFromString<List<BulkIdResult>>(read("album_add.json")).single().success)
     }

@@ -2,7 +2,9 @@ package com.github.ljarka.picfort.collections
 
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.JsonElement
+import retrofit2.Response
 import retrofit2.http.Body
+import retrofit2.http.DELETE
 import retrofit2.http.GET
 import retrofit2.http.POST
 import retrofit2.http.PUT
@@ -15,7 +17,24 @@ data class AlbumDto(
     val albumName: String = "",
     val albumThumbnailAssetId: String? = null,
     val assetCount: Int = 0,
+    val albumUsers: List<AlbumUserDto> = emptyList(),
 )
+
+@Serializable
+data class AlbumUserRef(val id: String)
+
+/** Someone with access to an album; the owner has role "owner" (Immich 3). */
+@Serializable
+data class AlbumUserDto(val user: AlbumUserRef, val role: String = "")
+
+/** The Immich user id of the album's owner, if the response names one. */
+val AlbumDto.ownerId: String? get() = albumUsers.firstOrNull { it.role == "owner" }?.user?.id
+
+/**
+ * Only the owner can delete an album (Immich answers others with 403). With no id for me (Immich users
+ * not synced yet) or no owner in the response the menu shows, and a refusal says why (T-070).
+ */
+fun AlbumDto.canDelete(myId: String): Boolean = myId.isBlank() || ownerId == null || ownerId == myId
 
 @Serializable
 data class CreateAlbumRequest(val albumName: String, val assetIds: List<String> = emptyList())
@@ -70,6 +89,10 @@ interface CollectionsService {
 
     @POST("/api/albums")
     suspend fun createAlbum(@Body body: CreateAlbumRequest): AlbumDto
+
+    /** The album only: its photos and videos stay in Immich. 204 No Content. */
+    @DELETE("/api/albums/{id}")
+    suspend fun deleteAlbum(@Path("id") albumId: String): Response<Unit>
 
     @PUT("/api/albums/{id}/assets")
     suspend fun addToAlbum(@Path("id") albumId: String, @Body body: BulkIdsRequest): List<BulkIdResult>
