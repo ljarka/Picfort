@@ -1,6 +1,6 @@
 # T-072 — The frame in a web browser
 
-**Status:** done (pending)  
+**Status:** done (d9cc26c)  
 **Component:** Picfort server (`browser_frame.py`, `frame_page.html`, `app.py`), Android app (`:feature:frame`)  
 **Decision:** [ADR 0014](../decisions/0014-browser-frame.md)
 
