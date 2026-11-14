@@ -1,6 +1,6 @@
 # T-028 — School timetable: Picfort server API
 
-**Status:** ready  
+**Status:** done (b98c747)  
 **Component:** ImageFrameServer  
 **Depends on:** T-018 (`store.py`, auth prefixes incl. `/school`),
 [ADR 0008](../decisions/0008-family-hub-storage.md)
@@ -124,9 +124,9 @@ version change keeps a `.bak` and leaves the other databases alone.
 
 ## Acceptance criteria
 
-- [ ] Endpoints above with token auth and the optional Picfort key.
-- [ ] `school.db` at `SCHOOL_DB_PATH`; `/data/school.db` in the Docker image.
-- [ ] Tests pass in CI; README (API table, backup line) and the `DATA_LOCATION` comment in
+- [x] Endpoints above with token auth and the optional Picfort key.
+- [x] `school.db` at `SCHOOL_DB_PATH`; `/data/school.db` in the Docker image.
+- [x] Tests pass in CI; README (API table, backup line) and the `DATA_LOCATION` comment in
       `docker/example.env` updated.
 
 ## Out of scope
