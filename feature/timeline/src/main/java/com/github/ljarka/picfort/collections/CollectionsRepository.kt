@@ -69,7 +69,7 @@ class CollectionsRepository @Inject constructor(
                         GridAsset(
                             id = id,
                             isVideo = b.isImage.getOrNull(i) == false,
-                            durationMs = parseImmichDuration(b.duration.getOrNull(i)),
+                            durationMs = parseSearchDuration(b.duration.getOrNull(i)),
                         )
                     }
                 }
@@ -130,7 +130,7 @@ class CollectionsRepository @Inject constructor(
         service.get().addToAlbum(albumId, BulkIdsRequest(assetIds)).count { it.success }
 }
 
-/** "0:00:12.500000" (Immich < 3) or 12500 (milliseconds, Immich 3+). */
+/** Search and album buckets: "0:00:12.500000" (Immich < 3) or 12500 (milliseconds, Immich 3+). */
 fun parseSearchDuration(value: JsonElement?): Long? = (value as? JsonPrimitive)?.let { p ->
     if (p.isString) parseImmichDuration(p.content) else p.longOrNull?.takeIf { it > 0 }
 }

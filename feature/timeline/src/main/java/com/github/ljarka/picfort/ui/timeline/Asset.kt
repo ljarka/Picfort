@@ -1,6 +1,7 @@
 package com.github.ljarka.picfort.ui.timeline
 
 import kotlinx.serialization.Serializable
+import kotlinx.serialization.json.JsonElement
 
 @Serializable
 data class BucketResponse(
@@ -8,8 +9,11 @@ data class BucketResponse(
     val ratio: List<Double>,
     val fileCreatedAt: List<String>,
     val isImage: List<Boolean> = emptyList(),
-    /** "H:MM:SS.ffffff" for videos, null for images. */
-    val duration: List<String?> = emptyList(),
+    /**
+     * Null for images; for videos milliseconds (a number) since v3, "H:MM:SS.ffffff" before.
+     * A String here made every album with a video fail to load.
+     */
+    val duration: List<JsonElement?> = emptyList(),
     /** Base64 ThumbHash per asset, for a blurred preview while the thumbnail loads. */
     val thumbhash: List<String?> = emptyList(),
 )
