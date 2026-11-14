@@ -94,6 +94,15 @@ class SchoolModelsTest {
     }
 
     @Test
+    fun saturdayChosenWhileEditingFallsBackWhenItsChipGoes() {
+        val weekdays = DayOfWeek.entries.take(5)
+        assertEquals(MONDAY, shownDay(SATURDAY, today = SATURDAY, days = weekdays))
+        assertEquals(FRIDAY, shownDay(SUNDAY, today = FRIDAY, days = weekdays))
+        assertEquals(SATURDAY, shownDay(SATURDAY, today = MONDAY, days = DayOfWeek.entries))
+        assertEquals(TUESDAY, shownDay(TUESDAY, today = SATURDAY, days = weekdays))
+    }
+
+    @Test
     fun fillBellsGeneratesPeriodsAndStopsBeforeMidnight() {
         val bells = fillBells(t("08:00"), 45, 10, 3)
         assertEquals(

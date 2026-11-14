@@ -50,6 +50,7 @@ import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -347,36 +348,40 @@ private fun Timetable(
         onAdd = onAddChild,
     )
     SummaryCard(child, schoolDay(child.entries, state.today, state.now), time)
-    val pager = rememberPagerState(initialPage = days.indexOf(state.day).coerceAtLeast(0)) { days.size }
-    val scope = rememberCoroutineScope()
-    // Swiping picks the day; a chip tap (or a new list of days) moves the pager.
-    LaunchedEffect(pager.currentPage, days) {
-        days.getOrNull(pager.currentPage)?.let { if (it != state.day) actions.onSelectDay(it) }
-    }
-    LaunchedEffect(state.day, days) {
-        val index = days.indexOf(state.day)
-        if (index >= 0 && index != pager.currentPage && !pager.isScrollInProgress) {
-            pager.scrollToPage(index)
+    // A new list of days (Saturday gone after editing) starts a new pager on the chosen day: the old one
+    // would clamp to another page and fight the chosen day, the screen flickering (T-069).
+    key(days) {
+        val pager = rememberPagerState(initialPage = days.indexOf(state.day).coerceAtLeast(0)) { days.size }
+        val scope = rememberCoroutineScope()
+        // Swiping picks the day; a chip tap (or a poll changing the day) moves the pager.
+        LaunchedEffect(pager.currentPage, days) {
+            days.getOrNull(pager.currentPage)?.let { if (it != state.day) actions.onSelectDay(it) }
         }
-    }
-    DayChips(days, state.day, state.today, locale) { day ->
-        actions.onSelectDay(day)
-        scope.launch { pager.animateScrollToPage(days.indexOf(day)) }
-    }
-    PullToRefreshBox(isRefreshing = false, onRefresh = actions.onRefresh, modifier = Modifier.fillMaxSize()) {
-        HorizontalPager(state = pager, modifier = Modifier.fillMaxSize(), key = { days[it] }) { page ->
-            val day = days[page]
-            DayPage(
-                child = child,
-                day = day,
-                isToday = day == state.today,
-                now = state.now,
-                editing = editing,
-                locale = locale,
-                time = time,
-                onOpenEntry = onOpenEntry,
-                onCopyDay = { onCopyDay(day) },
-            )
+        LaunchedEffect(state.day, days) {
+            val index = days.indexOf(state.day)
+            if (index >= 0 && index != pager.currentPage && !pager.isScrollInProgress) {
+                pager.scrollToPage(index)
+            }
+        }
+        DayChips(days, state.day, state.today, locale) { day ->
+            actions.onSelectDay(day)
+            scope.launch { pager.animateScrollToPage(days.indexOf(day)) }
+        }
+        PullToRefreshBox(isRefreshing = false, onRefresh = actions.onRefresh, modifier = Modifier.fillMaxSize()) {
+            HorizontalPager(state = pager, modifier = Modifier.fillMaxSize(), key = { days[it] }) { page ->
+                val day = days[page]
+                DayPage(
+                    child = child,
+                    day = day,
+                    isToday = day == state.today,
+                    now = state.now,
+                    editing = editing,
+                    locale = locale,
+                    time = time,
+                    onOpenEntry = onOpenEntry,
+                    onCopyDay = { onCopyDay(day) },
+                )
+            }
         }
     }
 }

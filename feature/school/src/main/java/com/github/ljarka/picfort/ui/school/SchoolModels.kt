@@ -123,6 +123,10 @@ fun visibleDays(child: Child?, editing: Boolean): List<DayOfWeek> = DayOfWeek.en
     day <= DayOfWeek.FRIDAY || editing || child?.entries?.any { it.weekday == day } == true
 }
 
+/** The chosen [day] if it still has a chip; else [startDay]. */
+fun shownDay(day: DayOfWeek, today: DayOfWeek, days: List<DayOfWeek>): DayOfWeek =
+    day.takeIf { it in days } ?: startDay(today, days)
+
 /** The day to open on: today if it has a chip, else Monday. */
 fun startDay(today: DayOfWeek, days: List<DayOfWeek>): DayOfWeek = today.takeIf { it in days } ?: DayOfWeek.MONDAY
 
