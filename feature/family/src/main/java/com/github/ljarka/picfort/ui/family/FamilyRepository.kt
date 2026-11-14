@@ -272,7 +272,6 @@ class FamilyRepository(
         user: FamilyUserUi,
         displayName: String,
         pickedPersonId: String? = null,
-        photoBytes: ByteArray? = null,
         clearPhoto: Boolean = false,
         showInFamily: Boolean = true,
         birthDate: BirthDate? = null,
@@ -285,8 +284,6 @@ class FamilyRepository(
             backend.uploadPhoto(user.id, jpeg)
             // The chosen face is who this member is in my photos (T-052).
             backend.linkPerson(user.id, pickedPersonId)
-        } else if (photoBytes != null) {
-            backend.uploadPhoto(user.id, photoBytes)
         } else if (clearPhoto && user.hasCustomPhoto) {
             backend.deletePhoto(user.id)
         }
@@ -307,24 +304,18 @@ class FamilyRepository(
             today = today,
             // A new photo resets the flag on the server.
             noPhoto = noPhoto.takeIf {
-                user.isImmichUser && pickedPersonId == null && photoBytes == null &&
-                    it != user.noPhoto
+                user.isImmichUser && pickedPersonId == null && it != user.noPhoto
             },
         )
         refresh()
     }
 
-    suspend fun addMember(
-        displayName: String,
-        birthDate: BirthDate? = null,
-        photoBytes: ByteArray? = null,
-        pickedPersonId: String? = null,
-    ) {
+    suspend fun addMember(displayName: String, birthDate: BirthDate? = null, pickedPersonId: String? = null) {
         val today = java.time.LocalDate.now().toString()
         val birthDateStr = birthDate?.toIsoString()
         try {
             // Fetch the face first: a failure then doesn't leave a member without the chosen photo.
-            val photo = pickedPersonId?.let { people.faceThumbnailJpeg(it) } ?: photoBytes
+            val photo = pickedPersonId?.let { people.faceThumbnailJpeg(it) }
             val created = backend.addMember(displayName, birthDateStr, today)
             if (photo != null) {
                 backend.uploadPhoto(created.userId, photo)

@@ -80,8 +80,6 @@ class FrameSettingsViewModel @Inject constructor(
     val savedAddress: String get() = store.frameUrl
     val savedApiKey: String get() = store.apiKey
 
-    fun isValid(address: String) = normalizeFrameUrl(address) != null
-
     fun resetTest() {
         _test.value = ConnectionTest.Idle
     }

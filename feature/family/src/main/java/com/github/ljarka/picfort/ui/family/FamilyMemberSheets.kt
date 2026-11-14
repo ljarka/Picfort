@@ -56,7 +56,6 @@ data class FamilyMemberEditUi(
     val previewAvatarUrl: String? = user.avatarUrl,
     val hasCustomPhoto: Boolean = user.hasCustomPhoto,
     val pickedPersonId: String? = null,
-    val pickedPhotoBytes: ByteArray? = null,
     val clearPhoto: Boolean = false,
     val noPhoto: Boolean = user.noPhoto,
     val showInFamily: Boolean = !user.hidden,
