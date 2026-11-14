@@ -47,6 +47,7 @@ internal data class SyncAssetDto(
     val stackId: String? = null,
     val isFavorite: Boolean = false,
     val checksum: String,
+    val originalFileName: String? = null,
 )
 
 @Serializable
@@ -165,4 +166,5 @@ internal fun SyncAssetDto.toEntity() = RemoteAssetEntity(
     stackId = stackId,
     isFavorite = isFavorite,
     checksum = checksum,
+    originalFileName = originalFileName,
 )

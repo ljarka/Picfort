@@ -35,7 +35,7 @@ class TimelineIndexTest {
         val index = buildTimelineIndex(
             remote = listOf(remote("r-oct", "2026-10-20T12:00:00Z"), remote("r-sep", "2026-09-05T08:00:00Z")),
             local = listOf(local(1, "2026-10-25T10:00:00Z"), local(2, "2026-09-30T10:00:00Z")),
-            backedUpLocalIds = emptySet(),
+            onServerLocalIds = emptySet(),
             zone = warsaw,
         )
         assertEquals(listOf(t("2026-10-01T00:00:00Z"), t("2026-09-01T00:00:00Z")), index.months.map { it.key })
@@ -50,7 +50,7 @@ class TimelineIndexTest {
         val index = buildTimelineIndex(
             remote = listOf(remote("r", "2026-10-20T12:00:00Z")),
             local = listOf(local(1, "2026-10-20T10:00:00Z"), local(2, "2026-10-21T10:00:00Z")),
-            backedUpLocalIds = setOf(1L),
+            onServerLocalIds = setOf(1L),
             zone = warsaw,
         )
         assertEquals(listOf("2", "r"), index.months.single().assets.map { it.id })
@@ -69,7 +69,7 @@ class TimelineIndexTest {
         val index = buildTimelineIndex(
             remote = listOf(remote("r", "2026-10-20T12:00:00Z"), remote("unknown", "2026-10-19T12:00:00Z", null, null)),
             local = listOf(local(1, "2026-10-18T10:00:00Z", w = 3, h = 4)),
-            backedUpLocalIds = emptySet(),
+            onServerLocalIds = emptySet(),
             zone = warsaw,
         )
         val (r, unknown, phone) = index.months.single().assets

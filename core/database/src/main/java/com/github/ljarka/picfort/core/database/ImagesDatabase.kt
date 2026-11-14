@@ -13,7 +13,7 @@ import androidx.room.RoomDatabase
         RemoteAssetEntity::class, RemoteStackEntity::class, PartnerEntity::class, SyncStateEntity::class,
         UserEntity::class,
     ],
-    version = 22,
+    version = 23,
     exportSchema = false,
 )
 abstract class ImagesDatabase : RoomDatabase() {
