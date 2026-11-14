@@ -1,6 +1,6 @@
 # T-061 — Albums with a video wouldn't open
 
-**Status:** in-progress  
+**Status:** done (f5cd699)  
 **Component:** Android app (`:feature:timeline`)  
 **Depends on:** T-015
 
