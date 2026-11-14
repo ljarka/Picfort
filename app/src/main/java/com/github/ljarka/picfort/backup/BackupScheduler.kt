@@ -39,12 +39,16 @@ class BackupScheduler @Inject constructor(
         .setRequiresCharging(settings.chargingOnly)
         .build()
 
-    /** Applies the current settings: schedules or cancels the periodic backup. */
-    fun apply() {
+    /**
+     * Applies the current settings: schedules or cancels the periodic backup. The first run is
+     * right away (when the constraints allow) unless [firstRunLater].
+     */
+    fun apply(firstRunLater: Boolean = false) {
         if (settings.enabled) {
             val request = PeriodicWorkRequestBuilder<BackupWorker>(6, TimeUnit.HOURS)
                 .setConstraints(constraints())
                 .setBackoffCriteria(BackoffPolicy.EXPONENTIAL, 1, TimeUnit.MINUTES)
+                .apply { if (firstRunLater) setInitialDelay(6, TimeUnit.HOURS) }
                 .build()
             workManager.enqueueUniquePeriodicWork(PERIODIC, ExistingPeriodicWorkPolicy.UPDATE, request)
         } else {
@@ -60,6 +64,19 @@ class BackupScheduler @Inject constructor(
             .setBackoffCriteria(BackoffPolicy.EXPONENTIAL, 1, TimeUnit.MINUTES)
             .build()
         workManager.enqueueUniqueWork(NOW, ExistingWorkPolicy.KEEP, request)
+    }
+
+    /**
+     * "Stop": ends the running or waiting backup (T-063). Files sent so far stay in Immich; the
+     * rest go next time. A periodic run is cancelled with its schedule, so it's scheduled again
+     * from now on, or WorkManager would start it again at once.
+     */
+    fun stop() {
+        workManager.cancelUniqueWork(NOW)
+        workManager.cancelUniqueWork(PERIODIC)
+        apply(firstRunLater = true)
+        settings.lastResult = "Stopped"
+        settings.lastRunAt = System.currentTimeMillis()
     }
 
     fun cancelAll() {

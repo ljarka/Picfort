@@ -13,7 +13,9 @@ import androidx.compose.ui.unit.dp
 import app.cash.paparazzi.DeviceConfig
 import app.cash.paparazzi.Paparazzi
 import com.android.resources.NightMode
+import com.github.ljarka.picfort.backup.BackupQueueState
 import com.github.ljarka.picfort.backup.BackupStatus
+import com.github.ljarka.picfort.backup.QueuedMedia
 import com.github.ljarka.picfort.core.model.EventsSegment
 import com.github.ljarka.picfort.core.model.FamilyEvent
 import com.github.ljarka.picfort.core.model.FamilyMember
@@ -328,6 +330,11 @@ class ScreenshotTest {
         SettingsContent(
             backup = backup,
             status = BackupStatus.Running(done = 2_455, total = 2_546),
+            queue = BackupQueueState(
+                pending = (1L..8L).map { QueuedMedia(it, isVideo = it == 3L) },
+                uploadingId = 2L,
+                uploadProgress = 0.4f,
+            ),
             serverUrl = "https://photos.example.com",
             picfortServer = "http://192.168.0.105:5000",
             wallpaperColors = false,

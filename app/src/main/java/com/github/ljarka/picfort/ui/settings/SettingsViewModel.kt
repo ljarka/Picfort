@@ -3,6 +3,8 @@ package com.github.ljarka.picfort.ui.settings
 import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.github.ljarka.picfort.backup.BackupQueue
+import com.github.ljarka.picfort.backup.BackupQueueState
 import com.github.ljarka.picfort.backup.BackupScheduler
 import com.github.ljarka.picfort.backup.BackupSettingsStore
 import com.github.ljarka.picfort.backup.BackupStatus
@@ -13,6 +15,7 @@ import com.github.ljarka.picfort.core.network.ServerUrlStore
 import com.github.ljarka.picfort.local.hasMediaAccess
 import com.github.ljarka.picfort.network.SessionManager
 import com.github.ljarka.picfort.ui.family.FamilyRepository
+import com.github.ljarka.picfort.ui.timeline.TimelineRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
 import javax.inject.Inject
@@ -20,6 +23,8 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
@@ -35,6 +40,13 @@ data class BackupSettingsUi(
     val hasMediaAccess: Boolean = true,
 )
 
+/**
+ * Phone items in Immich: those Picfort's backup linked, plus those the timeline matched to an
+ * Immich asset (uploaded by another app, or before this backup ran; T-063).
+ */
+fun countInImmich(onPhone: Int, linked: Collection<Long>, onServer: Set<Long>?): Int =
+    (linked.toSet() + onServer.orEmpty()).size.coerceAtMost(onPhone)
+
 @HiltViewModel
 class SettingsViewModel @Inject constructor(
     @ApplicationContext private val context: Context,
@@ -47,6 +59,8 @@ class SettingsViewModel @Inject constructor(
     private val familyRepository: FamilyRepository,
     private val sessionManager: SessionManager,
     private val appearance: AppearanceSettingsStore,
+    private val timelineRepository: TimelineRepository,
+    backupQueue: BackupQueue,
 ) : ViewModel() {
 
     /** null when the phone has no wallpaper colors (Android < 12): the row is hidden. */
@@ -68,9 +82,17 @@ class SettingsViewModel @Inject constructor(
     /** The Picfort server (frame + Family Wall), or "" when not set. */
     val picfortServer: String get() = frameSettingsStore.frameUrl
 
+    /** What the running backup is uploading now and what's next (T-063). */
+    val queue: StateFlow<BackupQueueState> = backupQueue.state
+
     init {
         reloadCounts()
         viewModelScope.launch { familyRepository.refresh() }
+        viewModelScope.launch {
+            if (hasMediaAccess(context)) timelineRepository.loadPhoneMediaIfNeeded()
+            // The timeline's match changes with each sync and backup: recount.
+            timelineRepository.phoneOnServer.distinctUntilChanged().collect { reloadCounts() }
+        }
     }
 
     private fun read() = BackupSettingsUi(
@@ -86,8 +108,9 @@ class SettingsViewModel @Inject constructor(
     fun reloadCounts() {
         viewModelScope.launch {
             val onPhone = if (hasMediaAccess(context)) scanner.count() else 0
-            val backedUp = backupDao.countBackedUp()
-            _backup.value = read().copy(onPhone = onPhone, backedUp = backedUp.coerceAtMost(onPhone))
+            val onServer = timelineRepository.phoneOnServer.first()
+            val backedUp = countInImmich(onPhone, backupDao.linkedLocalIds(), onServer)
+            _backup.value = read().copy(onPhone = onPhone, backedUp = backedUp)
         }
     }
 
@@ -111,6 +134,11 @@ class SettingsViewModel @Inject constructor(
     }
 
     fun backUpNow() = scheduler.runNow()
+
+    fun stopBackup() {
+        scheduler.stop()
+        reloadCounts()
+    }
 
     fun logout() {
         scheduler.cancelAll()
