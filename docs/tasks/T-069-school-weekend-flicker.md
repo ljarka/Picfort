@@ -1,6 +1,6 @@
 # T-069 — School: no flicker after editing on Saturday or Sunday
 
-**Status:** done (pending)  
+**Status:** done (c5879a0)  
 **Component:** Android app (`:feature:school`)  
 **Depends on:** T-029
 
