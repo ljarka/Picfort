@@ -218,10 +218,19 @@ class FamilyRepository(
     }
 
     /** Refreshes profiles from the Picfort server; keeps the offline copy on network errors. */
+    private val syncingUsers = java.util.concurrent.atomic.AtomicBoolean(false)
+
     override suspend fun refresh(): PicfortServerException? {
         // Immich users come only from the sync stream. Before the Photos tab has ever synced
         // (a fresh install) there are none, so the Wall and Shopping had no names or avatars.
-        if (usersDao.all().first().isEmpty()) runCatching { syncImmichUsers() }
+        // One at a time: on a big library this is a full timeline sync, and screens refresh every minute.
+        if (usersDao.all().first().isEmpty() && syncingUsers.compareAndSet(false, true)) {
+            try {
+                runCatching { syncImmichUsers() }
+            } finally {
+                syncingUsers.set(false)
+            }
+        }
         if (!backend.isConfigured) {
             _supported.value = false
             _canAddMembers.value = false

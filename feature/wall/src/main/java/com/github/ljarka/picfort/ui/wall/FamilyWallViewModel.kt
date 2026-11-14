@@ -121,11 +121,12 @@ class FamilyWallViewModel @Inject constructor(
         updatePanel()
         // Independent of the posts: a slow or failing /events must not delay or break the wall.
         viewModelScope.launch { refreshEvents() }
+        // Not awaited: on a fresh database (an update that wiped it) the family refresh first syncs
+        // the Immich users through the whole timeline, which can take minutes; names and avatars
+        // arrive through family.allMembers whenever it's done.
+        viewModelScope.launch { family.refresh() }
         try {
-            val posts = coroutineScope {
-                launch { family.refresh() }
-                repository.posts()
-            }
+            val posts = repository.posts()
             _state.update { s ->
                 s.copy(posts = posts + s.posts.filter { it.id < 0 }, isLoading = false, loadError = null)
             }
