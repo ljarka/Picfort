@@ -1,6 +1,6 @@
 # T-062 — Immich v3 responses: contract tests, readable errors
 
-**Status:** in-progress  
+**Status:** done (4522dfc)  
 **Component:** Android app (`:feature:timeline`, `:app`, `:core:database`)  
 **Depends on:** T-061, T-015
 
