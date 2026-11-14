@@ -33,6 +33,7 @@ import com.github.ljarka.picfort.collections.AlbumDto
 import com.github.ljarka.picfort.collections.AlbumsContent
 import com.github.ljarka.picfort.collections.GridAsset
 import com.github.ljarka.picfort.collections.LoadState
+import com.github.ljarka.picfort.collections.MediaFilter
 import com.github.ljarka.picfort.collections.PeoplePickerContent
 import com.github.ljarka.picfort.collections.SearchContent
 import com.github.ljarka.picfort.collections.SearchPerson
@@ -208,6 +209,14 @@ class TimelineScreenshotTest {
     fun search() = snap {
         SearchContent(
             state = SearchUi(query = "sunset over the hills", results = photos.drop(4), searched = true),
+            thumbnail = { it.id },
+        )
+    }
+
+    @Test
+    fun search_videos() = snap {
+        SearchContent(
+            state = SearchUi(results = photos.filter { it.isVideo }, searched = true, media = MediaFilter.Videos),
             thumbnail = { it.id },
         )
     }

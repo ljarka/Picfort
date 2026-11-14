@@ -37,6 +37,9 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SegmentedButton
+import androidx.compose.material3.SegmentedButtonDefaults
+import androidx.compose.material3.SingleChoiceSegmentedButtonRow
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
@@ -298,6 +301,7 @@ fun SearchScreen(onBack: () -> Unit, onAssetClick: (asset: GridAsset, index: Int
         onLoadMore = viewModel::loadMore,
         personThumbnail = viewModel::personThumbnail,
         onTogglePerson = viewModel::togglePerson,
+        onMedia = viewModel::setMedia,
         onAssetClick = { asset, index -> onAssetClick(asset, index, viewModel.source) },
     )
 }
@@ -314,6 +318,8 @@ fun SearchContent(
     personThumbnail: (String) -> String? = { null },
     /** A person tapped above the results, with the text in the field. */
     onTogglePerson: (id: String, query: String) -> Unit = { _, _ -> },
+    /** All / Photos / Videos picked, with the text in the field (T-071). */
+    onMedia: (MediaFilter, query: String) -> Unit = { _, _ -> },
 ) {
     var query by rememberSaveable { mutableStateOf(state.query) }
     var showAllPeople by rememberSaveable { mutableStateOf(false) }
@@ -349,6 +355,19 @@ fun SearchContent(
                     .padding(horizontal = 12.dp, vertical = 8.dp)
                     .focusRequester(focus),
             )
+            SingleChoiceSegmentedButtonRow(Modifier.fillMaxWidth().padding(start = 12.dp, end = 12.dp, bottom = 8.dp)) {
+                MediaFilter.entries.forEachIndexed { i, media ->
+                    SegmentedButton(
+                        selected = state.media == media,
+                        onClick = {
+                            keyboard?.hide()
+                            onMedia(media, query)
+                        },
+                        shape = SegmentedButtonDefaults.itemShape(i, MediaFilter.entries.size),
+                        label = { Text(media.label, maxLines = 1) },
+                    )
+                }
+            }
             if (state.people.isNotEmpty()) {
                 val accent = MaterialTheme.colorScheme.primary
                 // Many people in Immich: those in most photos, then the ones picked under "All people".
@@ -421,7 +440,7 @@ fun SearchContent(
 
                 !state.searched -> Message(
                     if (state.people.isEmpty()) {
-                        "Search your Immich library by describing what's in the photo."
+                        "Search your Immich library by describing what's in the photo, or pick Photos or Videos."
                     } else {
                         "Describe what's in the photo, or pick people above."
                     },

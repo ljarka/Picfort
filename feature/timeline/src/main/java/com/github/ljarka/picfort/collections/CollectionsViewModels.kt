@@ -154,6 +154,8 @@ data class SearchUi(
     val selectedPeople: Set<String> = emptySet(),
     /** Picked under "All people": at the end of the row, kept there while the screen is open. */
     val addedToRow: List<String> = emptyList(),
+    /** Only photos or only videos; alone it lists them all, newest first (T-071). */
+    val media: MediaFilter = MediaFilter.All,
 )
 
 /** "Ola", "Ola and Kuba", "Ola, Kuba and Staś" (the people picked, in Immich's order). */
@@ -163,11 +165,20 @@ fun SearchUi.selectedNames(): String {
 }
 
 /** Shown when nothing matched: what was searched for, in words. */
-fun SearchUi.nothingFound(): String = when {
-    selectedPeople.isEmpty() -> "Nothing found for \"$query\""
-    query.isEmpty() && selectedPeople.size == 1 -> "No photos of ${selectedNames()}"
-    query.isEmpty() -> "No photos of ${selectedNames()} together"
-    else -> "Nothing found for \"$query\" with ${selectedNames()}"
+fun SearchUi.nothingFound(): String {
+    val noun = if (media == MediaFilter.Videos) "videos" else "photos"
+    val among = when (media) {
+        MediaFilter.All -> ""
+        MediaFilter.Photos -> " in photos"
+        MediaFilter.Videos -> " in videos"
+    }
+    return when {
+        query.isEmpty() && selectedPeople.isEmpty() -> "No $noun"
+        selectedPeople.isEmpty() -> "Nothing found for \"$query\"$among"
+        query.isEmpty() && selectedPeople.size == 1 -> "No $noun of ${selectedNames()}"
+        query.isEmpty() -> "No $noun of ${selectedNames()} together"
+        else -> "Nothing found for \"$query\" with ${selectedNames()}$among"
+    }
 }
 
 @HiltViewModel
@@ -179,7 +190,9 @@ class SearchViewModel @Inject constructor(
     val state: StateFlow<SearchUi> = _state.asStateFlow()
     private var job: Job? = null
 
-    val source: String get() = _state.value.let { "search:${it.query}:${it.selectedPeople.sorted().joinToString(",")}" }
+    val source: String get() = _state.value.let {
+        "search:${it.query}:${it.selectedPeople.sorted().joinToString(",")}:${it.media}"
+    }
 
     init {
         viewModelScope.launch {
@@ -198,7 +211,7 @@ class SearchViewModel @Inject constructor(
     fun search(query: String) {
         val s = _state.value
         job?.cancel()
-        if (query.isBlank() && s.selectedPeople.isEmpty()) {
+        if (query.isBlank() && s.selectedPeople.isEmpty() && s.media == MediaFilter.All) {
             _state.value = SearchUi(people = s.people, addedToRow = s.addedToRow)
             return
         }
@@ -209,8 +222,16 @@ class SearchViewModel @Inject constructor(
             people = s.people,
             selectedPeople = s.selectedPeople,
             addedToRow = s.addedToRow,
+            media = s.media,
         )
         fetch(page = 1)
+    }
+
+    /** All, photos or videos; searches again with the text in the field. */
+    fun setMedia(media: MediaFilter, query: String) {
+        if (media == _state.value.media) return
+        _state.update { it.copy(media = media) }
+        search(query)
     }
 
     /** Picks or drops a person and searches again with the text in the field. */
@@ -236,10 +257,11 @@ class SearchViewModel @Inject constructor(
     private fun fetch(page: Int) {
         val query = _state.value.query
         val people = _state.value.selectedPeople
+        val media = _state.value.media
         val source = source
         job = viewModelScope.launch {
             try {
-                val result = repository.search(query, page, people)
+                val result = repository.search(query, page, people, media)
                 _state.update {
                     val all = (if (page == 1) emptyList() else it.results) + result.assets
                     repository.putList(source, all)

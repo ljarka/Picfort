@@ -59,6 +59,36 @@ class SearchPeopleTest {
     }
 
     @Test
+    fun `media type goes with text, people, or alone (T-071)`() = runBlocking {
+        repository.search("beach", page = 1, media = MediaFilter.Videos)
+        assertEquals(listOf(SmartSearchRequest("beach", 1, 100, personIds = null, type = "VIDEO")), smart)
+        repository.search("", page = 1, personIds = setOf("p1"), media = MediaFilter.Photos)
+        repository.search("", page = 1, media = MediaFilter.Videos)
+        assertEquals(
+            listOf(
+                MetadataSearchRequest(listOf("p1"), 1, 100, "desc", type = "IMAGE"),
+                MetadataSearchRequest(emptyList(), 1, 100, "desc", type = "VIDEO"),
+            ),
+            metadata,
+        )
+    }
+
+    @Test
+    fun `nothing found names the media type`() {
+        val people = listOf(SearchPerson("p1", "Ola"))
+        assertEquals("No videos", SearchUi(media = MediaFilter.Videos).nothingFound())
+        assertEquals("Nothing found for \"dog\" in videos", SearchUi("dog", media = MediaFilter.Videos).nothingFound())
+        assertEquals(
+            "No videos of Ola",
+            SearchUi(people = people, selectedPeople = setOf("p1"), media = MediaFilter.Videos).nothingFound(),
+        )
+        assertEquals(
+            "Nothing found for \"dog\" with Ola in photos",
+            SearchUi("dog", people = people, selectedPeople = setOf("p1"), media = MediaFilter.Photos).nothingFound(),
+        )
+    }
+
+    @Test
     fun `nothing found says what was searched for`() {
         val people = listOf(SearchPerson("p1", "Ola"), SearchPerson("p2", "Kuba"), SearchPerson("p3", "Staś"))
         fun ui(query: String, vararg ids: String) =
