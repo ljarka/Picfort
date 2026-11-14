@@ -51,6 +51,17 @@ Events (see events.py, T-022), same token auth; anyone can edit, only the creato
     PATCH  /events/<id>                      -> update any field (null clears optional ones)
     DELETE /events/<id>                      -> 204 (creator only)
     Every event has `members`: the family member ids it is for (T-053), settable on POST and PATCH.
+
+School timetables (see school.py, T-028), same token auth; anyone can edit or delete.
+    GET    /school                           -> {children: [child with periods and entries]}
+    POST   /school/children                  -> 201 {name, color}
+    PATCH/DELETE /school/children/<id>       -> rename/recolor; delete with its timetable
+    PUT/DELETE /school/children/<id>/photo   -> multipart photo (JPEG/PNG <= 2 MB)
+    PUT/DELETE /school/children/<id>/person  -> the caller's link to an Immich person
+    PUT    /school/children/<id>/periods     -> replace the bell schedule (lessons follow)
+    POST/PATCH/DELETE /school/children/<id>/entries[/<entry>] -> lessons and activities
+    POST   /school/children/<id>/copy-day    -> {from, to, kinds?}
+    POST   /school/children/<id>/copy-periods -> {from_child}
 """
 
 import hmac
@@ -72,6 +83,7 @@ from events import DEFAULT_LIMIT as EVENTS_DEFAULT_LIMIT, EventStore
 from family import FamilyStore
 from immich import ImmichClient
 from shopping import ShoppingStore
+from school import SchoolStore
 from slideshow import INTERVALS, MODES, Picker, SettingsStore, Slideshow, SlideshowSettings
 from store import StoreError
 from wall import DEFAULT_LIMIT, MAX_LIMIT, MAX_PHOTO_BYTES, WallError, WallStore
@@ -191,7 +203,7 @@ def settings_json(slideshow: Slideshow):
 def create_app(controller: FrameController, slideshow: Slideshow, immich: ImmichClient,
                wall: WallStore = None, auth: Authenticator = None, api_key: str = "",
                shopping: ShoppingStore = None, family: FamilyStore = None,
-               events: EventStore = None) -> Flask:
+               events: EventStore = None, school: SchoolStore = None) -> Flask:
     app = Flask(__name__)
     if api_key:
         require_api_key(app, api_key)
@@ -302,6 +314,8 @@ def create_app(controller: FrameController, slideshow: Slideshow, immich: Immich
         register_family(app, family)
     if events is not None:
         register_events(app, events)
+    if school is not None:
+        register_school(app, school)
     if family is not None and events is not None:
         family.events = events
         events.family = family
@@ -516,6 +530,81 @@ def register_events(app: Flask, events: EventStore):
         return "", 204
 
 
+def register_school(app: Flask, school: SchoolStore):
+    @app.route("/school", methods=["GET"])
+    def get_school():
+        return jsonify(children=school.children(g.user.id))
+
+    @app.route("/school/children", methods=["POST"])
+    def create_child():
+        return jsonify(school.create_child(g.user.id, json_body())), 201
+
+    @app.route("/school/children/<int:child_id>", methods=["PATCH"])
+    def update_child(child_id):
+        return jsonify(school.update_child(child_id, g.user.id, json_body()))
+
+    @app.route("/school/children/<int:child_id>", methods=["DELETE"])
+    def delete_child(child_id):
+        school.delete_child(child_id)
+        return "", 204
+
+    @app.route("/school/children/<int:child_id>/photo", methods=["PUT"])
+    def put_child_photo(child_id):
+        upload = request.files.get("photo")
+        data = upload.read() if upload and upload.filename else b""
+        return jsonify(school.set_photo(child_id, g.user.id, data))
+
+    @app.route("/school/children/<int:child_id>/photo", methods=["DELETE"])
+    def delete_child_photo(child_id):
+        school.delete_photo(child_id)
+        return "", 204
+
+    @app.route("/school/children/photo/<filename>")
+    def child_photo(filename):
+        path = school.photo_path(filename)
+        if path is None:
+            return error("Photo not found", 404)
+        mimetype = PHOTO_MIME_TYPES[filename.rsplit(".", 1)[1]]
+        resp = send_file(os.path.abspath(path), mimetype=mimetype, max_age=365 * 24 * 3600)
+        resp.cache_control.private = True
+        resp.cache_control.public = False
+        return resp
+
+    @app.route("/school/children/<int:child_id>/person", methods=["PUT"])
+    def link_child_person(child_id):
+        return jsonify(school.link_person(child_id, g.user.id, json_body()))
+
+    @app.route("/school/children/<int:child_id>/person", methods=["DELETE"])
+    def unlink_child_person(child_id):
+        school.unlink_person(child_id, g.user.id)
+        return "", 204
+
+    @app.route("/school/children/<int:child_id>/periods", methods=["PUT"])
+    def put_periods(child_id):
+        return jsonify(school.set_periods(child_id, g.user.id, request.get_json(silent=True)))
+
+    @app.route("/school/children/<int:child_id>/copy-periods", methods=["POST"])
+    def copy_periods(child_id):
+        return jsonify(school.copy_periods(child_id, g.user.id, json_body()))
+
+    @app.route("/school/children/<int:child_id>/entries", methods=["POST"])
+    def create_entry(child_id):
+        return jsonify(school.create_entry(child_id, g.user.id, json_body())), 201
+
+    @app.route("/school/children/<int:child_id>/entries/<int:entry_id>", methods=["PATCH"])
+    def update_entry(child_id, entry_id):
+        return jsonify(school.update_entry(child_id, entry_id, g.user.id, json_body()))
+
+    @app.route("/school/children/<int:child_id>/entries/<int:entry_id>", methods=["DELETE"])
+    def delete_entry(child_id, entry_id):
+        school.delete_entry(child_id, entry_id)
+        return "", 204
+
+    @app.route("/school/children/<int:child_id>/copy-day", methods=["POST"])
+    def copy_day(child_id):
+        return jsonify(school.copy_day(child_id, g.user.id, json_body()))
+
+
 def register_wall(app: Flask, wall: WallStore):
     @app.errorhandler(RequestEntityTooLarge)
     def too_large(_):
@@ -601,12 +690,14 @@ if __name__ == "__main__":
     family_store = FamilyStore(os.environ.get("FAMILY_DB_PATH", "family.db"),
                                os.environ.get("PROFILE_PHOTOS_PATH", "profile_photos"))
     event_store = EventStore(os.environ.get("EVENTS_DB_PATH", "events.db"))
+    school_store = SchoolStore(os.environ.get("SCHOOL_DB_PATH", "school.db"),
+                               os.environ.get("CHILD_PHOTOS_PATH", "child_photos"))
     wall_auth = Authenticator(immich_lookup(config.immich_url))
     api_key = os.environ.get("PICFORT_API_KEY", "").strip()
     if not api_key:
         log.info("PICFORT_API_KEY is not set: anyone who can reach this server can use it.")
     app = create_app(frame_controller, show_slideshow, immich_client, family_wall, wall_auth, api_key,
-                     shopping_store, family_store, event_store)
+                     shopping_store, family_store, event_store, school_store)
     port = int(os.environ.get("PORT", "5000"))
     log.info("Listening on port %s", port)
     # waitress, not Flask's development server: made for long-running use, and it handles
