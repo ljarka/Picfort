@@ -29,9 +29,10 @@ import com.github.ljarka.picfort.ui.events.EventsListUi
 import com.github.ljarka.picfort.ui.init.SetupContent
 import com.github.ljarka.picfort.ui.init.SetupStep
 import com.github.ljarka.picfort.ui.init.SetupUi
+import com.github.ljarka.picfort.ui.school.SchoolContent
+import com.github.ljarka.picfort.ui.school.SchoolUi
 import com.github.ljarka.picfort.ui.settings.BackupSettingsUi
 import com.github.ljarka.picfort.ui.settings.SettingsContent
-import com.github.ljarka.picfort.ui.shell.ComingSoonContent
 import com.github.ljarka.picfort.ui.shell.Tab
 import com.github.ljarka.picfort.ui.shell.TabBar
 import com.github.ljarka.picfort.ui.shell.TabRoot
@@ -316,14 +317,9 @@ class ScreenshotTest {
     }
 
     @Test
-    fun school_coming_soon_dark() = snap(dark = true) {
+    fun school_no_children_dark() = snap(dark = true) {
         WithTabBar(Tab.SCHOOL) {
-            ComingSoonContent(
-                "School",
-                configured = true,
-                message = "School timetables are coming soon.",
-                serverMessage = "",
-            )
+            SchoolContent(SchoolUi())
         }
     }
 

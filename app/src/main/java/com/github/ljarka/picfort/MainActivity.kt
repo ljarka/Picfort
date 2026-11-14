@@ -50,9 +50,9 @@ import com.github.ljarka.picfort.ui.frame.FrameSettingsDialog
 import com.github.ljarka.picfort.ui.frame.PicfortServerSetupScreen
 import com.github.ljarka.picfort.ui.image.ImageDetailsScreen
 import com.github.ljarka.picfort.ui.init.InitScreen
+import com.github.ljarka.picfort.ui.school.SchoolScreen
 import com.github.ljarka.picfort.ui.settings.AppearanceSettingsStore
 import com.github.ljarka.picfort.ui.settings.SettingsScreen
-import com.github.ljarka.picfort.ui.shell.ComingSoonScreen
 import com.github.ljarka.picfort.ui.shell.ServerStatusViewModel
 import com.github.ljarka.picfort.ui.shell.Tab
 import com.github.ljarka.picfort.ui.shell.TabBar
@@ -221,12 +221,7 @@ class MainActivity : ComponentActivity() {
                                     navigation<TabGraph.School>(startDestination = Screen.School) {
                                         composable<Screen.School> {
                                             TabRoot {
-                                                ComingSoonScreen(
-                                                    title = "School",
-                                                    message = "School timetables are coming soon.",
-                                                    serverMessage = SCHOOL_SERVER_MESSAGE,
-                                                    onSettingsClick = openSettings,
-                                                )
+                                                SchoolScreen(onSettingsClick = openSettings)
                                             }
                                         }
                                     }
@@ -402,5 +397,3 @@ class MainActivity : ComponentActivity() {
         }
     }
 }
-
-private const val SCHOOL_SERVER_MESSAGE = "Connect your Picfort server to use school timetables."

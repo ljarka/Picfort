@@ -70,6 +70,7 @@ dependencies {
     api(project(":core:network"))
     implementation(project(":feature:shopping"))
     implementation(project(":feature:events"))
+    implementation(project(":feature:school"))
     implementation(project(":feature:family"))
     implementation(project(":feature:wall"))
     implementation(project(":feature:frame"))

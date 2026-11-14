@@ -38,6 +38,7 @@ Do not load the whole project. Each module's `AGENTS.md` tells you what to read.
 | `:feature:events` | Family events, birthdays, recurring countdowns, detail & form | done |
 | `:feature:family` | Family members management, nickname/color editing, hidden toggles | done |
 | `:feature:frame` | Ambient e-paper frame control, photo push via `FrameSender`, pairing setup | done |
+| `:feature:school` | School timetables: child chips, "finishes at" card, week by day, bell schedule, editing | done |
 | `:feature:timeline` | Photo timeline, justified layout, full-screen viewer, albums, search, sync | done |
 | `:app` | Thin shell: `MainActivity`, root navigation graph, `AppShell`, Hilt assembly | done |
 

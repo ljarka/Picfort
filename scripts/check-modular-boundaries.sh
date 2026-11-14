@@ -51,6 +51,7 @@ MODULES=(
     "core/network"
     "feature/shopping"
     "feature/events"
+    "feature/school"
     "feature/family"
     "feature/wall"
     "feature/frame"
