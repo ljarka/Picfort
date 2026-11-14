@@ -109,10 +109,6 @@ class SchoolRepository @Inject constructor(
             refresh()
         }
 
-    suspend fun updateChild(id: Long, name: String, color: String) = change {
-        backend.updateChild(id, name.trim(), color)
-    }
-
     suspend fun deleteChild(id: Long) = quietlyGone {
         backend.deleteChild(id)
         _children.update { list -> list.filter { it.id != id } }

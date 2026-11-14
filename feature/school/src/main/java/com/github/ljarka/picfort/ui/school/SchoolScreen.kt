@@ -117,7 +117,6 @@ fun SchoolScreen(onSettingsClick: () -> Unit, onSetUpServer: () -> Unit = onSett
             onSettingsClick = onSettingsClick,
             onSetUpServer = onSetUpServer,
             onAddChild = viewModel::addChild,
-            onUpdateChild = viewModel::updateChild,
             onDeleteChild = viewModel::deleteChild,
             onSavePeriods = viewModel::savePeriods,
             onCopyPeriods = viewModel::copyPeriods,
@@ -138,7 +137,6 @@ data class SchoolActions(
     val onSettingsClick: () -> Unit = {},
     val onSetUpServer: () -> Unit = {},
     val onAddChild: (member: FamilyMember, done: () -> Unit) -> Unit = { _, _ -> },
-    val onUpdateChild: (id: Long, name: String, color: String, done: () -> Unit) -> Unit = { _, _, _, _ -> },
     val onDeleteChild: (id: Long, done: () -> Unit) -> Unit = { _, _ -> },
     val onSavePeriods: (childId: Long, periods: List<Period>, done: () -> Unit) -> Unit = { _, _, _ -> },
     val onCopyPeriods: (childId: Long, fromChild: Long, done: () -> Unit) -> Unit = { _, _, _ -> },
@@ -292,9 +290,6 @@ private fun SchoolSheet(
             is Sheet.ChildSheet -> ChildForm(
                 child = state.children.firstOrNull { it.id == open.child.id } ?: open.child,
                 avatar = state.avatarOf(open.child),
-                linked = state.memberOf(open.child) != null,
-                saving = state.saving,
-                onSave = { name, color -> actions.onUpdateChild(open.child.id, name, color, close) },
                 onBells = { onOpen(Sheet.Bells) },
                 onDelete = { id -> actions.onDeleteChild(id, close) },
             )

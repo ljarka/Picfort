@@ -38,11 +38,6 @@ private class FakeSchoolBackend : SchoolBackend {
         return Child(nextId++, name, color, memberId = memberId).also { children[it.id] = it }
     }
 
-    override suspend fun updateChild(id: Long, name: String, color: String): Child {
-        check()
-        return child(id).copy(name = name, color = color).also { children[id] = it }
-    }
-
     override suspend fun deleteChild(id: Long) {
         check()
         child(id)
@@ -137,8 +132,8 @@ class SchoolRepositoryTest {
     fun changesReplaceTheChildAndEntriesReload() = runBlocking {
         val ola = repository.addChild(" Ola ", "pink")
         assertEquals("Ola", repository.children.value.single().name)
-        repository.updateChild(ola.id, "Ola K", "green")
-        assertEquals("green", repository.children.value.single().color)
+        repository.setPeriods(ola.id, fillBells(LocalTime.of(8, 0), 45, 10, 2))
+        assertEquals(2, repository.children.value.single().periods.size)
 
         repository.addEntry(ola.id, draft("Maths"))
         repository.copyDay(ola.id, DayOfWeek.MONDAY, listOf(DayOfWeek.TUESDAY, DayOfWeek.WEDNESDAY))
@@ -146,13 +141,13 @@ class SchoolRepositoryTest {
     }
 
     @Test
-    fun aRenameReachesTheOfflineCopy() = runBlocking {
-        val ala = repository.addChild("Ala", "pink")
-        repository.updateChild(ala.id, "Ola", "green")
+    fun aChangeReachesTheOfflineCopy() = runBlocking {
+        repository.addChild("Ola", "pink")
+        repository.addChild("Staś", "blue") // answered with the child, then reloaded: the copy has both
         backend.down = true
         val restarted = SchoolRepository(backend, copy)
         restarted.refresh()
-        assertEquals(listOf("Ola"), restarted.children.value.map { it.name })
+        assertEquals(listOf("Ola", "Staś"), restarted.children.value.map { it.name })
     }
 
     @Test
@@ -168,6 +163,6 @@ class SchoolRepositoryTest {
     fun otherErrorsReachTheCaller(): Unit = runBlocking {
         val ola = repository.addChild("Ola", "pink")
         backend.down = true
-        repository.updateChild(ola.id, "Ola", "red")
+        repository.setPeriods(ola.id, emptyList())
     }
 }

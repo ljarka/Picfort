@@ -17,6 +17,10 @@ name: School — timetable (T-029)
     timeout: 10000
 - tapOn: "Add"
 - assertVisible: "Who goes to school\\?"
+# Both Immich users (Ola) and people added by hand (Kuba) are offered (T-066)
+- assertVisible:
+    text: "Kuba"
+    below: "Who goes to school\\?"
 - tapOn: "Ola"
 - extendedWaitUntil:
     visible: "No school today|.*finish.*school.*"

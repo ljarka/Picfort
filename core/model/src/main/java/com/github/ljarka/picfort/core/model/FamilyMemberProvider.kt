@@ -11,7 +11,11 @@ import kotlinx.coroutines.flow.flowOf
  */
 interface FamilyMemberProvider {
     val myId: String
+
+    /** Visible **Immich users** only (people who can post or write); not those added by hand. */
     val members: Flow<List<FamilyMember>>
+
+    /** The whole visible family: Immich users **and** people added by hand (T-033). For pickers. */
     val allMembers: Flow<List<FamilyMember>> get() = members
     val hiddenIds: Flow<Set<String>> get() = emptyFlow()
 

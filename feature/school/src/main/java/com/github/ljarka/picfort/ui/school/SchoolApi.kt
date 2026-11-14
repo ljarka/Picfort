@@ -106,7 +106,6 @@ interface SchoolBackend {
 
     /** [memberId]: the family member the child is. */
     suspend fun addChild(name: String, color: String, memberId: String?): Child
-    suspend fun updateChild(id: Long, name: String, color: String): Child
     suspend fun deleteChild(id: Long)
     suspend fun setPeriods(childId: Long, periods: List<Period>): Child
     suspend fun copyPeriods(childId: Long, fromChild: Long): Child
@@ -137,17 +136,6 @@ class SchoolApi @Inject constructor(private val server: PicfortServerClient, pri
                     put("name", name)
                     put("color", color)
                     memberId?.let { put("immich_user_id", it) }
-                },
-            ),
-        ).build(),
-    )
-
-    override suspend fun updateChild(id: Long, name: String, color: String) = childCall(
-        Request.Builder().url(child(id).build()).patch(
-            body(
-                buildJsonObject {
-                    put("name", name)
-                    put("color", color)
                 },
             ),
         ).build(),
