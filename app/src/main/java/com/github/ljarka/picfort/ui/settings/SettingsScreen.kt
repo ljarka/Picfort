@@ -65,7 +65,8 @@ fun SettingsScreen(onBack: () -> Unit, onFrameClick: () -> Unit, onFamilyClick: 
         }
         viewModel.setEnabled(enabled)
     }
-    if (!backup.hasMediaAccess) RequestMediaPermission(onGranted = viewModel::reloadCounts)
+    // Asks only for what's missing: photos, or (T-067) their locations.
+    RequestMediaPermission(onGranted = viewModel::reloadCounts)
     SettingsContent(
         backup = backup,
         status = status,

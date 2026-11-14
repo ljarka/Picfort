@@ -15,7 +15,7 @@ Thin Android application shell, navigation root, and Hilt root assembler.
 | `ui/init/*` | `InitScreen` (signed in → app) and the one-page setup (T-058): `SetupScreen`/`SetupContent`, `SetupViewModel` (Immich ping → login → `PicfortServerCheck`), `picfortSuggestion` (same host :5000) |
 | `ui/login/*` | `LoginService` (`/api/auth/login`, via `Provider`: Retrofit reads the base URL when built) |
 | `ui/settings/*` | App settings, server info, backup status (`countInImmich` with the timeline's match, `BackupQueueRow`, Stop; T-063); `AppearanceSettingsStore` ("Colors from wallpaper", off by default → brand palette) |
-| `backup/*` | Android WorkManager periodic background photo backup; `BackupQueue` (what uploads now/next, T-063), `BackupScheduler.stop()`; `BackupRoute` (home-network address, 413 → waits for home, T-064) |
+| `backup/*` | Android WorkManager periodic background photo backup; `BackupQueue` (what uploads now/next, T-063), `BackupScheduler.stop()`; `BackupRoute` (home-network address, 413 → waits for home, T-064); reads originals via `setRequireOriginal` (needs `ACCESS_MEDIA_LOCATION`, T-067) |
 
 ## Architecture & Rules
 

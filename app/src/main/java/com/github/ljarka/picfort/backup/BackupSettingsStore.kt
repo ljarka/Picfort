@@ -47,4 +47,9 @@ class BackupSettingsStore @Inject constructor(@ApplicationContext context: Conte
     var mappingsOwner: String?
         get() = prefs.getString("mappingsOwner", null)
         set(value) = prefs.edit { putString("mappingsOwner", value) }
+
+    /** Checksums of files not yet in Immich are of the originals (with GPS), not stripped copies (T-067). */
+    var originalChecksums: Boolean
+        get() = prefs.getBoolean("originalChecksums", false)
+        set(value) = prefs.edit { putBoolean("originalChecksums", value) }
 }
