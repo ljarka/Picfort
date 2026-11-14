@@ -133,6 +133,7 @@ Android task except T-017 and T-026 starts with a mockup the owner approves.
 | [T-068](tasks/T-068-goes-to-school-in-family.md) | "Goes to school" switch in Family settings; School's "+" opens Family; "+" without caption | `done` |
 | [T-069](tasks/T-069-school-weekend-flicker.md) | School: no flicker after editing with Saturday/Sunday chosen | `done` |
 | [T-070](tasks/T-070-delete-album.md) | Photos: delete an Immich album (⋮ in the album, owner only; photos stay) | `done` |
+| [T-071](tasks/T-071-search-media-type.md) | Search: All / Photos / Videos switch (with text, people, or alone) | `done` |
 
 ### Phase 8 — Modular Architecture (Agentic Pair Programming)
 Deconstruct monolithic `:app` into isolated feature slices and core foundations (ADR 0011).

@@ -87,17 +87,37 @@ class CollectionsRepository @Inject constructor(
     }
 
     /**
-     * Search: by text (CLIP), with the [personIds] in it (all of them), or only by people, newest
-     * first. At least one of them must be given.
+     * Search: by text (CLIP), with the [personIds] in it (all of them), or only by people and/or
+     * [media] type, newest first. At least one of them must be given.
      */
-    suspend fun search(query: String, page: Int, personIds: Set<String> = emptySet()): SearchPage {
+    suspend fun search(
+        query: String,
+        page: Int,
+        personIds: Set<String> = emptySet(),
+        media: MediaFilter = MediaFilter.All,
+    ): SearchPage {
         val text = query.trim()
         val response = if (text.isEmpty()) {
             service.get().metadataSearch(
-                MetadataSearchRequest(personIds.toList(), page = page, size = 100, order = "desc"),
+                MetadataSearchRequest(
+                    personIds.toList(),
+                    page = page,
+                    size = 100,
+                    order = "desc",
+                    type = media.immichType,
+                ),
             )
         } else {
-            service.get().smartSearch(SmartSearchRequest(text, page, personIds = personIds.toList().ifEmpty { null }))
+            service.get().smartSearch(
+                SmartSearchRequest(
+                    text,
+                    page,
+                    personIds = personIds.toList().ifEmpty {
+                        null
+                    },
+                    type = media.immichType,
+                ),
+            )
         }.assets
         return SearchPage(
             assets = response.items.map { item ->

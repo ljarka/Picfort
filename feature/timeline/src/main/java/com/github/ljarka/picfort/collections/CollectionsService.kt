@@ -52,6 +52,8 @@ data class SmartSearchRequest(
     val page: Int = 1,
     val size: Int = 100,
     val personIds: List<String>? = null,
+    /** "IMAGE" or "VIDEO"; null for both (T-071). */
+    val type: String? = null,
 )
 
 /** A face group in Immich ("people"); unnamed ones have an empty name. */
@@ -63,7 +65,21 @@ data class PeopleResponse(val people: List<PersonDto> = emptyList(), val hasNext
 
 /** Photos with a person (T-052). No default values: the app's Json doesn't encode defaults. */
 @Serializable
-data class MetadataSearchRequest(val personIds: List<String>, val page: Int, val size: Int, val order: String)
+data class MetadataSearchRequest(
+    val personIds: List<String>,
+    val page: Int,
+    val size: Int,
+    val order: String,
+    /** "IMAGE" or "VIDEO"; null (left out) for both (T-071). */
+    val type: String? = null,
+)
+
+/** Search filter: everything, only photos or only videos (Immich asset type, T-071). */
+enum class MediaFilter(val label: String, val immichType: String?) {
+    All("All", null),
+    Photos("Photos", "IMAGE"),
+    Videos("Videos", "VIDEO"),
+}
 
 @Serializable
 data class SearchAssetDto(
