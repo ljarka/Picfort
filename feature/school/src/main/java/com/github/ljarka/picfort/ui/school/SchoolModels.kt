@@ -39,6 +39,8 @@ data class Child(
     val color: String,
     val photoUrl: String? = null,
     val myPersonId: String? = null,
+    /** The family member this child is (server `immich_user_id`); name and face come from them. */
+    val memberId: String? = null,
     val periods: List<Period> = emptyList(),
     val entries: List<SchoolEntry> = emptyList(),
 ) {

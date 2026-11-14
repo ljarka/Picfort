@@ -49,6 +49,7 @@ data class ChildDto(
     val color: String,
     @SerialName("photo_url") val photoUrl: String? = null,
     @SerialName("my_person_id") val myPersonId: String? = null,
+    @SerialName("immich_user_id") val memberId: String? = null,
     val periods: List<PeriodDto> = emptyList(),
     val entries: List<EntryDto> = emptyList(),
 )
@@ -66,6 +67,7 @@ fun ChildDto.toChild(base: HttpUrl?): Child = Child(
     color = color,
     photoUrl = photoUrl?.let { base?.resolve(it)?.toString() ?: it },
     myPersonId = myPersonId,
+    memberId = memberId,
     periods = periods.map { Period(it.number, time(it.startTime), time(it.endTime)) },
     entries = entries.map {
         SchoolEntry(
@@ -101,7 +103,9 @@ interface SchoolBackend {
     /** The children and the raw JSON, for the offline copy. */
     suspend fun children(): Pair<List<Child>, String>
     fun decode(raw: String): List<Child>
-    suspend fun addChild(name: String, color: String): Child
+
+    /** [memberId]: the family member the child is. */
+    suspend fun addChild(name: String, color: String, memberId: String?): Child
     suspend fun updateChild(id: Long, name: String, color: String): Child
     suspend fun deleteChild(id: Long)
     suspend fun setPeriods(childId: Long, periods: List<Period>): Child
@@ -126,12 +130,13 @@ class SchoolApi @Inject constructor(private val server: PicfortServerClient, pri
         it.toChild(base)
     }
 
-    override suspend fun addChild(name: String, color: String) = childCall(
+    override suspend fun addChild(name: String, color: String, memberId: String?) = childCall(
         Request.Builder().url(school().addPathSegment("children").build()).post(
             body(
                 buildJsonObject {
                     put("name", name)
                     put("color", color)
+                    memberId?.let { put("immich_user_id", it) }
                 },
             ),
         ).build(),

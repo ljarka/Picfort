@@ -33,9 +33,9 @@ private class FakeSchoolBackend : SchoolBackend {
         Child(id.toLong(), name, "pink")
     }
 
-    override suspend fun addChild(name: String, color: String): Child {
+    override suspend fun addChild(name: String, color: String, memberId: String?): Child {
         check()
-        return Child(nextId++, name, color).also { children[it.id] = it }
+        return Child(nextId++, name, color, memberId = memberId).also { children[it.id] = it }
     }
 
     override suspend fun updateChild(id: Long, name: String, color: String): Child {
@@ -105,8 +105,8 @@ class SchoolRepositoryTest {
 
     @Test
     fun loadsSavesTheCopyAndFallsBackToItOffline() = runBlocking {
-        backend.addChild("Staś", "blue")
-        backend.addChild("Ola", "pink")
+        backend.addChild("Staś", "blue", null)
+        backend.addChild("Ola", "pink", null)
         assertNull(repository.refresh())
         assertEquals(listOf("Ola", "Staś"), repository.children.value.map { it.name })
         assertNull(repository.offlineSince.value)

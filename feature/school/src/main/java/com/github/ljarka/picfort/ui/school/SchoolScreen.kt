@@ -77,6 +77,8 @@ import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.repeatOnLifecycle
 import coil3.compose.AsyncImage
+import com.github.ljarka.picfort.core.model.FamilyMember
+import com.github.ljarka.picfort.core.ui.avatar.MemberCarousel
 import com.github.ljarka.picfort.core.ui.avatar.avatarColor
 import com.github.ljarka.picfort.core.ui.avatar.initials
 import com.github.ljarka.picfort.core.ui.component.ServerRequiredContent
@@ -135,7 +137,7 @@ data class SchoolActions(
     val onMessageShown: () -> Unit = {},
     val onSettingsClick: () -> Unit = {},
     val onSetUpServer: () -> Unit = {},
-    val onAddChild: (name: String, color: String, done: () -> Unit) -> Unit = { _, _, _ -> },
+    val onAddChild: (member: FamilyMember, done: () -> Unit) -> Unit = { _, _ -> },
     val onUpdateChild: (id: Long, name: String, color: String, done: () -> Unit) -> Unit = { _, _, _, _ -> },
     val onDeleteChild: (id: Long, done: () -> Unit) -> Unit = { _, _ -> },
     val onSavePeriods: (childId: Long, periods: List<Period>, done: () -> Unit) -> Unit = { _, _, _ -> },
@@ -147,8 +149,10 @@ data class SchoolActions(
 
 /** Which form is open over the timetable. */
 private sealed interface Sheet {
-    /** [child] null adds one. */
-    data class ChildSheet(val child: Child?) : Sheet
+    data class ChildSheet(val child: Child) : Sheet
+
+    /** Pick who goes to school from the family. */
+    data object AddChild : Sheet
 
     data class EntrySheet(val entry: SchoolEntry?, val day: DayOfWeek) : Sheet
 
@@ -231,7 +235,7 @@ fun SchoolContent(
                 else -> {
                     state.offlineSince?.let { OfflineBanner(it) }
                     if (child == null) {
-                        NoChildren(canAdd = state.canEdit, onAdd = { sheet = Sheet.ChildSheet(null) })
+                        NoChildren(state, onAdd = { sheet = Sheet.AddChild })
                     } else {
                         Timetable(
                             state = state,
@@ -241,7 +245,7 @@ fun SchoolContent(
                             time = time,
                             actions = actions,
                             onEditChild = { sheet = Sheet.ChildSheet(it) },
-                            onAddChild = { sheet = Sheet.ChildSheet(null) },
+                            onAddChild = { sheet = Sheet.AddChild },
                             onOpenEntry = { sheet = Sheet.EntrySheet(it, it.weekday) },
                             onCopyDay = { sheet = Sheet.CopyDay(it) },
                         )
@@ -286,18 +290,19 @@ private fun SchoolSheet(
     ModalBottomSheet(onDismissRequest = onClose, sheetState = sheetState) {
         when (open) {
             is Sheet.ChildSheet -> ChildForm(
-                child = open.child,
-                takenColors = state.children.map { it.color },
+                child = state.children.firstOrNull { it.id == open.child.id } ?: open.child,
+                avatar = state.avatarOf(open.child),
+                linked = state.memberOf(open.child) != null,
                 saving = state.saving,
-                onSave = { name, color ->
-                    if (open.child == null) {
-                        actions.onAddChild(name, color, close)
-                    } else {
-                        actions.onUpdateChild(open.child.id, name, color, close)
-                    }
-                },
+                onSave = { name, color -> actions.onUpdateChild(open.child.id, name, color, close) },
                 onBells = { onOpen(Sheet.Bells) },
                 onDelete = { id -> actions.onDeleteChild(id, close) },
+            )
+
+            Sheet.AddChild -> AddChildForm(
+                candidates = state.candidates,
+                saving = state.saving,
+                onPick = { actions.onAddChild(it, close) },
             )
 
             is Sheet.EntrySheet -> if (child != null) {
@@ -346,10 +351,9 @@ private fun Timetable(
     onCopyDay: (DayOfWeek) -> Unit,
 ) {
     val days = state.days
-    ChildChips(
-        children = state.children,
+    ChildrenRow(
+        state = state,
         selectedId = child.id,
-        canAdd = state.canEdit,
         editing = editing,
         onSelect = actions.onSelectChild,
         onEdit = onEditChild,
@@ -392,100 +396,43 @@ private fun Timetable(
 
 // --- Children ---
 
-@OptIn(ExperimentalFoundationApi::class)
+/** A child as an avatar: the family member's face and color when linked (as on the Wall). */
+fun SchoolUi.avatarOf(child: Child): FamilyMember {
+    val member = memberOf(child)
+    return FamilyMember(
+        id = child.id.toString(),
+        name = child.name,
+        avatarUrl = child.photoUrl,
+        color = member?.color ?: avatarColor(child.color),
+    )
+}
+
+/**
+ * The children as the family's avatar row (same as the Wall), with a last "+" that adds someone
+ * from the family. In edit mode, tapping the chosen child (or long-press "Edit") opens its sheet.
+ */
 @Composable
-private fun ChildChips(
-    children: List<Child>,
-    selectedId: Long,
-    canAdd: Boolean,
+private fun ChildrenRow(
+    state: SchoolUi,
+    selectedId: Long?,
     editing: Boolean,
     onSelect: (Long) -> Unit,
     onEdit: (Child) -> Unit,
     onAdd: () -> Unit,
 ) {
-    LazyRow(
-        contentPadding = PaddingValues(horizontal = 16.dp, vertical = 4.dp),
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
-    ) {
-        items(children, key = { it.id }) { child ->
-            val selected = child.id == selectedId
-            val color = avatarColor(child.color)
-            Surface(
-                shape = RoundedCornerShape(50),
-                color = if (selected) color.copy(alpha = 0.22f) else MaterialTheme.colorScheme.surface,
-                modifier = Modifier
-                    .clip(RoundedCornerShape(50))
-                    .border(
-                        1.dp,
-                        if (selected) color else MaterialTheme.colorScheme.outlineVariant,
-                        RoundedCornerShape(50),
-                    )
-                    .combinedClickable(
-                        onClick = { if (selected && editing) onEdit(child) else onSelect(child.id) },
-                        onLongClick = { if (editing) onEdit(child) else onSelect(child.id) },
-                        onLongClickLabel = if (editing) "Edit ${child.name}" else null,
-                    )
-                    .semantics {
-                        this.selected = selected
-                        role = Role.Tab
-                    },
-            ) {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    modifier = Modifier.padding(4.dp, 4.dp, 14.dp, 4.dp),
-                ) {
-                    ChildAvatar(child)
-                    Spacer(Modifier.width(8.dp))
-                    Text(
-                        child.name,
-                        style = MaterialTheme.typography.labelLarge,
-                        fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Normal,
-                    )
-                    if (selected && editing) {
-                        Spacer(Modifier.width(6.dp))
-                        Icon(Icons.Default.Edit, contentDescription = null, modifier = Modifier.size(14.dp))
-                    }
-                }
-            }
-        }
-        if (canAdd) {
-            item(key = "add") {
-                Surface(
-                    shape = CircleShape,
-                    color = MaterialTheme.colorScheme.surfaceContainerHigh,
-                    onClick = onAdd,
-                    modifier = Modifier.size(36.dp),
-                ) {
-                    Box(contentAlignment = Alignment.Center) {
-                        Icon(Icons.Default.Add, contentDescription = "Add child", modifier = Modifier.size(20.dp))
-                    }
-                }
-            }
-        }
-    }
-}
-
-@Composable
-fun ChildAvatar(child: Child, size: androidx.compose.ui.unit.Dp = 28.dp) {
-    val color = avatarColor(child.color)
-    Box(
-        contentAlignment = Alignment.Center,
-        modifier = Modifier.size(size).clip(CircleShape).background(color),
-    ) {
-        Text(
-            initials(child.name),
-            style = MaterialTheme.typography.labelMedium,
-            color = MaterialTheme.colorScheme.surface,
-        )
-        if (child.photoUrl != null) {
-            AsyncImage(
-                model = child.photoUrl,
-                contentDescription = null,
-                contentScale = ContentScale.Crop,
-                modifier = Modifier.fillMaxSize(),
-            )
-        }
-    }
+    val byId = state.children.associateBy { it.id.toString() }
+    MemberCarousel(
+        members = state.children.map { state.avatarOf(it) },
+        selectedId = selectedId?.toString(),
+        onSelect = { id ->
+            val child = id?.let(byId::get) ?: return@MemberCarousel
+            if (editing && child.id == selectedId) onEdit(child) else onSelect(child.id)
+        },
+        onEditMember = if (editing) ({ id -> byId[id]?.let(onEdit) }) else null,
+        onOpenFamily = if (state.canEdit) onAdd else null,
+        addLabel = "Add",
+        addClickLabel = "Add child",
+    )
 }
 
 // --- Today ---
@@ -694,17 +641,15 @@ private fun EntryRow(entry: SchoolEntry, rowTime: RowTime, time: (LocalTime) -> 
 // --- Empty states ---
 
 @Composable
-private fun NoChildren(canAdd: Boolean, onAdd: () -> Unit) {
+private fun NoChildren(state: SchoolUi, onAdd: () -> Unit) {
+    ChildrenRow(state, selectedId = null, editing = false, onSelect = {}, onEdit = {}, onAdd = onAdd)
     Centered {
         Text(
-            "Add a child to start a timetable",
+            if (state.canEdit) "Tap + to add who goes to school" else "No one in School yet",
             style = MaterialTheme.typography.bodyLarge,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
             textAlign = TextAlign.Center,
         )
-        if (canAdd) {
-            Spacer(Modifier.height(16.dp))
-            Button(onClick = onAdd) { Text("Add child") }
-        }
     }
 }
 

@@ -103,10 +103,11 @@ class SchoolRepository @Inject constructor(
         e
     }
 
-    suspend fun addChild(name: String, color: String): Child = backend.addChild(name.trim(), color).also {
-        put(it)
-        refresh()
-    }
+    suspend fun addChild(name: String, color: String, memberId: String? = null): Child =
+        backend.addChild(name.trim(), color, memberId).also {
+            put(it)
+            refresh()
+        }
 
     suspend fun updateChild(id: Long, name: String, color: String) = change {
         backend.updateChild(id, name.trim(), color)

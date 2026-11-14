@@ -4,6 +4,8 @@ import android.content.Context
 import androidx.core.content.edit
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.github.ljarka.picfort.core.model.FamilyMember
+import com.github.ljarka.picfort.core.model.FamilyMemberProvider
 import com.github.ljarka.picfort.core.model.pollEvery
 import com.github.ljarka.picfort.core.network.PicfortServerClient
 import com.github.ljarka.picfort.core.network.PicfortServerException
@@ -46,7 +48,18 @@ data class SchoolUi(
     val now: LocalTime = LocalTime.NOON,
     /** A change is being saved: forms wait. */
     val saving: Boolean = false,
+    /** Everyone in the family (hidden ones too): children's names and faces come from them. */
+    val family: List<FamilyMember> = emptyList(),
+    /** Family members shown in the app (not hidden): who can be added to School. */
+    val visibleFamily: List<FamilyMember> = emptyList(),
 ) {
+    /** Family members who aren't in School yet (not everyone goes to school). */
+    val candidates: List<FamilyMember>
+        get() = visibleFamily.filter { m -> children.none { it.memberId == m.id } }
+
+    /** The family member [child] is, if any. */
+    fun memberOf(child: Child): FamilyMember? = family.firstOrNull { it.id == child.memberId }
+
     /** The chosen child; the first one when it's gone. */
     val selected: Child? get() = children.firstOrNull { it.id == selectedId } ?: children.firstOrNull()
     val canEdit: Boolean get() = offlineSince == null && loadError == null
@@ -57,6 +70,7 @@ data class SchoolUi(
 class SchoolViewModel @Inject constructor(
     private val repository: SchoolRepository,
     private val server: PicfortServerClient,
+    private val familyMembers: FamilyMemberProvider,
     @ApplicationContext context: Context,
 ) : ViewModel() {
     private val prefs = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
@@ -74,13 +88,23 @@ class SchoolViewModel @Inject constructor(
     init {
         viewModelScope.launch {
             combine(local, repository.children, repository.offlineSince) { ui, children, offline ->
-                val withChildren = ui.copy(children = children, offlineSince = offline?.let(::savedAt))
+                // A child linked to a family member shows the member's current name and face.
+                val named = children.map { child ->
+                    ui.family.firstOrNull { it.id == child.memberId }
+                        ?.let { child.copy(name = it.name, photoUrl = it.avatarUrl ?: child.photoUrl) }
+                        ?: child
+                }
+                val withChildren = ui.copy(children = named, offlineSince = offline?.let(::savedAt))
                 // Today's page, or Monday when today has no chip (weekend without entries).
                 withChildren.copy(
                     day = withChildren.day.takeIf { it in withChildren.days }
                         ?: startDay(withChildren.today, withChildren.days),
                 )
             }.collect { _state.value = it }
+        }
+        viewModelScope.launch { familyMembers.allMembers.collect { all -> local.update { it.copy(family = all) } } }
+        viewModelScope.launch {
+            familyMembers.members.collect { shown -> local.update { it.copy(visibleFamily = shown) } }
         }
     }
 
@@ -103,6 +127,8 @@ class SchoolViewModel @Inject constructor(
     }
 
     private suspend fun refresh() {
+        // Names and faces for the children; not awaited (it can sync Immich users first, T-065).
+        viewModelScope.launch { familyMembers.refresh() }
         if (!server.isConfigured) {
             local.update { it.copy(configured = false, isLoading = false, loadError = null) }
             return
@@ -131,8 +157,17 @@ class SchoolViewModel @Inject constructor(
 
     fun messageShown() = local.update { it.copy(message = null) }
 
-    fun addChild(name: String, color: String, done: () -> Unit) = save(done) {
-        val child = repository.addChild(name, color)
+    /** Adds [member] to School; the server keeps their name too (offline copy, other phones). */
+    fun addChild(member: FamilyMember, done: () -> Unit) = save(done) {
+        val child = repository.addChild(
+            member.name,
+            defaultChildColor(
+                local.value.children.map {
+                    it.color
+                },
+            ),
+            member.id,
+        )
         selectChild(child.id)
     }
 

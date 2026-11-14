@@ -11,7 +11,7 @@ name: School — offline copy (T-029)
 - extendedWaitUntil:
     visible: "Offline. Timetable from .*"
     timeout: 15000
-- tapOn: "Ola T029"
+- tapOn: "Ola"
 - tapOn: "Mon.*"
 - assertVisible: "Period 1, .*Maths T029.*"
 - assertNotVisible: "Edit timetable"

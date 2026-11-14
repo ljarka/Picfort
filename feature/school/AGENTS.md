@@ -12,7 +12,7 @@ Server API: T-028 (`picfort-server/school.py`, `/school`, `school.db`).
 | `ui/school/SchoolRepository.kt` | `children` StateFlow, offline copy (`school.json`, tied to server + user), not optimistic |
 | `ui/school/SchoolViewModel.kt` | `SchoolUi`; selected child in SharedPreferences `school`; minute clock (`tick`), 60 s poll |
 | `ui/school/SchoolScreen.kt` | `SchoolScreen`/`SchoolContent`: child chips, summary card, day chips + `HorizontalPager`, rows, sheets |
-| `ui/school/SchoolForms.kt` | `ChildForm`, `EntryForm` ("Save and add next"), `BellsForm` (Fill in, Copy from), `CopyDayDialog`, `TimeField` |
+| `ui/school/SchoolForms.kt` | `AddChildForm` (pick from the family), `ChildForm` (bells, remove), `EntryForm` ("Save and add next"), `BellsForm` (Fill in, Copy from), `CopyDayDialog`, `TimeField` |
 
 ## Rules
 
@@ -24,6 +24,8 @@ Server API: T-028 (`picfort-server/school.py`, `/school`, `school.db`).
 - Activities differ from lessons by container color **and** a star icon. Today's current row is
   highlighted, finished ones dimmed. Weekend chips only with entries (always while editing).
 - Times: `H:mm` or `h:mm a` from the device setting (`timeFormatter`), ranges via `timeRange`; day names from the locale.
+- Children are family members (T-066): `Child.memberId` (server `immich_user_id`); name and face from
+  `FamilyMemberProvider`; row = `MemberCarousel` with "+" (`addLabel`); `SchoolUi.candidates` for the picker.
 - Out of scope here: children from Immich people, face photo, "Photos of Ola" (T-030).
 
 ## Public Contract
@@ -32,7 +34,7 @@ Server API: T-028 (`picfort-server/school.py`, `/school`, `school.db`).
 
 ## Dependencies & Boundaries
 
-- `:core:model` (`pollEvery`), `:core:ui` (theme, `avatarColor`, `initials`, `ServerRequiredContent`,
+- `:core:model` (`pollEvery`, `FamilyMember`, `FamilyMemberProvider`), `:core:ui` (theme, `MemberCarousel`, `MemberAvatar`, `avatarColor`, `initials`, `ServerRequiredContent`,
   `SettingsAction`, `aboveFloatingTabBar`), `:core:network` (`PicfortServerClient`, `PicfortServerException`,
   `FrameSettingsStore`, `AccessTokenStore`). **NEVER** another feature module.
 

@@ -46,7 +46,8 @@ private val AVATAR_SIZE = 56.dp
 /**
  * The family's avatar row (Wall, Photos): tap selects one member (tap again to clear, the caller
  * decides), long-press offers "Edit". Members in [dimmedIds] are drawn faded (e.g. not linked).
- * With [onOpenFamily], a last "Family" circle opens Family settings.
+ * With [onOpenFamily], a last "+" circle (labelled [addLabel], "Family" by default) opens Family
+ * settings, or whatever the screen adds people with (School: pick a child).
  */
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
@@ -59,6 +60,8 @@ fun MemberCarousel(
     onEditMember: ((String) -> Unit)? = {},
     dimmedIds: Set<String> = emptySet(),
     onOpenFamily: (() -> Unit)? = null,
+    addLabel: String = "Family",
+    addClickLabel: String = "Family settings",
     /** Several selected at once (Search, people together); overrides [selectedId]. */
     selectedIds: Set<String> = setOfNotNull(selectedId),
     /** For scrolling from outside, e.g. to a person who just joined the row. */
@@ -111,19 +114,19 @@ fun MemberCarousel(
             }
         }
         if (onOpenFamily != null) {
-            item(key = "picfort:family-settings") { FamilyCircle(onOpenFamily) }
+            item(key = "picfort:family-settings") { AddCircle(addLabel, addClickLabel, onOpenFamily) }
         }
     }
 }
 
 @Composable
-private fun FamilyCircle(onClick: () -> Unit) {
+private fun AddCircle(label: String, clickLabel: String, onClick: () -> Unit) {
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
         modifier = Modifier
             .padding(horizontal = 4.dp)
             .clip(RoundedCornerShape(16.dp))
-            .clickable(onClickLabel = "Family settings", onClick = onClick)
+            .clickable(onClickLabel = clickLabel, onClick = onClick)
             .padding(horizontal = 4.dp, vertical = 6.dp),
     ) {
         Box(
@@ -141,7 +144,7 @@ private fun FamilyCircle(onClick: () -> Unit) {
             )
         }
         Text(
-            "Family",
+            label,
             style = MaterialTheme.typography.labelSmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             maxLines = 1,

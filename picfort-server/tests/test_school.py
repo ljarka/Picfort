@@ -98,6 +98,13 @@ class SchoolApiTest(unittest.TestCase):
         self.assertEqual(TATA, r.get_json()["immich_user_id"])
         self.assertEqual(["Ola", "Staś"], [c["name"] for c in self.client.get("/school").get_json()["children"]])
 
+    def test_child_from_a_family_member(self):
+        r = self.client.post("/school/children", json={"name": "Ola", "color": "pink", "immich_user_id": TATA})
+        self.assertEqual(201, r.status_code, r.get_json())
+        self.assertEqual(TATA, r.get_json()["immich_user_id"])
+        r = self.client.post("/school/children", json={"name": "Ola", "color": "pink", "immich_user_id": "ola"})
+        self.assertEqual(400, r.status_code)
+
     def test_child_validation(self):
         for body in ({"color": "pink"}, {"name": " ", "color": "pink"}, {"name": "x" * 51, "color": "pink"},
                      {"name": "Ola", "color": "teal"}, {"name": "Ola"}):

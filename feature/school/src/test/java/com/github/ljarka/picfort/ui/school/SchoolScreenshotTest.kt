@@ -3,9 +3,11 @@ package com.github.ljarka.picfort.ui.school
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.graphics.Color
 import app.cash.paparazzi.DeviceConfig
 import app.cash.paparazzi.Paparazzi
 import com.android.resources.NightMode
+import com.github.ljarka.picfort.core.model.FamilyMember
 import com.github.ljarka.picfort.core.ui.theme.AccentTheme
 import com.github.ljarka.picfort.core.ui.theme.BrandAccent
 import com.github.ljarka.picfort.core.ui.theme.PicfortTheme
@@ -48,10 +50,19 @@ class SchoolScreenshotTest {
             SchoolEntry(id, EntryKind.LESSON, day, it.start, it.end, title, period, room, teacher)
         }
 
+    private val family = listOf(
+        FamilyMember("m-ola", "Ola", avatarUrl = null, color = Color(0xFFD9709E)),
+        FamilyMember("m-stas", "Staś", avatarUrl = null, color = Color(0xFF4F86D6)),
+        FamilyMember("m-mama", "Mama", avatarUrl = null, color = Color(0xFF3DAE78)),
+        FamilyMember("m-tata", "Tata", avatarUrl = null, color = Color(0xFF6676E0)),
+        FamilyMember("m-kuba", "Kuba", avatarUrl = null, color = Color(0xFFE0A030)),
+    )
+
     private val ola = Child(
         id = 1,
         name = "Ola",
         color = "pink",
+        memberId = "m-ola",
         periods = bells,
         entries = listOf(
             lesson(1, MONDAY, 1, "Maths", "12", "Mrs Nowak"),
@@ -73,7 +84,7 @@ class SchoolScreenshotTest {
             SchoolEntry(8, EntryKind.ACTIVITY, SATURDAY, t("10:00"), t("11:00"), "Football", place = "Orlik"),
         ),
     )
-    private val stas = Child(id = 2, name = "Staś", color = "blue")
+    private val stas = Child(id = 2, name = "Staś", color = "blue", memberId = "m-stas")
 
     private fun day(now: String, day: DayOfWeek = MONDAY, editing: Boolean = false, offline: String? = null) = SchoolUi(
         children = listOf(ola, stas),
@@ -83,6 +94,8 @@ class SchoolScreenshotTest {
         now = t(now),
         editing = editing,
         offlineSince = offline,
+        family = family,
+        visibleFamily = family,
     )
 
     @Test
@@ -101,7 +114,12 @@ class SchoolScreenshotTest {
     fun empty_day() = snap { SchoolContent(day("09:00", WEDNESDAY)) }
 
     @Test
-    fun no_children() = snap { SchoolContent(SchoolUi()) }
+    fun no_children() = snap { SchoolContent(SchoolUi(family = family, visibleFamily = family)) }
+
+    @Test
+    fun add_child_from_family() = sheet {
+        AddChildForm(day("09:00").candidates, saving = false, onPick = {})
+    }
 
     @Test
     fun edit_mode() = snap { SchoolContent(day("09:10", editing = true)) }
@@ -139,6 +157,8 @@ class SchoolScreenshotTest {
 
     @Test
     fun child_sheet() = sheet {
-        ChildForm(ola, listOf("pink", "blue"), false, { _, _ -> }, {}, {})
+        val ui = day("09:00")
+        ChildForm(ola, ui.avatarOf(ola), linked = true, saving = false, onSave = { _, _ ->
+        }, onBells = {}, onDelete = {})
     }
 }
