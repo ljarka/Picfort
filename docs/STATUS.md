@@ -122,6 +122,7 @@ Android task except T-017 and T-026 starts with a mockup the owner approves.
 | [T-057](tasks/T-057-search-by-people.md) | Photos — search by Immich people | `done` |
 | [T-058](tasks/T-058-one-page-setup.md) | First start on one screen (Immich + Picfort server); https:// by default | `done` |
 | [T-059](tasks/T-059-timeline-local-duplicates.md) | Photos — phone copies already in Immich show once (checksum, name + time) | `done` |
+| [T-060](tasks/T-060-search-people-row-order.md) | Search — people row keeps its order; picks from "All people" join at the end | `done` |
 
 ### Phase 8 — Modular Architecture (Agentic Pair Programming)
 Deconstruct monolithic `:app` into isolated feature slices and core foundations (ADR 0011).

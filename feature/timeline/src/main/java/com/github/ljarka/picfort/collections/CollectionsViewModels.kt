@@ -100,9 +100,11 @@ data class SearchUi(
     val people: List<SearchPerson> = emptyList(),
     /** Photos must have all of them; alone or with [query]. */
     val selectedPeople: Set<String> = emptySet(),
+    /** Picked under "All people": at the end of the row, kept there while the screen is open. */
+    val addedToRow: List<String> = emptyList(),
 )
 
-/** "Ola", "Ola and Kuba", "Ola, Kuba and Staś" (the people picked, in the row's order). */
+/** "Ola", "Ola and Kuba", "Ola, Kuba and Staś" (the people picked, in Immich's order). */
 fun SearchUi.selectedNames(): String {
     val names = people.filter { it.id in selectedPeople }.map { it.name }
     return if (names.size <= 1) names.joinToString() else names.dropLast(1).joinToString() + " and " + names.last()
@@ -145,7 +147,7 @@ class SearchViewModel @Inject constructor(
         val s = _state.value
         job?.cancel()
         if (query.isBlank() && s.selectedPeople.isEmpty()) {
-            _state.value = SearchUi(people = s.people)
+            _state.value = SearchUi(people = s.people, addedToRow = s.addedToRow)
             return
         }
         _state.value = SearchUi(
@@ -154,6 +156,7 @@ class SearchViewModel @Inject constructor(
             searched = true,
             people = s.people,
             selectedPeople = s.selectedPeople,
+            addedToRow = s.addedToRow,
         )
         fetch(page = 1)
     }
@@ -161,7 +164,11 @@ class SearchViewModel @Inject constructor(
     /** Picks or drops a person and searches again with the text in the field. */
     fun togglePerson(id: String, query: String) {
         _state.update { s ->
-            s.copy(selectedPeople = if (id in s.selectedPeople) s.selectedPeople - id else s.selectedPeople + id)
+            if (id in s.selectedPeople) {
+                s.copy(selectedPeople = s.selectedPeople - id)
+            } else {
+                s.copy(selectedPeople = s.selectedPeople + id, addedToRow = addedToRow(s.people, s.addedToRow, id))
+            }
         }
         search(query)
     }

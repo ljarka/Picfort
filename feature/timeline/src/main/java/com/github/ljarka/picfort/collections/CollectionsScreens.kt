@@ -254,9 +254,9 @@ fun SearchContent(
             )
             if (state.people.isNotEmpty()) {
                 val accent = MaterialTheme.colorScheme.primary
-                // Many people in Immich: the row has the picked ones and those in most photos.
-                val row = remember(state.people, state.selectedPeople, accent) {
-                    peopleRow(state.people, state.selectedPeople)
+                // Many people in Immich: those in most photos, then the ones picked under "All people".
+                val row = remember(state.people, state.addedToRow, accent) {
+                    peopleRow(state.people, state.addedToRow)
                         .map { FamilyMember(it.id, it.name, personThumbnail(it.id), accent) }
                 }
                 Row(

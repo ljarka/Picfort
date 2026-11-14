@@ -14,7 +14,7 @@ have hundreds of people, so the row shows a few and "All people" holds everyone,
 - People: every named, visible person in my Immich library (`GET /api/people`, all pages, up to
   5000), in Immich's order (favourites, then most photos). Not the Picfort family: anyone named in
   Immich. Faces: `/api/people/<id>/thumbnail`. Loading fails quietly: no People section.
-- "People" under the field: picked people first, then the others, 12 in all; "All people (N) ›"
+- "People" under the field: picked people first, then the others, 12 in all (changed in T-060: order stays put); "All people (N) ›"
   when there are more. The sheet: "Find a person" (case and accents ignored), grid of faces,
   tap picks or drops (results behind update at once), Done.
 - Search: several people = photos with all of them. People only → `search/metadata` (newest
