@@ -9,6 +9,7 @@ import com.github.ljarka.picfort.backup.BackupScheduler
 import com.github.ljarka.picfort.backup.BackupSettingsStore
 import com.github.ljarka.picfort.backup.BackupStatus
 import com.github.ljarka.picfort.backup.LocalMediaScanner
+import com.github.ljarka.picfort.backup.NEEDS_HOME_NETWORK
 import com.github.ljarka.picfort.core.database.BackupDao
 import com.github.ljarka.picfort.core.network.FrameSettingsStore
 import com.github.ljarka.picfort.core.network.ServerUrlStore
@@ -33,6 +34,10 @@ data class BackupSettingsUi(
     val enabled: Boolean,
     val wifiOnly: Boolean,
     val chargingOnly: Boolean,
+    /** Immich's home-network address for backup, "" when not set (T-064). */
+    val homeUrl: String = "",
+    /** Files too large for the public address, waiting for the home one. */
+    val waitingForHome: Int = 0,
     val backedUp: Int = 0,
     val onPhone: Int = 0,
     val lastResult: String? = null,
@@ -99,6 +104,7 @@ class SettingsViewModel @Inject constructor(
         enabled = settings.enabled,
         wifiOnly = settings.wifiOnly,
         chargingOnly = settings.chargingOnly,
+        homeUrl = settings.homeUrl,
         lastResult = settings.lastResult,
         lastRunAt = settings.lastRunAt,
         hasMediaAccess = hasMediaAccess(context),
@@ -110,7 +116,8 @@ class SettingsViewModel @Inject constructor(
             val onPhone = if (hasMediaAccess(context)) scanner.count() else 0
             val onServer = timelineRepository.phoneOnServer.first()
             val backedUp = countInImmich(onPhone, backupDao.linkedLocalIds(), onServer)
-            _backup.value = read().copy(onPhone = onPhone, backedUp = backedUp)
+            val waiting = backupDao.countRejected(NEEDS_HOME_NETWORK)
+            _backup.value = read().copy(onPhone = onPhone, backedUp = backedUp, waitingForHome = waiting)
         }
     }
 
@@ -134,6 +141,11 @@ class SettingsViewModel @Inject constructor(
     }
 
     fun backUpNow() = scheduler.runNow()
+
+    fun setHomeUrl(value: String) {
+        settings.homeUrl = value
+        _backup.update { it.copy(homeUrl = settings.homeUrl) }
+    }
 
     fun stopBackup() {
         scheduler.stop()

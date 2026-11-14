@@ -23,6 +23,11 @@ class BackupSettingsStore @Inject constructor(@ApplicationContext context: Conte
         get() = prefs.getBoolean("chargingOnly", false)
         set(value) = prefs.edit { putBoolean("chargingOnly", value) }
 
+    /** Immich's address on the home network, as typed ("" = none); backup uses it when it answers (T-064). */
+    var homeUrl: String
+        get() = prefs.getString("homeUrl", "").orEmpty()
+        set(value) = prefs.edit { putString("homeUrl", value.trim()) }
+
     /** Sent as deviceId to Immich < v3. */
     val deviceId: String
         get() = prefs.getString("deviceId", null) ?: UUID.randomUUID().toString().also {

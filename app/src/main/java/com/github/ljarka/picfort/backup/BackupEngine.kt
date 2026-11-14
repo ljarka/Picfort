@@ -37,7 +37,14 @@ private const val BATCH = 50
 data class BackupProgress(val done: Int, val total: Int)
 
 sealed interface BackupOutcome {
-    data class Done(val uploaded: Int, val alreadyOnServer: Int, val rejected: Int) : BackupOutcome
+    data class Done(
+        val uploaded: Int,
+        val alreadyOnServer: Int,
+        val rejected: Int,
+        /** Too large for the public address; they go through the home one (T-064). */
+        val waitingForHome: Int = 0,
+        val viaHomeNetwork: Boolean = false,
+    ) : BackupOutcome
     data object NoMediaAccess : BackupOutcome
     data object NotLoggedIn : BackupOutcome
 
@@ -66,6 +73,7 @@ class BackupEngine @Inject constructor(
     private val accessTokenStore: AccessTokenStore,
     private val timelineRepository: Provider<TimelineRepository>,
     private val queue: BackupQueue,
+    private val route: BackupRoute,
 ) {
     suspend fun run(onProgress: suspend (BackupProgress) -> Unit = {}): BackupOutcome {
         if (!accessTokenStore.hasData() || !serverUrlStore.hasData()) return BackupOutcome.NotLoggedIn
@@ -85,7 +93,8 @@ class BackupEngine @Inject constructor(
 
         val todo = media.filter { m ->
             val row = known[m.id]
-            !isUnchanged(m, row) || (row?.remoteId == null && row?.rejected == null)
+            !isUnchanged(m, row) ||
+                (row?.remoteId == null && (row?.rejected == null || row.rejected == NEEDS_HOME_NETWORK))
         }
         val alreadyBackedUp = media.size - todo.size
         onProgress(BackupProgress(alreadyBackedUp, media.size))
@@ -107,11 +116,15 @@ class BackupEngine @Inject constructor(
         total: Int,
         onProgress: suspend (BackupProgress) -> Unit,
     ): BackupOutcome {
-        val api = service.get()
+        val home = route.reachableHome()
+        val api = home?.let(route::service) ?: service.get()
+        val onHome = home != null
+        val homeSet = settings.homeUrl.isNotBlank()
         val serverMajor = api.version().major
         var uploaded = 0
         var duplicates = 0
         var rejected = 0
+        var waitingForHome = 0
         var quotaExceeded = false
 
         try {
@@ -156,20 +169,27 @@ class BackupEngine @Inject constructor(
                             rejected++
                         }
 
-                        else -> when (val remoteId = upload(api, m, row.checksum, serverMajor)) {
-                            null -> rejected++
+                        holdForHomeNetwork(m.size, row.rejected, onHome, homeSet) -> {
+                            if (row.rejected != NEEDS_HOME_NETWORK) dao.setRejected(localId, NEEDS_HOME_NETWORK)
+                            waitingForHome++
+                        }
 
-                            else -> {
-                                dao.setRemoteId(localId, remoteId)
+                        else -> when (val r = upload(api, m, row.checksum, serverMajor, onHome)) {
+                            is UploadResult.Uploaded -> {
+                                dao.setRemoteId(localId, r.remoteId)
                                 uploaded++
                             }
+
+                            UploadResult.NeedsHomeNetwork -> waitingForHome++
+
+                            UploadResult.Refused -> rejected++
                         }
                     }
                     queue.finished(listOf(localId))
                 }
                 // Found in Immich, refused, or deleted since the scan: out of the queue too.
                 queue.finished(batch.map { it.id })
-                onProgress(BackupProgress(alreadyBackedUp + uploaded + duplicates + rejected, total))
+                onProgress(BackupProgress(alreadyBackedUp + uploaded + duplicates + rejected + waitingForHome, total))
             }
         } catch (e: QuotaExceededException) {
             // Stop: every further upload would fail too. Files stay pending, not rejected,
@@ -186,11 +206,25 @@ class BackupEngine @Inject constructor(
             Log.w(TAG, "Timeline reload after backup failed", e)
         }
         if (quotaExceeded) return BackupOutcome.QuotaExceeded(uploaded)
-        return BackupOutcome.Done(uploaded, duplicates, rejected)
+        return BackupOutcome.Done(uploaded, duplicates, rejected, waitingForHome, onHome)
     }
 
-    /** Returns the Immich asset id, or null if the server refused this file. Network errors propagate. */
-    private suspend fun upload(api: BackupService, m: LocalMedia, checksum: String, serverMajor: Int): String? {
+    private sealed interface UploadResult {
+        data class Uploaded(val remoteId: String) : UploadResult
+        data object NeedsHomeNetwork : UploadResult
+
+        /** Refused for good (format, size on the server itself), or deleted since the scan. */
+        data object Refused : UploadResult
+    }
+
+    /** Network errors propagate. */
+    private suspend fun upload(
+        api: BackupService,
+        m: LocalMedia,
+        checksum: String,
+        serverMajor: Int,
+        onHome: Boolean,
+    ): UploadResult {
         val fields = uploadFields(m, serverMajor, settings.deviceId)
             .mapValues { (_, v) -> v.toRequestBody(MultipartBody.FORM) }
         queue.uploading(m.id)
@@ -199,18 +233,27 @@ class BackupEngine @Inject constructor(
         }
         val part = MultipartBody.Part.createFormData("assetData", m.fileName, body)
         return try {
-            api.upload(checksum, fields, part).id
+            UploadResult.Uploaded(api.upload(checksum, fields, part).id)
         } catch (e: HttpException) {
             if (isQuotaExceeded(e.response()?.errorBody()?.string())) throw QuotaExceededException()
-            if (e.code() in listOf(400, 413, 415, 422)) {
-                Log.w(TAG, "Immich refused ${m.fileName}: HTTP ${e.code()}")
-                dao.setRejected(m.id, "HTTP ${e.code()}")
-                null
-            } else {
-                throw e
+            when {
+                // A proxy in front of Immich (Cloudflare: 100 MB) refused the size: retry at home.
+                e.code() == 413 && !onHome -> {
+                    Log.w(TAG, "${m.fileName} too large for the public address, waits for the home network")
+                    dao.setRejected(m.id, NEEDS_HOME_NETWORK)
+                    UploadResult.NeedsHomeNetwork
+                }
+
+                e.code() in listOf(400, 413, 415, 422) -> {
+                    Log.w(TAG, "Immich refused ${m.fileName}: HTTP ${e.code()}")
+                    dao.setRejected(m.id, if (e.code() == 413) TOO_LARGE_FOR_SERVER else "HTTP ${e.code()}")
+                    UploadResult.Refused
+                }
+
+                else -> throw e
             }
         } catch (e: FileNotFoundException) {
-            null // deleted since the scan
+            UploadResult.Refused // deleted since the scan
         }
     }
 

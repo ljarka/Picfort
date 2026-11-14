@@ -15,6 +15,7 @@ import kotlinx.serialization.json.Json
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
 import okhttp3.logging.HttpLoggingInterceptor
+import okhttp3.logging.HttpLoggingInterceptor.Level
 import retrofit2.Retrofit
 import retrofit2.converter.kotlinx.serialization.asConverterFactory
 
@@ -41,14 +42,13 @@ class NetworkModule {
         if (BuildConfig.DEBUG) {
             // Debug only: bodies include the login password. Added last so it
             // sees the final request, with credentials redacted.
-            builder.addInterceptor(
-                HttpLoggingInterceptor().apply {
-                    level = HttpLoggingInterceptor.Level.BODY
-                    redactHeader("Authorization")
-                    redactHeader("x-api-key")
-                    redactHeader(PICFORT_KEY_HEADER)
-                },
-            )
+            fun logger(level: HttpLoggingInterceptor.Level) = HttpLoggingInterceptor().apply {
+                this.level = level
+                redactHeader("Authorization")
+                redactHeader("x-api-key")
+                redactHeader(PICFORT_KEY_HEADER)
+            }
+            builder.addInterceptor(DebugLoggingInterceptor(logger(Level.BODY), logger(Level.HEADERS)))
         }
         return builder.build()
     }

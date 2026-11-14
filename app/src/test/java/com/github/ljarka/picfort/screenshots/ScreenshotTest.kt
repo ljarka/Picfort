@@ -212,6 +212,8 @@ class ScreenshotTest {
         enabled = true,
         wifiOnly = true,
         chargingOnly = false,
+        homeUrl = "192.168.0.10:2283",
+        waitingForHome = 2,
         backedUp = 2_418,
         onPhone = 2_546,
         lastResult = "Uploaded 37 · 4 were already in Immich",
