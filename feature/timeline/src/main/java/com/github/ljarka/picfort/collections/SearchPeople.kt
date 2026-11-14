@@ -41,13 +41,20 @@ import java.text.Normalizer
 const val PEOPLE_IN_ROW = 12
 
 /**
- * The row: the selected people first (so they stay visible), then the others in Immich's order
- * (most photos first), [limit] in all.
+ * The row: the first [limit] people in Immich's order (most photos first), then those picked
+ * under "All people" ([added], in the order picked). Picking never moves anyone: a person in the
+ * row keeps their place, one from "All people" joins at the end.
  */
-fun peopleRow(people: List<SearchPerson>, selected: Set<String>, limit: Int = PEOPLE_IN_ROW): List<SearchPerson> {
-    val (picked, others) = people.partition { it.id in selected }
-    return picked + others.take((limit - picked.size).coerceAtLeast(0))
+fun peopleRow(people: List<SearchPerson>, added: List<String>, limit: Int = PEOPLE_IN_ROW): List<SearchPerson> {
+    val first = people.take(limit)
+    val inFirst = first.mapTo(HashSet()) { it.id }
+    val byId = people.associateBy { it.id }
+    return first + added.filter { it !in inFirst }.mapNotNull { byId[it] }
 }
+
+/** [added] with [id] at the end, if picking [id] puts a new person into the row. */
+fun addedToRow(people: List<SearchPerson>, added: List<String>, id: String, limit: Int = PEOPLE_IN_ROW): List<String> =
+    if (id in added || people.take(limit).any { it.id == id }) added else added + id
 
 /** "All people" filter: [text] anywhere in the name, ignoring case and accents ("lukasz" finds "Łukasz"). */
 fun filterPeople(people: List<SearchPerson>, text: String): List<SearchPerson> {

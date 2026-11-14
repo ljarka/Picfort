@@ -16,7 +16,7 @@ Immich photo timeline, gallery, full-screen viewer, collections, and media sync 
 | `ui/image/ImageDetailsScreen.kt` | Full-screen photo/video viewer, shared element transition |
 | `ui/image/ImageDetailsViewModel.kt` | Viewer ViewModel: zoom, EXIF metadata, pushing photo to frame via `FrameSender` |
 | `collections/CollectionsScreens.kt` | Albums list, album view, search screen (text + Immich people, T-057) |
-| `collections/SearchPeople.kt` | `peopleRow` (picked first, 12), `filterPeople` (case/accents), `PeoplePickerContent` ("All people" sheet) |
+| `collections/SearchPeople.kt` | `peopleRow` (first 12 in Immich's order stay put; picks from "All people" appended, T-060), `filterPeople` (case/accents), `PeoplePickerContent` ("All people" sheet) |
 | `sync/SyncEngine.kt` | Immich delta sync engine |
 | `local/LocalImagesProvider.kt` | Device MediaStore photo reader |
 | `ui/people/PeopleFilterViewModel.kt`, `PersonPhotosContent.kt` | Family carousel on Photos, photos of one person via `search/metadata` (T-052) |

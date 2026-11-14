@@ -75,10 +75,26 @@ class SearchPeopleRowTest {
         listOf(SearchPerson("l", "Łukasz"), SearchPerson("z", "Zoë Kowalska"))
 
     @Test
-    fun `the row has the selected people first, then the ones with most photos`() {
-        val row = peopleRow(people, selected = setOf("p15", "l"), limit = 5)
-        assertEquals(listOf("p15", "l", "p1", "p2", "p3"), row.map { it.id })
-        assertEquals(people.take(12), peopleRow(people, emptySet()))
+    fun `the row has the ones with most photos, then those picked under All people`() {
+        val row = peopleRow(people, added = listOf("p15", "l"), limit = 5)
+        assertEquals(listOf("p1", "p2", "p3", "p4", "p5", "p15", "l"), row.map { it.id })
+        assertEquals(people.take(12), peopleRow(people, emptyList()))
+    }
+
+    @Test
+    fun `picking never moves anyone, a person from All people joins at the end`() {
+        var added = emptyList<String>()
+        added = addedToRow(people, added, "p3", limit = 5) // already in the row
+        assertEquals(emptyList<String>(), added)
+        added = addedToRow(people, added, "l", limit = 5)
+        added = addedToRow(people, added, "p15", limit = 5)
+        added = addedToRow(people, added, "l", limit = 5) // picked again after dropping
+        assertEquals(
+            listOf("p1", "p2", "p3", "p4", "p5", "l", "p15"),
+            peopleRow(people, added, limit = 5).map {
+                it.id
+            },
+        )
     }
 
     @Test
