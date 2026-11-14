@@ -115,19 +115,19 @@ changed by accident.
 
 ## Acceptance criteria
 
-- [ ] Add, rename, recolor and delete a child; the selected child survives an app restart.
-- [ ] Two children show different timetables; switching is one tap.
+- [x] Add, rename, recolor and delete a child; the selected child survives an app restart.
+- [x] Two children show different timetables; switching is one tap.
 - [x] The summary card shows each row of the table above at the right time (before school,
       during, after, weekend), with activities, and changes within a minute of the end time.
-- [ ] The week is browsable by chips and by swiping; today is preselected and marked;
+- [x] The week is browsable by chips and by swiping; today is preselected and marked;
       weekend chips appear only with entries (or in edit mode).
 - [x] Activities are distinguishable from lessons without relying on color alone.
 - [x] A full day of 6 lessons can be entered with the bell schedule and "Save and add next"
       without reopening the sheet; "Copy lessons to…" fills other days.
 - [x] Changing a period's time in the bell schedule changes those lessons on every day.
 - [x] Outside edit mode nothing can be changed.
-- [ ] Another phone's change appears within 60 s while the tab is open.
-- [ ] Server unreachable: the last timetable is shown read-only with the banner, also after
+- [x] Another phone's change appears within 60 s while the tab is open.
+- [x] Server unreachable: the last timetable is shown read-only with the banner, also after
       the app was killed; the summary card still works.
 - [x] TalkBack: a lesson is read as "Period 1, 8:00 to 8:45, Maths, room 12"; an activity
       starts with "Activity"; chips announce the selected child and day.
@@ -156,9 +156,12 @@ changed by accident.
 - Checked on the emulator with the test server (`maestro/school.yaml`): add a child, Fill in the
   bell schedule, two lessons with "Save and add next", "Copy lessons to…" Tuesday, read-only
   outside edit mode, delete the child.
-- Not checked on a device yet (covered by code and unit tests only): rename/recolor, the selected
-  child after a restart, another phone's change within 60 s, the offline banner after a kill,
-  swiping between days, two children. The criteria for these stay open.
+- Device check, part 2 (f893361): `maestro/school-family.yaml` (two children, one-tap switch,
+  the chosen child after a restart, swiping Mon ↔ Tue, a lesson added through the API shows up
+  within 60 s, rename + recolor) and `maestro/school-offline.yaml` (test server stopped: banner,
+  last timetable, no ✎). Found and fixed: changes answered with the child (rename, color, bell
+  schedule, copy) didn't update the offline copy, so offline showed the old name; and on a
+  12-hour clock "8:00 AM–8:45 AM" wrapped (now "8:00–8:45 AM", wider column).
 - Choices: period picked with chips (one tap, all visible) rather than a dropdown; "Copy lessons
   to…" warns inside its dialog ("Lessons on Tuesday will be replaced") instead of a second one;
   eight distinct avatar colors (Immich's amber and yellow look the same, "primary" is no color).
