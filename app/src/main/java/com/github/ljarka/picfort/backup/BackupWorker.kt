@@ -75,9 +75,22 @@ class BackupWorker @AssistedInject constructor(
         }
     }
 
-    private fun summary(o: BackupOutcome.Done) = buildList {
-        add(if (o.uploaded == 0) "Up to date" else "Uploaded ${o.uploaded}")
-        if (o.alreadyOnServer > 0) add("${o.alreadyOnServer} were already in Immich")
-        if (o.rejected > 0) add("${o.rejected} not supported by the server")
-    }.joinToString(" · ")
+    private fun summary(o: BackupOutcome.Done) = backupSummary(o, homeAddressSet = settings.homeUrl.isNotBlank())
 }
+
+/** The last backup's line in Settings. */
+fun backupSummary(o: BackupOutcome.Done, homeAddressSet: Boolean): String = buildList {
+    if (o.viaHomeNetwork) add("Home network")
+    add(if (o.uploaded == 0 && o.waitingForHome == 0) "Up to date" else "Uploaded ${o.uploaded}")
+    if (o.alreadyOnServer > 0) add("${o.alreadyOnServer} were already in Immich")
+    if (o.rejected > 0) add("${o.rejected} not supported by the server")
+    if (o.waitingForHome > 0) {
+        add(
+            if (homeAddressSet) {
+                "${o.waitingForHome} over 100 MB wait for the home network"
+            } else {
+                "${o.waitingForHome} too large for the server's public address: set the home network address"
+            },
+        )
+    }
+}.joinToString(" · ")

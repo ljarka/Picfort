@@ -1,5 +1,6 @@
 package com.github.ljarka.picfort.network
 
+import com.github.ljarka.picfort.backup.BackupSettingsStore
 import com.github.ljarka.picfort.core.network.AccessTokenStore
 import com.github.ljarka.picfort.core.network.FrameSettingsStore
 import com.github.ljarka.picfort.core.network.ServerUrlStore
@@ -19,19 +20,26 @@ internal fun HttpUrl.isUnder(base: HttpUrl): Boolean {
 }
 
 /**
- * Adds the Immich token to requests for the Immich server only, and returns to login when
+ * Adds the Immich token to requests for the Immich server only (its address, or the home-network
+ * one set for backup), and returns to login when
  * Immich rejects it. Requests to other hosts (e.g. the Picfort server) go out untouched.
  */
 class AuthInterceptor @Inject constructor(
     private val tokenProvider: Provider<AccessTokenStore>,
     private val sessionManager: Provider<SessionManager>,
     private val serverUrlStore: Provider<ServerUrlStore>,
+    private val backupSettings: Provider<BackupSettingsStore>,
 ) : Interceptor {
 
     override fun intercept(chain: Interceptor.Chain): Response {
         val originalRequest = chain.request()
         val server = serverUrlStore.get().serverUrl.toHttpUrlOrNull()
-        if (server == null || !originalRequest.url.isUnder(server)) {
+        // The same Immich on the home network (backup, T-064) takes the same token.
+        val home = normalizeServerUrl(backupSettings.get().homeUrl)
+        val toServer = server != null && originalRequest.url.isUnder(server)
+        val toHome = home != null && originalRequest.url.isUnder(home)
+        val toImmich = toServer || toHome
+        if (!toImmich) {
             return chain.proceed(originalRequest)
         }
         if (originalRequest.url.encodedPath.contains("/auth/login")) {

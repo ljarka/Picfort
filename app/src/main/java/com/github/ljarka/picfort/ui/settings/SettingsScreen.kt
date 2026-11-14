@@ -83,6 +83,7 @@ fun SettingsScreen(onBack: () -> Unit, onFrameClick: () -> Unit, onFamilyClick: 
         onChargingOnly = viewModel::setChargingOnly,
         onBackUpNow = viewModel::backUpNow,
         onStopBackup = viewModel::stopBackup,
+        onHomeUrl = viewModel::setHomeUrl,
         onLogout = viewModel::logout,
     )
 }
@@ -109,6 +110,7 @@ fun SettingsContent(
     onChargingOnly: (Boolean) -> Unit = {},
     onBackUpNow: () -> Unit = {},
     onStopBackup: () -> Unit = {},
+    onHomeUrl: (String) -> Unit = {},
     onLogout: () -> Unit = {},
     /** Fixed "now" for screenshot tests. */
     now: Long = System.currentTimeMillis(),
@@ -118,6 +120,17 @@ fun SettingsContent(
         },
 ) {
     var confirmLogout by remember { mutableStateOf(false) }
+    var editHome by remember { mutableStateOf(false) }
+    if (editHome) {
+        HomeAddressDialog(
+            current = backup.homeUrl,
+            onSave = {
+                onHomeUrl(it)
+                editHome = false
+            },
+            onDismiss = { editHome = false },
+        )
+    }
     if (confirmLogout) {
         AlertDialog(
             onDismissRequest = { confirmLogout = false },
@@ -155,6 +168,15 @@ fun SettingsContent(
             SwitchRow("Back up this phone", "Photos and videos are uploaded to Immich", backup.enabled, onEnable)
             SwitchRow("Only on Wi-Fi", null, backup.wifiOnly, onWifiOnly)
             SwitchRow("Only while charging", null, backup.chargingOnly, onChargingOnly)
+            ListItem(
+                modifier = Modifier.clickable { editHome = true },
+                headlineContent = { Text("Home network address") },
+                supportingContent = {
+                    Text(
+                        backup.homeUrl.ifBlank { "Not set: large videos may not get through the public address" },
+                    )
+                },
+            )
 
             Column(Modifier.padding(horizontal = 16.dp, vertical = 8.dp)) {
                 when (val s = status) {
@@ -179,6 +201,13 @@ fun SettingsContent(
                     BackupStatus.Idle -> Text(
                         "${backup.backedUp} of ${backup.onPhone} phone items are in Immich",
                         style = MaterialTheme.typography.bodyMedium,
+                    )
+                }
+                if (backup.waitingForHome > 0) {
+                    Text(
+                        "${backup.waitingForHome} over 100 MB wait for the home network",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.error,
                     )
                 }
                 backup.lastResult?.let {

@@ -54,6 +54,9 @@ interface BackupDao {
     @Query("SELECT COUNT(*) FROM local_backup WHERE remoteId IS NOT NULL")
     suspend fun countBackedUp(): Int
 
+    @Query("SELECT COUNT(*) FROM local_backup WHERE rejected = :reason")
+    suspend fun countRejected(reason: String): Int
+
     /** Phone files Picfort's backup linked to an Immich asset. */
     @Query("SELECT localId FROM local_backup WHERE remoteId IS NOT NULL")
     suspend fun linkedLocalIds(): List<Long>
