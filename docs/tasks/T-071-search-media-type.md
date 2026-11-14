@@ -1,6 +1,6 @@
 # T-071 — Search: filter by photos or videos
 
-**Status:** done (pending)  
+**Status:** done (686e65a)  
 **Component:** Android app (`:feature:timeline`)  
 **Depends on:** T-057
 
