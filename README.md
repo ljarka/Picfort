@@ -1,6 +1,9 @@
 # Picfort
 
 [![CI](https://github.com/ljarka/Picfort/actions/workflows/ci.yml/badge.svg)](https://github.com/ljarka/Picfort/actions/workflows/ci.yml)
+[![Latest release](https://img.shields.io/github/v/release/ljarka/Picfort)](https://github.com/ljarka/Picfort/releases/latest)
+[![Downloads](https://img.shields.io/github/downloads/ljarka/Picfort/total)](https://github.com/ljarka/Picfort/releases)
+[![Lines of code](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/ljarka/Picfort/badges/loc.json)](.github/workflows/badges.yml)
 
 Picfort is an Android client for a self-hosted [Immich](https://immich.app) photo server. It shows your Immich library and the photos on your phone in one timeline. It can also send a photo to a picture frame on your home network.
 
