@@ -1,6 +1,6 @@
 # T-073 — Members' faces from each viewer's own Immich
 
-**Status:** in-progress (code done, not committed)  
+**Status:** done (30a54bb)  
 **Component:** Android app (`:feature:family`)  
 **Builds on:** [T-052](T-052-photos-family-carousel.md) (per-viewer link member → Immich person)
 

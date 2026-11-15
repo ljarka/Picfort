@@ -133,6 +133,7 @@ Android task except T-017 and T-026 starts with a mockup the owner approves.
 | [T-070](tasks/T-070-delete-album.md)                        | Photos: delete an Immich album (⋮ in the album, owner only; photos stay)                            | `done`        |
 | [T-071](tasks/T-071-search-media-type.md)                   | Search: All / Photos / Videos switch (with text, people, or alone)                                  | `done`        |
 | [T-072](tasks/T-072-browser-frame.md)                       | The frame in a web browser (`/frame`, full colour, behind the server key; tablet as a second frame) | `done`        |
+| [T-073](tasks/T-073-per-viewer-member-faces.md)             | Family: each Immich user sees members' faces from their own Immich people                           | `done`        |
 
 ### Phase 8 — Modular Architecture (Agentic Pair Programming)
 Deconstruct monolithic `:app` into isolated feature slices and core foundations (ADR 0011).
