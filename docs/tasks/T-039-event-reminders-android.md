@@ -1,7 +1,8 @@
 # T-039 — Event & birthday reminders (Android notifications)
 
-**Status:** ready  
-**Component:** Android app  
+**Status:** in-progress (code done in 707a7e6; emulator checked, a real phone in Doze left)  
+**Component:** Android app (`:feature:events`, `:app`)  
+**Decision:** [ADR 0015](../decisions/0015-event-reminders-on-the-phone.md)  
 **Depends on:** T-023 (Events UI), T-037 (Birthdays & repeating events)
 
 ## Summary
@@ -60,12 +61,28 @@ they want to be notified without spamming others.
    - When a reminder for occurrence N fires or is dismissed, automatically reschedule the alarm for
      occurrence N+1 (e.g. next year for a birthday, next week for lessons).
 
+## As built (2026-11-15)
+
+Owner choices: **defaults + per-event override** (no need to set anything), **every family event**
+notifies, whoever it's for. Changes from the design above:
+
+- Defaults in Settings → "Event reminders": events without a time (the day before at 19:00), with a
+  time (1 hour before), birthdays (on the day at 9:00); each can be "No reminder".
+- Presets: at the start time, 15 min / 1 hour before (timed only), on the day at 9:00, the day before
+  at 19:00, 3 days / a week before at 18:00. **No custom date & time** and **no row in the event form**
+  (the detail's "Reminder" row covers a new event right after saving). One reminder per event.
+- Stored in preferences, not Room (no migration; ADR 0015). No "Open" action button: tapping opens it.
+- Next occurrence of a series: brought by the refresh (in-app or the 6-hourly worker), not by the
+  fired alarm.
+
 ## Acceptance criteria
 
-- [ ] Reminder presets available in Event detail and Event form.
-- [ ] Birthday events offer gift-buying advance reminder (3 days before).
-- [ ] Notification fires reliably at the chosen time while phone is in Doze mode.
-- [ ] Tapping the notification navigates directly to the event details screen.
-- [ ] Rebooting the device preserves and reschedules future reminders.
-- [ ] Deleting an event cancels its scheduled alarm and dismisses any active notification.
-- [ ] Recurring events automatically schedule the alarm for the next occurrence after firing.
+- [x] Reminder presets available in Event detail (not in the form, see above).
+- [x] Birthday events offer gift-buying advance reminder (3 days before).
+- [ ] Notification fires reliably at the chosen time while phone is in Doze mode — exact when allowed;
+  on the emulator (API 37, exact alarms off) it came on time; Doze on a real phone left for the owner.
+- [x] Tapping the notification navigates directly to the event details screen
+  (`maestro/events-reminders.yaml`, from the home screen).
+- [x] Rebooting the device preserves and reschedules future reminders (`ReminderRearmReceiver`).
+- [x] Deleting an event cancels its scheduled alarm and dismisses any active notification.
+- [x] Recurring events automatically schedule the alarm for the next occurrence after firing.
