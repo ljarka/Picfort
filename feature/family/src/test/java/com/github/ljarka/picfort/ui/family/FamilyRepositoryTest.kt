@@ -51,11 +51,14 @@ private class FakePeopleSource : PeopleSource {
     }
 }
 
-private class FakeFamilyBackend(override var isConfigured: Boolean = true) : FamilyBackend {
+/** [map] is the server's shared profiles; [links] are this viewer's own (T-052). */
+private class FakeFamilyBackend(
+    override var isConfigured: Boolean = true,
+    val map: MutableMap<String, FamilyProfile> = mutableMapOf(),
+) : FamilyBackend {
     private val json = Json { ignoreUnknownKeys = true }
     private val base = "http://192.168.0.105:5000".toHttpUrl()
     var failWith: PicfortServerException? = null
-    val map = mutableMapOf<String, FamilyProfile>()
     val uploadedPhotos = mutableMapOf<String, ByteArray>()
     val deletedPhotos = mutableListOf<String>()
     val links = mutableMapOf<String, String>()
@@ -64,6 +67,10 @@ private class FakeFamilyBackend(override var isConfigured: Boolean = true) : Fam
 
     override suspend fun linkPerson(memberId: String, personId: String) {
         links[memberId] = personId
+    }
+
+    override suspend fun unlinkPerson(memberId: String) {
+        links.remove(memberId)
     }
 
     override suspend fun profiles(): Pair<List<FamilyProfile>, String> {
@@ -313,7 +320,8 @@ class FamilyRepositoryTest {
             assertEquals("person-tata", people.lastThumbPersonId)
             val updatedTata = repo.users.first().first { it.id == "tata" }
             assertEquals("Tata Piotr", updatedTata.name)
-            assertEquals("http://192.168.0.105:5000/family/photo/tata.jpg", updatedTata.avatarUrl)
+            // I see the face from my own Immich; others fall back to the shared photo (T-073).
+            assertEquals("https://photos.example.com/api/people/person-tata/thumbnail", updatedTata.avatarUrl)
             assertTrue(updatedTata.hasCustomPhoto)
 
             // Cold start offline with a new repository reading the saved offline copy.
@@ -336,6 +344,7 @@ class FamilyRepositoryTest {
                 showInFamily = true,
             )
             assertEquals(listOf("tata"), backend.deletedPhotos)
+            assertTrue(backend.links.isEmpty())
             val revertedTata = repo.users.first().first { it.id == "tata" }
             assertEquals("Piotr Kowalski", revertedTata.name)
             assertNull(revertedTata.avatarUrl)
@@ -381,7 +390,7 @@ class FamilyRepositoryTest {
             noPhoto = false,
         )
         val withFace = repo.users.first().first { it.id == "mama" }
-        assertEquals("http://192.168.0.105:5000/family/photo/mama.jpg", withFace.avatarUrl)
+        assertEquals("https://photos.example.com/api/people/p/thumbnail", withFace.avatarUrl)
         assertFalse(withFace.noPhoto)
     }
 
@@ -556,9 +565,46 @@ class FamilyRepositoryTest {
         assertEquals(mapOf(kuba.id to "person-kuba"), repo.myPersonIds.first())
 
         repo.saveMember(kuba, displayName = "Kuba", pickedPersonId = "person-kuba-2")
-        assertEquals("person-kuba-2", people.lastThumbPersonId)
+        // The shared photo stays; I see the new face from my Immich (T-073).
+        assertEquals("person-kuba", people.lastThumbPersonId)
+        assertEquals("http://immich/api/people/person-kuba-2/thumbnail", repo.users.first().single().avatarUrl)
         // Choosing a face links the member to that person in my photos (T-052).
         assertEquals(mapOf(kuba.id to "person-kuba-2"), repo.myPersonIds.first())
+    }
+
+    @Test
+    fun `each viewer sees the member's face from their own Immich people`() = runBlocking {
+        val server = mutableMapOf<String, FamilyProfile>()
+        val people = FakePeopleSource()
+        fun viewer(id: String) = FakeFamilyBackend(map = server).let { backend ->
+            backend to FamilyRepository(
+                backend,
+                people,
+                FakeOfflineCopy(),
+                FakeUsersDao(immichUsers),
+                { "https://photos.example.com" },
+                { id },
+            )
+        }
+        val (mamaBackend, mamaRepo) = viewer("mama")
+        val (tataBackend, tataRepo) = viewer("tata")
+        val (_, testRepo) = viewer("test")
+        listOf(mamaRepo, tataRepo).forEach { it.refresh() }
+
+        mamaRepo.saveMember(mamaRepo.users.first().first { it.id == "tata" }, "", pickedPersonId = "mamas-piotr")
+        tataRepo.refresh()
+        tataRepo.saveMember(tataRepo.users.first().first { it.id == "tata" }, "", pickedPersonId = "tatas-piotr")
+        mamaRepo.refresh()
+        testRepo.refresh()
+
+        fun avatar(repo: FamilyRepository) = runBlocking { repo.users.first().first { it.id == "tata" }.avatarUrl }
+        assertEquals("https://photos.example.com/api/people/mamas-piotr/thumbnail", avatar(mamaRepo))
+        assertEquals("https://photos.example.com/api/people/tatas-piotr/thumbnail", avatar(tataRepo))
+        // Without a link: the shared photo, set by the first face and not overwritten by the second.
+        assertEquals("http://192.168.0.105:5000/family/photo/tata.jpg", avatar(testRepo))
+        assertEquals(mapOf("tata" to "mamas-piotr"), mamaBackend.links)
+        assertEquals(mapOf("tata" to "tatas-piotr"), tataBackend.links)
+        assertEquals("mamas-piotr", people.lastThumbPersonId)
     }
 
     @Test

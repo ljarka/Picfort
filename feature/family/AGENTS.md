@@ -24,6 +24,9 @@ Family management vertical slice: member profiles, Immich users syncing, custom 
 - `addMember(pickedPersonId)` fetches the face before creating the member.
 - A picked face also saves my link member → my Immich person (`/family/<id>/person`, per viewer);
   `myPersonIds` feeds the Photos carousel (T-052).
+- Avatars are per viewer (T-073): my linked face (`<immich>/api/people/<id>/thumbnail`, my library)
+  wins over the shared photo. The shared photo is a fallback for viewers without a link: the first
+  face sets it, later picks don't overwrite it. "Clear" unlinks my face and deletes the shared photo.
 
 ## Birthday
 

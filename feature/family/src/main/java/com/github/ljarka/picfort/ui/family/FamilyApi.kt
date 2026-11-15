@@ -93,6 +93,8 @@ interface FamilyBackend {
     suspend fun myPeople(): Map<String, String> = emptyMap()
 
     suspend fun linkPerson(memberId: String, personId: String) = Unit
+
+    suspend fun unlinkPerson(memberId: String) = Unit
 }
 
 @Singleton
@@ -199,6 +201,12 @@ class FamilyApi @Inject constructor(private val server: PicfortServerClient, pri
             put("person_id", JsonPrimitive(personId))
         }.toString().toRequestBody(JSON_MEDIA_TYPE)
         execute(Request.Builder().url(url).put(body).build())
+    }
+
+    override suspend fun unlinkPerson(memberId: String) {
+        val url = server.base().newBuilder().addPathSegment("family").addPathSegment(memberId)
+            .addPathSegment("person").build()
+        execute(Request.Builder().url(url).delete().build())
     }
 
     private suspend fun execute(request: Request): String = server.execute(request) {

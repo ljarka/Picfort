@@ -73,7 +73,10 @@ class FileFamilyOfflineCopy @Inject constructor(
 /**
  * Pure merge of Immich users (`UsersDao`) and Picfort server profiles (`/family`) (T-032):
  * - name = `display_name` ?: Immich name
- * - avatar = profile photo ?: Immich profile picture (unless `no_photo`) ?: initials on the Immich avatar color
+ * - avatar = the face from **my** Immich people ([myPersonIds], T-073) ?: shared profile photo ?:
+ *   Immich profile picture (unless `no_photo`) ?: initials on the Immich avatar color.
+ *   Person ids belong to one Immich library, so each viewer sees the member's face from their own photos;
+ *   the shared photo is only a fallback for viewers who haven't linked the member.
  * - hidden = `hidden` ?: `isTestAccount(Immich name)`; the logged-in user ([myId]) is never hidden.
  */
 fun mergeFamilyUsers(
@@ -81,8 +84,11 @@ fun mergeFamilyUsers(
     profiles: Map<String, FamilyProfile>,
     myId: String,
     immichServerUrl: String,
+    myPersonIds: Map<String, String> = emptyMap(),
 ): List<FamilyUserUi> {
     val base = immichServerUrl.trimEnd('/')
+    fun myFace(memberId: String): String? =
+        myPersonIds[memberId]?.takeIf { base.isNotEmpty() }?.let { "$base/api/people/$it/thumbnail" }
     val immichIds = immichUsers.mapTo(HashSet()) { it.id }
     val manualProfiles = profiles.values.filter { it.manual || !immichIds.contains(it.userId) }
     // Members without a picked color get aperture colors in id order: distinct and the same on every phone.
@@ -99,7 +105,8 @@ fun mergeFamilyUsers(
             null
         }
         val noPhoto = profile?.noPhoto == true
-        val avatarUrl = profile?.photoUrl ?: immichAvatar.takeUnless { noPhoto }
+        val myFace = myFace(u.id)
+        val avatarUrl = myFace ?: profile?.photoUrl ?: immichAvatar.takeUnless { noPhoto }
         val isMe = u.id == myId
         val hidden = if (isMe) false else (profile?.hidden ?: isTestAccount(u.name))
         FamilyUserUi(
@@ -108,7 +115,7 @@ fun mergeFamilyUsers(
             immichName = u.name,
             avatarUrl = avatarUrl,
             immichAvatarUrl = immichAvatar,
-            hasCustomPhoto = profile?.photoUrl != null,
+            hasCustomPhoto = myFace != null || profile?.photoUrl != null,
             noPhoto = noPhoto,
             color = avatarColor(u.avatarColor, fallbackIndex[u.id] ?: 0),
             hidden = hidden,
@@ -119,13 +126,14 @@ fun mergeFamilyUsers(
     }
 
     val manualList = manualProfiles.map { p ->
+        val myFace = myFace(p.userId)
         FamilyUserUi(
             id = p.userId,
             name = p.displayName ?: "Member",
             immichName = "",
-            avatarUrl = p.photoUrl,
+            avatarUrl = myFace ?: p.photoUrl,
             immichAvatarUrl = null,
-            hasCustomPhoto = p.photoUrl != null,
+            hasCustomPhoto = myFace != null || p.photoUrl != null,
             color = avatarColor(null, fallbackIndex[p.userId] ?: 0),
             hidden = p.hidden ?: false,
             isMe = false,
@@ -187,14 +195,16 @@ class FamilyRepository(
     val canAddMembers: StateFlow<Boolean> = _canAddMembers.asStateFlow()
 
     /** Every Immich user merged with their custom profile (visible and hidden alike). */
-    val users: Flow<List<FamilyUserUi>> = combine(usersDao.all(), profiles) { immichUsers, profMap ->
-        mergeFamilyUsers(
-            immichUsers = immichUsers,
-            profiles = profMap,
-            myId = myId,
-            immichServerUrl = immichServerUrl(),
-        )
-    }
+    val users: Flow<List<FamilyUserUi>> =
+        combine(usersDao.all(), profiles, _myPersonIds) { immichUsers, profMap, faces ->
+            mergeFamilyUsers(
+                immichUsers = immichUsers,
+                profiles = profMap,
+                myId = myId,
+                immichServerUrl = immichServerUrl(),
+                myPersonIds = faces,
+            )
+        }
 
     /** Visible Immich members (people who can post or write). */
     override val members: Flow<List<FamilyMember>> = users.map { list ->
@@ -279,13 +289,16 @@ class FamilyRepository(
         /** "Clear" on an Immich user: initials instead of the account picture. */
         noPhoto: Boolean = user.noPhoto,
     ) {
+        val sharedPhoto = profiles.value[user.id]?.photoUrl != null
         if (pickedPersonId != null) {
-            val jpeg = people.faceThumbnailJpeg(pickedPersonId)
-            backend.uploadPhoto(user.id, jpeg)
-            // The chosen face is who this member is in my photos (T-052).
+            // The chosen face is who this member is in my photos (T-052), and my avatar for them (T-073).
             backend.linkPerson(user.id, pickedPersonId)
-        } else if (clearPhoto && user.hasCustomPhoto) {
-            backend.deletePhoto(user.id)
+            // The shared photo is only a fallback for those who haven't linked the member:
+            // the first face sets it, later ones don't overwrite what others see.
+            if (!sharedPhoto) backend.uploadPhoto(user.id, people.faceThumbnailJpeg(pickedPersonId))
+        } else if (clearPhoto) {
+            if (_myPersonIds.value.containsKey(user.id)) backend.unlinkPerson(user.id)
+            if (sharedPhoto) backend.deletePhoto(user.id)
         }
         val trimmedName = displayName.trim().takeIf { it.isNotEmpty() && (!user.isImmichUser || it != user.immichName) }
         val newHidden = !showInFamily
