@@ -1,0 +1,46 @@
+# T-039: an event's own reminder fires as a notification; tapping it opens the event.
+# Test server only: scripts/test-data.js puts "Przypomnienie T039" today, 3 minutes from now.
+# Takes up to ~4 minutes (waits for the alarm in the notification shade).
+appId: com.github.ljarka.immich.android2
+name: Events — reminder notification (T-039)
+---
+- runScript:
+    file: scripts/test-data.js
+    env:
+      REMINDER: "Przypomnienie T039"
+      REMINDER_IN: "3"
+- runFlow: subflows/open-app.yaml
+- tapOn: "Events"
+# The Events tab asks for notifications once (Android 13+).
+- runFlow:
+    when:
+      visible: "Allow"
+    commands:
+      - tapOn: "Allow"
+- extendedWaitUntil:
+    visible: "Przypomnienie T039.*"
+    timeout: 15000
+- tapOn: "Przypomnienie T039.*"
+- extendedWaitUntil:
+    visible: "Reminder"
+    timeout: 10000
+# The default for timed events: an hour before (already past, so it doesn't fire for a new event).
+- assertVisible: "Default · 1 hour before"
+- tapOn: "Reminder"
+- tapOn: "At the start time"
+- assertVisible: "At the start time"
+
+# Away from the app: the notification comes at the event's start time.
+- pressKey: Home
+- swipe:
+    start: "50%, 1%"
+    end: "50%, 70%"
+- extendedWaitUntil:
+    visible: "Przypomnienie T039"
+    timeout: 240000
+- tapOn: "Przypomnienie T039"
+- extendedWaitUntil:
+    visible: "Reminder"
+    timeout: 15000
+- assertVisible: "Przypomnienie T039"
+- assertVisible: "At the start time"

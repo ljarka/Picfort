@@ -20,3 +20,4 @@ Each file in this directory documents one major technical decision.
 | [0012](0012-serial-ksp.md) | One KSP task at a time (KSP2 in parallel left modules without Hilt code) |
 | [0013](0013-ktlint.md) | ktlint for Kotlin code style, checked in CI |
 | [0014](0014-browser-frame.md) | The frame in a web browser (`/frame`), only behind the server key |
+| [0015](0015-event-reminders-on-the-phone.md) | Event reminders planned and stored on each phone (AlarmManager + 6-hourly re-plan) |

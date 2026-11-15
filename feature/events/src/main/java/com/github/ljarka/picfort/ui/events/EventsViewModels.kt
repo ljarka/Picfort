@@ -32,17 +32,24 @@ import com.github.ljarka.picfort.core.model.FamilyMemberProvider
 import com.github.ljarka.picfort.core.model.pollEvery
 import com.github.ljarka.picfort.core.network.PicfortServerClient
 import com.github.ljarka.picfort.core.network.PicfortServerException
+import com.github.ljarka.picfort.ui.events.reminders.AskForNotificationsOnce
+import com.github.ljarka.picfort.ui.events.reminders.EventReminderUi
+import com.github.ljarka.picfort.ui.events.reminders.ReminderChoice
+import com.github.ljarka.picfort.ui.events.reminders.ReminderStore
+import com.github.ljarka.picfort.ui.events.reminders.rememberNotificationPermissionRequest
 import dagger.hilt.android.lifecycle.HiltViewModel
 import java.time.LocalDate
 import java.time.LocalTime
 import javax.inject.Inject
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
@@ -164,6 +171,7 @@ class EventDetailViewModel @Inject constructor(
     private val repository: EventsRepository,
     private val family: FamilyMemberProvider,
     private val dayPhotos: DayPhotosProvider,
+    private val reminders: ReminderStore,
     savedState: SavedStateHandle,
 ) : ViewModel() {
 
@@ -228,6 +236,17 @@ class EventDetailViewModel @Inject constructor(
 
     /** The viewer's collection key for this event's photos. */
     val photoSource: String get() = "event:$eventId"
+
+    /** This phone's reminder for the event (T-039); the scheduler re-plans on a change. */
+    val reminder: StateFlow<EventReminderUi> = combine(reminders.defaults, reminders.choices) { defaults, choices ->
+        EventReminderUi(choices[eventId] ?: ReminderChoice.Default, defaults)
+    }.stateIn(
+        viewModelScope,
+        SharingStarted.Eagerly,
+        EventReminderUi(reminders.choices.value[eventId] ?: ReminderChoice.Default, reminders.defaults.value),
+    )
+
+    fun setReminder(choice: ReminderChoice) = reminders.setChoice(eventId, choice)
 
     fun load() {
         viewModelScope.launch {
@@ -473,6 +492,8 @@ fun EventsListScreen(
             viewModel.keepFresh()
         }
     }
+    // Reminders are on by default (T-039): they need the permission on Android 13+.
+    if (state.configured) AskForNotificationsOnce()
     EventsListContent(
         state = state,
         locale = LocalConfiguration.current.locales[0],
@@ -501,6 +522,8 @@ fun EventDetailScreen(
 ) {
     val viewModel = hiltViewModel<EventDetailViewModel>()
     val state by viewModel.state.collectAsStateWithLifecycle()
+    val reminder by viewModel.reminder.collectAsStateWithLifecycle()
+    val askNotifications = rememberNotificationPermissionRequest()
     val context = LocalContext.current
     val lifecycle = LocalLifecycleOwner.current.lifecycle
     LaunchedEffect(viewModel) {
@@ -512,7 +535,8 @@ fun EventDetailScreen(
         }
     }
     EventDetailContent(
-        state = state,
+        // Only an occurrence still ahead can be reminded of.
+        state = state.copy(reminder = reminder.takeIf { state.event?.startDate?.isBefore(state.today) == false }),
         locale = LocalConfiguration.current.locales[0],
         onBack = onBack,
         onEdit = { onEdit(viewModel.eventId) },
@@ -529,6 +553,10 @@ fun EventDetailScreen(
         onEditBirthday = { state.event?.birthdayOf?.let(onEditBirthday) },
         onOpenPhoto = { photo, index -> onOpenPhoto(photo.id, index, viewModel.photoSource) },
         onOpenDay = onOpenDay,
+        onReminderChange = { choice ->
+            viewModel.setReminder(choice)
+            if (choice != ReminderChoice.Off) askNotifications()
+        },
     )
 }
 

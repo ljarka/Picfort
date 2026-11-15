@@ -1,5 +1,6 @@
 package com.github.ljarka.picfort
 
+import android.content.Intent
 import android.os.Build
 import android.os.Bundle
 import androidx.activity.ComponentActivity
@@ -44,6 +45,7 @@ import com.github.ljarka.picfort.network.SessionManager
 import com.github.ljarka.picfort.ui.events.EventDetailScreen
 import com.github.ljarka.picfort.ui.events.EventFormScreen
 import com.github.ljarka.picfort.ui.events.EventsListScreen
+import com.github.ljarka.picfort.ui.events.reminders.EXTRA_OPEN_EVENT_ID
 import com.github.ljarka.picfort.ui.family.FamilySettingsScreen
 import com.github.ljarka.picfort.ui.frame.FrameScreen
 import com.github.ljarka.picfort.ui.frame.FrameSettingsDialog
@@ -66,6 +68,7 @@ import com.github.ljarka.picfort.ui.wall.FamilyWallScreen
 import dagger.hilt.android.AndroidEntryPoint
 import java.time.LocalDate
 import javax.inject.Inject
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.serialization.Serializable
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalSharedTransitionApi::class)
@@ -78,8 +81,22 @@ class MainActivity : ComponentActivity() {
     @Inject
     lateinit var appearanceSettings: AppearanceSettingsStore
 
+    /** An event to open from a tapped reminder (T-039), once the app is past login. */
+    private val openEventId = MutableStateFlow<Long?>(null)
+
+    private fun takeEventFrom(intent: Intent?) {
+        intent?.getLongExtra(EXTRA_OPEN_EVENT_ID, -1L)?.takeIf { it > 0 }?.let { openEventId.value = it }
+    }
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        takeEventFrom(intent)
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        if (savedInstanceState == null) takeEventFrom(intent)
         enableEdgeToEdge(
             statusBarStyle = SystemBarStyle.auto(
                 android.graphics.Color.TRANSPARENT,
@@ -109,6 +126,15 @@ class MainActivity : ComponentActivity() {
                 destination?.hierarchy?.any { it.hasRoute(tab.graph::class) } == true
             }
             val onTabRoot = currentTab != null && destination?.hasRoute(currentTab.root::class) == true
+            val pendingEvent by openEventId.collectAsStateWithLifecycle()
+            LaunchedEffect(pendingEvent, currentTab != null) {
+                // Waits for a tab: Init's navigation to the Wall would pop a detail opened before it.
+                val id = pendingEvent ?: return@LaunchedEffect
+                if (currentTab != null) {
+                    openEventId.value = null
+                    navController.navigate(Screen.EventDetail(id))
+                }
+            }
             val onDayJump = destination?.hasRoute(Screen.Timeline::class) == true &&
                 backStackEntry?.toRoute<Screen.Timeline>()?.date != null
             // Bumped when Photos is reselected at its root: the timeline scrolls to the top.

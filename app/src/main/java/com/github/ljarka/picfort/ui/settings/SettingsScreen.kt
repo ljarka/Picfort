@@ -44,6 +44,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.github.ljarka.picfort.backup.BackupQueueState
 import com.github.ljarka.picfort.backup.BackupStatus
 import com.github.ljarka.picfort.local.RequestMediaPermission
+import com.github.ljarka.picfort.ui.events.reminders.EventReminderSettings
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -86,6 +87,11 @@ fun SettingsScreen(onBack: () -> Unit, onFrameClick: () -> Unit, onFamilyClick: 
         onStopBackup = viewModel::stopBackup,
         onHomeUrl = viewModel::setHomeUrl,
         onLogout = viewModel::logout,
+        eventReminders = if (viewModel.picfortServer.isNotEmpty()) {
+            { EventReminderSettings() }
+        } else {
+            null
+        },
     )
 }
 
@@ -113,6 +119,8 @@ fun SettingsContent(
     onStopBackup: () -> Unit = {},
     onHomeUrl: (String) -> Unit = {},
     onLogout: () -> Unit = {},
+    /** The "Event reminders" section from `:feature:events` (T-039); null hides it (no Picfort server). */
+    eventReminders: (@Composable () -> Unit)? = null,
     /** Fixed "now" for screenshot tests. */
     now: Long = System.currentTimeMillis(),
     relativeTimeSpan: (lastRunAt: Long, now: Long) -> CharSequence =
@@ -238,6 +246,12 @@ fun SettingsContent(
                     headlineContent = { Text("Family") },
                     supportingContent = { Text("Names, photos and hidden accounts") },
                 )
+            }
+
+            if (eventReminders != null) {
+                HorizontalDivider(Modifier.padding(vertical = 8.dp))
+                SectionTitle("Event reminders")
+                eventReminders()
             }
 
             if (wallpaperColors != null) {

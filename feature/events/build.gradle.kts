@@ -21,9 +21,14 @@ dependencies {
     implementation(project(":core:network"))
 
     ksp(libs.hilt.android.compiler)
+    ksp(libs.hilt.androidx.compiler)
 
     implementation(libs.hilt.android)
     implementation(libs.hilt.navigation.compose)
+    implementation(libs.hilt.work)
+    implementation(libs.work.runtime.ktx)
+    implementation(libs.androidx.core.ktx)
+    implementation(libs.androidx.activity.compose)
     implementation(platform(libs.androidx.compose.bom))
     implementation(libs.androidx.ui)
     implementation(libs.androidx.ui.graphics)

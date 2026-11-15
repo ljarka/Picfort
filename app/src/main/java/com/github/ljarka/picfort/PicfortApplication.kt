@@ -9,6 +9,7 @@ import coil3.network.okhttp.OkHttpNetworkFetcherFactory
 import coil3.video.VideoFrameDecoder
 import com.github.ljarka.picfort.backup.BackupScheduler
 import com.github.ljarka.picfort.local.LocalThumbnailFetcherFactory
+import com.github.ljarka.picfort.ui.events.reminders.ReminderScheduler
 import dagger.hilt.android.HiltAndroidApp
 import javax.inject.Inject
 import okhttp3.OkHttpClient
@@ -26,12 +27,16 @@ class PicfortApplication :
     @Inject
     lateinit var backupScheduler: BackupScheduler
 
+    @Inject
+    lateinit var reminderScheduler: ReminderScheduler
+
     override val workManagerConfiguration: Configuration
         get() = Configuration.Builder().setWorkerFactory(workerFactory).build()
 
     override fun onCreate() {
         super.onCreate()
         backupScheduler.apply() // keep the periodic backup in sync with settings
+        reminderScheduler.start() // event reminders follow the events (T-039)
         SingletonImageLoader.setSafe { context ->
             ImageLoader.Builder(context)
                 .components {

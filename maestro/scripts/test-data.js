@@ -8,6 +8,7 @@
 // hand on its photos: 01 on two photos, 02 on the first of them, the others on one photo each);
 // ALBUM=<name> to create an Immich album <name> with the newest photo on the test account (T-070);
 // ALBUM_GONE=<name> to check no album <name> is left while that photo still is.
+// REMINDER=<title> to put event <title> today, REMINDER_IN minutes from now (default 3, local time; T-039).
 // Credentials come from MAESTRO_* (scripts/maestro-smoke.sh); nothing is logged.
 
 function check(res, what) {
@@ -132,5 +133,20 @@ if (typeof ALBUM_GONE !== "undefined" && ALBUM_GONE) {
   if (albums.some(function (a) { return a.albumName === ALBUM_GONE })) throw new Error("Album " + ALBUM_GONE + " is still in Immich")
   if (typeof PHOTO !== "undefined" && PHOTO) {
     check(http.get(immich + "/api/assets/" + PHOTO, { headers: headers }), "the album's photo is still in Immich")
+  }
+}
+
+if (typeof REMINDER !== "undefined" && REMINDER) {
+  const minutes = typeof REMINDER_IN !== "undefined" && REMINDER_IN ? Number(REMINDER_IN) : 3
+  const at = new Date(Date.now() + minutes * 60000)
+  const two = function (n) { return (n < 10 ? "0" : "") + n }
+  const day = at.getFullYear() + "-" + two(at.getMonth() + 1) + "-" + two(at.getDate())
+  const body = { title: REMINDER, start_date: day, start_time: two(at.getHours()) + ":" + two(at.getMinutes()) }
+  const upcoming = check(http.get(server + "/events?after=" + day, { headers: headers }), "GET /events")
+  const found = upcoming.find(function (e) { return e.title === REMINDER })
+  if (found) {
+    check(http.request(server + "/events/" + found.id, { method: "PATCH", headers: headers, body: JSON.stringify(body) }), "PATCH " + REMINDER)
+  } else {
+    check(http.post(server + "/events", { headers: headers, body: JSON.stringify(body) }), "POST " + REMINDER)
   }
 }

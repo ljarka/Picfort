@@ -108,7 +108,7 @@ Android task except T-017 and T-026 starts with a mockup the owner approves.
 | [T-036](tasks/T-036-birthday-events-server.md)              | Birthdays as events — server (`events.db` v3)                                                       | `done`        |
 | [T-037](tasks/T-037-events-repeat-birthdays-android.md)     | Events — Android: repeat, birthdays with age                                                        | `done`        |
 | [T-038](tasks/T-038-visual-rebranding-and-icon.md)          | Visual rebranding — app icon, warm palette & floating nav bar                                       | `done`        |
-| [T-039](tasks/T-039-event-reminders-android.md)             | Event & birthday reminders — Android notifications                                                  | `ready`       |
+| [T-039](tasks/T-039-event-reminders-android.md)             | Event & birthday reminders — Android notifications                                                  | `in-progress` |
 | [T-040](tasks/T-040-shopping-reminders-android.md)          | Shopping list reminders — Android notifications                                                     | `ready`       |
 | [T-041](tasks/T-041-wishlist-backend.md)                    | Wishlist & link preview — server API (`shopping.db` v2)                                             | `ready`       |
 | [T-042](tasks/T-042-wishlist-android.md)                    | Wishlist carousel & event linking — Android                                                         | `ready`       |
@@ -206,3 +206,4 @@ Decided by the owner (2026-11-11), as recommended:
 | [0009](decisions/0009-receipts-gemini.md) | Receipts read by Gemini free tier on the server, opt-in (proposed) |
 | [0010](decisions/0010-family-members-birthdays-recurring-events.md) | Manual family members, birth dates & recurring events with additive migrations |
 | [0011](decisions/0011-modular-architecture.md) | Multi-module architecture optimized for AI Agent pair programming |
+| [0015](decisions/0015-event-reminders-on-the-phone.md) | Event reminders planned and stored on each phone (AlarmManager + 6-hourly re-plan) |

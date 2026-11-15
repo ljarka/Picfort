@@ -24,6 +24,8 @@ Thin Android application shell, navigation root, and Hilt root assembler.
 - Cross-feature dependencies must be wired in `AppModule.kt` via interfaces in `:core:model`.
 - Family settings need the Picfort server: without one (`ServerStatusViewModel.configured`, rechecked on start)
   Photos gets no "+ Family" circle, long-press "Edit" or "Link"; Settings hides "Family" (`FamilyRepository.supported`).
+- A tapped event reminder (T-039) carries `EXTRA_OPEN_EVENT_ID`; `MainActivity` opens `Screen.EventDetail`
+  once a tab is shown (onCreate / onNewIntent). Settings embeds `EventReminderSettings` (with a Picfort server).
 - `Screen.Timeline(date)`: a birthday's year opens Photos on that day on top of the event (Back returns
   to it); a tab switch from there pops it without `saveState`, so it never ends up in another tab's stack (T-056).
 

@@ -47,6 +47,10 @@ class EventsRepository(private val backend: EventsBackend, private val todayProv
     private val _upcoming = MutableStateFlow<List<FamilyEvent>>(emptyList())
     override val upcoming: StateFlow<List<FamilyEvent>> = _upcoming.asStateFlow()
 
+    /** Set after the first successful load: an empty [upcoming] before it means "not known", not "none". */
+    private val _upcomingLoaded = MutableStateFlow(false)
+    val upcomingLoaded: StateFlow<Boolean> = _upcomingLoaded.asStateFlow()
+
     private val _past = MutableStateFlow<List<FamilyEvent>>(emptyList())
     val past: StateFlow<List<FamilyEvent>> = _past.asStateFlow()
 
@@ -101,6 +105,7 @@ class EventsRepository(private val backend: EventsBackend, private val todayProv
     suspend fun refreshUpcoming(date: LocalDate): PicfortServerException? = try {
         val fresh = backend.upcoming(date)
         _upcoming.value = fresh
+        _upcomingLoaded.value = true
         null
     } catch (e: PicfortServerException) {
         if (_upcoming.value.isNotEmpty()) {

@@ -94,6 +94,9 @@ import com.github.ljarka.picfort.core.ui.avatar.MemberCarousel
 import com.github.ljarka.picfort.core.ui.component.ServerRequiredContent
 import com.github.ljarka.picfort.core.ui.component.SettingsAction
 import com.github.ljarka.picfort.core.ui.component.aboveFloatingTabBar
+import com.github.ljarka.picfort.ui.events.reminders.EventReminderUi
+import com.github.ljarka.picfort.ui.events.reminders.ReminderChoice
+import com.github.ljarka.picfort.ui.events.reminders.ReminderLine
 import java.time.LocalDate
 import java.time.LocalTime
 import java.time.format.DateTimeFormatter
@@ -132,6 +135,8 @@ data class EventDetailUi(
     val members: List<FamilyMember> = emptyList(),
     /** Photos from past birthdays (T-055); null for other events and birthdays without a year. */
     val birthdayPhotos: BirthdayPhotosUi? = null,
+    /** This phone's reminder (T-039); null hides the row (an event that's over). */
+    val reminder: EventReminderUi? = null,
 )
 
 data class EventFormUi(
@@ -547,6 +552,7 @@ fun EventDetailContent(
     /** A birthday photo was tapped: the photo and its position among all of them (T-055). */
     onOpenPhoto: (DayPhoto, Int) -> Unit = { _, _ -> },
     onOpenDay: (LocalDate) -> Unit = {},
+    onReminderChange: (ReminderChoice) -> Unit = {},
 ) {
     val snackbar = remember { SnackbarHostState() }
     LaunchedEffect(state.message) {
@@ -680,6 +686,11 @@ fun EventDetailContent(
                         if (repeatText != null && !event.isBirthday) {
                             Spacer(Modifier.height(14.dp))
                             DetailLine(R.drawable.ic_repeat, repeatText)
+                        }
+
+                        state.reminder?.let { reminder ->
+                            Spacer(Modifier.height(10.dp))
+                            ReminderLine(event, reminder, onReminderChange)
                         }
 
                         val location = event.location

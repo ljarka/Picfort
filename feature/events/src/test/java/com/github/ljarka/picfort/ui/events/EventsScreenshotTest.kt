@@ -1,5 +1,6 @@
 package com.github.ljarka.picfort.ui.events
 
+import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
 import app.cash.paparazzi.DeviceConfig
@@ -13,6 +14,11 @@ import com.github.ljarka.picfort.core.model.FamilyMember
 import com.github.ljarka.picfort.core.ui.theme.AccentTheme
 import com.github.ljarka.picfort.core.ui.theme.BrandAccent
 import com.github.ljarka.picfort.core.ui.theme.PicfortTheme
+import com.github.ljarka.picfort.ui.events.reminders.EventReminderSettingsContent
+import com.github.ljarka.picfort.ui.events.reminders.EventReminderUi
+import com.github.ljarka.picfort.ui.events.reminders.ReminderChoice
+import com.github.ljarka.picfort.ui.events.reminders.ReminderDefaults
+import com.github.ljarka.picfort.ui.events.reminders.ReminderPreset
 import java.time.LocalDate
 import java.time.LocalTime
 import org.junit.Rule
@@ -289,6 +295,28 @@ class EventsScreenshotTest {
         EventsListContent(
             EventsListUi(today = sampleToday, upcomingEvents = withWho, memberNames = members, members = family),
         )
+    }
+
+    @Test
+    fun event_detail_reminder() = snap {
+        EventDetailContent(
+            EventDetailUi(
+                event = sampleUpcomingEvents[0],
+                today = sampleToday,
+                authorName = "Mama",
+                reminder = EventReminderUi(ReminderChoice.Default, ReminderDefaults()),
+            ),
+        )
+    }
+
+    @Test
+    fun event_reminder_settings() = snap {
+        Surface {
+            EventReminderSettingsContent(
+                defaults = ReminderDefaults(birthday = ReminderPreset.DAYS_3),
+                exactOn = false,
+            )
+        }
     }
 
     @Test

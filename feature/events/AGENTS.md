@@ -13,7 +13,8 @@ Family events vertical slice: upcoming and past events, details, form, recurrenc
 | `ui/events/EventsApi.kt` | Server HTTP client: `/events` endpoints |
 | `ui/events/EventsModels.kt` | Grouping, relative labels, `turnsLabel`, `repeatSummary` |
 | `ui/events/BirthdayPhotos.kt` | Birthday photos (T-055): `birthdayDays`, `birthdayYears`, `EventDetailList` (lazy detail + rows) |
-| `ui/events/EventsScreenshotTest.kt` | Paparazzi snapshots: upcoming, past, dark theme, details, form, repeat & birthdays |
+| `ui/events/EventsScreenshotTest.kt` | Paparazzi snapshots: upcoming, past, dark theme, details, form, repeat & birthdays, reminders |
+| `ui/events/reminders/*` | Reminders (T-039, ADR 0015): `ReminderPlan` (pure plan), `ReminderStore`, `ReminderScheduler` + worker, `ReminderAlarms` (receivers, notification), `ReminderUi` |
 
 ## Repeat & birthdays (T-037)
 
@@ -36,6 +37,16 @@ Family events vertical slice: upcoming and past events, details, form, recurrenc
   from `DayPhotosProvider`, one section per year ("Turned 8 · 16 Nov 2025"), empty years left out.
 - The detail is one `LazyColumn` (event as the first item); tap → `onOpenPhoto(id, index, "event:<id>")`.
 - A year's title (whole row, ">") → `onOpenDay(day)`: Photos on that day (T-056, routed by `:app`).
+
+## Reminders (T-039, ADR 0015)
+
+- Per phone, nothing on the server. `ReminderDefaults` per `ReminderKind` (Settings section
+  `EventReminderSettings`, embedded by `:app`) + `ReminderChoice` per event (detail's "Reminder" row).
+- `planReminders` (pure, `ReminderPlanTest`): one reminder per event for its current occurrence; key
+  `id@occurrence@trigger` remembered once shown; an armed one missed comes ≤ 12 h late, before the start.
+- `ReminderScheduler.start()` (from `Application.onCreate`) re-plans on every change, after
+  `EventsRepository.upcomingLoaded`; `EventRemindersWorker` every 6 h. Tap → launch intent with
+  `EXTRA_OPEN_EVENT_ID`, opened by `MainActivity`. Receivers are declared in this module's manifest.
 
 ## Public Contract / Navigation Entry Points
 
@@ -60,4 +71,5 @@ Family events vertical slice: upcoming and past events, details, form, recurrenc
 ./gradlew :feature:events:recordPaparazziDebug # on intentional UI changes
 DEVICE=emulator-5556 ./scripts/maestro-smoke.sh maestro/events-member-filter.yaml   # T-054, test server
 DEVICE=emulator-5556 ./scripts/maestro-smoke.sh maestro/events-birthday-photos.yaml  # T-055, T-056
+DEVICE=emulator-5556 ./scripts/maestro-smoke.sh maestro/events-reminders.yaml        # T-039, ~4 min
 ```
