@@ -46,7 +46,7 @@ hilt-work = { group = "androidx.hilt", name = "hilt-work", version.ref = "hiltX"
 hilt-androidx-compiler = { group = "androidx.hilt", name = "hilt-compiler", version.ref = "hiltX" }
 work-runtime-ktx = { group = "androidx.work", name = "work-runtime-ktx", version.ref = "work" }
 retrofit = { group = "com.squareup.retrofit2", name = "retrofit", version = "2.11.0" }
-converter-kotlinx-serialization = { group = "com.squareup.retrofit2", name = "converter-kotlinx-serialization", version = "2.11.0" }
+converter-kotlinx-serialization = { group = "com.squareup.retrofit2", name = "converter-kotlinx-serialization", version = "3.0.0" }
 okhttp = { group = "com.squareup.okhttp3", name = "okhttp", version = "5.5.1" }
 datastore-preferences = { group = "androidx.datastore", name = "datastore-preferences", version = "1.3.0" }
 logging-interceptor = { group = "com.squareup.okhttp3", name = "logging-interceptor", version = "5.5.1" }
