@@ -1,6 +1,7 @@
 package com.github.ljarka.picfort.ui.school
 
 import android.content.Context
+import com.github.ljarka.picfort.core.model.SchoolAssistantProvider
 import com.github.ljarka.picfort.core.model.SchoolMembership
 import com.github.ljarka.picfort.core.network.AccessTokenStore
 import com.github.ljarka.picfort.core.network.FrameSettingsStore
@@ -69,6 +70,9 @@ abstract class SchoolModule {
 
     @Binds
     abstract fun membership(impl: SchoolMembershipImpl): SchoolMembership
+
+    @Binds
+    abstract fun assistant(impl: SchoolAssistantImpl): SchoolAssistantProvider
 }
 
 /**

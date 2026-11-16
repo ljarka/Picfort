@@ -10,6 +10,7 @@ Family wall vertical slice: posts stream, today panel (events/trips/birthdays), 
 | `ui/wall/TodayPanel.kt` | Today overview panel at the top of the wall (events, ongoing trips, next big event) |
 | `ui/wall/FamilyWallViewModel.kt` | ViewModel: wall stream, polling, new post creation, reaction toggles |
 | `ui/wall/WallRepository.kt` | Repository: server fetch & polling, optimistic updates |
+| `ui/wall/WallAssistantImpl.kt` | `WallAssistantProvider` for Gemini AppFunctions (T-074) |
 | `ui/wall/WallApi.kt` | Server HTTP client: `/wall/posts`, `/wall/posts/{id}/reactions` |
 | `ui/wall/WallScreenshotTest.kt` | Paparazzi snapshots: wall feed, dark mode, filtered, today panels |
 

@@ -1,5 +1,6 @@
 package com.github.ljarka.picfort.ui.wall
 
+import com.github.ljarka.picfort.core.model.WallAssistantProvider
 import com.github.ljarka.picfort.core.network.PicfortHttpClient
 import dagger.Module
 import dagger.Provides
@@ -24,4 +25,7 @@ class WallModule {
         .connectTimeout(5, TimeUnit.SECONDS)
         .writeTimeout(60, TimeUnit.SECONDS) // photo uploads over home Wi-Fi
         .build()
+
+    @Provides
+    fun wallAssistant(impl: WallAssistantImpl): WallAssistantProvider = impl
 }

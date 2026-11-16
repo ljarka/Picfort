@@ -16,6 +16,7 @@ Shopping list vertical slice: collaborative checklists, offline caching, receipt
 | `ui/shopping/SpendingModels.kt` | Spending domain/UI models and aggregation helpers (`topShopsWithOther`, etc.) |
 | `ui/shopping/ShoppingViewModels.kt` | ViewModels: `ShoppingListsViewModel`, `ShoppingListViewModel`, `ShoppingListsScreen`, `ShoppingListScreen` |
 | `ui/shopping/ShoppingRepository.kt` | Repository: polling, sync, optimistic updates, offline cache file, receipts CRUD |
+| `ui/shopping/ShoppingAssistantImpl.kt` | `ShoppingAssistantProvider` for Gemini AppFunctions (T-074) |
 | `ui/shopping/ShoppingApi.kt` | Server HTTP client: `/lists` and `/receipts` endpoints |
 | `ui/shopping/ShoppingModels.kt` | UI state: `ShoppingListsUi`, `ShoppingListUi` |
 | `ui/shopping/ShoppingScreenshotTest.kt` | Paparazzi snapshots: cards, empty state, offline banner, list items, receipts & sheet |

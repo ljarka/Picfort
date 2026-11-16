@@ -13,6 +13,7 @@ Server API: T-028 (`picfort-server/school.py`, `/school`, `school.db`).
 | `ui/school/SchoolViewModel.kt` | `SchoolUi`; selected child in SharedPreferences `school`; minute clock (`tick`), 60 s poll |
 | `ui/school/SchoolScreen.kt` | `SchoolScreen`/`SchoolContent`: child chips, summary card, day chips + `HorizontalPager`, rows, sheets |
 | `ui/school/SchoolMembershipImpl.kt` | `SchoolMembership` for Family's "Goes to school" switch (T-068) |
+| `ui/school/SchoolAssistantImpl.kt` | `SchoolAssistantProvider` for Gemini AppFunctions (T-074) |
 | `ui/school/SchoolForms.kt` | `ChildForm` (bells, remove), `EntryForm` ("Save and add next"), `BellsForm` (Fill in, Copy from), `CopyDayDialog`, `TimeField` |
 
 ## Rules

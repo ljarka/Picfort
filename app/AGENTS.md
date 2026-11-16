@@ -11,6 +11,7 @@ Thin Android application shell, navigation root, and Hilt root assembler.
 | `PicfortApplication.kt` | Application class, Hilt AndroidApp entry, Coil image loader init |
 | `network/*` | OkHttp/Retrofit; `AuthInterceptor` (token for Immich and its home address), `DebugLoggingInterceptor` (no bodies for uploads/downloads), `UploadTimeoutInterceptor` (5 min for `POST /api/assets` on a slow uplink, T-006) |
 | `AppModule.kt` | Top-level Hilt module: binds cross-feature bridges (e.g. `ImmichUsersSync`) |
+| `assistant/*` | `BasePicfortAppFunctionService` & `PicfortAssistantHandler`: Android 16+ Gemini AppFunctions (T-074) |
 | `ui/shell/AppShell.kt` | Floating navigation bar (`TabBar`), `TabRoot`; `Tab.accent` (Wall coral, Shopping mint, Events amber, School sky, Photos periwinkle), applied in `MainActivity` via `AccentTheme` |
 | `ui/init/*` | `InitScreen` (signed in → app) and the one-page setup (T-058): `SetupScreen`/`SetupContent`, `SetupViewModel` (Immich ping → login → `PicfortServerCheck`), `picfortSuggestion` (same host :5000) |
 | `ui/login/*` | `LoginService` (`/api/auth/login`, via `Provider`: Retrofit reads the base URL when built) |

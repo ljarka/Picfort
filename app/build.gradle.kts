@@ -78,6 +78,8 @@ dependencies {
     ksp(libs.hilt.android.compiler)
     ksp(libs.room.compiler)
     ksp(libs.hilt.androidx.compiler)
+    ksp(libs.androidx.appfunctions.compiler)
+    implementation(libs.androidx.appfunctions)
     implementation(libs.hilt.work)
     implementation(libs.work.runtime.ktx)
     implementation(libs.room.runtime)

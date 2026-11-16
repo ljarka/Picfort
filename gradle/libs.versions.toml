@@ -61,6 +61,8 @@ room-runtime = { group = "androidx.room", name = "room-runtime", version = "2.8.
 room-compiler = { group = "androidx.room", name = "room-compiler", version = "2.8.5" }
 room-ktx = { group = "androidx.room", name = "room-ktx", version = "2.8.5" }
 mlkit-genai-prompt = { group = "com.google.mlkit", name = "genai-prompt", version = "1.0.0-beta5" }
+androidx-appfunctions = { group = "androidx.appfunctions", name = "appfunctions", version = "1.0.0-rc01" }
+androidx-appfunctions-compiler = { group = "androidx.appfunctions", name = "appfunctions-compiler", version = "1.0.0-rc01" }
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }
 android-library = { id = "com.android.library", version.ref = "agp" }
