@@ -13,6 +13,7 @@ from app import FrameController, create_app
 from auth import Authenticator
 from school import SchoolStore
 from slideshow import Picker, SettingsStore, Slideshow
+from store import StoreError
 from wall import WallStore
 
 PERSON = "44444444-4444-4444-4444-444444444444"
@@ -349,14 +350,17 @@ class SchoolApiTest(unittest.TestCase):
 
     # --- schema ---
 
-    def test_schema_change_keeps_backup_and_leaves_other_databases(self):
+    def test_schema_change_without_migration_leaves_data_and_returns_503(self):
         self.child()
         self.client.post("/wall", data={"text": "hello"}, content_type="multipart/form-data")
         with closing(sqlite3.connect(self.db)) as conn:
             conn.execute("PRAGMA user_version = 99")
-        SchoolStore(self.db, self.photos, clock=Clock())
-        self.assertTrue(os.path.exists(self.db + ".v99.bak"))
-        self.assertEqual([], self.client.get("/school").get_json()["children"])
+        reopened = SchoolStore(self.db, self.photos, clock=Clock())
+        self.assertIsNotNone(reopened.migration_error)
+        self.assertFalse(os.path.exists(self.db + ".v99.bak"))
+        with self.assertRaises(StoreError) as ctx:
+            reopened.children(MAMA)
+        self.assertEqual(503, ctx.exception.status)
         self.assertEqual(1, len(self.client.get("/wall").get_json()))
 
 

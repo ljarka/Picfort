@@ -2,14 +2,19 @@
 
 Room database, entities and DAOs for local caching and offline storage.
 
-## Scope
-- Room configuration: `ImagesDatabase` (version 23, destructive migration fallback; ADR 0016: allowed only for cache tables, T-075 classifies them).
-- DAOs and Entities:
-  - `UsersDao`, `UserEntity` (Immich users synced from stream).
-  - `RemoteAssetsDao`, `RemoteAssetEntity` (Timeline images, stacks, partner libraries;
-    `takenOnMonthDays` for photos of given days, T-055).
-  - `BackupDao`, `LocalBackupEntity` (Background photo backup state).
-- Hilt bindings: `DatabaseModule`.
+## Scope & Table Classification (ADR 0016)
+`ImagesDatabase` (version 23) keeps `fallbackToDestructiveMigration(dropAllTables = true)` because **every table in it is a cache** that can be rebuilt without data loss:
+
+| Table | Entity | Kind | Rebuilt from |
+|---|---|---|---|
+| `users` | `UserEntity` | cache | Immich sync stream / users API |
+| `remote_assets` | `RemoteAssetEntity` | cache | Immich sync stream |
+| `remote_stacks` | `RemoteStackEntity` | cache | Immich sync stream |
+| `partners` | `PartnerEntity` | cache | Immich sync stream |
+| `sync_state` | `SyncStateEntity` | cache | Immich sync cursor (full re-sync on wipe) |
+| `local_backup` | `LocalBackupEntity` | cache | Local MediaStore re-hash; server dedupes, nothing is uploaded twice |
+
+If a future table holds user state that cannot be rebuilt (e.g. local reminders or unsynced drafts), replace the destructive fallback with explicit Room `Migration`s and `MigrationTestHelper` tests.
 
 ## Verification
 ```bash

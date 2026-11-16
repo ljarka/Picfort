@@ -1,13 +1,12 @@
-"""Base for the family-hub SQLite stores (ADR 0008): one file per feature.
+"""Base for the family-hub SQLite stores (ADR 0008, ADR 0016): one file per feature.
 
-When a store's SCHEMA_VERSION changes, the old file is kept as `<file>.v<old>.bak`. Then either
-a registered additive migration (ADR 0010: only `family.db` and `events.db`, nullable columns) brings
-the data forward, or, with no migration for that version, the feature starts empty (ADR 0008).
-Other features' files are untouched.
+When a store's SCHEMA_VERSION changes, the old file is copied to `<file>.v<old>.bak` before
+running registered migrations in `MIGRATIONS` (ADR 0016). If a migration is missing or fails,
+the error is logged, the database file is left untouched, and the store's endpoints answer
+503 until fixed — no store ever starts empty.
 """
 
 import logging
-import os
 import shutil
 import sqlite3
 from contextlib import closing
@@ -38,9 +37,18 @@ class SqliteStore:
     def __init__(self, db_path: str, clock=utc_now):
         self.db_path = db_path
         self.clock = clock
+        self.migration_error: str | None = None
         self._init_schema()
 
+    def require_ready(self):
+        if self.migration_error:
+            raise StoreError(self.migration_error, status=503)
+
     def connect(self) -> sqlite3.Connection:
+        self.require_ready()
+        return self._raw_connect()
+
+    def _raw_connect(self) -> sqlite3.Connection:
         # One connection per call: Flask serves requests on several threads. SQLite leaves
         # foreign keys off unless every connection turns them on.
         conn = sqlite3.connect(self.db_path, timeout=10)
@@ -49,22 +57,27 @@ class SqliteStore:
         return conn
 
     def _init_schema(self):
-        with closing(self.connect()) as conn:
+        with closing(self._raw_connect()) as conn:
             version = conn.execute("PRAGMA user_version").fetchone()[0]
             has_tables = conn.execute("SELECT 1 FROM sqlite_master WHERE type = 'table'").fetchone()
         if version == self.SCHEMA_VERSION:
             return
-        if self._can_migrate(version):
-            self._migrate(version)
+        if version == 0 and not has_tables:
+            with closing(self._raw_connect()) as conn, conn:
+                conn.executescript(self.SCHEMA)
+                conn.execute(f"PRAGMA user_version = {self.SCHEMA_VERSION}")
             return
-        if version != 0 or has_tables:
-            backup = f"{self.db_path}.v{version}.bak"
-            log.warning("%s schema changed (%s -> %s): kept the old data in %s, starting empty",
-                        self.NAME, version, self.SCHEMA_VERSION, backup)
-            os.replace(self.db_path, backup)
-        with closing(self.connect()) as conn, conn:
-            conn.executescript(self.SCHEMA)
-            conn.execute(f"PRAGMA user_version = {self.SCHEMA_VERSION}")
+        if not self._can_migrate(version):
+            msg = f"{self.NAME} schema changed ({version} -> {self.SCHEMA_VERSION}): no migration path; store unavailable"
+            log.error(msg)
+            self.migration_error = msg
+            return
+        try:
+            self._migrate(version)
+        except Exception as e:
+            msg = f"{self.NAME} schema migration ({version} -> {self.SCHEMA_VERSION}) failed: {e}"
+            log.exception(msg)
+            self.migration_error = msg
 
     def _can_migrate(self, version: int) -> bool:
         return 0 < version < self.SCHEMA_VERSION and all(v in self.MIGRATIONS for v in range(version, self.SCHEMA_VERSION))
@@ -74,7 +87,7 @@ class SqliteStore:
         log.warning("%s schema changed (%s -> %s): migrating, copy of the old data in %s",
                     self.NAME, version, self.SCHEMA_VERSION, backup)
         shutil.copy2(self.db_path, backup)
-        with closing(self.connect()) as conn, conn:
+        with closing(self._raw_connect()) as conn, conn:
             for step in range(version, self.SCHEMA_VERSION):
                 for statement in self.MIGRATIONS[step]:
                     conn.execute(statement)

@@ -2,7 +2,7 @@
 of lessons and extracurricular activities. A child's photo is a file; each parent can link the
 child to a person in their own Immich library (person ids are per library, T-030).
 
-`school.db` only; no migrations yet: a schema change starts empty with a `.bak` (store.py).
+`school.db` uses `SqliteStore` migrations (ADR 0016) so timetables survive schema updates.
 """
 
 import os

@@ -138,7 +138,7 @@ Android task except T-017 and T-026 starts with a mockup the owner approves.
 | [T-072](tasks/T-072-browser-frame.md)                       | The frame in a web browser (`/frame`, full colour, behind the server key; tablet as a second frame) | `done`        |
 | [T-073](tasks/T-073-per-viewer-member-faces.md)             | Family: each Immich user sees members' faces from their own Immich people                           | `done`        |
 | [T-074](tasks/T-074-gemini-app-functions.md)                | Gemini Assistant integration via Android AppFunctions (school, events, birthdays, shopping, wall)   | `done`        |
-| [T-075](tasks/T-075-schema-migrations.md)                   | Schema migrations everywhere: no store starts empty (ADR 0016); **before T-041**                    | `ready`       |
+| [T-075](tasks/T-075-schema-migrations.md)                   | Schema migrations everywhere: no store starts empty (ADR 0016); **before T-041**                    | `done`        |
 
 ### Phase 8 — Modular Architecture (Agentic Pair Programming)
 Deconstruct monolithic `:app` into isolated feature slices and core foundations (ADR 0011).

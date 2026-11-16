@@ -12,6 +12,7 @@ from app import AUTH_PREFIXES, FrameController, create_app
 from auth import Authenticator
 from shopping import MAX_ITEMS, ShoppingStore
 from slideshow import Picker, SettingsStore, Slideshow
+from store import StoreError
 from wall import WallStore
 
 
@@ -188,14 +189,17 @@ class ShoppingApiTest(unittest.TestCase):
         lst = self.new_list()
         self.assertEqual(lst, ShoppingStore(self.db).get(lst["id"]))
 
-    def test_schema_change_keeps_a_backup_and_leaves_the_wall(self):
+    def test_schema_change_without_migration_leaves_data_and_returns_503(self):
         self.new_list()
         self.client.post("/wall", data={"text": "hi"}, content_type="multipart/form-data")
         with closing(sqlite3.connect(self.db)) as conn:
             conn.execute("PRAGMA user_version = 99")
         store = ShoppingStore(self.db)
-        self.assertEqual([], store.lists())
-        self.assertTrue(os.path.exists(self.db + ".v99.bak"))
+        self.assertIsNotNone(store.migration_error)
+        self.assertFalse(os.path.exists(self.db + ".v99.bak"))
+        with self.assertRaises(StoreError) as ctx:
+            store.lists()
+        self.assertEqual(503, ctx.exception.status)
         self.assertEqual(1, len(WallStore(self.wall_db, os.path.join(self.dir, "wall_photos")).list()))
 
     # Auth

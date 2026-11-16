@@ -15,6 +15,7 @@ from datetime import date
 from events import EventStore, MAX_LOCATION, MAX_NOTE, MAX_TITLE, last_occurrence, next_occurrence, occurrence_start
 from shopping import ShoppingStore
 from slideshow import Picker, SettingsStore, Slideshow
+from store import StoreError
 from wall import WallStore
 
 ALBUM_ID = "11111111-2222-3333-4444-555555555555"
@@ -285,8 +286,11 @@ class EventsApiTest(unittest.TestCase):
             conn.execute("PRAGMA user_version = 99")
 
         reopened = EventStore(self.db)
-        self.assertEqual([], reopened.upcoming("2000-01-01"))
-        self.assertTrue(os.path.exists(self.db + ".v99.bak"))
+        self.assertIsNotNone(reopened.migration_error)
+        self.assertFalse(os.path.exists(self.db + ".v99.bak"))
+        with self.assertRaises(StoreError) as ctx:
+            reopened.upcoming("2000-01-01")
+        self.assertEqual(503, ctx.exception.status)
         self.assertEqual(1, len(WallStore(self.wall_db, os.path.join(self.dir, "wall_photos")).list()))
         self.assertEqual(1, len(ShoppingStore(self.shopping_db).lists()))
 

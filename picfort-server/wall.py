@@ -1,100 +1,62 @@
-"""Family Wall: posts (text and/or a photo) stored in SQLite, photos as files (ADR 0002).
+"""Family Wall: posts (text and/or a photo) stored in SQLite (`wall.db`), photos as files (ADR 0002).
 
-No migrations: when SCHEMA_VERSION changes, the wall is recreated empty.
+Schema changes use `SqliteStore` migrations (ADR 0016) so wall posts survive updates.
 """
 
-import logging
 import os
-import sqlite3
 import uuid
 from contextlib import closing
-from datetime import datetime, timezone
 
 from photos import MAX_PHOTO_BYTES, PHOTO_FORMATS, PHOTO_NAME_RE, inspect_photo
+from store import SqliteStore, StoreError, utc_now
 
-log = logging.getLogger("wall")
-
-SCHEMA_VERSION = 1
-MAX_PHOTO_BYTES = 10 * 1024 * 1024
 DEFAULT_LIMIT = 20
 MAX_LIMIT = 100
 PHOTO_URL_PREFIX = "/wall/photo/"
 
-SCHEMA = """
-CREATE TABLE posts (
-  id           INTEGER PRIMARY KEY AUTOINCREMENT,
-  author_id    TEXT    NOT NULL,
-  author       TEXT    NOT NULL,
-  text         TEXT,
-  photo        TEXT,
-  photo_width  INTEGER,
-  photo_height INTEGER,
-  pinned       INTEGER NOT NULL DEFAULT 0,
-  created      TEXT    NOT NULL
-)
-"""
+WallError = StoreError
 
 
-class WallError(Exception):
-    def __init__(self, message: str, status: int):
-        super().__init__(message)
-        self.status = status
+class WallStore(SqliteStore):
+    SCHEMA_VERSION = 1
+    NAME = "wall"
+    SCHEMA = """
+    CREATE TABLE posts (
+      id           INTEGER PRIMARY KEY AUTOINCREMENT,
+      author_id    TEXT    NOT NULL,
+      author       TEXT    NOT NULL,
+      text         TEXT,
+      photo        TEXT,
+      photo_width  INTEGER,
+      photo_height INTEGER,
+      pinned       INTEGER NOT NULL DEFAULT 0,
+      created      TEXT    NOT NULL
+    );
+    """
 
-
-def _utc_now() -> str:
-    return datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
-
-
-class WallStore:
-    def __init__(self, db_path: str, photo_dir: str, clock=_utc_now):
-        self.db_path = db_path
+    def __init__(self, db_path: str, photo_dir: str, clock=utc_now):
         self.photo_dir = photo_dir
-        self.clock = clock
         os.makedirs(photo_dir, exist_ok=True)
-        self._init_schema()
-
-    def _connect(self) -> sqlite3.Connection:
-        # One connection per call: Flask serves requests on several threads.
-        conn = sqlite3.connect(self.db_path, timeout=10)
-        conn.row_factory = sqlite3.Row
-        return conn
-
-    def _init_schema(self):
-        with closing(self._connect()) as conn, conn:
-            version = conn.execute("PRAGMA user_version").fetchone()[0]
-            if version == SCHEMA_VERSION:
-                return
-            if version != 0 or conn.execute(
-                "SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = 'posts'"
-            ).fetchone():
-                log.warning("Wall schema changed (%s -> %s): starting with an empty wall", version, SCHEMA_VERSION)
-                conn.execute("DROP TABLE IF EXISTS posts")
-                self._remove_all_photos()
-            conn.execute(SCHEMA)
-            conn.execute(f"PRAGMA user_version = {SCHEMA_VERSION}")
-
-    def _remove_all_photos(self):
-        for name in os.listdir(self.photo_dir):
-            if PHOTO_NAME_RE.match(name):
-                os.remove(os.path.join(self.photo_dir, name))
+        super().__init__(db_path, clock=clock)
 
     # Reading
 
     def list(self, limit: int = DEFAULT_LIMIT) -> list:
         """Pinned posts first, then newest first."""
-        with closing(self._connect()) as conn:
+        with closing(self.connect()) as conn:
             rows = conn.execute(
                 "SELECT * FROM posts ORDER BY pinned DESC, created DESC, id DESC LIMIT ?", (limit,)
             ).fetchall()
         return [self._json(r) for r in rows]
 
     def get(self, post_id: int):
-        with closing(self._connect()) as conn:
+        with closing(self.connect()) as conn:
             row = conn.execute("SELECT * FROM posts WHERE id = ?", (post_id,)).fetchone()
         return self._json(row) if row else None
 
     def photo_path(self, filename: str):
         """Path of a stored photo, or None for names that aren't ours or files that are gone."""
+        self.require_ready()
         if not PHOTO_NAME_RE.match(filename):
             return None
         path = os.path.join(self.photo_dir, filename)
@@ -118,7 +80,7 @@ class WallStore:
             with open(os.path.join(self.photo_dir, filename), "wb") as f:
                 f.write(photo)
         try:
-            with closing(self._connect()) as conn, conn:
+            with closing(self.connect()) as conn, conn:
                 cur = conn.execute(
                     "INSERT INTO posts (author_id, author, text, photo, photo_width, photo_height, created)"
                     " VALUES (?, ?, ?, ?, ?, ?, ?)",
@@ -132,7 +94,7 @@ class WallStore:
         return self.get(post_id)
 
     def delete(self, post_id: int) -> bool:
-        with closing(self._connect()) as conn, conn:
+        with closing(self.connect()) as conn, conn:
             row = conn.execute("SELECT photo FROM posts WHERE id = ?", (post_id,)).fetchone()
             if row is None:
                 return False
@@ -145,7 +107,7 @@ class WallStore:
         return True
 
     def toggle_pin(self, post_id: int):
-        with closing(self._connect()) as conn, conn:
+        with closing(self.connect()) as conn, conn:
             cur = conn.execute("UPDATE posts SET pinned = 1 - pinned WHERE id = ?", (post_id,))
             if cur.rowcount == 0:
                 return None

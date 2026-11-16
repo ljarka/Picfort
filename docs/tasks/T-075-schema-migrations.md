@@ -1,6 +1,6 @@
 # T-075 — Schema migrations everywhere (no more "start empty")
 
-**Status:** ready  
+**Status:** done  
 **Component:** Picfort server, Android (`:core:database`)  
 **Depends on:** ADR 0016. **Before:** T-041 (first `shopping.db` bump, which holds receipts).
 

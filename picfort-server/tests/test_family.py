@@ -18,6 +18,7 @@ from events import EventStore
 from family import FamilyStore
 from shopping import ShoppingStore
 from slideshow import Picker, SettingsStore, Slideshow
+from store import StoreError
 from wall import WallStore
 
 OLA = "33333333-3333-3333-3333-333333333333"
@@ -217,15 +218,21 @@ class FamilyApiTest(unittest.TestCase):
             r = getattr(self.client, method)(path, headers={"Authorization": ""})
             self.assertEqual(401, r.status_code, (method, path))
 
-    def test_schema_change_keeps_backup_and_leaves_other_databases_alone(self):
+    def test_schema_change_without_migration_leaves_data_and_raises_503(self):
         self.client.patch(f"/family/{MAMA}", json={"display_name": "Mama"})
         self.client.post("/lists", json={"title": "Biedronka"})
         self.client.post("/wall", data={"text": "hi"}, content_type="multipart/form-data")
         with closing(sqlite3.connect(self.db)) as conn:
             conn.execute("PRAGMA user_version = 99")
         reopened = FamilyStore(self.db, self.photos)
-        self.assertEqual([], reopened.profiles())
-        self.assertTrue(os.path.exists(self.db + ".v99.bak"))
+        self.assertIsNotNone(reopened.migration_error)
+        self.assertFalse(os.path.exists(self.db + ".v99.bak"))
+        with self.assertRaises(StoreError) as ctx:
+            reopened.profiles()
+        self.assertEqual(503, ctx.exception.status)
+        with closing(sqlite3.connect(self.db)) as conn:
+            row = conn.execute("SELECT display_name FROM profiles WHERE user_id = ?", (MAMA,)).fetchone()
+        self.assertEqual("Mama", row[0])
         self.assertEqual(1, len(ShoppingStore(self.shopping_db).lists()))
         self.assertEqual(1, len(WallStore(self.wall_db, os.path.join(self.dir, "wall_photos")).list()))
 

@@ -12,7 +12,7 @@ from auth import Authenticator, AuthUnavailable, User
 from app import FrameController, create_app
 from PIL import Image
 from slideshow import Picker, SettingsStore, Slideshow
-from wall import WallStore
+from wall import WallError, WallStore
 
 MAMA = "11111111-1111-1111-1111-111111111111"
 TATA = "22222222-2222-2222-2222-222222222222"
@@ -173,14 +173,17 @@ class WallApiTest(unittest.TestCase):
         reopened = WallStore(self.store.db_path, self.photos)
         self.assertEqual([post], reopened.list())
 
-    def test_schema_change_starts_empty(self):
+    def test_schema_change_without_migration_leaves_data_and_returns_503(self):
         self.post(text="hi", photo=image_bytes())
         conn = sqlite3.connect(self.store.db_path)
         conn.execute("PRAGMA user_version = 0")  # as if written by another schema
         conn.close()
         reopened = WallStore(self.store.db_path, self.photos)
-        self.assertEqual([], reopened.list())
-        self.assertEqual([], os.listdir(self.photos))
+        self.assertIsNotNone(reopened.migration_error)
+        self.assertEqual(1, len(os.listdir(self.photos)))
+        with self.assertRaises(WallError) as ctx:
+            reopened.list()
+        self.assertEqual(503, ctx.exception.status)
 
     def test_author_comes_from_the_token(self):
         post = self.post(token="tata-token", text="hi", author_id=MAMA, author="Mama").get_json()
