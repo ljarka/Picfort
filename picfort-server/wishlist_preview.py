@@ -1,0 +1,145 @@
+"""OpenGraph / HTML metadata extractor for wishlist link previews (T-041)."""
+
+from decimal import Decimal, InvalidOperation
+from html.parser import HTMLParser
+import re
+import urllib.error
+import urllib.parse
+import urllib.request
+
+from store import StoreError
+
+MAX_URL_LENGTH = 2048
+MAX_PREVIEW_BYTES = 1024 * 1024
+PREVIEW_TIMEOUT_SECONDS = 4
+MAX_PRICE_MINOR = 100_000_000
+MOBILE_USER_AGENT = (
+    "Mozilla/5.0 (Linux; Android 14; Pixel 8) "
+    "AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Mobile Safari/537.36"
+)
+
+
+def validate_http_url(url) -> str:
+    if not isinstance(url, str) or not url.strip():
+        raise StoreError("url must not be empty")
+    url = url.strip()
+    if len(url) > MAX_URL_LENGTH:
+        raise StoreError(f"url must be at most {MAX_URL_LENGTH} characters")
+    parsed = urllib.parse.urlparse(url)
+    if parsed.scheme not in ("http", "https") or not parsed.netloc:
+        raise StoreError("url must be a valid http:// or https:// URL")
+    return url
+
+
+def _parse_price_minor(raw: str | None) -> int | None:
+    if not raw:
+        return None
+    cleaned = re.sub(r"[^\d.,]", "", raw.strip())
+    if not cleaned:
+        return None
+    if "," in cleaned and "." in cleaned:
+        # Assume comma is thousands separator if it appears before dot, else decimal.
+        if cleaned.rfind(",") > cleaned.rfind("."):
+            cleaned = cleaned.replace(".", "").replace(",", ".")
+        else:
+            cleaned = cleaned.replace(",", "")
+    elif "," in cleaned:
+        cleaned = cleaned.replace(",", ".")
+    try:
+        amount = Decimal(cleaned)
+    except InvalidOperation:
+        return None
+    minor = int((amount * 100).to_integral_value())
+    if not 1 <= minor <= MAX_PRICE_MINOR:
+        return None
+    return minor
+
+
+class _OgParser(HTMLParser):
+    def __init__(self):
+        super().__init__()
+        self.meta: dict[str, str] = {}
+        self._in_title = False
+        self._title_parts: list[str] = []
+
+    def handle_starttag(self, tag, attrs):
+        tag = tag.lower()
+        if tag == "title":
+            self._in_title = True
+            return
+        if tag != "meta":
+            return
+        attr_map = {k.lower(): v for k, v in attrs if k and v is not None}
+        key = (attr_map.get("property") or attr_map.get("name") or "").strip().lower()
+        content = attr_map.get("content", "").strip()
+        if key and content and key not in self.meta:
+            self.meta[key] = content
+
+    def handle_endtag(self, tag):
+        if tag.lower() == "title":
+            self._in_title = False
+
+    def handle_data(self, data):
+        if self._in_title:
+            self._title_parts.append(data)
+
+    @property
+    def title_tag(self) -> str | None:
+        text = " ".join("".join(self._title_parts).split()).strip()
+        return text or None
+
+
+def parse_link_preview(html_text: str, base_url: str) -> dict:
+    parser = _OgParser()
+    parser.feed(html_text)
+    parser.close()
+
+    title = parser.meta.get("og:title") or parser.title_tag
+    if title:
+        title = " ".join(title.split())[:200]
+
+    raw_image = parser.meta.get("og:image") or parser.meta.get("og:image:url")
+    image_url = urllib.parse.urljoin(base_url, raw_image) if raw_image else None
+    if image_url:
+        parsed_img = urllib.parse.urlparse(image_url)
+        if parsed_img.scheme not in ("http", "https") or not parsed_img.netloc:
+            image_url = None
+
+    raw_price = (
+        parser.meta.get("og:price:amount")
+        or parser.meta.get("product:price:amount")
+        or parser.meta.get("twitter:data1")
+    )
+    price_minor = _parse_price_minor(raw_price)
+
+    host = (urllib.parse.urlparse(base_url).hostname or "").removeprefix("www.")
+    shop_name = parser.meta.get("og:site_name") or host or None
+
+    return {
+        "title": title,
+        "image_url": image_url,
+        "price_minor": price_minor,
+        "shop_name": shop_name,
+    }
+
+
+def fetch_link_preview(url: str) -> dict:
+    url = validate_http_url(url)
+    req = urllib.request.Request(
+        url,
+        headers={
+            "User-Agent": MOBILE_USER_AGENT,
+            "Accept": "text/html,application/xhtml+xml;q=0.9,*/*;q=0.8",
+            "Accept-Language": "pl-PL,pl;q=0.9,en-US;q=0.8,en;q=0.7",
+        },
+    )
+    try:
+        with urllib.request.urlopen(req, timeout=PREVIEW_TIMEOUT_SECONDS) as resp:
+            raw = resp.read(MAX_PREVIEW_BYTES)
+            charset = resp.headers.get_content_charset() or "utf-8"
+            final_url = resp.geturl() or url
+    except (urllib.error.URLError, TimeoutError, ValueError) as e:
+        raise StoreError(f"Could not fetch link preview: {e}", status=502)
+
+    html_text = raw.decode(charset, errors="replace")
+    return parse_link_preview(html_text, final_url)

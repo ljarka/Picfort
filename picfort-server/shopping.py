@@ -12,6 +12,7 @@ import uuid
 
 from photos import PHOTO_NAME_RE, inspect_photo
 from store import SqliteStore, StoreError, utc_now
+from wishlist_preview import fetch_link_preview, validate_http_url
 
 MAX_TITLE = 100
 MAX_TEXT = 200
@@ -60,7 +61,44 @@ CREATE TABLE receipts (
   updated     TEXT    NOT NULL
 );
 CREATE INDEX receipts_date ON receipts(date);
+CREATE TABLE wishlist_items (
+  id               INTEGER PRIMARY KEY AUTOINCREMENT,
+  url              TEXT    NOT NULL,
+  title            TEXT    NOT NULL,
+  image_url        TEXT,
+  price_minor      INTEGER,
+  currency         TEXT    NOT NULL DEFAULT 'PLN',
+  event_id         INTEGER,
+  target_member_id TEXT,
+  reserved_by      TEXT,
+  bought           INTEGER NOT NULL DEFAULT 0,
+  created_by       TEXT    NOT NULL,
+  created          TEXT    NOT NULL,
+  updated          TEXT    NOT NULL
+);
+CREATE INDEX wishlist_event ON wishlist_items(event_id);
 """
+
+WISHLIST_V2_STATEMENTS = [
+    """
+    CREATE TABLE wishlist_items (
+      id               INTEGER PRIMARY KEY AUTOINCREMENT,
+      url              TEXT    NOT NULL,
+      title            TEXT    NOT NULL,
+      image_url        TEXT,
+      price_minor      INTEGER,
+      currency         TEXT    NOT NULL DEFAULT 'PLN',
+      event_id         INTEGER,
+      target_member_id TEXT,
+      reserved_by      TEXT,
+      bought           INTEGER NOT NULL DEFAULT 0,
+      created_by       TEXT    NOT NULL,
+      created          TEXT    NOT NULL,
+      updated          TEXT    NOT NULL
+    )
+    """,
+    "CREATE INDEX wishlist_event ON wishlist_items(event_id)",
+]
 
 # Unchecked by position, then checked with the most recently checked first.
 ITEM_ORDER = ("checked, CASE WHEN checked THEN 0 ELSE position END, "
@@ -135,15 +173,41 @@ def _payer_id(value) -> str:
     return value.strip()
 
 
+def _optional_int(value, field: str):
+    if value is None:
+        return None
+    if isinstance(value, bool) or not isinstance(value, int) or value <= 0:
+        raise StoreError(f"{field} must be a positive integer")
+    return value
+
+
+def _optional_id(value, field: str):
+    if value is None:
+        return None
+    if not isinstance(value, str):
+        raise StoreError(f"{field} must be text")
+    value = value.strip()
+    return value or None
+
+
 class ShoppingStore(SqliteStore):
-    SCHEMA_VERSION = 1
+    SCHEMA_VERSION = 2
     SCHEMA = SCHEMA
+    MIGRATIONS = {1: WISHLIST_V2_STATEMENTS}
     NAME = "Shopping"
 
-    def __init__(self, db_path: str, clock=utc_now, receipts_dir: str = None, currency: str = "PLN"):
+    def __init__(
+        self,
+        db_path: str,
+        clock=utc_now,
+        receipts_dir: str = None,
+        currency: str = "PLN",
+        link_preview=fetch_link_preview,
+    ):
         super().__init__(db_path, clock=clock)
         self.receipts_dir = receipts_dir or os.path.join(os.path.dirname(os.path.abspath(db_path)), "receipts")
         self.currency = (currency or "PLN").strip() or "PLN"
+        self.link_preview = link_preview
         os.makedirs(self.receipts_dir, exist_ok=True)
 
     # Reading
@@ -543,6 +607,129 @@ class ShoppingStore(SqliteStore):
             "payer_id": r["payer_id"],
             "status": r["status"],
             "read_error": r["read_error"],
+            "created_by": r["created_by"],
+            "created": r["created"],
+            "updated": r["updated"],
+        }
+
+    # Wishlist (T-041)
+
+    def preview_wishlist_url(self, url) -> dict:
+        return self.link_preview(validate_http_url(url))
+
+    def wishlist(self, event_id: int | None = None, bought: bool | None = None) -> list:
+        clauses, params = [], []
+        if event_id is not None:
+            clauses.append("event_id = ?")
+            params.append(event_id)
+        if bought is not None:
+            clauses.append("bought = ?")
+            params.append(int(bought))
+        where = f"WHERE {' AND '.join(clauses)} " if clauses else ""
+        with closing(self.connect()) as conn:
+            rows = conn.execute(
+                f"SELECT * FROM wishlist_items {where}ORDER BY bought ASC, id DESC",
+                params,
+            ).fetchall()
+            return [self._wishlist_json(r) for r in rows]
+
+    def create_wishlist_item(self, user_id: str, body: dict) -> dict:
+        url = validate_http_url(body.get("url"))
+        raw_title = body.get("title")
+        image_url = body.get("image_url")
+        price_minor = _total_minor(body.get("price_minor")) if "price_minor" in body else None
+        event_id = _optional_int(body.get("event_id"), "event_id")
+        target_member_id = _optional_id(body.get("target_member_id"), "target_member_id")
+
+        if raw_title is None or (isinstance(raw_title, str) and not raw_title.strip()):
+            preview = {}
+            try:
+                preview = self.link_preview(url) or {}
+            except StoreError:
+                preview = {}
+            title = (preview.get("title") or preview.get("shop_name") or url).strip()[:MAX_TEXT]
+            if "image_url" not in body:
+                image_url = preview.get("image_url")
+            if "price_minor" not in body:
+                price_minor = preview.get("price_minor")
+        else:
+            title = _text(raw_title, "title", MAX_TEXT)
+
+        if image_url is not None:
+            image_url = validate_http_url(image_url)
+
+        now = self.clock()
+        with closing(self.connect()) as conn, conn:
+            cur = conn.execute(
+                "INSERT INTO wishlist_items"
+                " (url, title, image_url, price_minor, currency, event_id, target_member_id, created_by, created, updated)"
+                " VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                (url, title, image_url, price_minor, self.currency, event_id, target_member_id, user_id, now, now),
+            )
+            row = self._wishlist_row(conn, cur.lastrowid)
+        return self._wishlist_json(row)
+
+    def update_wishlist_item(self, item_id: int, body: dict) -> dict:
+        now = self.clock()
+        with closing(self.connect()) as conn, conn:
+            row = self._wishlist_row(conn, item_id)
+            updates, params = [], []
+            if "title" in body:
+                updates.append("title = ?")
+                params.append(_text(body["title"], "title", MAX_TEXT))
+            if "image_url" in body:
+                updates.append("image_url = ?")
+                params.append(validate_http_url(body["image_url"]) if body["image_url"] is not None else None)
+            if "price_minor" in body:
+                updates.append("price_minor = ?")
+                params.append(_total_minor(body["price_minor"]))
+            if "event_id" in body:
+                updates.append("event_id = ?")
+                params.append(_optional_int(body["event_id"], "event_id"))
+            if "target_member_id" in body:
+                updates.append("target_member_id = ?")
+                params.append(_optional_id(body["target_member_id"], "target_member_id"))
+            if "reserved_by" in body:
+                updates.append("reserved_by = ?")
+                params.append(_optional_id(body["reserved_by"], "reserved_by"))
+            if "bought" in body:
+                updates.append("bought = ?")
+                params.append(int(_bool(body["bought"], "bought")))
+            if updates:
+                updates.append("updated = ?")
+                params.append(now)
+                params.append(item_id)
+                conn.execute(f"UPDATE wishlist_items SET {', '.join(updates)} WHERE id = ?", params)
+                row = self._wishlist_row(conn, item_id)
+        return self._wishlist_json(row)
+
+    def delete_wishlist_item(self, item_id: int, user_id: str):
+        with closing(self.connect()) as conn, conn:
+            row = self._wishlist_row(conn, item_id)
+            if row["created_by"] != user_id and not row["bought"]:
+                raise StoreError("Only the creator can delete an unbought wishlist item", 403)
+            conn.execute("DELETE FROM wishlist_items WHERE id = ?", (item_id,))
+
+    @staticmethod
+    def _wishlist_row(conn, item_id: int):
+        row = conn.execute("SELECT * FROM wishlist_items WHERE id = ?", (item_id,)).fetchone()
+        if row is None:
+            raise StoreError("Wishlist item not found", 404)
+        return row
+
+    @staticmethod
+    def _wishlist_json(r) -> dict:
+        return {
+            "id": r["id"],
+            "url": r["url"],
+            "title": r["title"],
+            "image_url": r["image_url"],
+            "price_minor": r["price_minor"],
+            "currency": r["currency"],
+            "event_id": r["event_id"],
+            "target_member_id": r["target_member_id"],
+            "reserved_by": r["reserved_by"],
+            "bought": bool(r["bought"]),
             "created_by": r["created_by"],
             "created": r["created"],
             "updated": r["updated"],

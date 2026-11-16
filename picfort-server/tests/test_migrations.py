@@ -105,6 +105,59 @@ class MigrationTests(unittest.TestCase):
         self.assertEqual(1, len(upcoming))
         self.assertEqual("Picnic", upcoming[0]["title"])
 
+    def test_shopping_v1_migrates_with_rows_intact_and_wishlist_table_ready(self):
+        db = os.path.join(self.dir, "shopping.db")
+        store = open_migrated(
+            db,
+            """
+            CREATE TABLE lists (
+              id INTEGER PRIMARY KEY AUTOINCREMENT,
+              title TEXT NOT NULL,
+              archived INTEGER NOT NULL DEFAULT 0,
+              revision INTEGER NOT NULL DEFAULT 1,
+              created_by TEXT NOT NULL,
+              created TEXT NOT NULL,
+              updated TEXT NOT NULL
+            );
+            CREATE TABLE items (
+              id INTEGER PRIMARY KEY AUTOINCREMENT,
+              list_id INTEGER NOT NULL REFERENCES lists(id) ON DELETE CASCADE,
+              text TEXT NOT NULL,
+              checked INTEGER NOT NULL DEFAULT 0,
+              position REAL NOT NULL,
+              checked_by TEXT,
+              checked_at TEXT,
+              created_by TEXT NOT NULL
+            );
+            CREATE TABLE receipts (
+              id INTEGER PRIMARY KEY AUTOINCREMENT,
+              list_id INTEGER REFERENCES lists(id) ON DELETE SET NULL,
+              photo TEXT,
+              shop TEXT,
+              date TEXT NOT NULL,
+              total_minor INTEGER,
+              payer_id TEXT NOT NULL,
+              status TEXT NOT NULL,
+              read_error TEXT,
+              created_by TEXT NOT NULL,
+              created TEXT NOT NULL,
+              updated TEXT NOT NULL
+            );
+            INSERT INTO lists (id, title, created_by, created, updated)
+              VALUES (1, 'Biedronka', 'u1', '2026-01-01T00:00:00Z', '2026-01-01T00:00:00Z');
+            INSERT INTO items (list_id, text, position, created_by) VALUES (1, 'Milk', 1.0, 'u1');
+            PRAGMA user_version = 1;
+            """,
+            ShoppingStore,
+        )
+        self.assertIsNone(store.migration_error)
+        self.assertTrue(os.path.exists(db + ".v1.bak"))
+        lists = store.lists()
+        self.assertEqual(1, len(lists))
+        self.assertEqual("Biedronka", lists[0]["title"])
+        item = store.create_wishlist_item("u1", {"url": "https://shop.example/a", "title": "Toy"})
+        self.assertEqual("Toy", item["title"])
+
     def test_failed_migration_leaves_db_untouched_and_endpoints_return_503(self):
         class BrokenStore(SqliteStore):
             SCHEMA_VERSION = 2

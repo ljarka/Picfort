@@ -91,6 +91,9 @@ class ApiContractTest(unittest.TestCase):
             "/wall/<int:post_id>": ["DELETE"],
             "/wall/<int:post_id>/pin": ["PUT"],
             "/wall/photo/<filename>": ["GET"],
+            "/wishlist": ["GET", "POST"],
+            "/wishlist/<int:item_id>": ["DELETE", "PATCH"],
+            "/wishlist/preview": ["POST"],
         }
 
         actual = {}

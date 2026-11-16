@@ -420,7 +420,7 @@ def require_api_key(app: Flask, api_key: str, open_paths=frozenset(), clock=time
 
 # Family features: every call carries the caller's Immich token (ADR 0006, 0008). The frame
 # endpoints stay open on the home network (ADR 0004).
-AUTH_PREFIXES = ("/wall", "/lists", "/receipts", "/spending", "/events", "/school", "/family")
+AUTH_PREFIXES = ("/wall", "/lists", "/receipts", "/spending", "/wishlist", "/events", "/school", "/family")
 
 
 def needs_token(path: str) -> bool:
@@ -568,6 +568,43 @@ def register_shopping(app: Flask, shopping: ShoppingStore):
     @app.route("/spending", methods=["GET"])
     def get_spending():
         return jsonify(shopping.spending(request.args.get("from"), request.args.get("to")))
+
+    # Wishlist (T-041)
+
+    @app.route("/wishlist/preview", methods=["POST"])
+    def preview_wishlist():
+        body = json_body()
+        return jsonify(shopping.preview_wishlist_url(body.get("url")))
+
+    @app.route("/wishlist", methods=["GET"])
+    def get_wishlist():
+        raw_event_id = request.args.get("event_id")
+        event_id = None
+        if raw_event_id is not None:
+            try:
+                event_id = int(raw_event_id)
+            except ValueError:
+                raise StoreError("event_id must be an integer")
+        raw_bought = request.args.get("bought")
+        bought = None
+        if raw_bought is not None:
+            if raw_bought not in ("0", "1"):
+                raise StoreError("bought must be 0 or 1")
+            bought = raw_bought == "1"
+        return jsonify(items=shopping.wishlist(event_id=event_id, bought=bought))
+
+    @app.route("/wishlist", methods=["POST"])
+    def create_wishlist_item():
+        return jsonify(shopping.create_wishlist_item(g.user.id, json_body())), 201
+
+    @app.route("/wishlist/<int:item_id>", methods=["PATCH"])
+    def update_wishlist_item(item_id):
+        return jsonify(shopping.update_wishlist_item(item_id, json_body()))
+
+    @app.route("/wishlist/<int:item_id>", methods=["DELETE"])
+    def delete_wishlist_item(item_id):
+        shopping.delete_wishlist_item(item_id, g.user.id)
+        return "", 204
 
 
 def register_family(app: Flask, family: FamilyStore):

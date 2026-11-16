@@ -1,6 +1,6 @@
 # T-041 — Wishlist & link metadata preview: Picfort server
 
-**Status:** ready  
+**Status:** done  
 **Component:** ImageFrameServer  
 **Depends on:** T-018 (`shopping.db`, `store.py`), T-075 (migrations, ADR 0016), ADR 0008, ADR 0010
 

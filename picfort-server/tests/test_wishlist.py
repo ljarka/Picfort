@@ -1,0 +1,159 @@
+"""Tests for wishlist CRUD, OpenGraph preview, filtering, and permissions (T-041)."""
+
+import os
+import sys
+import tempfile
+import unittest
+
+sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
+sys.path.insert(0, os.path.dirname(__file__))
+
+import frame
+from app import FrameController, create_app
+from auth import Authenticator
+from helpers import FakeImmich
+from shopping import ShoppingStore
+from slideshow import Picker, SettingsStore, Slideshow
+from test_wall import Clock, FakeImmichAuth, MAMA, TATA
+from wall import WallStore
+from wishlist_preview import parse_link_preview
+
+
+SAMPLE_HTML = """<!doctype html>
+<html>
+<head>
+  <title>Ignored fallback title</title>
+  <meta property="og:title" content="LEGO Technic Crane" />
+  <meta property="og:image" content="/images/crane.jpg" />
+  <meta property="og:price:amount" content="349,99" />
+  <meta property="og:site_name" content="Allegro" />
+</head>
+<body></body>
+</html>
+"""
+
+FALLBACK_TITLE_HTML = """<!doctype html>
+<html>
+<head><title>  Simple   Product Page  </title></head>
+<body></body>
+</html>
+"""
+
+
+class WishlistPreviewTest(unittest.TestCase):
+    def test_extracts_opengraph_tags_and_resolves_relative_image(self):
+        preview = parse_link_preview(SAMPLE_HTML, "https://allegro.pl/oferta/lego-123")
+        self.assertEqual("LEGO Technic Crane", preview["title"])
+        self.assertEqual("https://allegro.pl/images/crane.jpg", preview["image_url"])
+        self.assertEqual(34999, preview["price_minor"])
+        self.assertEqual("Allegro", preview["shop_name"])
+
+    def test_falls_back_to_title_tag_and_hostname(self):
+        preview = parse_link_preview(FALLBACK_TITLE_HTML, "https://www.example.com/item")
+        self.assertEqual("Simple Product Page", preview["title"])
+        self.assertIsNone(preview["image_url"])
+        self.assertIsNone(preview["price_minor"])
+        self.assertEqual("example.com", preview["shop_name"])
+
+
+class WishlistApiTest(unittest.TestCase):
+    def setUp(self):
+        self.dir = tempfile.mkdtemp()
+        self.db = os.path.join(self.dir, "shopping.db")
+        self.wall_db = os.path.join(self.dir, "wall.db")
+        self.preview_calls = []
+
+        def fake_preview(url: str) -> dict:
+            self.preview_calls.append(url)
+            return {
+                "title": "Previewed Bike",
+                "image_url": "https://shop.example/bike.png",
+                "price_minor": 129900,
+                "shop_name": "Shop",
+            }
+
+        self.store = ShoppingStore(self.db, clock=Clock(), link_preview=fake_preview)
+        self.wall = WallStore(self.wall_db, os.path.join(self.dir, "wall_photos"), clock=Clock())
+        cfg = frame.Config(
+            immich_url="http://immich",
+            immich_api_key="k",
+            preview_path=os.path.join(self.dir, "p.png"),
+        )
+        controller = FrameController(cfg, min_interval=30, display=lambda img: None, prepare=lambda a: a)
+        slideshow = Slideshow(
+            SettingsStore(os.path.join(self.dir, "s.json")),
+            Picker(FakeImmich()),
+            controller.try_show,
+        )
+        self.client = create_app(
+            controller,
+            slideshow,
+            FakeImmich(),
+            self.wall,
+            Authenticator(FakeImmichAuth()),
+            shopping=self.store,
+        ).test_client()
+        self.client.environ_base["HTTP_AUTHORIZATION"] = "Bearer mama-token"
+
+    def tearDown(self):
+        import shutil
+        shutil.rmtree(self.dir, ignore_errors=True)
+
+    def as_tata(self):
+        return {"Authorization": "Bearer tata-token"}
+
+    def test_preview_endpoint_validates_url_and_returns_metadata(self):
+        self.assertEqual(400, self.client.post("/wishlist/preview", json={"url": "ftp://bad"}).status_code)
+        r = self.client.post("/wishlist/preview", json={"url": "https://shop.example/bike"})
+        self.assertEqual(200, r.status_code)
+        self.assertEqual("Previewed Bike", r.get_json()["title"])
+        self.assertEqual(129900, r.get_json()["price_minor"])
+
+    def test_create_auto_fetches_metadata_when_title_omitted(self):
+        r = self.client.post("/wishlist", json={"url": "https://shop.example/bike", "event_id": 7})
+        self.assertEqual(201, r.status_code, r.get_json())
+        item = r.get_json()
+        self.assertEqual("Previewed Bike", item["title"])
+        self.assertEqual("https://shop.example/bike.png", item["image_url"])
+        self.assertEqual(129900, item["price_minor"])
+        self.assertEqual(7, item["event_id"])
+        self.assertFalse(item["bought"])
+        self.assertEqual(MAMA, item["created_by"])
+
+    def test_filter_by_event_and_bought_and_reserve_and_delete(self):
+        a = self.client.post("/wishlist", json={"url": "https://a.example", "title": "A", "event_id": 10}).get_json()
+        b = self.client.post("/wishlist", json={"url": "https://b.example", "title": "B", "event_id": 20}).get_json()
+
+        # Filter by event_id
+        ev10 = self.client.get("/wishlist?event_id=10").get_json()["items"]
+        self.assertEqual([a["id"]], [i["id"] for i in ev10])
+
+        # Tata reserves and marks B as bought
+        r = self.client.patch(
+            f"/wishlist/{b['id']}",
+            json={"reserved_by": TATA, "bought": True},
+            headers=self.as_tata(),
+        )
+        self.assertEqual(200, r.status_code)
+        self.assertEqual(TATA, r.get_json()["reserved_by"])
+        self.assertTrue(r.get_json()["bought"])
+
+        # Unbought sorted first, bought last
+        all_items = self.client.get("/wishlist").get_json()["items"]
+        self.assertEqual([a["id"], b["id"]], [i["id"] for i in all_items])
+
+        # Filter by bought=1
+        bought_only = self.client.get("/wishlist?bought=1").get_json()["items"]
+        self.assertEqual([b["id"]], [i["id"] for i in bought_only])
+
+        # Tata cannot delete unbought A (created by Mama), but can delete bought B
+        self.assertEqual(403, self.client.delete(f"/wishlist/{a['id']}", headers=self.as_tata()).status_code)
+        self.assertEqual(204, self.client.delete(f"/wishlist/{b['id']}", headers=self.as_tata()).status_code)
+        self.assertEqual(204, self.client.delete(f"/wishlist/{a['id']}").status_code)
+
+    def test_wishlist_requires_auth(self):
+        self.assertEqual(401, self.client.get("/wishlist", headers={"Authorization": ""}).status_code)
+        self.assertEqual(
+            401,
+            self.client.post("/wishlist/preview", json={"url": "https://a.example"}, headers={"Authorization": ""}).status_code,
+        )
