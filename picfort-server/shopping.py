@@ -5,12 +5,24 @@ version, which would empty the lists.
 """
 
 from contextlib import closing
+from datetime import date as dt_date
+import os
+import re
+import uuid
 
-from store import SqliteStore, StoreError
+from photos import PHOTO_NAME_RE, inspect_photo
+from store import SqliteStore, StoreError, utc_now
 
 MAX_TITLE = 100
 MAX_TEXT = 200
 MAX_ITEMS = 300
+MAX_SHOP = 100
+MAX_TOTAL_MINOR = 100_000_000
+MAX_RECEIPTS_LIMIT = 200
+MAX_SPENDING_MONTHS = 24
+RECEIPT_PHOTO_PREFIX = "/receipts/photo/"
+DATE_RE = re.compile(r"^\d{4}-\d{2}-\d{2}$")
+MONTH_RE = re.compile(r"^\d{4}-\d{2}$")
 
 SCHEMA = """
 CREATE TABLE lists (
@@ -76,10 +88,63 @@ def _number(value, field: str) -> float:
     return float(value)
 
 
+def _receipt_date(value) -> str:
+    if not isinstance(value, str) or not DATE_RE.match(value.strip()):
+        raise StoreError("date must be YYYY-MM-DD")
+    value = value.strip()
+    try:
+        dt_date.fromisoformat(value)
+    except ValueError:
+        raise StoreError("date must be a real YYYY-MM-DD date")
+    return value
+
+
+def _month_ym(value, field: str) -> tuple[int, int]:
+    if not isinstance(value, str) or not MONTH_RE.match(value.strip()):
+        raise StoreError(f"{field} must be YYYY-MM")
+    year, month = (int(part) for part in value.strip().split("-"))
+    if not 1 <= month <= 12:
+        raise StoreError(f"{field} must be YYYY-MM")
+    return year, month
+
+
+def _total_minor(value):
+    if value is None:
+        return None
+    if isinstance(value, bool) or not isinstance(value, int):
+        raise StoreError("total_minor must be an integer")
+    if not 1 <= value <= MAX_TOTAL_MINOR:
+        raise StoreError(f"total_minor must be between 1 and {MAX_TOTAL_MINOR}")
+    return value
+
+
+def _shop(value):
+    if value is None:
+        return None
+    if not isinstance(value, str):
+        raise StoreError("shop must be text")
+    value = value.strip()
+    if len(value) > MAX_SHOP:
+        raise StoreError(f"shop must be at most {MAX_SHOP} characters")
+    return value or None
+
+
+def _payer_id(value) -> str:
+    if not isinstance(value, str) or not value.strip():
+        raise StoreError("payer_id must not be empty")
+    return value.strip()
+
+
 class ShoppingStore(SqliteStore):
     SCHEMA_VERSION = 1
     SCHEMA = SCHEMA
     NAME = "Shopping"
+
+    def __init__(self, db_path: str, clock=utc_now, receipts_dir: str = None, currency: str = "PLN"):
+        super().__init__(db_path, clock=clock)
+        self.receipts_dir = receipts_dir or os.path.join(os.path.dirname(os.path.abspath(db_path)), "receipts")
+        self.currency = (currency or "PLN").strip() or "PLN"
+        os.makedirs(self.receipts_dir, exist_ok=True)
 
     # Reading
 
@@ -251,4 +316,234 @@ class ShoppingStore(SqliteStore):
             "item_count": len(items),
             "checked_count": sum(1 for i in items if i["checked"]),
             "items": items,
+        }
+
+    # Receipts (T-020)
+
+    def receipts(self, month: str = None, list_id: int = None) -> list:
+        clauses = []
+        params = []
+        if month is not None:
+            year, mon = _month_ym(month, "month")
+            clauses.append("date LIKE ?")
+            params.append(f"{year:04d}-{mon:02d}-%")
+        if list_id is not None:
+            clauses.append("list_id = ?")
+            params.append(list_id)
+        where = f"WHERE {' AND '.join(clauses)}" if clauses else ""
+        limit = "" if month is not None else f"LIMIT {MAX_RECEIPTS_LIMIT}"
+        with closing(self.connect()) as conn:
+            rows = conn.execute(
+                f"SELECT * FROM receipts {where} ORDER BY date DESC, id DESC {limit}",
+                params,
+            ).fetchall()
+            return [self._receipt_json(r) for r in rows]
+
+    def get_receipt(self, receipt_id: int) -> dict:
+        with closing(self.connect()) as conn:
+            return self._receipt_json(self._receipt_row(conn, receipt_id))
+
+    def create_receipt(self, user_id: str, photo: bytes, date, list_id=None,
+                       payer_id=None, shop=None, total_minor=None) -> dict:
+        if not photo:
+            raise StoreError("photo is required")
+        date_str = _receipt_date(date)
+        payer = _payer_id(user_id if payer_id is None else payer_id)
+        shop_val = _shop(shop)
+        total_val = _total_minor(total_minor)
+        status = "confirmed" if total_val is not None else "manual"
+        ext, _, _ = inspect_photo(photo, error_cls=StoreError)
+        filename = f"{uuid.uuid4().hex}.{ext}"
+        photo_path = os.path.join(self.receipts_dir, filename)
+        with open(photo_path, "wb") as f:
+            f.write(photo)
+        now = self.clock()
+        try:
+            with closing(self.connect()) as conn, conn:
+                if list_id is not None:
+                    self._check_list_id(conn, list_id)
+                receipt_id = conn.execute(
+                    "INSERT INTO receipts (list_id, photo, shop, date, total_minor, payer_id,"
+                    " status, read_error, created_by, created, updated)"
+                    " VALUES (?, ?, ?, ?, ?, ?, ?, NULL, ?, ?, ?)",
+                    (list_id, filename, shop_val, date_str, total_val, payer, status, user_id, now, now),
+                ).lastrowid
+                return self._receipt_json(self._receipt_row(conn, receipt_id))
+        except Exception:
+            try:
+                os.remove(photo_path)
+            except OSError:
+                pass
+            raise
+
+    def update_receipt(self, receipt_id: int, body: dict) -> dict:
+        changes = {}
+        if "shop" in body:
+            changes["shop"] = _shop(body["shop"])
+        if "date" in body:
+            changes["date"] = _receipt_date(body["date"])
+        if "total_minor" in body:
+            changes["total_minor"] = _total_minor(body["total_minor"])
+        if "payer_id" in body:
+            changes["payer_id"] = _payer_id(body["payer_id"])
+        if "list_id" in body:
+            val = body["list_id"]
+            if val is not None and (isinstance(val, bool) or not isinstance(val, int)):
+                raise StoreError("list_id must be an integer or null")
+            changes["list_id"] = val
+        with closing(self.connect()) as conn, conn:
+            row = self._receipt_row(conn, receipt_id)
+            if changes.get("list_id") is not None:
+                self._check_list_id(conn, changes["list_id"])
+            if "total_minor" in changes:
+                if changes["total_minor"] is not None:
+                    changes["status"] = "confirmed"
+                    changes["read_error"] = None
+                else:
+                    changes["status"] = "manual"
+            if changes:
+                changes["updated"] = self.clock()
+                sets = ", ".join(f"{col} = ?" for col in changes)
+                conn.execute(f"UPDATE receipts SET {sets} WHERE id = ?", (*changes.values(), receipt_id))
+            return self._receipt_json(self._receipt_row(conn, receipt_id))
+
+    def delete_receipt(self, receipt_id: int, user_id: str):
+        with closing(self.connect()) as conn, conn:
+            row = self._receipt_row(conn, receipt_id)
+            if row["created_by"] != user_id:
+                raise StoreError("Only the person who added the receipt can delete it", 403)
+            conn.execute("DELETE FROM receipts WHERE id = ?", (receipt_id,))
+        if row["photo"]:
+            try:
+                os.remove(os.path.join(self.receipts_dir, row["photo"]))
+            except FileNotFoundError:
+                pass
+
+    def receipt_photo_path(self, filename: str):
+        if not PHOTO_NAME_RE.match(filename):
+            return None
+        path = os.path.join(self.receipts_dir, filename)
+        return path if os.path.isfile(path) else None
+
+    def spending(self, from_month: str, to_month: str) -> dict:
+        sy, sm = _month_ym(from_month, "from")
+        ey, em = _month_ym(to_month, "to")
+        start_idx = sy * 12 + (sm - 1)
+        end_idx = ey * 12 + (em - 1)
+        if start_idx > end_idx:
+            raise StoreError("from must not be after to")
+        count = end_idx - start_idx + 1
+        if count > MAX_SPENDING_MONTHS:
+            raise StoreError(f"Range can cover at most {MAX_SPENDING_MONTHS} months")
+
+        months_keys = [f"{idx // 12:04d}-{idx % 12 + 1:02d}" for idx in range(start_idx, end_idx + 1)]
+        start_date = f"{months_keys[0]}-01"
+        end_exclusive = f"{(end_idx + 1) // 12:04d}-{(end_idx + 1) % 12 + 1:02d}-01"
+
+        with closing(self.connect()) as conn:
+            summary_rows = conn.execute(
+                """
+                SELECT substr(date, 1, 7) AS m,
+                       COALESCE(SUM(CASE WHEN total_minor IS NOT NULL THEN total_minor ELSE 0 END), 0) AS total_minor,
+                       COUNT(*) AS receipt_count,
+                       SUM(CASE WHEN total_minor IS NOT NULL AND status != 'confirmed' THEN 1 ELSE 0 END) AS unconfirmed_count,
+                       SUM(CASE WHEN total_minor IS NULL THEN 1 ELSE 0 END) AS missing_total_count
+                FROM receipts
+                WHERE date >= ? AND date < ?
+                GROUP BY m
+                """,
+                (start_date, end_exclusive),
+            ).fetchall()
+            summary_by_m = {r["m"]: r for r in summary_rows}
+
+            shop_rows = conn.execute(
+                """
+                SELECT substr(date, 1, 7) AS m,
+                       CASE WHEN shop IS NULL OR TRIM(shop) = '' THEN NULL ELSE LOWER(TRIM(shop)) END AS norm_shop,
+                       CASE WHEN shop IS NULL OR TRIM(shop) = '' THEN NULL ELSE TRIM(shop) END AS raw_shop,
+                       COUNT(*) AS cnt,
+                       SUM(total_minor) AS total_minor
+                FROM receipts
+                WHERE date >= ? AND date < ? AND total_minor IS NOT NULL
+                GROUP BY m, norm_shop, raw_shop
+                """,
+                (start_date, end_exclusive),
+            ).fetchall()
+
+            payer_rows = conn.execute(
+                """
+                SELECT substr(date, 1, 7) AS m,
+                       payer_id,
+                       SUM(total_minor) AS total_minor
+                FROM receipts
+                WHERE date >= ? AND date < ? AND total_minor IS NOT NULL
+                GROUP BY m, payer_id
+                ORDER BY total_minor DESC, payer_id ASC
+                """,
+                (start_date, end_exclusive),
+            ).fetchall()
+
+        # Aggregate shop spellings: pick the most frequent spelling per (month, norm_shop).
+        shop_groups: dict[tuple[str, str | None], dict] = {}
+        for r in shop_rows:
+            key = (r["m"], r["norm_shop"])
+            entry = shop_groups.setdefault(key, {"total": 0, "best_shop": r["raw_shop"], "best_cnt": -1})
+            entry["total"] += r["total_minor"]
+            if r["cnt"] > entry["best_cnt"]:
+                entry["best_cnt"] = r["cnt"]
+                entry["best_shop"] = r["raw_shop"]
+
+        shops_by_m: dict[str, list] = {}
+        for (m, _), entry in shop_groups.items():
+            shops_by_m.setdefault(m, []).append({"shop": entry["best_shop"], "total_minor": entry["total"]})
+        for lst in shops_by_m.values():
+            lst.sort(key=lambda x: (-x["total_minor"], x["shop"] or ""))
+
+        payers_by_m: dict[str, list] = {}
+        for r in payer_rows:
+            payers_by_m.setdefault(r["m"], []).append({"payer_id": r["payer_id"], "total_minor": r["total_minor"]})
+
+        months = []
+        for m in months_keys:
+            sr = summary_by_m.get(m)
+            months.append({
+                "month": m,
+                "total_minor": sr["total_minor"] if sr else 0,
+                "receipt_count": sr["receipt_count"] if sr else 0,
+                "unconfirmed_count": sr["unconfirmed_count"] if sr else 0,
+                "missing_total_count": sr["missing_total_count"] if sr else 0,
+                "by_shop": shops_by_m.get(m, []),
+                "by_payer": payers_by_m.get(m, []),
+            })
+        return {"currency": self.currency, "months": months}
+
+    @staticmethod
+    def _check_list_id(conn, list_id):
+        if isinstance(list_id, bool) or not isinstance(list_id, int):
+            raise StoreError("list_id must be an integer")
+        if conn.execute("SELECT 1 FROM lists WHERE id = ?", (list_id,)).fetchone() is None:
+            raise StoreError("List not found")
+
+    @staticmethod
+    def _receipt_row(conn, receipt_id: int):
+        row = conn.execute("SELECT * FROM receipts WHERE id = ?", (receipt_id,)).fetchone()
+        if row is None:
+            raise StoreError("Receipt not found", 404)
+        return row
+
+    def _receipt_json(self, r) -> dict:
+        return {
+            "id": r["id"],
+            "list_id": r["list_id"],
+            "photo_url": RECEIPT_PHOTO_PREFIX + r["photo"] if r["photo"] else None,
+            "shop": r["shop"],
+            "date": r["date"],
+            "total_minor": r["total_minor"],
+            "currency": self.currency,
+            "payer_id": r["payer_id"],
+            "status": r["status"],
+            "read_error": r["read_error"],
+            "created_by": r["created_by"],
+            "created": r["created"],
+            "updated": r["updated"],
         }

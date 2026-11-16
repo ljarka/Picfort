@@ -6,12 +6,16 @@ Shopping list vertical slice: collaborative checklists, offline caching, and wis
 
 | File | Purpose |
 |---|---|
-| `ui/shopping/ShoppingScreens.kt` | UI: `ShoppingListsContent` (cards grid) and `ShoppingListContent` (checklist) |
+| `ui/shopping/ShoppingScreens.kt` | UI: `ShoppingListsContent` (cards grid) and `ShoppingListContent` (checklist + receipts) |
+| `ui/shopping/ReceiptSheet.kt` | Receipt modal bottom sheet, date picker, member/list dropdowns, full-screen zoom viewer |
+| `ui/shopping/ReceiptReader.kt` | `ReceiptReader` & `GeminiNanoReceiptReader` (on-device ML Kit GenAI Prompt / AICore) |
+| `ui/shopping/ReceiptReadingParser.kt` | JSON parsing and validation for on-device receipt reading output |
+| `ui/shopping/ReceiptMoney.kt` | `BigDecimal` receipt total parsing and locale-aware currency formatting |
 | `ui/shopping/ShoppingViewModels.kt` | ViewModels: `ShoppingListsViewModel`, `ShoppingListViewModel`, `ShoppingListsScreen`, `ShoppingListScreen` |
-| `ui/shopping/ShoppingRepository.kt` | Repository: polling, sync, optimistic updates, offline cache file |
-| `ui/shopping/ShoppingApi.kt` | Server HTTP client: `/lists` endpoints |
+| `ui/shopping/ShoppingRepository.kt` | Repository: polling, sync, optimistic updates, offline cache file, receipts CRUD |
+| `ui/shopping/ShoppingApi.kt` | Server HTTP client: `/lists` and `/receipts` endpoints |
 | `ui/shopping/ShoppingModels.kt` | UI state: `ShoppingListsUi`, `ShoppingListUi` |
-| `ui/shopping/ShoppingScreenshotTest.kt` | Paparazzi snapshots: cards, empty state, offline banner, list items |
+| `ui/shopping/ShoppingScreenshotTest.kt` | Paparazzi snapshots: cards, empty state, offline banner, list items, receipts & sheet |
 
 ## Public Contract / Navigation Entry Points
 

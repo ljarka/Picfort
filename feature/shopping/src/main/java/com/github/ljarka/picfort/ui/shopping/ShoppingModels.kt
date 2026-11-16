@@ -1,7 +1,7 @@
 package com.github.ljarka.picfort.ui.shopping
 
 import com.github.ljarka.picfort.core.model.FamilyMember
-import com.github.ljarka.picfort.core.model.ShoppingItem
+import com.github.ljarka.picfort.core.model.Receipt
 import com.github.ljarka.picfort.core.model.ShoppingList
 
 /** The Shopping tab: the family's lists as cards. */
@@ -19,15 +19,27 @@ data class ShoppingListsUi(
 /** One open list. */
 data class ShoppingListUi(
     val list: ShoppingList? = null,
+    val receipts: List<Receipt> = emptyList(),
+    val activeLists: List<ShoppingList> = emptyList(),
     val members: List<FamilyMember> = emptyList(),
     val myId: String = "",
     val offlineSince: String? = null,
     val message: String? = null,
     /** Set when the list can't be shown at all (deleted, never loaded). */
     val loadError: String? = null,
+    val uploadingReceipt: Boolean = false,
+    val canRetryReceiptUpload: Boolean = false,
+    val openReceipt: Receipt? = null,
+    val savingReceipt: Boolean = false,
+    val aiSupported: Boolean = false,
+    val readingReceipt: Boolean = false,
+    val receiptReadHint: String? = null,
 ) {
     val editable: Boolean get() = offlineSince == null
     val isMine: Boolean get() = list?.createdBy == myId
+
+    val receiptsTotalMinor: Long get() = receipts.sumOf { it.totalMinor ?: 0L }
+    val receiptsCurrency: String get() = receipts.firstOrNull()?.currency ?: "PLN"
 
     fun memberOf(id: String?): FamilyMember? = members.firstOrNull { it.id == id }
 }

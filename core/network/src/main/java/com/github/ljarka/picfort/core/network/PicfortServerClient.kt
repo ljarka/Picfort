@@ -78,4 +78,27 @@ class PicfortServerClient @Inject constructor(
                 throw PicfortServerException.Unreachable(request.url.host)
             }
         }
+
+    /** Downloads raw bytes (e.g. a receipt photo) with the caller's Immich token and Picfort key handling. */
+    suspend fun executeBytes(unsigned: Request, notFound: () -> PicfortServerException): ByteArray =
+        withContext(Dispatchers.IO) {
+            val request = unsigned.newBuilder().header("Authorization", "Bearer ${tokens.accessToken}").build()
+            try {
+                client.newCall(request).execute().use { response ->
+                    if (response.isPicfortKeyRejected()) throw PicfortServerException.WrongApiKey()
+                    when (response.code) {
+                        in 200..299 -> response.body.bytes()
+                        401 -> throw PicfortServerException.NotAccepted()
+                        403 -> throw PicfortServerException.Forbidden("Not allowed")
+                        404 -> throw notFound()
+                        502 -> throw PicfortServerException.ImmichUnreachable()
+                        else -> throw PicfortServerException.Other("The Picfort server returned HTTP ${response.code}")
+                    }
+                }
+            } catch (e: CleartextNotAllowedException) {
+                throw PicfortServerException.Other(e.message ?: "Use https:// for servers outside your network")
+            } catch (e: IOException) {
+                throw PicfortServerException.Unreachable(request.url.host)
+            }
+        }
 }

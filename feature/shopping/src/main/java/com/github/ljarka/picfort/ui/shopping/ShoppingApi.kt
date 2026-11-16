@@ -1,5 +1,6 @@
 package com.github.ljarka.picfort.ui.shopping
 
+import com.github.ljarka.picfort.core.model.Receipt
 import com.github.ljarka.picfort.core.model.ShoppingItem
 import com.github.ljarka.picfort.core.model.ShoppingList
 import com.github.ljarka.picfort.core.network.PicfortServerClient
@@ -9,11 +10,13 @@ import javax.inject.Singleton
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonNull
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
 import okhttp3.HttpUrl
 import okhttp3.MediaType.Companion.toMediaType
+import okhttp3.MultipartBody
 import okhttp3.Request
 import okhttp3.RequestBody.Companion.toRequestBody
 
@@ -57,6 +60,39 @@ private fun ShoppingList.toDto() = ShoppingListDto(
     },
 )
 
+@Serializable
+data class ReceiptDto(
+    val id: Long,
+    @SerialName("list_id") val listId: Long? = null,
+    @SerialName("photo_url") val photoUrl: String? = null,
+    val shop: String? = null,
+    val date: String,
+    @SerialName("total_minor") val totalMinor: Long? = null,
+    val currency: String = "PLN",
+    @SerialName("payer_id") val payerId: String = "",
+    val status: String = "manual",
+    @SerialName("read_error") val readError: String? = null,
+    @SerialName("created_by") val createdBy: String = "",
+    val created: String = "",
+    val updated: String = "",
+) {
+    fun toReceipt(base: HttpUrl) = Receipt(
+        id = id,
+        listId = listId,
+        photoUrl = photoUrl?.let { base.resolve(it)?.toString() },
+        shop = shop,
+        date = date,
+        totalMinor = totalMinor,
+        currency = currency,
+        payerId = payerId,
+        status = status,
+        readError = readError,
+        createdBy = createdBy,
+        created = created,
+        updated = updated,
+    )
+}
+
 /** A list fetched with If-None-Match: null when it hasn't changed (304). */
 data class ListFetch(val list: ShoppingList?)
 
@@ -73,6 +109,20 @@ interface ShoppingBackend {
     suspend fun addItem(listId: Long, text: String, position: Double?): ShoppingItem
     suspend fun updateItem(listId: Long, itemId: Long, text: String? = null, checked: Boolean? = null): ShoppingItem
     suspend fun deleteItem(listId: Long, itemId: Long)
+    suspend fun receipts(listId: Long? = null, month: String? = null): List<Receipt>
+    suspend fun uploadReceipt(photo: ByteArray, date: String, listId: Long? = null, payerId: String? = null): Receipt
+    suspend fun updateReceipt(
+        id: Long,
+        shop: String? = null,
+        date: String? = null,
+        totalMinor: Long? = null,
+        payerId: String? = null,
+        listId: Long? = null,
+        clearShop: Boolean = false,
+        clearList: Boolean = false,
+    ): Receipt
+    suspend fun deleteReceipt(id: Long)
+    suspend fun downloadReceiptPhoto(photoUrl: String): ByteArray
     fun decodeLists(raw: String): List<ShoppingList>
     fun encodeLists(lists: List<ShoppingList>): String
 }
@@ -147,10 +197,84 @@ class ShoppingApi @Inject constructor(private val server: PicfortServerClient, p
         call(Request.Builder().url(item(listId, itemId)).delete().build(), listId)
     }
 
+    override suspend fun receipts(listId: Long?, month: String?): List<Receipt> {
+        val base = server.base()
+        val url = base.newBuilder().addPathSegment("receipts").apply {
+            listId?.let { addQueryParameter("list_id", "$it") }
+            month?.let { addQueryParameter("month", it) }
+        }.build()
+        val raw = server.execute(Request.Builder().url(url).build()) {
+            PicfortServerException.Outdated("receipts")
+        }.body
+        return json.decodeFromString<List<ReceiptDto>>(raw).map { it.toReceipt(base) }
+    }
+
+    override suspend fun uploadReceipt(photo: ByteArray, date: String, listId: Long?, payerId: String?): Receipt {
+        val base = server.base()
+        val multipart = MultipartBody.Builder().setType(MultipartBody.FORM)
+            .addFormDataPart("date", date)
+            .apply {
+                listId?.let { addFormDataPart("list_id", "$it") }
+                payerId?.let { addFormDataPart("payer_id", it) }
+            }
+            .addFormDataPart("photo", "receipt.jpg", photo.toRequestBody(JPEG))
+            .build()
+        val url = base.newBuilder().addPathSegment("receipts").build()
+        val raw = server.execute(Request.Builder().url(url).post(multipart).build()) {
+            PicfortServerException.Outdated("receipts")
+        }.body
+        return json.decodeFromString<ReceiptDto>(raw).toReceipt(base)
+    }
+
+    override suspend fun updateReceipt(
+        id: Long,
+        shop: String?,
+        date: String?,
+        totalMinor: Long?,
+        payerId: String?,
+        listId: Long?,
+        clearShop: Boolean,
+        clearList: Boolean,
+    ): Receipt {
+        val base = server.base()
+        val body = buildJsonObject {
+            when {
+                clearShop -> put("shop", JsonNull)
+                shop != null -> put("shop", shop)
+            }
+            date?.let { put("date", it) }
+            totalMinor?.let { put("total_minor", it) }
+            payerId?.let { put("payer_id", it) }
+            when {
+                clearList -> put("list_id", JsonNull)
+                listId != null -> put("list_id", listId)
+            }
+        }
+        val url = receipt(id)
+        val raw = server.execute(Request.Builder().url(url).patch(body(body)).build()) {
+            PicfortServerException.Gone("This receipt no longer exists")
+        }.body
+        return json.decodeFromString<ReceiptDto>(raw).toReceipt(base)
+    }
+
+    override suspend fun deleteReceipt(id: Long) {
+        server.execute(Request.Builder().url(receipt(id)).delete().build()) {
+            PicfortServerException.Gone("This receipt no longer exists")
+        }
+    }
+
+    override suspend fun downloadReceiptPhoto(photoUrl: String): ByteArray {
+        val url = server.base().resolve(photoUrl) ?: throw PicfortServerException.Other("Invalid photo URL")
+        return server.executeBytes(Request.Builder().url(url).build()) {
+            PicfortServerException.Gone("Photo not found")
+        }
+    }
+
     private fun lists(): HttpUrl.Builder = server.base().newBuilder().addPathSegment("lists")
     private fun list(id: Long) = lists().addPathSegment("$id")
     private fun item(listId: Long, itemId: Long) =
         list(listId).addPathSegment("items").addPathSegment("$itemId").build()
+    private fun receipt(id: Long) = server.base().newBuilder().addPathSegment("receipts").addPathSegment("$id").build()
 
     private fun notFound(listId: Long?) = {
         if (listId == null) {
@@ -173,5 +297,6 @@ class ShoppingApi @Inject constructor(private val server: PicfortServerClient, p
 
     private companion object {
         val JSON = "application/json".toMediaType()
+        val JPEG = "image/jpeg".toMediaType()
     }
 }

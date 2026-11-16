@@ -5,6 +5,7 @@ import app.cash.paparazzi.DeviceConfig
 import app.cash.paparazzi.Paparazzi
 import com.android.resources.NightMode
 import com.github.ljarka.picfort.core.model.FamilyMember
+import com.github.ljarka.picfort.core.model.Receipt
 import com.github.ljarka.picfort.core.model.ShoppingItem
 import com.github.ljarka.picfort.core.model.ShoppingList
 import com.github.ljarka.picfort.core.ui.avatar.avatarColor
@@ -132,6 +133,87 @@ class ShoppingScreenshotTest {
         ShoppingListContent(
             ShoppingListUi(list = groceries, members = members, myId = "mama", offlineSince = "14:32"),
             checkedOpen = true,
+        )
+    }
+
+    private val sampleReceipts = listOf(
+        Receipt(
+            id = 10,
+            listId = 1,
+            shop = "Biedronka",
+            date = "2026-11-10",
+            totalMinor = 8410,
+            currency = "PLN",
+            payerId = "mama",
+            status = "confirmed",
+            createdBy = "mama",
+        ),
+        Receipt(
+            id = 11,
+            listId = 1,
+            shop = null,
+            date = "2026-11-11",
+            totalMinor = null,
+            currency = "PLN",
+            payerId = "tata",
+            status = "manual",
+            createdBy = "tata",
+        ),
+    )
+
+    @Test
+    fun shopping_list_with_receipts() = snap {
+        ShoppingListContent(
+            ShoppingListUi(
+                list = groceries,
+                receipts = sampleReceipts,
+                members = members,
+                myId = "mama",
+            ),
+        )
+    }
+
+    @Test
+    fun receipt_sheet_manual() = snap {
+        ReceiptSheetContent(
+            receipt = sampleReceipts[1],
+            members = members,
+            activeLists = shoppingLists,
+            myId = "mama",
+        )
+    }
+
+    @Test
+    fun receipt_sheet_manual_dark() = snap(dark = true) {
+        ReceiptSheetContent(
+            receipt = sampleReceipts[0],
+            members = members,
+            activeLists = shoppingLists,
+            myId = "mama",
+        )
+    }
+
+    @Test
+    fun receipt_sheet_reading() = snap {
+        ReceiptSheetContent(
+            receipt = sampleReceipts[1],
+            members = members,
+            activeLists = shoppingLists,
+            myId = "mama",
+            aiSupported = true,
+            reading = true,
+        )
+    }
+
+    @Test
+    fun receipt_sheet_read() = snap {
+        ReceiptSheetContent(
+            receipt = sampleReceipts[0].copy(status = "manual", photoUrl = "/receipts/photo/sample.jpg"),
+            members = members,
+            activeLists = shoppingLists,
+            myId = "mama",
+            aiSupported = true,
+            readHint = "Read on device. Check the total and save.",
         )
     }
 }

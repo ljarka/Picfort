@@ -502,6 +502,73 @@ def register_shopping(app: Flask, shopping: ShoppingStore):
         shopping.delete_item(list_id, item_id)
         return "", 204
 
+    # Receipts and spending (T-020)
+
+    @app.route("/receipts", methods=["GET"])
+    def get_receipts():
+        month = request.args.get("month")
+        raw_list_id = request.args.get("list_id")
+        list_id = None
+        if raw_list_id is not None:
+            try:
+                list_id = int(raw_list_id)
+            except ValueError:
+                raise StoreError("list_id must be an integer")
+        return jsonify(shopping.receipts(month=month, list_id=list_id))
+
+    @app.route("/receipts", methods=["POST"])
+    def create_receipt():
+        upload = request.files.get("photo")
+        photo = upload.read() if upload and upload.filename else None
+        raw_list_id = request.form.get("list_id")
+        list_id = None
+        if raw_list_id is not None and raw_list_id != "":
+            try:
+                list_id = int(raw_list_id)
+            except ValueError:
+                raise StoreError("list_id must be an integer")
+        payer_id = request.form.get("payer_id")
+        if payer_id == "":
+            raise StoreError("payer_id must not be empty")
+        raw_total = request.form.get("total_minor")
+        total_minor = None
+        if raw_total is not None and raw_total != "":
+            try:
+                total_minor = int(raw_total)
+            except ValueError:
+                raise StoreError("total_minor must be an integer")
+        receipt = shopping.create_receipt(
+            g.user.id,
+            photo,
+            request.form.get("date"),
+            list_id=list_id,
+            payer_id=payer_id,
+            shop=request.form.get("shop"),
+            total_minor=total_minor,
+        )
+        return jsonify(receipt), 201
+
+    @app.route("/receipts/<int:receipt_id>", methods=["GET"])
+    def get_receipt(receipt_id):
+        return jsonify(shopping.get_receipt(receipt_id))
+
+    @app.route("/receipts/<int:receipt_id>", methods=["PATCH"])
+    def update_receipt(receipt_id):
+        return jsonify(shopping.update_receipt(receipt_id, json_body()))
+
+    @app.route("/receipts/<int:receipt_id>", methods=["DELETE"])
+    def delete_receipt(receipt_id):
+        shopping.delete_receipt(receipt_id, g.user.id)
+        return "", 204
+
+    @app.route("/receipts/photo/<filename>")
+    def receipt_photo(filename):
+        return _send_private_photo(shopping.receipt_photo_path(filename), filename)
+
+    @app.route("/spending", methods=["GET"])
+    def get_spending():
+        return jsonify(shopping.spending(request.args.get("from"), request.args.get("to")))
+
 
 def register_family(app: Flask, family: FamilyStore):
     @app.route("/family", methods=["GET"])
@@ -676,6 +743,17 @@ def register_school(app: Flask, school: SchoolStore):
         return jsonify(school.copy_day(child_id, g.user.id, json_body()))
 
 
+def _send_private_photo(path, filename: str):
+    if path is None:
+        return error("Photo not found", 404)
+    # Names are random and never reused, so the file can be cached for good (privately: it needs a login).
+    mimetype = PHOTO_MIME_TYPES[filename.rsplit(".", 1)[1]]  # Python 3.11 doesn't know .heic
+    resp = send_file(os.path.abspath(path), mimetype=mimetype, max_age=365 * 24 * 3600)
+    resp.cache_control.private = True
+    resp.cache_control.public = False
+    return resp
+
+
 def register_wall(app: Flask, wall: WallStore):
     @app.errorhandler(RequestEntityTooLarge)
     def too_large(_):
@@ -728,15 +806,7 @@ def register_wall(app: Flask, wall: WallStore):
 
     @app.route("/wall/photo/<filename>")
     def wall_photo(filename):
-        path = wall.photo_path(filename)
-        if path is None:
-            return error("Photo not found", 404)
-        # Names are random and never reused, so the file can be cached for good (privately: it needs a login).
-        mimetype = PHOTO_MIME_TYPES[filename.rsplit(".", 1)[1]]  # Python 3.11 doesn't know .heic
-        resp = send_file(os.path.abspath(path), mimetype=mimetype, max_age=365 * 24 * 3600)
-        resp.cache_control.private = True
-        resp.cache_control.public = False
-        return resp
+        return _send_private_photo(wall.photo_path(filename), filename)
 
 
 log = logging.getLogger("server")
@@ -757,7 +827,11 @@ if __name__ == "__main__":
     show_slideshow.start()
     family_wall = WallStore(os.environ.get("WALL_DB_PATH", "wall.db"),
                             os.environ.get("WALL_PHOTOS_PATH", "wall_photos"))
-    shopping_store = ShoppingStore(os.environ.get("SHOPPING_DB_PATH", "shopping.db"))
+    shopping_store = ShoppingStore(
+        os.environ.get("SHOPPING_DB_PATH", "shopping.db"),
+        receipts_dir=os.environ.get("RECEIPTS_PATH", "receipts"),
+        currency=os.environ.get("CURRENCY", "PLN"),
+    )
     family_store = FamilyStore(os.environ.get("FAMILY_DB_PATH", "family.db"),
                                os.environ.get("PROFILE_PHOTOS_PATH", "profile_photos"))
     event_store = EventStore(os.environ.get("EVENTS_DB_PATH", "events.db"))

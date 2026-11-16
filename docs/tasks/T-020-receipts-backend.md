@@ -1,6 +1,6 @@
 # T-020 — Receipts and spending: Picfort server
 
-**Status:** ready  
+**Status:** done  
 **Component:** ImageFrameServer  
 **Depends on:** T-018 (`shopping.db` with the `receipts` table, `store.py`, auth prefixes),
 ADR 0008
@@ -8,8 +8,7 @@ ADR 0008
 ## Summary
 
 Upload a receipt photo, optionally attached to a shopping list, with shop, date and total
-typed by a person, and serve monthly spending summaries. No AI here: reading the photo with
-Gemini is T-024 and plugs into the `status` field defined below.
+typed by a person (or pre-filled on-device on Android by T-024), and serve monthly spending summaries. No AI runs on the server.
 
 ## Data
 
@@ -27,8 +26,8 @@ A receipt:
  "created_by": "<immich user id>", "created": "2026-11-11T17:03:00Z", "updated": "…"}
 ```
 
-`status` is one of `pending`, `read`, `manual`, `confirmed` (ADR 0009). In this task a new
-receipt is always `manual` with `read_error: "off"`; `pending` and `read` appear with T-024.
+`status` is `manual` (no confirmed total yet) or `confirmed` (ADR 0009). A new receipt
+starts as `manual` (`read_error: null`).
 
 ## API
 
@@ -61,17 +60,12 @@ missing photo; `month`/`from`/`to` not `YYYY-MM`, `from` after `to`, more than 2
   receipts (the app draws bars without filling gaps). A receipt belongs to the month of its
   `date`.
 - `total_minor`, `by_shop` and `by_payer` sum every receipt that has a total, whatever its
-  status. `unconfirmed_count` counts those with status `read`; `missing_total_count` those
-  without a total (not in the sums).
+  status. `unconfirmed_count` counts those with a total that are not `confirmed`;
+  `missing_total_count` those without a total (not in the sums).
 - `by_shop` groups by the trimmed, case-insensitive shop name and returns the spelling used
   most often; receipts without a shop are one entry with `"shop": null`. Both lists are
   sorted by amount, largest first.
 - All sums are integer arithmetic in SQL.
-
-### `/status`
-
-Add `"receipts_ai": false` to `GET /status` (T-024 sets it from the configuration). The app
-uses it to say whether receipts are read by Gemini.
 
 ## Tests
 
@@ -92,7 +86,7 @@ Spending: month boundaries (31 Oct vs 1 Nov), empty months, shop grouping (`"LID
 
 ## Out of scope
 
-- Reading the photo (T-024).
+- On-device reading of the photo (T-024, Android).
 - Line items and categories (owner decision 2026-11-11: total + shop + date only).
 - Several currencies, expenses without a photo, duplicate detection.
 - Budgets and limits, CSV export, "who owes whom" (v2 candidates).

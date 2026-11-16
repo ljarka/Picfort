@@ -1,11 +1,19 @@
 package com.github.ljarka.picfort.ui.shopping
 
+import android.content.Context
+import android.net.Uri
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.PickVisualMediaRequest
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.platform.LocalContext
+import androidx.core.content.FileProvider
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.SavedStateHandle
@@ -15,16 +23,22 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.repeatOnLifecycle
 import androidx.lifecycle.viewModelScope
 import com.github.ljarka.picfort.core.model.FamilyMemberProvider
+import com.github.ljarka.picfort.core.model.Receipt
 import com.github.ljarka.picfort.core.model.ShoppingItem
 import com.github.ljarka.picfort.core.model.ShoppingList
 import com.github.ljarka.picfort.core.model.pollEvery
 import com.github.ljarka.picfort.core.network.PicfortServerClient
 import com.github.ljarka.picfort.core.network.PicfortServerException
+import com.github.ljarka.picfort.core.network.compressImageUri
 import dagger.hilt.android.lifecycle.HiltViewModel
+import dagger.hilt.android.qualifiers.ApplicationContext
+import java.io.File
 import java.time.Instant
+import java.time.LocalDate
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.time.format.FormatStyle
+import java.util.UUID
 import javax.inject.Inject
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -103,8 +117,10 @@ class ShoppingListsViewModel @Inject constructor(
 
 @HiltViewModel
 class ShoppingListViewModel @Inject constructor(
+    @ApplicationContext private val context: Context,
     private val repository: ShoppingRepository,
     private val family: FamilyMemberProvider,
+    private val receiptReader: ReceiptReader,
     savedState: SavedStateHandle,
 ) : ViewModel() {
     val listId: Long = savedState.get<Long>("id") ?: 0L
@@ -116,13 +132,39 @@ class ShoppingListViewModel @Inject constructor(
     var undoable: ShoppingItem? = null
         private set
 
+    private var pendingReceiptBytes: ByteArray? = null
+    private val receiptBytesCache = mutableMapOf<Long, ByteArray>()
+
     init {
         viewModelScope.launch {
-            combine(repository.lists, repository.offlineSince, family.members, extra) { lists, since, members, ui ->
-                ui.copy(list = lists[listId], members = members, offlineSince = since?.asTime())
+            val supported = receiptReader.isSupported()
+            extra.update { it.copy(aiSupported = supported) }
+        }
+        viewModelScope.launch {
+            combine(
+                repository.lists,
+                repository.receipts,
+                repository.offlineSince,
+                family.members,
+                extra,
+            ) { lists, receiptsMap, since, members, ui ->
+                val listReceipts = receiptsMap.values
+                    .filter { it.listId == listId }
+                    .sortedWith(compareByDescending<Receipt> { it.date }.thenByDescending { it.id })
+                val activeLists = lists.values
+                    .filter { !it.archived }
+                    .sortedWith(compareByDescending<ShoppingList> { it.created }.thenByDescending { it.id })
+                ui.copy(
+                    list = lists[listId],
+                    receipts = listReceipts,
+                    activeLists = activeLists,
+                    members = members,
+                    offlineSince = since?.asTime(),
+                )
             }.collect { _state.value = it }
         }
         viewModelScope.launch { repository.messages.collect { msg -> extra.update { it.copy(message = msg) } } }
+        viewModelScope.launch { repository.refreshReceipts(listId) }
     }
 
     suspend fun keepFresh() {
@@ -145,7 +187,10 @@ class ShoppingListViewModel @Inject constructor(
     }
 
     fun refreshNow() {
-        viewModelScope.launch { repository.refreshList(listId) }
+        viewModelScope.launch {
+            repository.refreshList(listId)
+            repository.refreshReceipts(listId)
+        }
     }
 
     fun toggle(item: ShoppingItem) = repository.toggle(listId, item, family.myId)
@@ -170,7 +215,144 @@ class ShoppingListViewModel @Inject constructor(
 
     fun messageShown() {
         undoable = null
-        extra.update { it.copy(message = null) }
+        pendingReceiptBytes = null
+        extra.update { it.copy(message = null, canRetryReceiptUpload = false) }
+    }
+
+    fun addReceipt(uri: Uri) {
+        viewModelScope.launch {
+            extra.update { it.copy(uploadingReceipt = true, canRetryReceiptUpload = false) }
+            try {
+                val bytes = compressImageUri(context, uri, maxEdge = 2400, jpegQuality = 90)
+                pendingReceiptBytes = bytes
+                uploadBytes(bytes)
+            } catch (e: PicfortServerException) {
+                extra.update {
+                    it.copy(
+                        uploadingReceipt = false,
+                        canRetryReceiptUpload = pendingReceiptBytes != null,
+                        message = "Couldn't upload receipt: ${e.message}",
+                    )
+                }
+            }
+        }
+    }
+
+    fun retryReceiptUpload() {
+        val bytes = pendingReceiptBytes ?: return
+        viewModelScope.launch {
+            extra.update { it.copy(uploadingReceipt = true, canRetryReceiptUpload = false) }
+            try {
+                uploadBytes(bytes)
+            } catch (e: PicfortServerException) {
+                extra.update {
+                    it.copy(
+                        uploadingReceipt = false,
+                        canRetryReceiptUpload = true,
+                        message = "Couldn't upload receipt: ${e.message}",
+                    )
+                }
+            }
+        }
+    }
+
+    private suspend fun uploadBytes(bytes: ByteArray) {
+        val today = LocalDate.now().toString()
+        val created = repository.uploadReceipt(bytes, date = today, listId = listId)
+        pendingReceiptBytes = null
+        receiptBytesCache[created.id] = bytes
+        extra.update {
+            it.copy(
+                uploadingReceipt = false,
+                canRetryReceiptUpload = false,
+                openReceipt = created,
+                receiptReadHint = null,
+            )
+        }
+        if (extra.value.aiSupported) {
+            readReceiptOnDevice(created, bytes)
+        }
+    }
+
+    fun openReceipt(receipt: Receipt) = extra.update {
+        it.copy(openReceipt = receipt, readingReceipt = false, receiptReadHint = null)
+    }
+
+    fun closeReceipt() = extra.update {
+        it.copy(openReceipt = null, readingReceipt = false, receiptReadHint = null)
+    }
+
+    fun readReceiptAgain(receipt: Receipt) {
+        if (!extra.value.aiSupported || extra.value.readingReceipt) return
+        viewModelScope.launch {
+            extra.update { it.copy(readingReceipt = true, receiptReadHint = null) }
+            val bytes = receiptBytesCache[receipt.id] ?: runCatching {
+                receipt.photoUrl?.let { repository.downloadReceiptPhoto(it) }
+            }.getOrNull()?.also { receiptBytesCache[receipt.id] = it }
+            if (bytes == null) {
+                extra.update {
+                    it.copy(readingReceipt = false, receiptReadHint = "Couldn't read the receipt. Type the total.")
+                }
+                return@launch
+            }
+            readReceiptOnDevice(receipt, bytes)
+        }
+    }
+
+    private suspend fun readReceiptOnDevice(receipt: Receipt, bytes: ByteArray) {
+        extra.update { it.copy(readingReceipt = true, receiptReadHint = null) }
+        val reading = receiptReader.read(bytes)
+        extra.update { ui ->
+            val current = ui.openReceipt
+            if (current?.id != receipt.id) return@update ui.copy(readingReceipt = false)
+            val updated = if (reading != null) {
+                current.copy(
+                    shop = reading.shop ?: current.shop,
+                    date = reading.date ?: current.date,
+                    totalMinor = reading.totalMinor ?: current.totalMinor,
+                )
+            } else {
+                current
+            }
+            val hint = if (reading?.totalMinor != null) {
+                "Read on device. Check the total and save."
+            } else {
+                "Couldn't find the total. Type it."
+            }
+            ui.copy(openReceipt = updated, readingReceipt = false, receiptReadHint = hint)
+        }
+    }
+
+    fun saveReceipt(
+        receipt: Receipt,
+        shop: String?,
+        date: String,
+        totalMinor: Long,
+        payerId: String,
+        targetListId: Long?,
+    ) {
+        viewModelScope.launch {
+            extra.update { it.copy(savingReceipt = true) }
+            try {
+                repository.updateReceipt(receipt.id, shop, date, totalMinor, payerId, targetListId)
+                repository.refreshReceipts(listId)
+                extra.update { it.copy(savingReceipt = false, openReceipt = null) }
+            } catch (e: PicfortServerException) {
+                extra.update { it.copy(savingReceipt = false, message = "Couldn't save receipt: ${e.message}") }
+            }
+        }
+    }
+
+    fun deleteReceipt(receipt: Receipt) {
+        viewModelScope.launch {
+            extra.update { it.copy(savingReceipt = true) }
+            try {
+                repository.deleteReceipt(receipt.id)
+                extra.update { it.copy(savingReceipt = false, openReceipt = null) }
+            } catch (e: PicfortServerException) {
+                extra.update { it.copy(savingReceipt = false, message = "Couldn't delete receipt: ${e.message}") }
+            }
+        }
     }
 }
 
@@ -215,6 +397,14 @@ fun ShoppingListScreen(onBack: () -> Unit, focusAdd: Boolean) {
     val state by viewModel.state.collectAsStateWithLifecycle()
     val lifecycle = LocalLifecycleOwner.current.lifecycle
     LaunchedEffect(lifecycle) { lifecycle.repeatOnLifecycle(Lifecycle.State.STARTED) { viewModel.keepFresh() } }
+    val context = LocalContext.current
+    var pendingCamera by rememberSaveable { mutableStateOf<Uri?>(null) }
+    val picker = rememberLauncherForActivityResult(ActivityResultContracts.PickVisualMedia()) { uri ->
+        if (uri != null) viewModel.addReceipt(uri)
+    }
+    val camera = rememberLauncherForActivityResult(ActivityResultContracts.TakePicture()) { taken ->
+        if (taken) pendingCamera?.let(viewModel::addReceipt)
+    }
     ShoppingListContent(
         state = state,
         onBack = onBack,
@@ -234,6 +424,22 @@ fun ShoppingListScreen(onBack: () -> Unit, focusAdd: Boolean) {
         },
         onRefresh = viewModel::refreshNow,
         onMessageShown = viewModel::messageShown,
+        onTakeReceiptPhoto = {
+            val dir = File(context.cacheDir, "receipts").apply { mkdirs() }
+            val file = File(dir, "${UUID.randomUUID()}.jpg")
+            val uri = FileProvider.getUriForFile(context, "${context.packageName}.files", file)
+            pendingCamera = uri
+            camera.launch(uri)
+        },
+        onChooseReceiptPhoto = {
+            picker.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly))
+        },
+        onRetryReceiptUpload = viewModel::retryReceiptUpload,
+        onOpenReceipt = viewModel::openReceipt,
+        onCloseReceipt = viewModel::closeReceipt,
+        onSaveReceipt = viewModel::saveReceipt,
+        onDeleteReceipt = viewModel::deleteReceipt,
+        onReadReceiptAgain = viewModel::readReceiptAgain,
         focusAdd = focusAdd,
     )
 }

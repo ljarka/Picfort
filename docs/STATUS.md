@@ -65,8 +65,9 @@ Automated checks and architecture guardrails.
 ### Phase 7 — Family hub
 The app opens on the Family Wall; bottom tabs Wall · Shopping · Events · School · Photos.
 Shared shopping lists with receipts and spending, a family events timeline linked to
-Immich albums, and a school timetable per child. Data on the Picfort server (ADR 0008).
-Receipts can be read by Google Gemini (ADR 0009): opt-in on the server, the one exception to "without any cloud service".
+Immich albums, and a school timetable per child. Data on the Picfort server (ADR 0008);
+on phones with Gemini Nano (AICore), receipts can be read locally on-device (ADR 0009),
+keeping everything 100% free of cloud services.
 
 Delivery order (each milestone is usable on its own):
 - **M1 shell:** T-017.
@@ -77,7 +78,7 @@ Delivery order (each milestone is usable on its own):
 - **M3b members, birthdays, recurring events** (ADR 0010): T-033 → T-034 (add people, birth dates),
   T-035 (recurring, server) → T-036 (birthday events, server) → T-037 (Android). T-026 (albums) is independent.
 - **M4 school timetable:** T-028 → T-029 → T-030 (children from Immich people).
-- **M5 receipts & spending:** T-020 → T-024 (Gemini) → T-021 → T-025.
+- **M5 receipts & spending:** T-020 → T-021 → T-024 (on-device Gemini Nano) → T-025.
 
 Events and school before receipts: no external dependency, daily use, and receipts are the
 largest block. M3 and M4 are independent of each other and can swap. Server tasks T-020,
@@ -89,11 +90,11 @@ Android task except T-017 and T-026 starts with a mockup the owner approves.
 | [T-017](tasks/T-017-app-shell-bottom-nav.md)                | App shell: Wall as home, bottom navigation (5 tabs)                                                 | `done`        |
 | [T-018](tasks/T-018-shopping-lists-backend.md)              | Shopping lists — server API, `shopping.db`, shared store/auth foundations                           | `done`        |
 | [T-019](tasks/T-019-shopping-lists-android.md)              | Shopping lists — Android, Keep-like checklist, read-only offline copy                               | `done`        |
-| [T-020](tasks/T-020-receipts-backend.md)                    | Receipts + `/spending` — server, totals typed by hand                                               | `ready`       |
-| [T-021](tasks/T-021-receipts-android.md)                    | Receipts — Android: add to a list, check, correct                                                   | `ready`       |
+| [T-020](tasks/T-020-receipts-backend.md)                    | Receipts + `/spending` — server, totals typed by hand                                               | `done`        |
+| [T-021](tasks/T-021-receipts-android.md)                    | Receipts — Android: add to a list, check, correct                                                   | `done`        |
 | [T-022](tasks/T-022-events-backend.md)                      | Events — server API (`events.db`)                                                                   | `done`        |
 | [T-023](tasks/T-023-events-android.md)                      | Events — Android: upcoming / past, add, edit                                                        | `done`        |
-| [T-024](tasks/T-024-receipt-reading-gemini.md)              | Receipts — read shop, date, total with Gemini (server, opt-in)                                      | `ready`       |
+| [T-024](tasks/T-024-receipt-reading-gemini.md)              | Receipts — read shop, date, total on-device with Gemini Nano (Android, when supported)              | `done`        |
 | [T-025](tasks/T-025-spending-summary-android.md)            | Spending summary — Android: month, 6-month bars, by shop and person                                 | `ready`       |
 | [T-026](tasks/T-026-event-albums-android.md)                | Events — link or create a family-shared Immich album (Android)                                      | `ready`       |
 | [T-027](tasks/T-027-wall-today-panel.md)                    | Family Wall — today panel: date and the day's event                                                 | `done`        |
@@ -134,6 +135,7 @@ Android task except T-017 and T-026 starts with a mockup the owner approves.
 | [T-071](tasks/T-071-search-media-type.md)                   | Search: All / Photos / Videos switch (with text, people, or alone)                                  | `done`        |
 | [T-072](tasks/T-072-browser-frame.md)                       | The frame in a web browser (`/frame`, full colour, behind the server key; tablet as a second frame) | `done`        |
 | [T-073](tasks/T-073-per-viewer-member-faces.md)             | Family: each Immich user sees members' faces from their own Immich people                           | `done`        |
+| [T-074](tasks/T-074-gemini-app-functions.md)                | Gemini Assistant integration via Android AppFunctions (school, events, birthdays, shopping, wall)   | `ready`       |
 
 ### Phase 8 — Modular Architecture (Agentic Pair Programming)
 Deconstruct monolithic `:app` into isolated feature slices and core foundations (ADR 0011).
@@ -203,7 +205,7 @@ Decided by the owner (2026-11-11), as recommended:
 | [0006](decisions/0006-family-wall-auth.md) | Family Wall checks the caller's Immich token (supersedes 0004 for `/wall`) |
 | [0007](decisions/0007-server-api-key.md) | Optional `PICFORT_API_KEY` for a server reachable from outside (e.g. Cloudflare Tunnel) |
 | [0008](decisions/0008-family-hub-storage.md) | Shopping lists, receipts, events, school timetables on the Picfort server, one SQLite file per feature, `.bak` on schema change (proposed) |
-| [0009](decisions/0009-receipts-gemini.md) | Receipts read by Gemini free tier on the server, opt-in (proposed) |
+| [0009](decisions/0009-receipts-gemini.md) | Receipts read on-device with Gemini Nano when supported by the phone |
 | [0010](decisions/0010-family-members-birthdays-recurring-events.md) | Manual family members, birth dates & recurring events with additive migrations |
 | [0011](decisions/0011-modular-architecture.md) | Multi-module architecture optimized for AI Agent pair programming |
 | [0015](decisions/0015-event-reminders-on-the-phone.md) | Event reminders planned and stored on each phone (AlarmManager + 6-hourly re-plan) |

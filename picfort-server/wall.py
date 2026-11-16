@@ -5,21 +5,12 @@ No migrations: when SCHEMA_VERSION changes, the wall is recreated empty.
 
 import logging
 import os
-import re
 import sqlite3
 import uuid
 from contextlib import closing
 from datetime import datetime, timezone
-from io import BytesIO
 
-from PIL import Image, UnidentifiedImageError
-
-try:  # Optional: lets Pillow open HEIC/HEIF photos from iPhones.
-    from pillow_heif import register_heif_opener
-
-    register_heif_opener()
-except ImportError:
-    pass
+from photos import MAX_PHOTO_BYTES, PHOTO_FORMATS, PHOTO_NAME_RE, inspect_photo
 
 log = logging.getLogger("wall")
 
@@ -28,11 +19,6 @@ MAX_PHOTO_BYTES = 10 * 1024 * 1024
 DEFAULT_LIMIT = 20
 MAX_LIMIT = 100
 PHOTO_URL_PREFIX = "/wall/photo/"
-# Pillow format -> file extension. HEIF only opens when pillow-heif is installed.
-PHOTO_FORMATS = {"JPEG": "jpg", "PNG": "png", "HEIF": "heic"}
-PHOTO_NAME_RE = re.compile(r"^[0-9a-f]{32}\.(jpg|png|heic)$")
-# EXIF orientations that rotate by 90°, so width and height swap when shown upright.
-ROTATED_ORIENTATIONS = {5, 6, 7, 8}
 
 SCHEMA = """
 CREATE TABLE posts (
@@ -169,21 +155,7 @@ class WallStore:
 
     @staticmethod
     def _inspect_photo(data: bytes):
-        """(extension, upright width, upright height); raises WallError for anything that isn't a photo we keep."""
-        if len(data) > MAX_PHOTO_BYTES:
-            raise WallError("The photo is larger than 10 MB", 413)
-        try:
-            with Image.open(BytesIO(data)) as img:
-                fmt = img.format
-                width, height = img.size
-                orientation = img.getexif().get(0x0112)
-        except (UnidentifiedImageError, OSError):
-            raise WallError("The photo must be JPEG, PNG or HEIC", 415)
-        if fmt not in PHOTO_FORMATS:
-            raise WallError("The photo must be JPEG, PNG or HEIC", 415)
-        if orientation in ROTATED_ORIENTATIONS:
-            width, height = height, width
-        return PHOTO_FORMATS[fmt], width, height
+        return inspect_photo(data, error_cls=WallError)
 
     @staticmethod
     def _json(row) -> dict:

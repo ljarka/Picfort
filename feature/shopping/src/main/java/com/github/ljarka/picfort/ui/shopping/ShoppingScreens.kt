@@ -47,6 +47,7 @@ import androidx.compose.material3.ExtendedFloatingActionButton
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
@@ -74,7 +75,9 @@ import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.vectorResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.stateDescription
@@ -85,8 +88,10 @@ import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.github.ljarka.picfort.core.model.FamilyMember
+import com.github.ljarka.picfort.core.model.Receipt
 import com.github.ljarka.picfort.core.model.ShoppingItem
 import com.github.ljarka.picfort.core.model.ShoppingList
+import com.github.ljarka.picfort.core.ui.R as CoreUiR
 import com.github.ljarka.picfort.core.ui.avatar.MemberAvatar
 import com.github.ljarka.picfort.core.ui.component.ServerRequiredContent
 import com.github.ljarka.picfort.core.ui.component.SettingsAction
@@ -299,6 +304,14 @@ fun ShoppingListContent(
     onDeleteList: () -> Unit = {},
     onRefresh: () -> Unit = {},
     onMessageShown: () -> Unit = {},
+    onTakeReceiptPhoto: () -> Unit = {},
+    onChooseReceiptPhoto: () -> Unit = {},
+    onRetryReceiptUpload: () -> Unit = {},
+    onOpenReceipt: (Receipt) -> Unit = {},
+    onCloseReceipt: () -> Unit = {},
+    onSaveReceipt: (Receipt, String?, String, Long, String, Long?) -> Unit = { _, _, _, _, _, _ -> },
+    onDeleteReceipt: (Receipt) -> Unit = {},
+    onReadReceiptAgain: (Receipt) -> Unit = {},
     /** Focus "Add item" when the screen opens (a list that was just created). */
     focusAdd: Boolean = false,
     /** Start with the checked section open (screenshots). */
@@ -306,10 +319,17 @@ fun ShoppingListContent(
 ) {
     ResizeForKeyboard()
     val snackbar = remember { SnackbarHostState() }
-    LaunchedEffect(state.message) {
+    LaunchedEffect(state.message, state.canRetryReceiptUpload) {
         state.message?.let {
-            val result = snackbar.showSnackbar(it, actionLabel = if (canUndo()) "Undo" else null)
-            if (result == SnackbarResult.ActionPerformed) onUndo()
+            val action = when {
+                state.canRetryReceiptUpload -> "Retry"
+                canUndo() -> "Undo"
+                else -> null
+            }
+            val result = snackbar.showSnackbar(it, actionLabel = action)
+            if (result == SnackbarResult.ActionPerformed) {
+                if (state.canRetryReceiptUpload) onRetryReceiptUpload() else onUndo()
+            }
             onMessageShown()
         }
     }
@@ -352,6 +372,31 @@ fun ShoppingListContent(
                 navigationIcon = { IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back") } },
                 actions = {
                     if (list != null && state.editable) {
+                        var receiptMenu by remember { mutableStateOf(false) }
+                        Box {
+                            IconButton(onClick = { receiptMenu = true }) {
+                                Icon(
+                                    ImageVector.vectorResource(CoreUiR.drawable.ic_photo_camera),
+                                    contentDescription = "Add receipt",
+                                )
+                            }
+                            DropdownMenu(expanded = receiptMenu, onDismissRequest = { receiptMenu = false }) {
+                                DropdownMenuItem(
+                                    text = { Text("Take photo") },
+                                    onClick = {
+                                        receiptMenu = false
+                                        onTakeReceiptPhoto()
+                                    },
+                                )
+                                DropdownMenuItem(
+                                    text = { Text("Choose photo") },
+                                    onClick = {
+                                        receiptMenu = false
+                                        onChooseReceiptPhoto()
+                                    },
+                                )
+                            }
+                        }
                         var menu by remember { mutableStateOf(false) }
                         IconButton(onClick = { menu = true }) { Icon(Icons.Default.MoreVert, "More") }
                         DropdownMenu(expanded = menu, onDismissRequest = { menu = false }) {
@@ -405,11 +450,39 @@ fun ShoppingListContent(
                 else -> {
                     state.offlineSince?.let { OfflineBanner(it) }
                     PullToRefreshBox(isRefreshing = false, onRefresh = onRefresh, modifier = Modifier.weight(1f)) {
-                        ItemList(state, list, onToggle, onEdit, onAdd, onDelete, focusAdd, checkedOpen)
+                        ItemList(
+                            state = state,
+                            list = list,
+                            onToggle = onToggle,
+                            onEdit = onEdit,
+                            onAdd = onAdd,
+                            onDelete = onDelete,
+                            onOpenReceipt = onOpenReceipt,
+                            focusAdd = focusAdd,
+                            checkedOpen = checkedOpen,
+                        )
                     }
                 }
             }
         }
+    }
+    state.openReceipt?.let { receipt ->
+        ReceiptSheet(
+            receipt = receipt,
+            members = state.members,
+            activeLists = state.activeLists,
+            myId = state.myId,
+            saving = state.savingReceipt,
+            aiSupported = state.aiSupported,
+            reading = state.readingReceipt,
+            readHint = state.receiptReadHint,
+            onDismiss = onCloseReceipt,
+            onSave = { shop, date, totalMinor, payerId, targetListId ->
+                onSaveReceipt(receipt, shop, date, totalMinor, payerId, targetListId)
+            },
+            onDelete = { onDeleteReceipt(receipt) },
+            onReadAgain = { onReadReceiptAgain(receipt) },
+        )
     }
 }
 
@@ -447,6 +520,7 @@ private fun ItemList(
     onEdit: (ShoppingItem, String) -> Unit,
     onAdd: (String) -> Unit,
     onDelete: (ShoppingItem) -> Unit,
+    onOpenReceipt: (Receipt) -> Unit,
     focusAdd: Boolean,
     checkedOpen: Boolean,
 ) {
@@ -502,6 +576,77 @@ private fun ItemList(
                 }
             }
         }
+        if (state.uploadingReceipt) {
+            item(key = "uploading-receipt") {
+                Column(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp)) {
+                    Text(
+                        "Uploading receipt…",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                    Spacer(Modifier.height(4.dp))
+                    LinearProgressIndicator(Modifier.fillMaxWidth())
+                }
+            }
+        }
+        if (state.receipts.isNotEmpty()) {
+            item(key = "receipts-header") {
+                HorizontalDivider(Modifier.padding(vertical = 8.dp))
+                Text(
+                    text = "Receipts · ${formatTotalMinor(state.receiptsTotalMinor, state.receiptsCurrency)}",
+                    style = MaterialTheme.typography.titleSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
+                )
+            }
+            items(state.receipts, key = { "receipt-${it.id}" }) { receipt ->
+                ReceiptRow(receipt = receipt, onClick = { onOpenReceipt(receipt) })
+            }
+        }
+    }
+}
+
+@Composable
+private fun ReceiptRow(receipt: Receipt, onClick: () -> Unit) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .heightIn(min = 48.dp)
+            .clickable(onClick = onClick)
+            .padding(horizontal = 16.dp, vertical = 8.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(12.dp),
+    ) {
+        Column(Modifier.weight(1f)) {
+            Text(
+                text = receipt.shop ?: "Receipt",
+                style = MaterialTheme.typography.bodyLarge,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+            Text(
+                text = formatReceiptDate(receipt.date),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+        if (!receipt.isConfirmed) {
+            Text(
+                text = "⚠",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.error,
+                modifier = Modifier.semantics { contentDescription = "not confirmed" },
+            )
+        }
+        Text(
+            text = receipt.totalMinor?.let { formatTotalMinor(it, receipt.currency) } ?: "No total",
+            style = MaterialTheme.typography.bodyMedium,
+            color = if (receipt.totalMinor != null) {
+                MaterialTheme.colorScheme.onSurface
+            } else {
+                MaterialTheme.colorScheme.onSurfaceVariant
+            },
+        )
     }
 }
 

@@ -1,6 +1,7 @@
 package com.github.ljarka.picfort.ui.shopping
 
 import android.content.Context
+import com.github.ljarka.picfort.core.model.Receipt
 import com.github.ljarka.picfort.core.model.ShoppingItem
 import com.github.ljarka.picfort.core.model.ShoppingList
 import com.github.ljarka.picfort.core.network.AccessTokenStore
@@ -77,6 +78,9 @@ abstract class ShoppingModule {
 
     @Binds
     abstract fun offlineCopy(file: FileOfflineCopy): OfflineCopy
+
+    @Binds
+    abstract fun receiptReader(reader: GeminiNanoReceiptReader): ReceiptReader
 }
 
 /**
@@ -92,6 +96,9 @@ class ShoppingRepository @Inject constructor(
 ) {
     private val all = MutableStateFlow<Map<Long, ShoppingList>>(emptyMap())
     val lists: StateFlow<Map<Long, ShoppingList>> = all.asStateFlow()
+
+    private val _receipts = MutableStateFlow<Map<Long, Receipt>>(emptyMap())
+    val receipts: StateFlow<Map<Long, Receipt>> = _receipts.asStateFlow()
 
     private val _offlineSince = MutableStateFlow<Long?>(null)
 
@@ -310,4 +317,52 @@ class ShoppingRepository @Inject constructor(
 
     private fun Collection<ShoppingList>.newestFirst() =
         sortedWith(compareByDescending<ShoppingList> { it.created }.thenByDescending { it.id })
+
+    // Receipts (T-021)
+
+    suspend fun refreshReceipts(listId: Long): PicfortServerException? = try {
+        val loaded = backend.receipts(listId = listId)
+        _receipts.update { current ->
+            current.filterValues { it.listId != listId } + loaded.associateBy { it.id }
+        }
+        null
+    } catch (e: PicfortServerException) {
+        e
+    }
+
+    suspend fun uploadReceipt(photo: ByteArray, date: String, listId: Long?, payerId: String? = null): Receipt {
+        val created = backend.uploadReceipt(photo, date, listId, payerId)
+        _receipts.update { it + (created.id to created) }
+        return created
+    }
+
+    suspend fun updateReceipt(
+        id: Long,
+        shop: String?,
+        date: String,
+        totalMinor: Long,
+        payerId: String,
+        listId: Long?,
+    ): Receipt {
+        val trimmedShop = shop?.trim()?.takeIf { it.isNotEmpty() }
+        val updated = backend.updateReceipt(
+            id = id,
+            shop = trimmedShop,
+            date = date,
+            totalMinor = totalMinor,
+            payerId = payerId,
+            listId = listId,
+            clearShop = trimmedShop == null,
+            clearList = listId == null,
+        )
+        _receipts.update { it + (updated.id to updated) }
+        return updated
+    }
+
+    suspend fun deleteReceipt(id: Long) {
+        backend.deleteReceipt(id)
+        _receipts.update { it - id }
+    }
+
+    suspend fun downloadReceiptPhoto(photoUrl: String): ByteArray = backend.downloadReceiptPhoto(photoUrl)
 }

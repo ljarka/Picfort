@@ -1,15 +1,15 @@
 # T-021 — Receipts: Android (add, check, correct)
 
-**Status:** ready (first step: mockup for the owner to approve)  
+**Status:** done  
 **Component:** Android app  
 **Depends on:** T-019 (list detail, `PicfortServerClient`), T-020 (API). Works with and
 without T-024 (reading).
 
 ## Summary
 
-Add a receipt to a shopping list with the camera or the photo picker, see what was read (when
-the server reads receipts), correct it and save. A list shows its receipts and their sum.
-The monthly summary is T-025.
+Add a receipt to a shopping list with the camera or the photo picker, type shop, date and
+total (or have them pre-filled on-device in T-024 when the phone supports Gemini Nano) and
+save. A list shows its receipts and their sum. The monthly summary is T-025.
 
 ## Mockup first
 
@@ -44,15 +44,8 @@ receipts section. Owner approval before coding.
 └─────────────────────────────┘
 ```
 
-- `pending`: fields are editable at once; poll `GET /receipts/<id>` every 2 s for at most
-  60 s. When it becomes `read`, fill only the fields the user hasn't touched. After 60 s stop
-  polling and show "Couldn't read the receipt. Type the total."
-- `read`: hint "Read from the photo. Check the total and save."
-- `manual`: hint by `read_error`: `off` → none; `no_total` → "Couldn't find the total. Type
-  it."; `rate_limited` / `failed` → "Couldn't read the receipt. Type the total or try again."
-- **Save** → `PATCH` (→ `confirmed`). Enabled when the total is valid.
-- **Read again** → `POST /receipts/<id>/read`; shown only when `/status` has `receipts_ai:
-  true` and the receipt is `read` or `manual`.
+- All fields are editable at once. (T-024 adds on-device Gemini Nano pre-fill and "Read again" on supported phones.)
+- **Save** → `PATCH /receipts/<id>` (→ `confirmed`). Enabled when the total is valid.
 - **Delete** (own receipts only) asks for confirmation.
 - Total input: accepts `,` and `.` as the decimal separator, at most two decimals, greater
   than zero; converted to minor units with `BigDecimal`, never through `Double`. Shown with
@@ -70,25 +63,15 @@ with one row per receipt: date, shop (or "Receipt"), total (or "No total"), ⚠ 
 `confirmed`. Tap opens the sheet. Data: `GET /receipts?list_id=<id>`, loaded with the list and
 after every change; not part of the 10 s poll. Hidden when the list has no receipts.
 
-## Settings
-
-Settings → Picfort server: a line "Receipts are read by Google Gemini" when `/status` has
-`receipts_ai: true` (add the field to `FrameResponse`; missing = false).
-
-## Acceptance criteria
-
 - [ ] Camera and picker both add a receipt to the open list; the sheet opens.
-- [ ] Server without reading: the sheet asks for the total; Save works; the list's sum
-      updates.
-- [ ] Server with reading (T-024): fields fill in within about 15 s; values typed meanwhile
-      are kept; Save confirms; "Read again" works.
+- [ ] The sheet asks for shop, date and total; Save works; the list's sum updates.
 - [ ] `12,50`, `12.5` and `12` are accepted; `0`, `12,555` and text are not.
 - [ ] Paid by and List can be changed; the receipt moves to the other list.
 - [ ] Delete is offered only on own receipts and removes it from the list's sum.
 - [ ] Upload failure offers Retry without taking the photo again.
 - [ ] TalkBack: fields have labels; ⚠ is read as "not confirmed".
-- [ ] Paparazzi: sheet (pending, read, manual with each hint), list with receipts, dark.
-- [ ] Unit tests: total parsing/formatting, "fill only untouched fields", polling stop.
+- [ ] Paparazzi: sheet (manual), list with receipts, dark.
+- [ ] Unit tests: total parsing/formatting.
 - [ ] README Features; CI passes.
 
 ## Out of scope

@@ -1,10 +1,6 @@
 package com.github.ljarka.picfort.ui.wall
 
 import android.content.Context
-import android.graphics.Bitmap
-import android.graphics.BitmapFactory
-import android.graphics.Matrix
-import android.media.ExifInterface
 import android.net.Uri
 import androidx.compose.ui.graphics.Color
 import com.github.ljarka.picfort.core.model.BirthDate
@@ -12,17 +8,13 @@ import com.github.ljarka.picfort.core.model.FamilyMember
 import com.github.ljarka.picfort.core.model.isTestAccount
 import com.github.ljarka.picfort.core.model.meFirst
 import com.github.ljarka.picfort.core.network.AccessTokenStore
-import com.github.ljarka.picfort.core.network.PicfortServerException
+import com.github.ljarka.picfort.core.network.compressImageUri
 import com.github.ljarka.picfort.core.ui.avatar.UNKNOWN_MEMBER_COLOR
 import com.github.ljarka.picfort.core.ui.avatar.avatarColor
 import com.github.ljarka.picfort.core.ui.avatar.initials
 import dagger.hilt.android.qualifiers.ApplicationContext
-import java.io.ByteArrayOutputStream
 import javax.inject.Inject
 import javax.inject.Singleton
-import kotlin.math.max
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.withContext
 
 @Singleton
 class WallRepository @Inject constructor(
@@ -43,57 +35,8 @@ class WallRepository @Inject constructor(
 
     suspend fun togglePin(id: Int): WallPost = api.togglePin(id)
 
-    private suspend fun compress(uri: Uri): ByteArray = withContext(Dispatchers.IO) {
-        val resolver = context.contentResolver
-        val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
-        resolver.openInputStream(uri)?.use { BitmapFactory.decodeStream(it, null, bounds) }
-        val longest = max(bounds.outWidth, bounds.outHeight)
-        if (longest <= 0) throw PicfortServerException.Other("Couldn't read the photo")
-        var sample = 1
-        while (longest / (sample * 2) >= MAX_EDGE) sample *= 2
-        val decoded = resolver.openInputStream(uri)?.use {
-            BitmapFactory.decodeStream(it, null, BitmapFactory.Options().apply { inSampleSize = sample })
-        } ?: throw PicfortServerException.Other("Couldn't read the photo")
-        val orientation = runCatching {
-            resolver.openInputStream(uri)?.use {
-                ExifInterface(it).getAttributeInt(ExifInterface.TAG_ORIENTATION, ExifInterface.ORIENTATION_NORMAL)
-            }
-        }.getOrNull() ?: ExifInterface.ORIENTATION_NORMAL
-        val upright = scaleAndRotate(decoded, orientation)
-        ByteArrayOutputStream().use { out ->
-            upright.compress(Bitmap.CompressFormat.JPEG, JPEG_QUALITY, out)
-            out.toByteArray()
-        }
-    }
-
-    private fun scaleAndRotate(bitmap: Bitmap, orientation: Int): Bitmap {
-        val scale = MAX_EDGE.toFloat() / max(bitmap.width, bitmap.height)
-        val matrix = Matrix()
-        if (scale < 1f) matrix.postScale(scale, scale)
-        when (orientation) {
-            ExifInterface.ORIENTATION_ROTATE_90 -> matrix.postRotate(90f)
-
-            ExifInterface.ORIENTATION_ROTATE_180 -> matrix.postRotate(180f)
-
-            ExifInterface.ORIENTATION_ROTATE_270 -> matrix.postRotate(270f)
-
-            ExifInterface.ORIENTATION_FLIP_HORIZONTAL -> matrix.postScale(-1f, 1f)
-
-            ExifInterface.ORIENTATION_FLIP_VERTICAL -> matrix.postScale(1f, -1f)
-
-            ExifInterface.ORIENTATION_TRANSPOSE -> {
-                matrix.postRotate(90f)
-                matrix.postScale(-1f, 1f)
-            }
-
-            ExifInterface.ORIENTATION_TRANSVERSE -> {
-                matrix.postRotate(270f)
-                matrix.postScale(-1f, 1f)
-            }
-        }
-        if (matrix.isIdentity) return bitmap
-        return Bitmap.createBitmap(bitmap, 0, 0, bitmap.width, bitmap.height, matrix, true)
-    }
+    private suspend fun compress(uri: Uri): ByteArray =
+        compressImageUri(context, uri, maxEdge = MAX_EDGE, jpegQuality = JPEG_QUALITY)
 
     private companion object {
         const val MAX_EDGE = 1920

@@ -1,5 +1,6 @@
 package com.github.ljarka.picfort.ui.shopping
 
+import com.github.ljarka.picfort.core.model.Receipt
 import com.github.ljarka.picfort.core.model.ShoppingItem
 import com.github.ljarka.picfort.core.model.ShoppingList
 import com.github.ljarka.picfort.core.network.PicfortServerException
@@ -128,6 +129,53 @@ private class FakeBackend : ShoppingBackend {
         write("delete $itemId")
         bump(listId) { l -> l.copy(items = l.items.filter { it.id != itemId }) }
     }
+
+    val receipts = mutableMapOf<Long, Receipt>()
+
+    override suspend fun receipts(listId: Long?, month: String?): List<Receipt> {
+        read()
+        return receipts.values.filter { listId == null || it.listId == listId }
+    }
+
+    override suspend fun uploadReceipt(photo: ByteArray, date: String, listId: Long?, payerId: String?): Receipt {
+        write("uploadReceipt")
+        return Receipt(
+            id = nextId++,
+            listId = listId,
+            date = date,
+            payerId = payerId ?: "me",
+            createdBy = "me",
+        ).also { receipts[it.id] = it }
+    }
+
+    override suspend fun updateReceipt(
+        id: Long,
+        shop: String?,
+        date: String?,
+        totalMinor: Long?,
+        payerId: String?,
+        listId: Long?,
+        clearShop: Boolean,
+        clearList: Boolean,
+    ): Receipt {
+        write("updateReceipt $id")
+        val existing = receipts[id] ?: throw PicfortServerException.Gone("gone")
+        return existing.copy(
+            shop = if (clearShop) null else shop ?: existing.shop,
+            date = date ?: existing.date,
+            totalMinor = totalMinor ?: existing.totalMinor,
+            payerId = payerId ?: existing.payerId,
+            listId = if (clearList) null else listId ?: existing.listId,
+            status = if ((totalMinor ?: existing.totalMinor) != null) "confirmed" else "manual",
+        ).also { receipts[id] = it }
+    }
+
+    override suspend fun deleteReceipt(id: Long) {
+        write("deleteReceipt $id")
+        receipts.remove(id)
+    }
+
+    override suspend fun downloadReceiptPhoto(photoUrl: String): ByteArray = ByteArray(0)
 }
 
 private class MemoryCopy : OfflineCopy {

@@ -1,90 +1,85 @@
-# T-024 — Receipts: read shop, date and total with Gemini (server)
+# T-024 — Receipts: read shop, date and total on-device with Gemini Nano (Android)
 
-**Status:** ready  
-**Component:** ImageFrameServer  
-**Depends on:** T-020 (receipts API), [ADR 0009](../decisions/0009-receipts-gemini.md)
+**Status:** done  
+**Component:** Android app (`:feature:shopping`)  
+**Depends on:** T-021 (receipts sheet & upload), [ADR 0009](../decisions/0009-receipts-gemini.md)
 
 ## Summary
 
-When `GEMINI_API_KEY` is set, the server asks Gemini for the shop, the purchase date and the
-total of each uploaded receipt and fills them in as a suggestion for the user to confirm.
-Without the key, nothing changes from T-020.
+When the phone supports **Gemini Nano** via **Android AICore** (ML Kit GenAI Prompt API),
+the Android app reads the shop, purchase date and total from the receipt photo locally on
+the device and pre-fills them in the receipt sheet for the user to confirm. If the phone
+does not support on-device Gemini Nano, the feature is simply not supported and the receipt
+sheet works in manual mode without any AI UI or error.
 
-## Configuration
+## Device capability & privacy
 
-| Variable | Meaning |
-|---|---|
-| `GEMINI_API_KEY` | Empty (default) = receipts are never sent anywhere. |
-| `GEMINI_MODEL` | Model id. Required when the key is set; if it is missing the server logs an error at start and keeps reading off. `example.env` carries the free-tier vision model current at implementation time (check Google's model list then; don't copy a name from this task). |
+- Uses `com.google.mlkit:genai-prompt` (ML Kit GenAI Prompt API) with `ModelPreference.FULL`
+  and multimodal input (`ImagePart` + `TextPart`), plus structured output (`@Generable` /
+  JSON schema) if supported by the library version.
+- **No cloud fallback:** Receipts are never sent to Google's cloud API or any external server.
+- Before showing AI UI or starting inference, check feature/model availability via ML Kit
+  GenAI (`checkFeatureStatus`).
+  - If `UNAVAILABLE` / unsupported on this device: do not show "Read with AI" / "Read again",
+    do not show a "not supported" banner, and keep the receipt sheet purely manual.
+  - If `DOWNLOADABLE`: optionally trigger/await model download only when the user taps
+    "Read from photo" (or check if already `AVAILABLE` for automatic reading).
 
-`docker/example.env` gets both with a privacy note: "Optional. With a key, receipt photos are
-sent to Google Gemini to read the shop, date and total. On the free tier Google may use them
-to improve its products. Leave empty to type totals by hand." `GET /status` reports
-`receipts_ai: true` when both are set.
+## Reading & validation
 
-## Reading
+- Behind a `ReceiptReader` interface in `:feature:shopping` so unit tests and Paparazzi
+  screenshots run with a fake reader without AICore.
+- Image input: upright bitmap downscaled to longest edge 1600 px (keeps small fiscal print
+  legible without exceeding on-device context/memory limits).
+- Prompt asks for:
+  - `shop`: everyday store name (e.g. `"Biedronka"`, not `"Jeronimo Martins Polska S.A."`)
+  - `date`: `YYYY-MM-DD`
+  - `total`: amount paid as a decimal string (on Polish fiscal receipts, the `SUMA PLN` line)
+  - Any field may be `null` when not legible; nothing may be guessed.
+- Validation (model output is never trusted):
+  - `total`: spaces removed, `,` accepted as decimal separator, parsed with `BigDecimal` to
+    minor units; invalid or outside `1..100_000_000` → `null`.
+  - `date`: must parse as a real date between 1 year before today and 1 day after today;
+    otherwise ignored (keeps default/user date).
+  - `shop`: trimmed, max 100 chars.
 
-- `receipts.py` holds the prompt, the response schema, the HTTP call and the parsing of the
-  answer, behind `read_receipt(jpeg_bytes) -> ReceiptReading | ReadError`. The store and the
-  routes never talk to Gemini directly, so tests pass a fake reader.
-- The call: HTTPS with `requests` to the Generative Language API's `generateContent` for
-  `GEMINI_MODEL`, the image inline, JSON output constrained by a response schema, the key in
-  a request header (not in the URL). Timeout 30 s. Check the exact endpoint, header and
-  schema syntax in the current Gemini API docs before coding. Never log the key, the request
-  URL with a key, or the photo.
-- Image sent: decoded with Pillow, turned upright (`ImageOps.exif_transpose`), longest edge
-  1600 px, JPEG quality 85, no EXIF. The stored original is not changed.
-- Asked for: `shop` (the store's everyday name, e.g. "Biedronka", not the legal entity
-  "Jeronimo Martins Polska S.A."), `date` (`YYYY-MM-DD`), `total` (the amount paid as a string
-  with a dot, e.g. `"45.20"`; on Polish fiscal receipts the line `SUMA PLN`). Each may be
-  null when not legible. The prompt says the photo is usually a Polish fiscal receipt and
-  that nothing may be guessed.
-- Validation of the answer (the model is not trusted):
-  - `total`: spaces removed, a comma accepted as the decimal separator, then `Decimal` →
-    minor units; anything else, or a value outside 1..100 000 000, counts as null.
-  - `date` must parse and lie between one year before the upload and one day after it, else
-    the upload date stays.
-  - `shop` trimmed, at most 100 chars.
-- Result: a total was read → `status = "read"`, fields filled. No total → `status = "manual"`,
-  `read_error = "no_total"`, shop and date kept if valid.
-- `read_error` values (also used by the app): `off` (no key), `no_total`, `rate_limited`
-  (`429`), `failed` (network error, timeout, other HTTP errors, unparsable answer).
+## Flow in the receipt sheet (T-021)
 
-## Flow
-
-- `POST /receipts` with reading on: the receipt is created `pending` and queued; the response
-  returns at once. One worker thread reads receipts one at a time.
-- The worker writes its result only if the receipt is still `pending` (a user may have typed
-  the total meanwhile, or deleted the receipt).
-- On start, receipts left `pending` by a restart are queued again.
-- `POST /receipts/<id>/read`: re-queues a `manual` or `read` receipt as `pending` ("Read
-  again"); `409` when reading is off or the receipt is `confirmed` or already `pending`.
-- No automatic retries: a `429` or failure becomes `manual` right away and the user decides.
+- When a receipt is added (camera or picker) on a supported device with Gemini Nano ready:
+  - The receipt sheet opens immediately with all fields editable and shows a subtle inline
+    indicator `"Reading receipt on device…"` while inference runs in a coroutine.
+  - When inference finishes, only fields the user has **not** touched are filled in.
+  - Hint after read: `"Read on device. Check the total and save."` (or `"Couldn't find the
+    total. Type it."` if `total` is `null`).
+- **Read again** button in the receipt sheet: shown **only** when the device supports
+  Gemini Nano; re-runs `ReceiptReader` on the local photo (or downloaded receipt photo) and
+  updates untouched fields.
+- If the user closes the sheet without saving, nothing is lost: the photo is already on the
+  Picfort server (`manual`), and tapping **Save** sends `PATCH /receipts/<id>` (`confirmed`).
 
 ## Tests
 
-`tests/test_receipt_reading.py` with a fake reader and recorded Gemini answers as fixtures
-(success, null total, garbage JSON, HTTP 429, timeout): status transitions; total parsing
-(`"45.20"`, `"1 284,50"`, `"45.2 zł"` → null, negative, huge); date window; user edit
-during `pending` is not overwritten; pending receipts re-queued at start; key never appears
-in logs (`assertLogs`); the request carries only the image and the prompt. No test calls
-Google.
+- Unit tests in `:feature:shopping` with a fake `ReceiptReader`:
+  - Total parsing (`"45.20"`, `"1 284,50"`, `"45.2 zł"` → null, negative, huge) and
+    `BigDecimal` conversion.
+  - Date window validation and `shop` trimming/length cap.
+  - Untouched-field preservation when user edits during inference.
+  - Unsupported device (`Available = false`) hides AI indicator and "Read again" button.
+- Paparazzi snapshots (light + dark): receipt sheet in `reading` state and `read` state.
 
 ## Acceptance criteria
 
-- [ ] Without `GEMINI_API_KEY`: no outbound request, new receipts are `manual`/`off`,
-      `receipts_ai` is false.
-- [ ] With the key, on the owner's server: five real Polish receipts (supermarket, petrol
-      station, pharmacy, a long one, a crumpled one) uploaded with `curl` leave `pending`
-      within 15 s; note in the task how many totals, dates and shops were right.
-- [ ] A wrong key or no internet → `manual` with `read_error: "failed"`; "read again" works
-      after fixing it.
-- [ ] The user's own values are never overwritten by a late reading.
-- [ ] Tests pass in CI; README (settings, a "Receipts and Google Gemini" privacy paragraph),
-      `example.env`, and the one-line exception in STATUS.md's vision and ARCHITECTURE.md.
+- [ ] On a phone without Gemini Nano / AICore: no AI UI, no crash, no error; manual receipt
+      entry works identically to T-021.
+- [ ] On a supported phone (e.g. Pixel with AICore): taking/picking a receipt photo fills
+      `shop`, `date`, `total` locally without internet/cloud AI; user-edited fields are not
+      overwritten; "Read again" works.
+- [ ] Zero outbound requests to external AI services; no `GEMINI_API_KEY` anywhere.
+- [ ] Unit tests + Paparazzi + `./scripts/check-modular-boundaries.sh` + `./gradlew ktlintCheck`
+      green.
 
 ## Out of scope
 
 - Line items, categories, VAT, payment method.
-- Other providers, a local model, on-device OCR (the reader interface leaves room for them).
-- Re-reading old receipts in bulk.
+- Cloud Gemini API fallback (explicitly rejected in ADR 0009).
+- Bulk re-reading of old receipts.
