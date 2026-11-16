@@ -1,6 +1,6 @@
 # T-031 — Family profiles: Picfort server
 
-**Status:** in-progress (server code and tests done; released with the next server version)  
+**Status:** done  
 **Component:** ImageFrameServer  
 **Depends on:** T-018 (`store.py`, `register_auth` prefixes), [ADR 0008](../decisions/0008-family-hub-storage.md)
 

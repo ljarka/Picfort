@@ -211,8 +211,8 @@ Decided by the owner (2026-11-11), as recommended:
 | [0009](decisions/0009-receipts-gemini.md) | Receipts read on-device with Gemini Nano when supported by the phone |
 | [0010](decisions/0010-family-members-birthdays-recurring-events.md) | Manual family members, birth dates & recurring events with additive migrations |
 | [0011](decisions/0011-modular-architecture.md) | Multi-module architecture optimized for AI Agent pair programming |
-| [0015](decisions/0015-event-reminders-on-the-phone.md) | Event reminders planned and stored on each phone (AlarmManager + 6-hourly re-plan) |
 | [0012](decisions/0012-serial-ksp.md) | One KSP task at a time |
 | [0013](decisions/0013-ktlint.md) | ktlint for Kotlin code style, checked in CI |
 | [0014](decisions/0014-browser-frame.md) | The frame in a web browser (`/frame`), only behind the server key |
+| [0015](decisions/0015-event-reminders-on-the-phone.md) | Event reminders planned and stored on each phone (AlarmManager + 6-hourly re-plan) |
 | [0016](decisions/0016-schema-migrations.md) | Data survives schema changes: a migration for every bump |

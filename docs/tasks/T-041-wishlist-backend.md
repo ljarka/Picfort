@@ -31,7 +31,7 @@ CREATE TABLE wishlist_items (
 CREATE INDEX wishlist_event ON wishlist_items(event_id);
 ```
 
-Migration: additive `ALTER TABLE` / `CREATE TABLE` with `.v1.bak` backup per ADR 0010.
+Migration: additive `ALTER TABLE` / `CREATE TABLE` with `MIGRATIONS` per [ADR 0016](../decisions/0016-schema-migrations.md).
 
 ## API
 
