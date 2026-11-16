@@ -1,6 +1,6 @@
 # T-039 — Event & birthday reminders (Android notifications)
 
-**Status:** in-progress (code done in 707a7e6; emulator checked, a real phone in Doze left)  
+**Status:** done (707a7e6)  
 **Component:** Android app (`:feature:events`, `:app`)  
 **Decision:** [ADR 0015](../decisions/0015-event-reminders-on-the-phone.md)  
 **Depends on:** T-023 (Events UI), T-037 (Birthdays & repeating events)
