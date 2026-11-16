@@ -1,6 +1,6 @@
 # T-030 — Children from Immich people: face photo and the child's photos
 
-**Status:** ready (first step: check the People API on the owner's server; mockup of the picker)  
+**Status:** closed (dropped by owner 2026-11-16: no separate picker needed; covered by family member faces in T-065/T-073)  
 **Component:** Android app  
 **Depends on:** T-029 (School tab, child sheet), T-028 (photo and per-parent person links)
 
