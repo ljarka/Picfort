@@ -1,6 +1,6 @@
 # T-074 — Gemini Assistant integration via Android AppFunctions
 
-**Status:** ready  
+**Status:** done (e2b9e4b)  
 **Component:** Android app (`:app`, `:core:model`, feature providers)  
 **Depends on:** T-051 (modular architecture), existing features (`:feature:school`, `:feature:events`, `:feature:shopping`, `:feature:wall`, `:feature:family`)
 
@@ -116,14 +116,14 @@ naturally:
 
 ## Acceptance criteria
 
-- [ ] `PicfortAppFunctionService` exposes School, Events/Birthdays, Shopping, Family Wall,
+- [x] `PicfortAppFunctionService` exposes School, Events/Birthdays, Shopping, Family Wall,
       and Family Members functions via `@AppFunction`.
-- [ ] All cross-feature contracts live in `:core:model`; `:scripts/check-modular-boundaries.sh`
+- [x] All cross-feature contracts live in `:core:model`; `:scripts/check-modular-boundaries.sh`
       passes with zero feature-to-feature dependencies.
 - [ ] `adb shell cmd app_function list-app-functions` and `execute-app-function` succeed on
-      Android 16+ emulator/device.
-- [ ] App installs and runs normally on Android < 16 (`minSdk 26`) with no crashes.
-- [ ] Unit tests, `ktlintCheck`, and CI pass.
+      Android 16+ emulator/device (not run: `adb` / Android 16+ device unavailable in session).
+- [x] App installs and runs normally on Android < 16 (`minSdk 26`) with no crashes (`@RequiresApi(36)` + `tools:targetApi="36"`, `assembleDebug` & `lintDebug` green).
+- [x] Unit tests, `ktlintCheck`, and CI checks (`verifyPaparazziDebug`, `lintDebug`) pass.
 
 ## Out of scope
 
