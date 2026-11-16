@@ -2,6 +2,7 @@
 
 from decimal import Decimal, InvalidOperation
 from html.parser import HTMLParser
+import json
 import re
 import urllib.error
 import urllib.parse
@@ -61,11 +62,20 @@ class _OgParser(HTMLParser):
         self.meta: dict[str, str] = {}
         self._in_title = False
         self._title_parts: list[str] = []
+        self._in_ld_json = False
+        self._ld_parts: list[str] = []
+        self.json_ld_blocks: list[str] = []
 
     def handle_starttag(self, tag, attrs):
         tag = tag.lower()
         if tag == "title":
             self._in_title = True
+            return
+        if tag == "script":
+            attr_map = {k.lower(): v for k, v in attrs if k and v is not None}
+            if "ld+json" in (attr_map.get("type") or "").lower():
+                self._in_ld_json = True
+                self._ld_parts = []
             return
         if tag != "meta":
             return
@@ -76,12 +86,20 @@ class _OgParser(HTMLParser):
             self.meta[key] = content
 
     def handle_endtag(self, tag):
-        if tag.lower() == "title":
+        tag = tag.lower()
+        if tag == "title":
             self._in_title = False
+        elif tag == "script" and self._in_ld_json:
+            self._in_ld_json = False
+            raw = "".join(self._ld_parts).strip()
+            if raw:
+                self.json_ld_blocks.append(raw)
 
     def handle_data(self, data):
         if self._in_title:
             self._title_parts.append(data)
+        elif self._in_ld_json:
+            self._ld_parts.append(data)
 
     @property
     def title_tag(self) -> str | None:
@@ -89,16 +107,63 @@ class _OgParser(HTMLParser):
         return text or None
 
 
+def _extract_product_json_ld(blocks: list[str]) -> dict:
+    """Extract name, image, price from schema.org/Product JSON-LD blocks (common on Allegro/shops)."""
+    def walk(node):
+        if isinstance(node, list):
+            for item in node:
+                res = walk(item)
+                if res:
+                    return res
+            return None
+        if not isinstance(node, dict):
+            return None
+        node_type = node.get("@type")
+        is_product = node_type == "Product" or (isinstance(node_type, list) and "Product" in node_type)
+        if is_product:
+            return node
+        if "@graph" in node:
+            return walk(node["@graph"])
+        return None
+
+    for raw in blocks:
+        try:
+            parsed = json.loads(raw)
+        except (ValueError, TypeError):
+            continue
+        product = walk(parsed)
+        if product:
+            image = product.get("image")
+            if isinstance(image, list):
+                image = image[0] if image else None
+            elif isinstance(image, dict):
+                image = image.get("url")
+            offers = product.get("offers")
+            if isinstance(offers, list):
+                offers = offers[0] if offers else None
+            price = None
+            if isinstance(offers, dict):
+                price = offers.get("price") or offers.get("lowPrice")
+            return {
+                "title": product.get("name") if isinstance(product.get("name"), str) else None,
+                "image": image if isinstance(image, str) else None,
+                "price": str(price) if price is not None else None,
+            }
+    return {}
+
+
 def parse_link_preview(html_text: str, base_url: str) -> dict:
     parser = _OgParser()
     parser.feed(html_text)
     parser.close()
 
-    title = parser.meta.get("og:title") or parser.title_tag
+    ld = _extract_product_json_ld(parser.json_ld_blocks)
+
+    title = parser.meta.get("og:title") or ld.get("title") or parser.title_tag
     if title:
         title = " ".join(title.split())[:200]
 
-    raw_image = parser.meta.get("og:image") or parser.meta.get("og:image:url")
+    raw_image = parser.meta.get("og:image") or parser.meta.get("og:image:url") or ld.get("image")
     image_url = urllib.parse.urljoin(base_url, raw_image) if raw_image else None
     if image_url:
         parsed_img = urllib.parse.urlparse(image_url)
@@ -108,6 +173,7 @@ def parse_link_preview(html_text: str, base_url: str) -> dict:
     raw_price = (
         parser.meta.get("og:price:amount")
         or parser.meta.get("product:price:amount")
+        or ld.get("price")
         or parser.meta.get("twitter:data1")
     )
     price_minor = _parse_price_minor(raw_price)

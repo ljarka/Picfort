@@ -217,6 +217,9 @@ class MainActivity : ComponentActivity() {
                                                     onSpendingClick = {
                                                         navController.navigate(Screen.Spending)
                                                     },
+                                                    onOpenEvent = { id ->
+                                                        navController.navigate(Screen.EventDetail(id))
+                                                    },
                                                     onSettingsClick = openSettings,
                                                 )
                                             }

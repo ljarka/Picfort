@@ -29,6 +29,8 @@ import com.github.ljarka.picfort.core.model.EventsSegment
 import com.github.ljarka.picfort.core.model.FamilyEvent
 import com.github.ljarka.picfort.core.model.FamilyMember
 import com.github.ljarka.picfort.core.model.FamilyMemberProvider
+import com.github.ljarka.picfort.core.model.WishlistItem
+import com.github.ljarka.picfort.core.model.WishlistProvider
 import com.github.ljarka.picfort.core.model.pollEvery
 import com.github.ljarka.picfort.core.network.PicfortServerClient
 import com.github.ljarka.picfort.core.network.PicfortServerException
@@ -172,6 +174,7 @@ class EventDetailViewModel @Inject constructor(
     private val family: FamilyMemberProvider,
     private val dayPhotos: DayPhotosProvider,
     private val reminders: ReminderStore,
+    private val wishlist: WishlistProvider,
     savedState: SavedStateHandle,
 ) : ViewModel() {
 
@@ -180,6 +183,7 @@ class EventDetailViewModel @Inject constructor(
         EventDetailUi(
             event = repository.cachedEvent(eventId),
             today = repository.today.value,
+            myId = family.myId,
             isLoading = repository.cachedEvent(eventId) == null,
         ),
     )
@@ -201,7 +205,8 @@ class EventDetailViewModel @Inject constructor(
                 repository.past,
                 repository.today,
                 family.allMembers,
-            ) { _, _, today, users ->
+                wishlist.items,
+            ) { _, _, today, users, allWishlist ->
                 // Hidden members still have a name; only ids no longer in Immich are "Former member".
                 knownUsers = users.associate { it.id to it.name }
                 val ev = repository.cachedEvent(eventId) ?: _state.value.event
@@ -212,6 +217,8 @@ class EventDetailViewModel @Inject constructor(
                     canDelete = canDelete(ev),
                     memberNames = knownUsers,
                     members = users,
+                    myId = family.myId,
+                    wishlistItems = allWishlist.filter { it.eventId == eventId },
                 )
             }.collect { _state.value = it }
         }
@@ -248,7 +255,25 @@ class EventDetailViewModel @Inject constructor(
 
     fun setReminder(choice: ReminderChoice) = reminders.setChoice(eventId, choice)
 
+    fun toggleWishlistBought(item: WishlistItem) {
+        viewModelScope.launch {
+            runCatching { wishlist.setBought(item.id, !item.bought) }
+                .onFailure { e -> _state.update { it.copy(message = e.message) } }
+        }
+    }
+
+    fun toggleWishlistReserve(item: WishlistItem) {
+        viewModelScope.launch {
+            val next = if (item.reservedBy == null) family.myId else null
+            runCatching { wishlist.setReservedBy(item.id, next) }
+                .onFailure { e -> _state.update { it.copy(message = e.message) } }
+        }
+    }
+
     fun load() {
+        viewModelScope.launch {
+            wishlist.refresh()
+        }
         viewModelScope.launch {
             family.refresh()
             _state.update { it.copy(isLoading = it.event == null, loadError = null) }
@@ -557,6 +582,8 @@ fun EventDetailScreen(
             viewModel.setReminder(choice)
             if (choice != ReminderChoice.Off) askNotifications()
         },
+        onToggleWishlistBought = viewModel::toggleWishlistBought,
+        onToggleWishlistReserve = viewModel::toggleWishlistReserve,
     )
 }
 

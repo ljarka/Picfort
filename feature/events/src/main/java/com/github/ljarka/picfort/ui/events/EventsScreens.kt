@@ -89,6 +89,7 @@ import com.github.ljarka.picfort.core.model.EventRepeat
 import com.github.ljarka.picfort.core.model.EventsSegment
 import com.github.ljarka.picfort.core.model.FamilyEvent
 import com.github.ljarka.picfort.core.model.FamilyMember
+import com.github.ljarka.picfort.core.model.WishlistItem
 import com.github.ljarka.picfort.core.ui.R
 import com.github.ljarka.picfort.core.ui.avatar.MemberCarousel
 import com.github.ljarka.picfort.core.ui.component.ServerRequiredContent
@@ -137,6 +138,8 @@ data class EventDetailUi(
     val birthdayPhotos: BirthdayPhotosUi? = null,
     /** This phone's reminder (T-039); null hides the row (an event that's over). */
     val reminder: EventReminderUi? = null,
+    val myId: String = "",
+    val wishlistItems: List<WishlistItem> = emptyList(),
 )
 
 data class EventFormUi(
@@ -553,6 +556,8 @@ fun EventDetailContent(
     onOpenPhoto: (DayPhoto, Int) -> Unit = { _, _ -> },
     onOpenDay: (LocalDate) -> Unit = {},
     onReminderChange: (ReminderChoice) -> Unit = {},
+    onToggleWishlistBought: (WishlistItem) -> Unit = {},
+    onToggleWishlistReserve: (WishlistItem) -> Unit = {},
 ) {
     val snackbar = remember { SnackbarHostState() }
     LaunchedEffect(state.message) {
@@ -631,6 +636,19 @@ fun EventDetailContent(
                     name = event.birthdayOf?.let(state.memberNames::get) ?: event.title,
                     onOpenPhoto = onOpenPhoto,
                     onOpenDay = onOpenDay,
+                    wishlistSlot = if (state.wishlistItems.isNotEmpty()) {
+                        {
+                            EventWishlistSection(
+                                items = state.wishlistItems,
+                                memberNames = state.memberNames,
+                                myId = state.myId,
+                                onToggleBought = onToggleWishlistBought,
+                                onToggleReserve = onToggleWishlistReserve,
+                            )
+                        }
+                    } else {
+                        null
+                    },
                     modifier = Modifier.fillMaxSize().padding(padding),
                 ) {
                     Column(Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 8.dp)) {

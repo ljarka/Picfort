@@ -7,6 +7,7 @@ Family events vertical slice: upcoming and past events, details, form, recurrenc
 | File | Purpose |
 |---|---|
 | `ui/events/EventsScreens.kt` | UI: `EventsListContent`, `EventDetailContent` |
+| `ui/events/EventWishlistSection.kt` | "Gift ideas & Wishlist" horizontal carousel on event detail (T-042) |
 | `ui/events/EventFormContent.kt` | UI: `EventFormContent` + form-only pickers (`PickerField`, `RepeatField`) |
 | `ui/events/EventsViewModels.kt` | ViewModels: `EventsListViewModel`, `EventDetailViewModel`, `EventFormViewModel` |
 | `ui/events/EventsRepository.kt` | Repository: polling, pagination of past events, midnight rollover |

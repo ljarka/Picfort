@@ -120,6 +120,7 @@ internal fun EventDetailList(
     modifier: Modifier = Modifier,
     /** A year's title: that day in the Photos timeline (T-056). */
     onOpenDay: (LocalDate) -> Unit = {},
+    wishlistSlot: (@Composable () -> Unit)? = null,
     header: @Composable () -> Unit,
 ) {
     BoxWithConstraints(modifier) {
@@ -130,6 +131,9 @@ internal fun EventDetailList(
         val rows = remember(years, widthPx, spacingPx) { layoutYears(years, widthPx, spacingPx) }
         LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(bottom = 24.dp)) {
             item(key = "detail") { header() }
+            if (wishlistSlot != null) {
+                item(key = "wishlist") { wishlistSlot() }
+            }
             if (photos != null) {
                 item(key = "photos-title") {
                     Text(

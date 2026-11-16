@@ -1,13 +1,25 @@
 package com.github.ljarka.picfort.ui.shopping
 
+import com.github.ljarka.picfort.core.model.FamilyEvent
 import com.github.ljarka.picfort.core.model.FamilyMember
 import com.github.ljarka.picfort.core.model.Receipt
 import com.github.ljarka.picfort.core.model.ShoppingList
+import com.github.ljarka.picfort.core.model.WishlistItem
+import com.github.ljarka.picfort.core.model.WishlistPreview
 
-/** The Shopping tab: the family's lists as cards. */
+/** The Shopping tab: the family's lists as cards and the wishlist carousel. */
 data class ShoppingListsUi(
     val configured: Boolean = true,
     val lists: List<ShoppingList> = emptyList(),
+    val wishlist: List<WishlistItem> = emptyList(),
+    val upcomingEvents: List<FamilyEvent> = emptyList(),
+    val members: List<FamilyMember> = emptyList(),
+    val myId: String = "",
+    val wishlistSheetOpen: Boolean = false,
+    val editingWishlistItem: WishlistItem? = null,
+    val wishlistPreview: WishlistPreview? = null,
+    val wishlistPreviewLoading: Boolean = false,
+    val savingWishlist: Boolean = false,
     val isLoading: Boolean = false,
     /** Set when nothing could be loaded and there is no offline copy. */
     val loadError: String? = null,

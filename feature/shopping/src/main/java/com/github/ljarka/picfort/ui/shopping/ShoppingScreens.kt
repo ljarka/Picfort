@@ -24,6 +24,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.staggeredgrid.LazyVerticalStaggeredGrid
 import androidx.compose.foundation.lazy.staggeredgrid.StaggeredGridCells
+import androidx.compose.foundation.lazy.staggeredgrid.StaggeredGridItemSpan
 import androidx.compose.foundation.lazy.staggeredgrid.items
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
@@ -91,6 +92,7 @@ import com.github.ljarka.picfort.core.model.FamilyMember
 import com.github.ljarka.picfort.core.model.Receipt
 import com.github.ljarka.picfort.core.model.ShoppingItem
 import com.github.ljarka.picfort.core.model.ShoppingList
+import com.github.ljarka.picfort.core.model.WishlistItem
 import com.github.ljarka.picfort.core.ui.R as CoreUiR
 import com.github.ljarka.picfort.core.ui.avatar.MemberAvatar
 import com.github.ljarka.picfort.core.ui.component.ServerRequiredContent
@@ -112,12 +114,22 @@ fun ShoppingListsContent(
     onCreate: (String) -> Unit = {},
     onArchivedClick: () -> Unit = {},
     onSpendingClick: () -> Unit = {},
+    onOpenEvent: (Long) -> Unit = {},
     onBack: () -> Unit = {},
     onSettingsClick: () -> Unit = {},
     onRefresh: () -> Unit = {},
     onSetUpServer: () -> Unit = {},
     onMessageShown: () -> Unit = {},
+    onAddWishlistClick: () -> Unit = {},
+    onEditWishlistItem: (WishlistItem) -> Unit = {},
+    onCloseWishlistSheet: () -> Unit = {},
+    onPreviewWishlistUrl: (String) -> Unit = {},
+    onSaveWishlistItem: (String, String, String?, Long?, Long?, String?) -> Unit = { _, _, _, _, _, _ -> },
+    onToggleWishlistBought: (WishlistItem) -> Unit = {},
+    onToggleWishlistReserve: (WishlistItem) -> Unit = {},
+    onDeleteWishlistItem: (WishlistItem) -> Unit = {},
 ) {
+    val context = LocalContext.current
     val snackbar = remember { SnackbarHostState() }
     LaunchedEffect(state.message) {
         state.message?.let {
@@ -192,7 +204,8 @@ fun ShoppingListsContent(
                 else -> {
                     state.offlineSince?.let { OfflineBanner(it) }
                     PullToRefreshBox(isRefreshing = false, onRefresh = onRefresh, modifier = Modifier.weight(1f)) {
-                        if (state.lists.isEmpty()) {
+                        val showWishlist = !archived && (state.wishlist.isNotEmpty() || state.offlineSince == null)
+                        if (state.lists.isEmpty() && !showWishlist) {
                             Centered {
                                 Text(
                                     if (archived) "No archived lists" else "No shopping lists yet",
@@ -201,6 +214,12 @@ fun ShoppingListsContent(
                                 )
                             }
                         } else {
+                            val eventsById = remember(state.upcomingEvents) {
+                                state.upcomingEvents.associateBy { it.id }
+                            }
+                            val membersById = remember(state.members) {
+                                state.members.associateBy { it.id }
+                            }
                             LazyVerticalStaggeredGrid(
                                 columns = StaggeredGridCells.Fixed(2),
                                 modifier = Modifier.fillMaxSize(),
@@ -208,13 +227,65 @@ fun ShoppingListsContent(
                                 verticalItemSpacing = 8.dp,
                                 horizontalArrangement = Arrangement.spacedBy(8.dp),
                             ) {
-                                items(state.lists, key = { it.id }) { list -> ListCard(list) { onOpen(list) } }
+                                if (showWishlist) {
+                                    item(key = "wishlist", span = StaggeredGridItemSpan.FullLine) {
+                                        WishlistCarouselSection(
+                                            items = state.wishlist,
+                                            eventsById = eventsById,
+                                            membersById = membersById,
+                                            myId = state.myId,
+                                            editable = state.offlineSince == null,
+                                            onAddClick = onAddWishlistClick,
+                                            onOpenUrl = { url -> openExternalUrl(context, url) },
+                                            onEventClick = onOpenEvent,
+                                            onToggleBought = onToggleWishlistBought,
+                                            onToggleReserve = onToggleWishlistReserve,
+                                            onEdit = onEditWishlistItem,
+                                            onDelete = onDeleteWishlistItem,
+                                            modifier = Modifier.padding(bottom = 8.dp),
+                                        )
+                                    }
+                                    if (state.lists.isNotEmpty()) {
+                                        item(key = "lists-header", span = StaggeredGridItemSpan.FullLine) {
+                                            Text(
+                                                text = "Shopping lists",
+                                                style = MaterialTheme.typography.titleMedium,
+                                                modifier = Modifier.padding(horizontal = 4.dp, vertical = 2.dp),
+                                            )
+                                        }
+                                    }
+                                }
+                                if (state.lists.isEmpty()) {
+                                    item(key = "empty-lists", span = StaggeredGridItemSpan.FullLine) {
+                                        Text(
+                                            if (archived) "No archived lists" else "No shopping lists yet",
+                                            style = MaterialTheme.typography.bodyLarge,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                            modifier = Modifier.padding(horizontal = 4.dp, vertical = 24.dp),
+                                        )
+                                    }
+                                } else {
+                                    items(state.lists, key = { it.id }) { list -> ListCard(list) { onOpen(list) } }
+                                }
                             }
                         }
                     }
                 }
             }
         }
+    }
+    if (state.wishlistSheetOpen) {
+        WishlistItemSheet(
+            editing = state.editingWishlistItem,
+            upcomingEvents = state.upcomingEvents,
+            members = state.members,
+            isPreviewLoading = state.wishlistPreviewLoading,
+            preview = state.wishlistPreview,
+            saving = state.savingWishlist,
+            onPreviewUrl = onPreviewWishlistUrl,
+            onSave = onSaveWishlistItem,
+            onDismiss = onCloseWishlistSheet,
+        )
     }
 }
 

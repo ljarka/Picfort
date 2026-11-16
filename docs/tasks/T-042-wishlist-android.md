@@ -1,6 +1,6 @@
 # T-042 — Wishlist carousel & event linking (Android)
 
-**Status:** ready  
+**Status:** done  
 **Component:** Android app  
 **Depends on:** T-019 (Shopping tab), T-023 (Events UI), T-041 (Wishlist backend API)
 

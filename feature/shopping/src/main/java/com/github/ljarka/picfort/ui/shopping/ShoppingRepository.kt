@@ -6,6 +6,7 @@ import com.github.ljarka.picfort.core.model.ReceiptAiStatusProvider
 import com.github.ljarka.picfort.core.model.ShoppingAssistantProvider
 import com.github.ljarka.picfort.core.model.ShoppingItem
 import com.github.ljarka.picfort.core.model.ShoppingList
+import com.github.ljarka.picfort.core.model.WishlistProvider
 import com.github.ljarka.picfort.core.network.AccessTokenStore
 import com.github.ljarka.picfort.core.network.AppScope
 import com.github.ljarka.picfort.core.network.FrameSettingsStore
@@ -89,6 +90,12 @@ abstract class ShoppingModule {
 
     @Binds
     abstract fun assistant(impl: ShoppingAssistantImpl): ShoppingAssistantProvider
+
+    @Binds
+    abstract fun wishlistBackend(api: WishlistApi): WishlistBackend
+
+    @Binds
+    abstract fun wishlistProvider(repo: WishlistRepository): WishlistProvider
 }
 
 /**

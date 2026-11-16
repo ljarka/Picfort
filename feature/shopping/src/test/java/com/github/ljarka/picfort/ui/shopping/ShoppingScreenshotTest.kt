@@ -4,12 +4,15 @@ import androidx.compose.runtime.Composable
 import app.cash.paparazzi.DeviceConfig
 import app.cash.paparazzi.Paparazzi
 import com.android.resources.NightMode
+import com.github.ljarka.picfort.core.model.FamilyEvent
 import com.github.ljarka.picfort.core.model.FamilyMember
 import com.github.ljarka.picfort.core.model.Receipt
 import com.github.ljarka.picfort.core.model.ShoppingItem
 import com.github.ljarka.picfort.core.model.ShoppingList
+import com.github.ljarka.picfort.core.model.WishlistItem
 import com.github.ljarka.picfort.core.ui.avatar.avatarColor
 import com.github.ljarka.picfort.core.ui.theme.PicfortTheme
+import java.time.LocalDate
 import org.junit.Rule
 import org.junit.Test
 
@@ -216,4 +219,58 @@ class ShoppingScreenshotTest {
             readHint = "Read on device. Check the total and save.",
         )
     }
+
+    @Test
+    fun wishlist_carousel() = snap {
+        ShoppingListsContent(
+            state = ShoppingListsUi(
+                lists = shoppingLists,
+                wishlist = sampleWishlist,
+                upcomingEvents = sampleEvents,
+                members = members,
+                myId = "mama",
+            ),
+        )
+    }
+
+    @Test
+    fun wishlist_carousel_dark() = snap(dark = true) {
+        ShoppingListsContent(
+            state = ShoppingListsUi(
+                lists = shoppingLists,
+                wishlist = sampleWishlist,
+                upcomingEvents = sampleEvents,
+                members = members,
+                myId = "mama",
+            ),
+        )
+    }
+
+    private val sampleEvents = listOf(
+        FamilyEvent(
+            id = 10L,
+            title = "Ola's birthday",
+            startDate = LocalDate.of(2026, 12, 1),
+            birthdayOf = "ola",
+        ),
+    )
+
+    private val sampleWishlist = listOf(
+        WishlistItem(
+            id = 1L,
+            url = "https://allegro.pl/oferta/lego",
+            title = "LEGO Technic Mobile Crane",
+            priceMinor = 34_999L,
+            eventId = 10L,
+            targetMemberId = "ola",
+            reservedBy = "tata",
+        ),
+        WishlistItem(
+            id = 2L,
+            url = "https://amazon.pl/book",
+            title = "Children's Atlas of Space",
+            priceMinor = 6_900L,
+            bought = true,
+        ),
+    )
 }

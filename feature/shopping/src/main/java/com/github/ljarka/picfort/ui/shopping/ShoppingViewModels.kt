@@ -22,10 +22,12 @@ import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.repeatOnLifecycle
 import androidx.lifecycle.viewModelScope
+import com.github.ljarka.picfort.core.model.FamilyEventsProvider
 import com.github.ljarka.picfort.core.model.FamilyMemberProvider
 import com.github.ljarka.picfort.core.model.Receipt
 import com.github.ljarka.picfort.core.model.ShoppingItem
 import com.github.ljarka.picfort.core.model.ShoppingList
+import com.github.ljarka.picfort.core.model.WishlistItem
 import com.github.ljarka.picfort.core.model.pollEvery
 import com.github.ljarka.picfort.core.network.PicfortServerClient
 import com.github.ljarka.picfort.core.network.PicfortServerException
@@ -57,20 +59,45 @@ internal fun Long.asTime(zone: ZoneId = ZoneId.systemDefault()): String =
 @HiltViewModel
 class ShoppingListsViewModel @Inject constructor(
     private val repository: ShoppingRepository,
+    private val wishlistRepository: WishlistRepository,
+    private val events: FamilyEventsProvider,
     private val family: FamilyMemberProvider,
     private val server: PicfortServerClient,
     savedState: SavedStateHandle,
 ) : ViewModel() {
     val archived: Boolean = savedState.get<Boolean>("archived") ?: false
-    private val extra = MutableStateFlow(ShoppingListsUi(isLoading = true))
-    private val _state = MutableStateFlow(ShoppingListsUi(isLoading = true))
+    private val extra = MutableStateFlow(ShoppingListsUi(isLoading = true, myId = family.myId))
+    private val _state = MutableStateFlow(ShoppingListsUi(isLoading = true, myId = family.myId))
     val state: StateFlow<ShoppingListsUi> = _state.asStateFlow()
 
     init {
         viewModelScope.launch {
-            combine(repository.lists, repository.offlineSince, extra) { _, since, ui ->
+            combine(
+                repository.lists,
+                repository.offlineSince,
+                wishlistRepository.items,
+                events.upcoming,
+                family.allMembers,
+                extra,
+            ) { values ->
+                @Suppress("UNCHECKED_CAST")
+                val since = values[1] as Long?
+
+                @Suppress("UNCHECKED_CAST")
+                val wishlist = values[2] as List<WishlistItem>
+
+                @Suppress("UNCHECKED_CAST")
+                val upcomingEvents = values[3] as List<com.github.ljarka.picfort.core.model.FamilyEvent>
+
+                @Suppress("UNCHECKED_CAST")
+                val members = values[4] as List<com.github.ljarka.picfort.core.model.FamilyMember>
+                val ui = values[5] as ShoppingListsUi
                 ui.copy(
                     lists = if (archived) repository.archived() else repository.active(),
+                    wishlist = wishlist,
+                    upcomingEvents = upcomingEvents,
+                    members = members,
+                    myId = family.myId,
                     offlineSince = since?.asTime()?.takeIf { !archived },
                 )
             }.collect { _state.value = it }
@@ -95,6 +122,10 @@ class ShoppingListsViewModel @Inject constructor(
         }
         extra.update { it.copy(configured = true) }
         viewModelScope.launch { family.refresh() }
+        if (!archived) {
+            viewModelScope.launch { events.refreshUpcoming() }
+            viewModelScope.launch { wishlistRepository.refresh() }
+        }
         val error = repository.refresh(archived)
         val nothing = (if (archived) repository.archived() else repository.active()).isEmpty()
         extra.update {
@@ -113,6 +144,116 @@ class ShoppingListsViewModel @Inject constructor(
     }
 
     fun messageShown() = extra.update { it.copy(message = null) }
+
+    fun openNewWishlistItem() = extra.update {
+        it.copy(
+            wishlistSheetOpen = true,
+            editingWishlistItem = null,
+            wishlistPreview = null,
+            wishlistPreviewLoading = false,
+        )
+    }
+
+    fun editWishlistItem(item: WishlistItem) = extra.update {
+        it.copy(
+            wishlistSheetOpen = true,
+            editingWishlistItem = item,
+            wishlistPreview = null,
+            wishlistPreviewLoading = false,
+        )
+    }
+
+    fun closeWishlistSheet() = extra.update {
+        it.copy(
+            wishlistSheetOpen = false,
+            editingWishlistItem = null,
+            wishlistPreview = null,
+            wishlistPreviewLoading = false,
+        )
+    }
+
+    fun previewWishlistUrl(url: String) {
+        viewModelScope.launch {
+            extra.update { it.copy(wishlistPreviewLoading = true) }
+            val preview = runCatching { wishlistRepository.preview(url) }.getOrNull()
+            extra.update { it.copy(wishlistPreviewLoading = false, wishlistPreview = preview) }
+        }
+    }
+
+    fun saveWishlistItem(
+        url: String,
+        title: String,
+        imageUrl: String?,
+        priceMinor: Long?,
+        eventId: Long?,
+        targetMemberId: String?,
+    ) {
+        viewModelScope.launch {
+            extra.update { it.copy(savingWishlist = true) }
+            try {
+                val editing = extra.value.editingWishlistItem
+                if (editing == null) {
+                    wishlistRepository.create(
+                        url = url,
+                        title = title.ifBlank { null },
+                        imageUrl = imageUrl,
+                        priceMinor = priceMinor,
+                        eventId = eventId,
+                        targetMemberId = targetMemberId,
+                    )
+                } else {
+                    wishlistRepository.update(
+                        id = editing.id,
+                        title = title,
+                        priceMinor = priceMinor,
+                        eventId = eventId,
+                        targetMemberId = targetMemberId,
+                    )
+                }
+                extra.update {
+                    it.copy(
+                        savingWishlist = false,
+                        wishlistSheetOpen = false,
+                        editingWishlistItem = null,
+                        wishlistPreview = null,
+                    )
+                }
+            } catch (e: PicfortServerException) {
+                extra.update { it.copy(savingWishlist = false, message = e.message) }
+            }
+        }
+    }
+
+    fun toggleWishlistBought(item: WishlistItem) {
+        viewModelScope.launch {
+            try {
+                wishlistRepository.setBought(item.id, !item.bought)
+            } catch (e: PicfortServerException) {
+                extra.update { it.copy(message = e.message) }
+            }
+        }
+    }
+
+    fun toggleWishlistReserve(item: WishlistItem) {
+        viewModelScope.launch {
+            try {
+                val next = if (item.reservedBy == null) family.myId else null
+                wishlistRepository.setReservedBy(item.id, next)
+            } catch (e: PicfortServerException) {
+                extra.update { it.copy(message = e.message) }
+            }
+        }
+    }
+
+    fun deleteWishlistItem(item: WishlistItem) {
+        viewModelScope.launch {
+            try {
+                wishlistRepository.delete(item.id)
+            } catch (e: PicfortServerException) {
+                extra.update { it.copy(message = e.message) }
+            }
+        }
+    }
 }
 
 @HiltViewModel
@@ -363,6 +504,7 @@ fun ShoppingListsScreen(
     onOpen: (ShoppingList, Boolean) -> Unit,
     onArchivedClick: () -> Unit = {},
     onSpendingClick: () -> Unit = {},
+    onOpenEvent: (Long) -> Unit = {},
     onBack: () -> Unit = {},
     onSettingsClick: () -> Unit = {},
     onSetUpServer: () -> Unit = onSettingsClick,
@@ -385,11 +527,20 @@ fun ShoppingListsScreen(
         onCreate = { creating = it },
         onArchivedClick = onArchivedClick,
         onSpendingClick = onSpendingClick,
+        onOpenEvent = onOpenEvent,
         onBack = onBack,
         onSettingsClick = onSettingsClick,
         onRefresh = viewModel::refreshNow,
         onSetUpServer = onSetUpServer,
         onMessageShown = viewModel::messageShown,
+        onAddWishlistClick = viewModel::openNewWishlistItem,
+        onEditWishlistItem = viewModel::editWishlistItem,
+        onCloseWishlistSheet = viewModel::closeWishlistSheet,
+        onPreviewWishlistUrl = viewModel::previewWishlistUrl,
+        onSaveWishlistItem = viewModel::saveWishlistItem,
+        onToggleWishlistBought = viewModel::toggleWishlistBought,
+        onToggleWishlistReserve = viewModel::toggleWishlistReserve,
+        onDeleteWishlistItem = viewModel::deleteWishlistItem,
     )
 }
 

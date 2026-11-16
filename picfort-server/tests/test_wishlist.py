@@ -55,6 +55,17 @@ class WishlistPreviewTest(unittest.TestCase):
         self.assertIsNone(preview["price_minor"])
         self.assertEqual("example.com", preview["shop_name"])
 
+    def test_extracts_json_ld_product_price_and_image(self):
+        html = """<!doctype html><html><head>
+        <script type="application/ld+json">
+        {"@type":"Product","name":"Klocki","image":["https://cdn.allegro.pl/klocki.jpg"],"offers":{"price":"149.90"}}
+        </script></head><body></body></html>"""
+        preview = parse_link_preview(html, "https://allegro.pl/oferta/klocki")
+        self.assertEqual("Klocki", preview["title"])
+        self.assertEqual("https://cdn.allegro.pl/klocki.jpg", preview["image_url"])
+        self.assertEqual(14990, preview["price_minor"])
+        self.assertEqual("allegro.pl", preview["shop_name"])
+
 
 class WishlistApiTest(unittest.TestCase):
     def setUp(self):
