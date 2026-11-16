@@ -1,6 +1,6 @@
 # T-070: delete an Immich album from its ⋮ menu; its photo stays in Immich.
 # Test account only: scripts/test-data.js creates the album "Album T070" with the newest photo.
-appId: com.github.ljarka.immich.android2
+appId: com.github.ljarka.picfort
 name: Photos — delete an album (T-070)
 ---
 - runScript:

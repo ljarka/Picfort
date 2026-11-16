@@ -1,6 +1,6 @@
 # The selection sheet's actions sit above the floating tab bar (they were under it).
 # Tapping "Album" must open the album dialog, not hit the tab bar. Nothing is changed.
-appId: com.github.ljarka.immich.android2
+appId: com.github.ljarka.picfort
 name: Photos — selection actions above the tab bar
 ---
 - runFlow: subflows/open-app.yaml

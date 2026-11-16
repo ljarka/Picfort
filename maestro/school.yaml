@@ -1,7 +1,7 @@
 # T-029, T-068: "+" → Family → "Goes to school" adds a child, set the bell schedule, enter a day with
 # "Save and add next", copy it to Tuesday, then switch "Goes to school" off.
 # Test server only: scripts/test-data.js empties School first; the family has "Ola" and "Kuba".
-appId: com.github.ljarka.immich.android2
+appId: com.github.ljarka.picfort
 name: School — timetable (T-029)
 ---
 - runScript:

@@ -1,7 +1,7 @@
 # T-055: a birthday's detail shows the photos taken on past birthdays, per year.
 # Test server only: Ola's birth date is set to 22 Dec 2022 (the test library has photos on
 # 22 Dec 2022 and 2023) and put back to 12 Nov 2017 at the end.
-appId: com.github.ljarka.immich.android2
+appId: com.github.ljarka.picfort
 name: Events — birthday photos (T-055, T-056)
 onFlowComplete:
   - runScript:

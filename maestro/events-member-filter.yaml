@@ -1,6 +1,6 @@
 # T-054: the avatar row in Events filters the list by family member.
 # Test server only: scripts/test-data.js creates "Basen T054" (Ola, Kuba) and "Wspolne T054" (no one).
-appId: com.github.ljarka.immich.android2
+appId: com.github.ljarka.picfort
 name: Events — filter by member (T-054)
 ---
 - runScript:

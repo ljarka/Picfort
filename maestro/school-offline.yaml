@@ -3,7 +3,7 @@
 #   docker stop picfort_test
 #   SKIP_SERVER_CHECK=1 ./scripts/maestro-smoke.sh maestro/school-offline.yaml
 #   docker start picfort_test
-appId: com.github.ljarka.immich.android2
+appId: com.github.ljarka.picfort
 name: School — offline copy (T-029)
 ---
 - runFlow: subflows/open-app.yaml

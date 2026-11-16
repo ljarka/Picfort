@@ -1,6 +1,6 @@
 # T-057: Search by Immich people. Test account only: the script tags 14 people "Osoba 01".."14"
 # by hand (01 on two photos, 02 together with 01 on one of them).
-appId: com.github.ljarka.immich.android2
+appId: com.github.ljarka.picfort
 name: Photos — search by people (T-057)
 ---
 - runScript:

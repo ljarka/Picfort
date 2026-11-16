@@ -1,7 +1,7 @@
 # Fresh install: Immich and the Picfort server on one setup screen (T-058). Values come from
 # scripts/maestro-smoke.sh (MAESTRO_* env vars read from ~/.config/picfort/test.env); never
 # hardcode credentials here.
-appId: com.github.ljarka.immich.android2
+appId: com.github.ljarka.picfort
 ---
 - tapOn: "Immich address"
 - inputText: ${MAESTRO_IMMICH_URL}

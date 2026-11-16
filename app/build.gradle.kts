@@ -11,9 +11,7 @@ android {
     namespace = "com.github.ljarka.picfort"
 
     defaultConfig {
-        // Kept from before the rename: changing it installs a separate app and
-        // existing installs would lose their login, settings and cache.
-        applicationId = "com.github.ljarka.immich.android2"
+        applicationId = "com.github.ljarka.picfort"
         minSdk = 26
         targetSdk = 35
         // Set by the release workflow from the git tag; local builds are 1 / "dev".

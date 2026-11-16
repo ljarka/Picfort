@@ -2,7 +2,7 @@
 # without a scheme gets https:// (not on the local network) and, unreachable, shows its error
 # while Immich stays signed in; Skip goes on without it. Ends logged in again with the test
 # server, like a normal fresh install (test account only).
-appId: com.github.ljarka.immich.android2
+appId: com.github.ljarka.picfort
 name: Setup — errors on the one-page setup (T-058)
 ---
 - launchApp:

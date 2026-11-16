@@ -1,7 +1,7 @@
 # T-039: an event's own reminder fires as a notification; tapping it opens the event.
 # Test server only: scripts/test-data.js puts "Przypomnienie T039" today, 3 minutes from now.
 # Takes up to ~4 minutes (waits for the alarm in the notification shade).
-appId: com.github.ljarka.immich.android2
+appId: com.github.ljarka.picfort
 name: Events — reminder notification (T-039)
 ---
 - runScript:

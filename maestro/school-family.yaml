@@ -1,6 +1,6 @@
 # T-029, T-066: two children (family members), switching, the chosen child after a restart, swiping days,
 # another phone's change within 60 s. Test server only: scripts/test-data.js sets it up.
-appId: com.github.ljarka.immich.android2
+appId: com.github.ljarka.picfort
 name: School — two children, restart, swipe, polling (T-029)
 ---
 - runScript:

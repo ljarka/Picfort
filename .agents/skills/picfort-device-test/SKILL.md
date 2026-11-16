@@ -42,7 +42,7 @@ them to be connected instead of silently using adb.
 
 - One file per feature in `maestro/`, starting with a comment: what it checks, task numbers,
   "Test server only" if it changes data.
-- `appId: com.github.ljarka.immich.android2`; start with `- runFlow: subflows/open-app.yaml`
+- `appId: com.github.ljarka.picfort`; start with `- runFlow: subflows/open-app.yaml`
   (`subflows/login.yaml` for a fresh install).
 - Set up data with `maestro/scripts/test-data.js` (env such as `SCHOOL`, `EVENTS`, `PEOPLE`,
   `ALBUM`; see the comment at the top of the file). Add new switches there, not in the flow.

@@ -14,7 +14,7 @@ import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 
-private const val PACKAGE = "com.github.ljarka.immich.android2"
+private const val PACKAGE = "com.github.ljarka.picfort"
 
 /**
  * Frame times while flinging through the timeline. Needs a logged-in app with photos
