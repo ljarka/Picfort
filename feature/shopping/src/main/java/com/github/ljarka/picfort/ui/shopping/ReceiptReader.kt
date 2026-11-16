@@ -3,6 +3,8 @@ package com.github.ljarka.picfort.ui.shopping
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.graphics.Matrix
+import com.github.ljarka.picfort.core.model.ReceiptAiStatus
+import com.github.ljarka.picfort.core.model.ReceiptAiStatusProvider
 import com.google.mlkit.genai.common.FeatureStatus
 import com.google.mlkit.genai.prompt.Generation
 import com.google.mlkit.genai.prompt.ImagePart
@@ -21,14 +23,21 @@ interface ReceiptReader {
 }
 
 @Singleton
-class GeminiNanoReceiptReader @Inject constructor() : ReceiptReader {
-    override suspend fun isSupported(): Boolean = withContext(Dispatchers.IO) {
+class GeminiNanoReceiptReader @Inject constructor() :
+    ReceiptReader,
+    ReceiptAiStatusProvider {
+    override suspend fun status(): ReceiptAiStatus = withContext(Dispatchers.IO) {
         runCatching {
-            val client = Generation.getClient()
-            val status = client.checkStatus()
-            status == FeatureStatus.AVAILABLE
-        }.getOrDefault(false)
+            when (Generation.getClient().checkStatus()) {
+                FeatureStatus.AVAILABLE -> ReceiptAiStatus.Available
+                FeatureStatus.DOWNLOADABLE -> ReceiptAiStatus.Downloadable
+                FeatureStatus.DOWNLOADING -> ReceiptAiStatus.Downloading
+                else -> ReceiptAiStatus.Unavailable
+            }
+        }.getOrDefault(ReceiptAiStatus.Unavailable)
     }
+
+    override suspend fun isSupported(): Boolean = status() == ReceiptAiStatus.Available
 
     override suspend fun read(photoBytes: ByteArray): ReceiptReading? = withContext(Dispatchers.IO) {
         runCatching {

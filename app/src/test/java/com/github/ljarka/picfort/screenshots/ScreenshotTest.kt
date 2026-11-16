@@ -19,6 +19,7 @@ import com.github.ljarka.picfort.backup.QueuedMedia
 import com.github.ljarka.picfort.core.model.EventsSegment
 import com.github.ljarka.picfort.core.model.FamilyEvent
 import com.github.ljarka.picfort.core.model.FamilyMember
+import com.github.ljarka.picfort.core.model.ReceiptAiStatus
 import com.github.ljarka.picfort.core.model.ShoppingItem
 import com.github.ljarka.picfort.core.model.ShoppingList
 import com.github.ljarka.picfort.core.ui.avatar.avatarColor
@@ -32,6 +33,9 @@ import com.github.ljarka.picfort.ui.init.SetupUi
 import com.github.ljarka.picfort.ui.school.SchoolContent
 import com.github.ljarka.picfort.ui.school.SchoolUi
 import com.github.ljarka.picfort.ui.settings.BackupSettingsUi
+import com.github.ljarka.picfort.ui.settings.ExperimentalFeaturesContent
+import com.github.ljarka.picfort.ui.settings.ExperimentalFeaturesUi
+import com.github.ljarka.picfort.ui.settings.PhotoAccessLevel
 import com.github.ljarka.picfort.ui.settings.SettingsContent
 import com.github.ljarka.picfort.ui.shell.Tab
 import com.github.ljarka.picfort.ui.shell.TabBar
@@ -348,6 +352,22 @@ class ScreenshotTest {
             status = BackupStatus.Idle,
             serverUrl = "https://photos.example.com",
             now = NOW,
+        )
+    }
+
+    @Test
+    fun experimental_features() = snap {
+        ExperimentalFeaturesContent(
+            ui = ExperimentalFeaturesUi(
+                deviceLabel = "Nothing A069P",
+                sdkInt = 36,
+                receiptAiStatus = ReceiptAiStatus.Unavailable,
+                aiCoreInstalled = false,
+                appFunctionsServiceRegistered = true,
+                mediaLocationGranted = true,
+                photoAccess = PhotoAccessLevel.Full,
+                exactAlarmsAllowed = true,
+            ),
         )
     }
 

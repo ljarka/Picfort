@@ -54,6 +54,7 @@ import com.github.ljarka.picfort.ui.image.ImageDetailsScreen
 import com.github.ljarka.picfort.ui.init.InitScreen
 import com.github.ljarka.picfort.ui.school.SchoolScreen
 import com.github.ljarka.picfort.ui.settings.AppearanceSettingsStore
+import com.github.ljarka.picfort.ui.settings.ExperimentalFeaturesScreen
 import com.github.ljarka.picfort.ui.settings.SettingsScreen
 import com.github.ljarka.picfort.ui.shell.ServerStatusViewModel
 import com.github.ljarka.picfort.ui.shell.Tab
@@ -341,7 +342,13 @@ class MainActivity : ComponentActivity() {
                                             onBack = { navController.popBackStack() },
                                             onFrameClick = { navController.navigate(Screen.Frame) },
                                             onFamilyClick = { navController.navigate(Screen.FamilySettings()) },
+                                            onExperimentalClick = {
+                                                navController.navigate(Screen.ExperimentalFeatures)
+                                            },
                                         )
+                                    }
+                                    composable<Screen.ExperimentalFeatures> {
+                                        ExperimentalFeaturesScreen(onBack = { navController.popBackStack() })
                                     }
                                     composable<Screen.EventDetail> {
                                         EventDetailScreen(

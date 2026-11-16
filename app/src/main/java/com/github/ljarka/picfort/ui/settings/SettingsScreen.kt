@@ -48,7 +48,12 @@ import com.github.ljarka.picfort.ui.events.reminders.EventReminderSettings
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun SettingsScreen(onBack: () -> Unit, onFrameClick: () -> Unit, onFamilyClick: () -> Unit = {}) {
+fun SettingsScreen(
+    onBack: () -> Unit,
+    onFrameClick: () -> Unit,
+    onFamilyClick: () -> Unit = {},
+    onExperimentalClick: () -> Unit = {},
+) {
     val viewModel: SettingsViewModel = hiltViewModel()
     val backup by viewModel.backup.collectAsStateWithLifecycle()
     val status by viewModel.status.collectAsStateWithLifecycle()
@@ -80,6 +85,7 @@ fun SettingsScreen(onBack: () -> Unit, onFrameClick: () -> Unit, onFamilyClick: 
         onBack = onBack,
         onFrameClick = onFrameClick,
         onFamilyClick = onFamilyClick,
+        onExperimentalClick = onExperimentalClick,
         onEnable = onEnable,
         onWifiOnly = viewModel::setWifiOnly,
         onChargingOnly = viewModel::setChargingOnly,
@@ -112,6 +118,7 @@ fun SettingsContent(
     onBack: () -> Unit = {},
     onFrameClick: () -> Unit = {},
     onFamilyClick: () -> Unit = {},
+    onExperimentalClick: () -> Unit = {},
     onEnable: (Boolean) -> Unit = {},
     onWifiOnly: (Boolean) -> Unit = {},
     onChargingOnly: (Boolean) -> Unit = {},
@@ -264,6 +271,14 @@ fun SettingsContent(
                     onWallpaperColors,
                 )
             }
+
+            HorizontalDivider(Modifier.padding(vertical = 8.dp))
+            SectionTitle("Experimental")
+            ListItem(
+                modifier = Modifier.clickable(onClick = onExperimentalClick),
+                headlineContent = { Text("Experimental features") },
+                supportingContent = { Text("Check Gemini Nano and AppFunctions availability on this phone") },
+            )
 
             HorizontalDivider(Modifier.padding(vertical = 8.dp))
             SectionTitle("Account")

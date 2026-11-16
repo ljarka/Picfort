@@ -15,6 +15,9 @@ sealed interface Screen {
     object Settings : Screen
 
     @Serializable
+    object ExperimentalFeatures : Screen
+
+    @Serializable
     data class FamilySettings(val editUserId: String? = null) : Screen
 
     @Serializable

@@ -2,6 +2,7 @@ package com.github.ljarka.picfort.ui.shopping
 
 import android.content.Context
 import com.github.ljarka.picfort.core.model.Receipt
+import com.github.ljarka.picfort.core.model.ReceiptAiStatusProvider
 import com.github.ljarka.picfort.core.model.ShoppingAssistantProvider
 import com.github.ljarka.picfort.core.model.ShoppingItem
 import com.github.ljarka.picfort.core.model.ShoppingList
@@ -82,6 +83,9 @@ abstract class ShoppingModule {
 
     @Binds
     abstract fun receiptReader(reader: GeminiNanoReceiptReader): ReceiptReader
+
+    @Binds
+    abstract fun receiptAiStatus(reader: GeminiNanoReceiptReader): ReceiptAiStatusProvider
 
     @Binds
     abstract fun assistant(impl: ShoppingAssistantImpl): ShoppingAssistantProvider
