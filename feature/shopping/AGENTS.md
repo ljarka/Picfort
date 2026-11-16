@@ -1,6 +1,6 @@
 # feature:shopping — AGENTS.md
 
-Shopping list vertical slice: collaborative checklists, offline caching, and wishlists.
+Shopping list vertical slice: collaborative checklists, offline caching, receipts and spending summary (wishlist: T-041/T-042, not built yet).
 
 ## Scope & Files
 
@@ -11,6 +11,9 @@ Shopping list vertical slice: collaborative checklists, offline caching, and wis
 | `ui/shopping/ReceiptReader.kt` | `ReceiptReader` & `GeminiNanoReceiptReader` (on-device ML Kit GenAI Prompt / AICore) |
 | `ui/shopping/ReceiptReadingParser.kt` | JSON parsing and validation for on-device receipt reading output |
 | `ui/shopping/ReceiptMoney.kt` | `BigDecimal` receipt total parsing and locale-aware currency formatting |
+| `ui/shopping/SpendingScreen.kt` | Monthly spending summary screen, 6-month bar chart, by-shop/by-person, receipts |
+| `ui/shopping/SpendingViewModel.kt` | ViewModel for `SpendingScreen` (month navigation, `/spending` + `/receipts`) |
+| `ui/shopping/SpendingModels.kt` | Spending domain/UI models and aggregation helpers (`topShopsWithOther`, etc.) |
 | `ui/shopping/ShoppingViewModels.kt` | ViewModels: `ShoppingListsViewModel`, `ShoppingListViewModel`, `ShoppingListsScreen`, `ShoppingListScreen` |
 | `ui/shopping/ShoppingRepository.kt` | Repository: polling, sync, optimistic updates, offline cache file, receipts CRUD |
 | `ui/shopping/ShoppingApi.kt` | Server HTTP client: `/lists` and `/receipts` endpoints |
@@ -19,8 +22,9 @@ Shopping list vertical slice: collaborative checklists, offline caching, and wis
 
 ## Public Contract / Navigation Entry Points
 
-- `ShoppingListsScreen(onOpen: (ShoppingList, Boolean) -> Unit, onArchivedClick: () -> Unit, onBack: () -> Unit, onSettingsClick: () -> Unit, onSetUpServer: () -> Unit)`
+- `ShoppingListsScreen(onOpen: (ShoppingList, Boolean) -> Unit, onArchivedClick: () -> Unit, onSpendingClick: () -> Unit, onBack: () -> Unit, onSettingsClick: () -> Unit, onSetUpServer: () -> Unit)`
 - `ShoppingListScreen(onBack: () -> Unit, focusAdd: Boolean)`
+- `SpendingScreen(onBack: () -> Unit)`
 
 ## Dependencies & Boundaries
 

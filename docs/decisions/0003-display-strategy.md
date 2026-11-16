@@ -1,6 +1,6 @@
 # ADR 0003 — Display strategy: tablet primary, e-paper secondary
 
-**Status:** accepted  
+**Status:** superseded by [ADR 0014](0014-browser-frame.md) (2026-11; T-003 closed, the tablet frame is the browser frame)  
 **Date:** 2026-11-08
 
 ## Context

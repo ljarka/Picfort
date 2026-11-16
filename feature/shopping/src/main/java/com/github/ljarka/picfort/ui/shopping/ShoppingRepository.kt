@@ -365,4 +365,12 @@ class ShoppingRepository @Inject constructor(
     }
 
     suspend fun downloadReceiptPhoto(photoUrl: String): ByteArray = backend.downloadReceiptPhoto(photoUrl)
+
+    suspend fun spending(fromMonth: String, toMonth: String): SpendingSummary = backend.spending(fromMonth, toMonth)
+
+    suspend fun receiptsForMonth(month: String): List<Receipt> {
+        val loaded = backend.receipts(month = month)
+        _receipts.update { current -> current + loaded.associateBy { it.id } }
+        return loaded
+    }
 }

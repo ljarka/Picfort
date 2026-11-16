@@ -2,7 +2,7 @@
 
 **Status:** ready  
 **Component:** ImageFrameServer  
-**Depends on:** T-018 (`shopping.db`, `store.py`), ADR 0008, ADR 0010
+**Depends on:** T-018 (`shopping.db`, `store.py`), T-075 (migrations, ADR 0016), ADR 0008, ADR 0010
 
 ## Summary
 

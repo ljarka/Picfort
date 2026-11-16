@@ -1,6 +1,6 @@
 # ADR 0010 — Family members beyond Immich, birthdays as recurring events, additive migrations
 
-**Status:** proposed  
+**Status:** accepted; migrations generalised by [ADR 0016](0016-schema-migrations.md)  
 **Date:** 2026-11-11  
 **Extends:** [ADR 0008](0008-family-hub-storage.md). **Supersedes** its "Schema changes" section for `family.db` and `events.db` only.
 

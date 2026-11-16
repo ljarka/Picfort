@@ -45,6 +45,9 @@ sealed interface Screen {
     data class ShoppingList(val id: Long, val focusAdd: Boolean = false) : Screen
 
     @Serializable
+    object Spending : Screen
+
+    @Serializable
     object Events : Screen
 
     /** Reachable from any tab (T-023). `eventId` is read by EventDetailViewModel. */

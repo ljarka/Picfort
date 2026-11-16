@@ -3,7 +3,7 @@
 Room database, entities and DAOs for local caching and offline storage.
 
 ## Scope
-- Room configuration: `ImagesDatabase` (version 23, destructive migration fallback).
+- Room configuration: `ImagesDatabase` (version 23, destructive migration fallback; ADR 0016: allowed only for cache tables, T-075 classifies them).
 - DAOs and Entities:
   - `UsersDao`, `UserEntity` (Immich users synced from stream).
   - `RemoteAssetsDao`, `RemoteAssetEntity` (Timeline images, stacks, partner libraries;

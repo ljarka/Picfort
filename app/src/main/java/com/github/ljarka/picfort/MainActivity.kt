@@ -61,6 +61,7 @@ import com.github.ljarka.picfort.ui.shell.TabBar
 import com.github.ljarka.picfort.ui.shell.TabRoot
 import com.github.ljarka.picfort.ui.shopping.ShoppingListScreen
 import com.github.ljarka.picfort.ui.shopping.ShoppingListsScreen
+import com.github.ljarka.picfort.ui.shopping.SpendingScreen
 import com.github.ljarka.picfort.ui.timeline.AlbumRoute
 import com.github.ljarka.picfort.ui.timeline.ImageDetailsRoute
 import com.github.ljarka.picfort.ui.timeline.TimelineScreen
@@ -212,9 +213,15 @@ class MainActivity : ComponentActivity() {
                                                     onArchivedClick = {
                                                         navController.navigate(Screen.ArchivedShopping())
                                                     },
+                                                    onSpendingClick = {
+                                                        navController.navigate(Screen.Spending)
+                                                    },
                                                     onSettingsClick = openSettings,
                                                 )
                                             }
+                                        }
+                                        composable<Screen.Spending> {
+                                            SpendingScreen(onBack = { navController.popBackStack() })
                                         }
                                         composable<Screen.ArchivedShopping> {
                                             ShoppingListsScreen(

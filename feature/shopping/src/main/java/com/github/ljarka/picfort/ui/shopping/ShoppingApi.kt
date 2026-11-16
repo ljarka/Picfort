@@ -93,6 +93,45 @@ data class ReceiptDto(
     )
 }
 
+@Serializable
+private data class ShopSpendingDto(val shop: String? = null, @SerialName("total_minor") val totalMinor: Long = 0L) {
+    fun toDomain() = ShopSpending(shop = shop, totalMinor = totalMinor)
+}
+
+@Serializable
+private data class PayerSpendingDto(
+    @SerialName("payer_id") val payerId: String = "",
+    @SerialName("total_minor") val totalMinor: Long = 0L,
+) {
+    fun toDomain() = PayerSpending(payerId = payerId, totalMinor = totalMinor)
+}
+
+@Serializable
+private data class SpendingMonthDto(
+    val month: String,
+    @SerialName("total_minor") val totalMinor: Long = 0L,
+    @SerialName("receipt_count") val receiptCount: Int = 0,
+    @SerialName("unconfirmed_count") val unconfirmedCount: Int = 0,
+    @SerialName("missing_total_count") val missingTotalCount: Int = 0,
+    @SerialName("by_shop") val byShop: List<ShopSpendingDto> = emptyList(),
+    @SerialName("by_payer") val byPayer: List<PayerSpendingDto> = emptyList(),
+) {
+    fun toDomain() = SpendingMonth(
+        month = month,
+        totalMinor = totalMinor,
+        receiptCount = receiptCount,
+        unconfirmedCount = unconfirmedCount,
+        missingTotalCount = missingTotalCount,
+        byShop = byShop.map { it.toDomain() },
+        byPayer = byPayer.map { it.toDomain() },
+    )
+}
+
+@Serializable
+private data class SpendingDto(val currency: String = "PLN", val months: List<SpendingMonthDto> = emptyList()) {
+    fun toDomain() = SpendingSummary(currency = currency, months = months.map { it.toDomain() })
+}
+
 /** A list fetched with If-None-Match: null when it hasn't changed (304). */
 data class ListFetch(val list: ShoppingList?)
 
@@ -123,6 +162,7 @@ interface ShoppingBackend {
     ): Receipt
     suspend fun deleteReceipt(id: Long)
     suspend fun downloadReceiptPhoto(photoUrl: String): ByteArray
+    suspend fun spending(fromMonth: String, toMonth: String): SpendingSummary
     fun decodeLists(raw: String): List<ShoppingList>
     fun encodeLists(lists: List<ShoppingList>): String
 }
@@ -268,6 +308,18 @@ class ShoppingApi @Inject constructor(private val server: PicfortServerClient, p
         return server.executeBytes(Request.Builder().url(url).build()) {
             PicfortServerException.Gone("Photo not found")
         }
+    }
+
+    override suspend fun spending(fromMonth: String, toMonth: String): SpendingSummary {
+        val url = server.base().newBuilder()
+            .addPathSegment("spending")
+            .addQueryParameter("from", fromMonth)
+            .addQueryParameter("to", toMonth)
+            .build()
+        val raw = server.execute(Request.Builder().url(url).build()) {
+            PicfortServerException.Outdated("spending")
+        }.body
+        return json.decodeFromString<SpendingDto>(raw).toDomain()
     }
 
     private fun lists(): HttpUrl.Builder = server.base().newBuilder().addPathSegment("lists")

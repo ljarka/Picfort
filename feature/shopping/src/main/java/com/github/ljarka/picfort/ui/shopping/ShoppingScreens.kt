@@ -111,6 +111,7 @@ fun ShoppingListsContent(
     onOpen: (ShoppingList) -> Unit = {},
     onCreate: (String) -> Unit = {},
     onArchivedClick: () -> Unit = {},
+    onSpendingClick: () -> Unit = {},
     onBack: () -> Unit = {},
     onSettingsClick: () -> Unit = {},
     onRefresh: () -> Unit = {},
@@ -142,6 +143,12 @@ fun ShoppingListsContent(
                 },
                 actions = {
                     if (!archived && state.configured) {
+                        IconButton(onClick = onSpendingClick) {
+                            Icon(
+                                ImageVector.vectorResource(CoreUiR.drawable.ic_bar_chart),
+                                contentDescription = "Spending",
+                            )
+                        }
                         var menu by remember { mutableStateOf(false) }
                         IconButton(onClick = { menu = true }) { Icon(Icons.Default.MoreVert, "More") }
                         DropdownMenu(expanded = menu, onDismissRequest = { menu = false }) {

@@ -176,6 +176,8 @@ private class FakeBackend : ShoppingBackend {
     }
 
     override suspend fun downloadReceiptPhoto(photoUrl: String): ByteArray = ByteArray(0)
+
+    override suspend fun spending(fromMonth: String, toMonth: String): SpendingSummary = SpendingSummary()
 }
 
 private class MemoryCopy : OfflineCopy {

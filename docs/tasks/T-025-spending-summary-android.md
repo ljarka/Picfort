@@ -1,6 +1,6 @@
 # T-025 — Spending summary: Android
 
-**Status:** ready (first step: mockup for the owner to approve)  
+**Status:** done  
 **Component:** Android app  
 **Depends on:** T-021 (receipt sheet), T-020 (`/spending`)
 

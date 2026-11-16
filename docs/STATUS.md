@@ -2,8 +2,10 @@
 
 ## Vision
 
-Privacy-first family photo ecosystem. Unified timeline of Immich + phone photos,
-picture frame control, and a shared Family Wall — all without any cloud service.
+Privacy-first family hub on top of Immich. Unified timeline of Immich + phone photos,
+picture frame control, and the family's shared Wall, shopping lists and receipts, events and
+birthdays, and school timetables — all on the family's own server, without any cloud service.
+Data the family typed in survives updates (ADR 0016).
 
 ---
 
@@ -95,7 +97,7 @@ Android task except T-017 and T-026 starts with a mockup the owner approves.
 | [T-022](tasks/T-022-events-backend.md)                      | Events — server API (`events.db`)                                                                   | `done`        |
 | [T-023](tasks/T-023-events-android.md)                      | Events — Android: upcoming / past, add, edit                                                        | `done`        |
 | [T-024](tasks/T-024-receipt-reading-gemini.md)              | Receipts — read shop, date, total on-device with Gemini Nano (Android, when supported)              | `done`        |
-| [T-025](tasks/T-025-spending-summary-android.md)            | Spending summary — Android: month, 6-month bars, by shop and person                                 | `ready`       |
+| [T-025](tasks/T-025-spending-summary-android.md)            | Spending summary — Android: month, 6-month bars, by shop and person                                 | `done`        |
 | [T-026](tasks/T-026-event-albums-android.md)                | Events — link or create a family-shared Immich album (Android)                                      | `ready`       |
 | [T-027](tasks/T-027-wall-today-panel.md)                    | Family Wall — today panel: date and the day's event                                                 | `done`        |
 | [T-028](tasks/T-028-school-timetable-backend.md)            | School timetable — server API (`school.db`): children, bell schedule, lessons, activities           | `done`        |
@@ -136,6 +138,7 @@ Android task except T-017 and T-026 starts with a mockup the owner approves.
 | [T-072](tasks/T-072-browser-frame.md)                       | The frame in a web browser (`/frame`, full colour, behind the server key; tablet as a second frame) | `done`        |
 | [T-073](tasks/T-073-per-viewer-member-faces.md)             | Family: each Immich user sees members' faces from their own Immich people                           | `done`        |
 | [T-074](tasks/T-074-gemini-app-functions.md)                | Gemini Assistant integration via Android AppFunctions (school, events, birthdays, shopping, wall)   | `ready`       |
+| [T-075](tasks/T-075-schema-migrations.md)                   | Schema migrations everywhere: no store starts empty (ADR 0016); **before T-041**                    | `ready`       |
 
 ### Phase 8 — Modular Architecture (Agentic Pair Programming)
 Deconstruct monolithic `:app` into isolated feature slices and core foundations (ADR 0011).
@@ -155,8 +158,8 @@ and fast isolated snapshot testing (`./gradlew :feature:<name>:verifyPaparazziDe
 | [T-051](tasks/T-051-modularization-app-shell-cleanup.md) | Thin `:app` shell, root navigation assembly & architecture boundary guard | `done` |
 
 Decided by the owner (2026-11-11), as recommended:
-- **Schema changes** in `shopping.db` / `events.db`: no migrations; the old file is kept as
-  `.bak` and the feature starts empty (ADR 0008).
+- ~~**Schema changes:** no migrations, `.bak` and start empty (ADR 0008).~~ Reversed by the
+  owner on 2026-11-16: every schema change ships a migration, nothing starts empty (ADR 0016, T-075).
 - **Shopping away from home:** a connection is not assumed; T-019 keeps a read-only copy of
   the lists on the phone; checking items off offline is v2.
 - **Deleting** a list, event or receipt: the creator only; anyone can edit, and archive a list.
@@ -199,13 +202,17 @@ Decided by the owner (2026-11-11), as recommended:
 |-----|----------|
 | [0001](decisions/0001-architecture-overview.md) | Three-tier architecture: Immich + Android + Picfort server |
 | [0002](decisions/0002-family-wall-storage.md) | Family Wall lives in the Picfort server's SQLite |
-| [0003](decisions/0003-display-strategy.md) | Tablet as primary display target; e-paper as secondary |
+| [0003](decisions/0003-display-strategy.md) | ~~Tablet as primary display target~~ — superseded by 0014 |
 | [0004](decisions/0004-network-auth.md) | No auth on the frame endpoints (trusted local network; see 0006, 0007) |
 | [0005](decisions/0005-timeline-sync-stream.md) | Timeline from a local copy synced with Immich's sync stream |
 | [0006](decisions/0006-family-wall-auth.md) | Family Wall checks the caller's Immich token (supersedes 0004 for `/wall`) |
 | [0007](decisions/0007-server-api-key.md) | Optional `PICFORT_API_KEY` for a server reachable from outside (e.g. Cloudflare Tunnel) |
-| [0008](decisions/0008-family-hub-storage.md) | Shopping lists, receipts, events, school timetables on the Picfort server, one SQLite file per feature, `.bak` on schema change (proposed) |
+| [0008](decisions/0008-family-hub-storage.md) | Shopping lists, receipts, events, school timetables on the Picfort server, one SQLite file per feature (schema changes: 0016) |
 | [0009](decisions/0009-receipts-gemini.md) | Receipts read on-device with Gemini Nano when supported by the phone |
 | [0010](decisions/0010-family-members-birthdays-recurring-events.md) | Manual family members, birth dates & recurring events with additive migrations |
 | [0011](decisions/0011-modular-architecture.md) | Multi-module architecture optimized for AI Agent pair programming |
 | [0015](decisions/0015-event-reminders-on-the-phone.md) | Event reminders planned and stored on each phone (AlarmManager + 6-hourly re-plan) |
+| [0012](decisions/0012-serial-ksp.md) | One KSP task at a time |
+| [0013](decisions/0013-ktlint.md) | ktlint for Kotlin code style, checked in CI |
+| [0014](decisions/0014-browser-frame.md) | The frame in a web browser (`/frame`), only behind the server key |
+| [0016](decisions/0016-schema-migrations.md) | Data survives schema changes: a migration for every bump |

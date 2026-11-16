@@ -1,6 +1,6 @@
 # ADR 0008 — Shopping lists, receipts, events and school timetables live on the Picfort server
 
-**Status:** proposed  
+**Status:** accepted; "Schema changes" superseded by [ADR 0016](0016-schema-migrations.md)  
 **Date:** 2026-11-11  
 **Extends:** [ADR 0002](0002-family-wall-storage.md) (wall in SQLite), [ADR 0006](0006-family-wall-auth.md) (Immich token), [ADR 0007](0007-server-api-key.md) (optional key)
 
@@ -38,6 +38,9 @@ posts but painful for a year of receipts.
   later (T-020) is not a schema change.
 
 ### Schema changes
+
+> **Superseded by [ADR 0016](0016-schema-migrations.md) (2026-11-16):** every schema bump now
+> ships a migration; a store never starts empty. The text below is kept as history.
 
 No migrations (project rule), but no silent loss either. When `user_version` differs from
 `SCHEMA_VERSION`, the store **renames the old file** to `<name>.v<old>.bak` (replacing an older

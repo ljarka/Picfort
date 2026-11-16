@@ -5,7 +5,7 @@
 [![Downloads](https://img.shields.io/github/downloads/ljarka/Picfort/total)](https://github.com/ljarka/Picfort/releases)
 [![Lines of code](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/ljarka/Picfort/badges/loc.json)](.github/workflows/badges.yml)
 
-Picfort is an Android client for a self-hosted [Immich](https://immich.app) photo server. It shows your Immich library and the photos on your phone in one timeline. It can also send a photo to a picture frame on your home network.
+Picfort is a private family hub on top of a self-hosted [Immich](https://immich.app) photo server. It shows your Immich library and the photos on your phone in one timeline, and adds what the family shares day to day: a Family Wall, shopping lists with receipts and spending, events and birthdays, and school timetables. Everything lives on your own small Picfort server next to Immich, which can also drive a picture frame; no cloud service is involved.
 
 > **Status:** early, personal project.
 
@@ -37,6 +37,7 @@ These are rendered from the app's UI code with sample photos by the [screenshot 
 
 - **Family hub.** The app opens on the Family Wall. A bottom bar switches between Wall, Shopping, Events, School and Photos; each tab keeps its place.
 - **Shopping lists.** Shared lists for the family, like Google Keep: check items off, checked ones fold away with the avatar of who checked them, add item after item without closing the keyboard, delete with Undo, archive. An open list updates every 10 seconds. Without a connection (in the shop) the last loaded lists stay readable. Lists live on the Picfort server.
+- **Receipts and spending.** Add a receipt photo to a list; on phones with Gemini Nano the shop, date and total are read on the phone itself (otherwise typed by hand). The Spending screen (bar-chart icon on the Shopping tab) shows the month's total, the last six months as bars, spending by shop and by person, and the month's receipts.
 - **One timeline.** Photos from Immich and from the phone's MediaStore (the last 24 months) are merged and grouped by month, newest first. A cloud icon shows where each image comes from. The family's avatar row sits on top: tap a member to see only the photos with them (their face is chosen in Family settings).
 - **Aspect-ratio grid.** A 4-column grid where wide photos take more columns. The number of rows per month is cached so the scrollbar is right before the images load.
 - **Fast scroll.** A draggable scrollbar that shows the month you're scrolling to.
@@ -64,13 +65,14 @@ core/ui/                 Design system: theme, avatars, shared UI components
 core/database/           Room entities/DAOs for local cache and backup state
 core/network/            OkHttp/Retrofit clients, secure stores, network policies
 feature/wall/            Family Wall feed + today panel
-feature/shopping/        Shared shopping lists + offline copy
-feature/events/          Family events (upcoming/past, detail, form)
+feature/shopping/        Shared shopping lists + offline copy, receipts, spending
+feature/events/          Family events (upcoming/past, detail, form, reminders)
+feature/school/          School timetables per child
 feature/family/          Family member profiles, avatars, birth dates
 feature/frame/           Picture-frame controls + server setup/pairing
 feature/timeline/        Timeline, albums, search, details, sync
 benchmark/               Macrobenchmark suite (timeline scrolling)
-picfort-server/        Python service for the picture frame
+picfort-server/          Python service: family data (wall, lists, events, school…) and the picture frame
   app.py                 Flask HTTP API (/run, /status, /slideshow, /next, …)
   slideshow.py           Slideshow modes, schedule, quiet hours
   immich.py              Immich API client used by the slideshow
@@ -188,7 +190,8 @@ docker compose up -d
 
 Then in the app: **Settings → Picfort server**, enter `<this machine's IP>:5000` and tap **Test**.
 
-- The Family Wall and its photos, the shopping lists, the family profiles, the events, the school timetables and the slideshow settings are stored in `./data` (`DATA_LOCATION` in `.env`). Back up that folder.
+- Schema changes come with a migration, and the old file is first copied to `<name>.v<old>.bak` (ADR 0016; `family.db` and `events.db` already, the rest with T-075).
+- The Family Wall and its photos, the shopping lists and receipts, the family profiles, the events, the school timetables and the slideshow settings are stored in `./data` (`DATA_LOCATION` in `.env`). Back up that folder.
 - Update: `docker compose pull && docker compose up -d`. Pin a version with `PICFORT_VERSION=v0.3.0` in `.env`.
 - Logs: `docker compose logs -f`.
 - The image is built for `amd64` and `arm64` (64-bit Raspberry Pi OS). Any variable from the table below can go in `.env`.
@@ -337,7 +340,7 @@ It changes every 15 min to 24 h and can pause during quiet hours (for example 22
 | `PUT /wall/<id>/pin` | Toggles `pinned` and returns the post. Own posts only (`403`). |
 | `GET /wall/photo/<file>` | The photo attached to a post (`photo_url` in the post) |
 
-A post looks like `{"id","author_id","author","text","photo_url","photo_width","photo_height","pinned","created"}`. `photo_width`/`photo_height` are the upright size, so the app can lay out photos before they load. The wall is stored in SQLite next to the server (ADR 0002). There are no migrations: if a new version changes the schema, the wall starts empty. Every `/wall` call needs `Authorization: Bearer <Immich access token>` (an API key doesn't work). The server checks it with `GET /api/users/me` on its own `IMMICH_URL` and remembers the answer for 5 minutes. No token or a rejected one gives `401`; if Immich can't be reached, `502`. The author of a post is the user of the token.
+A post looks like `{"id","author_id","author","text","photo_url","photo_width","photo_height","pinned","created"}`. `photo_width`/`photo_height` are the upright size, so the app can lay out photos before they load. The wall is stored in SQLite next to the server (ADR 0002). Every `/wall` call needs `Authorization: Bearer <Immich access token>` (an API key doesn't work). The server checks it with `GET /api/users/me` on its own `IMMICH_URL` and remembers the answer for 5 minutes. No token or a rejected one gives `401`; if Immich can't be reached, `502`. The author of a post is the user of the token.
 
 #### Shopping lists
 
@@ -355,7 +358,7 @@ Shared lists with checkable items; everyone in the family can edit every list (T
 | `PATCH /lists/<id>/items/<item>` | `{"text"?, "checked"?, "position"?}`. Checking records who and when (`checked_by`, `checked_at`). |
 | `DELETE /lists/<id>/items/<item>` | `204`. |
 
-A list looks like `{"id","title","archived","revision","created_by","created","updated","item_count","checked_count","items"}`; `items` are unchecked by `position`, then checked with the latest first. Every change bumps `revision`. Lists are stored in `shopping.db` (ADR 0008). There are no migrations: if a new version changes the schema, the old file is kept as `shopping.db.v<old>.bak` and the lists start empty. `400` for invalid input, `404` for an unknown list or an item of another list.
+A list looks like `{"id","title","archived","revision","created_by","created","updated","item_count","checked_count","items"}`; `items` are unchecked by `position`, then checked with the latest first. Every change bumps `revision`. Lists are stored in `shopping.db` (ADR 0008). `400` for invalid input, `404` for an unknown list or an item of another list.
 
 #### Family profiles
 
@@ -386,7 +389,7 @@ Family events (trips, holidays, birthdays) with plain calendar dates, recurrence
 | `PATCH /events/<id>` | Any of those fields (`null` clears an optional one). Anyone. On a birthday event (`kind: "birthday"`), `title`, `start_date`, `end_date`, `repeat`, `repeat_until` return `409` (edit in Family settings). Returns the event. |
 | `DELETE /events/<id>` | `204`. The creator only (`403`). `409` on birthday events. Does not touch the Immich album. |
 
-An event looks like `{"id","title","start_date","end_date","start_time","location","note","album_id","repeat","repeat_until","kind","member_id","occurrence_start","occurrence_end","turns","created_by","created","updated"}` (unset fields are `null`; an `end_date` equal to `start_date` is stored as `null`). Events are stored in `events.db` (ADR 0008, ADR 0010); additive migrations keep `events.db.v<old>.bak`.
+An event looks like `{"id","title","start_date","end_date","start_time","location","note","album_id","repeat","repeat_until","kind","member_id","occurrence_start","occurrence_end","turns","created_by","created","updated"}` (unset fields are `null`; an `end_date` equal to `start_date` is stored as `null`). Events are stored in `events.db` (ADR 0008, ADR 0010).
 
 #### School timetables
 

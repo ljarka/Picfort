@@ -362,6 +362,7 @@ class ShoppingListViewModel @Inject constructor(
 fun ShoppingListsScreen(
     onOpen: (ShoppingList, Boolean) -> Unit,
     onArchivedClick: () -> Unit = {},
+    onSpendingClick: () -> Unit = {},
     onBack: () -> Unit = {},
     onSettingsClick: () -> Unit = {},
     onSetUpServer: () -> Unit = onSettingsClick,
@@ -383,6 +384,7 @@ fun ShoppingListsScreen(
         onOpen = { onOpen(it, false) },
         onCreate = { creating = it },
         onArchivedClick = onArchivedClick,
+        onSpendingClick = onSpendingClick,
         onBack = onBack,
         onSettingsClick = onSettingsClick,
         onRefresh = viewModel::refreshNow,

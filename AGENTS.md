@@ -35,7 +35,7 @@ Do not load the whole project. Each module's `AGENTS.md` tells you what to read.
 | `:core:database` | Room DB v23, DAOs (`ShoppingDao`, `UsersDao`, `EventsDao`), Entities | done |
 | `:core:network` | `PicfortServerClient`, `ServerUrlStore`, `AccessTokenStore`, `FrameSettingsStore` | done |
 | `:feature:wall` | Family Wall posts feed, photo posting, reactions, today summary panel | done |
-| `:feature:shopping` | Shared shopping lists, checklist items, categories, receipts & wishlist | done |
+| `:feature:shopping` | Shared shopping lists, checklist items, categories, receipts & spending (wishlist: T-041/42) | done |
 | `:feature:events` | Family events, birthdays, recurring countdowns, detail & form | done |
 | `:feature:family` | Family members management, nickname/color editing, hidden toggles | done |
 | `:feature:frame` | Ambient e-paper frame control, photo push via `FrameSender`, pairing setup | done |

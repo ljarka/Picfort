@@ -1,6 +1,6 @@
 # ADR 0002 — Family Wall storage in ImageFrameServer
 
-**Status:** accepted  
+**Status:** accepted; "no migrations" superseded by [ADR 0016](0016-schema-migrations.md)  
 **Date:** 2026-11-08
 
 ## Context

@@ -6,14 +6,14 @@ Each file in this directory documents one major technical decision.
 
 | ADR | Topic |
 |---|---|
-| [0001](0001-architecture-overview.md) | Three-tier architecture: Immich + Android + ImageFrameServer |
-| [0002](0002-family-wall-storage.md) | Family Wall storage in ImageFrameServer SQLite |
-| [0003](0003-display-strategy.md) | Tablet-first display strategy; e-paper as secondary |
+| [0001](0001-architecture-overview.md) | Three-tier architecture: Immich + Android + Picfort server (formerly ImageFrameServer) |
+| [0002](0002-family-wall-storage.md) | Family Wall storage in the Picfort server's SQLite |
+| [0003](0003-display-strategy.md) | ~~Tablet-first display strategy~~ — superseded by 0014 |
 | [0004](0004-network-auth.md) | Frame endpoints open on trusted home network |
 | [0005](0005-timeline-sync-stream.md) | Timeline from a local copy synced from Immich stream |
 | [0006](0006-family-wall-auth.md) | Family Wall requires Immich token validation |
 | [0007](0007-server-api-key.md) | Optional `PICFORT_API_KEY` for externally reachable server |
-| [0008](0008-family-hub-storage.md) | Family-hub feature storage on Picfort server |
+| [0008](0008-family-hub-storage.md) | Family-hub feature storage on Picfort server (schema changes: see 0016) |
 | [0009](0009-receipts-gemini.md) | On-device receipt reading with Gemini Nano (when supported by phone) |
 | [0010](0010-family-members-birthdays-recurring-events.md) | Manual members, birthdays, recurring events with additive migrations |
 | [0011](0011-modular-architecture.md) | Multi-module architecture for focused, agent-friendly development |
@@ -21,3 +21,4 @@ Each file in this directory documents one major technical decision.
 | [0013](0013-ktlint.md) | ktlint for Kotlin code style, checked in CI |
 | [0014](0014-browser-frame.md) | The frame in a web browser (`/frame`), only behind the server key |
 | [0015](0015-event-reminders-on-the-phone.md) | Event reminders planned and stored on each phone (AlarmManager + 6-hourly re-plan) |
+| [0016](0016-schema-migrations.md) | Data survives schema changes: a migration for every bump (server SQLite and Room state) |
