@@ -47,6 +47,8 @@ class WishlistRepositoryTest {
         override suspend fun update(
             id: Long,
             title: String?,
+            imageUrl: String?,
+            clearImage: Boolean,
             priceMinor: Long?,
             clearPrice: Boolean,
             eventId: Long?,
@@ -60,6 +62,7 @@ class WishlistRepositoryTest {
             val current = items.first { it.id == id }
             val updated = current.copy(
                 title = title ?: current.title,
+                imageUrl = if (clearImage) null else (imageUrl ?: current.imageUrl),
                 priceMinor = if (clearPrice) null else (priceMinor ?: current.priceMinor),
                 eventId = if (clearEvent) null else (eventId ?: current.eventId),
                 targetMemberId = if (clearTargetMember) null else (targetMemberId ?: current.targetMemberId),
@@ -110,5 +113,16 @@ class WishlistRepositoryTest {
         assertEquals("https://img/a.jpg", dto.imageUrl)
         assertEquals(19900L, dto.priceMinor)
         assertEquals("Allegro", dto.shopName)
+    }
+
+    @Test
+    fun `parseWebViewPreviewJson extracts title, imageUrl and priceMinor`() {
+        val raw = "\"{\\\"title\\\":\\\"Multicooker Tefal\\\"," +
+            "\\\"imageUrl\\\":\\\"https://a.allegroimg.com/s512/123.jpg\\\"," +
+            "\\\"price\\\":\\\"499.99\\\"}\""
+        val parsed = parseWebViewPreviewJson(raw)
+        assertEquals("Multicooker Tefal", parsed?.title)
+        assertEquals("https://a.allegroimg.com/s512/123.jpg", parsed?.imageUrl)
+        assertEquals(49999L, parsed?.priceMinor)
     }
 }

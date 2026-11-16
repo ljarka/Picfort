@@ -2,7 +2,6 @@ package com.github.ljarka.picfort.ui.shopping
 
 import android.content.Intent
 import android.net.Uri
-import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -40,7 +39,6 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
-import androidx.compose.material3.OutlinedCard
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -89,7 +87,7 @@ fun WishlistCarouselSection(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 4.dp, vertical = 4.dp),
+                .padding(horizontal = 4.dp, vertical = 2.dp),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(8.dp),
         ) {
@@ -108,73 +106,43 @@ fun WishlistCarouselSection(
                     modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
                 )
             }
-        }
-        Spacer(Modifier.height(6.dp))
-        LazyRow(
-            contentPadding = PaddingValues(horizontal = 2.dp),
-            horizontalArrangement = Arrangement.spacedBy(10.dp),
-        ) {
+            Spacer(Modifier.weight(1f))
             if (editable) {
-                item(key = "add-wishlist") {
-                    AddWishlistCard(onClick = onAddClick)
-                }
-            }
-            items(items, key = { it.id }) { item ->
-                WishlistProductCard(
-                    item = item,
-                    event = item.eventId?.let(eventsById::get),
-                    reservedByName = item.reservedBy?.let { membersById[it]?.name },
-                    hideSecretReservation = item.targetMemberId == myId,
-                    editable = editable,
-                    canDelete = item.createdBy == myId || item.bought,
-                    onOpenUrl = { onOpenUrl(item.url) },
-                    onEventClick = { item.eventId?.let(onEventClick) },
-                    onToggleBought = { onToggleBought(item) },
-                    onToggleReserve = { onToggleReserve(item) },
-                    onEdit = { onEdit(item) },
-                    onDelete = { onDelete(item) },
-                )
-            }
-        }
-    }
-}
-
-@Composable
-private fun AddWishlistCard(onClick: () -> Unit) {
-    OutlinedCard(
-        onClick = onClick,
-        modifier = Modifier
-            .width(128.dp)
-            .height(206.dp),
-        shape = RoundedCornerShape(14.dp),
-        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
-    ) {
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(12.dp),
-            verticalArrangement = Arrangement.Center,
-            horizontalAlignment = Alignment.CenterHorizontally,
-        ) {
-            Surface(
-                color = MaterialTheme.colorScheme.primaryContainer,
-                shape = RoundedCornerShape(12.dp),
-                modifier = Modifier.size(40.dp),
-            ) {
-                Box(contentAlignment = Alignment.Center) {
+                IconButton(
+                    onClick = onAddClick,
+                    modifier = Modifier.size(32.dp),
+                ) {
                     Icon(
                         Icons.Default.Add,
                         contentDescription = "Add wishlist link",
-                        tint = MaterialTheme.colorScheme.onPrimaryContainer,
+                        tint = MaterialTheme.colorScheme.primary,
                     )
                 }
             }
-            Spacer(Modifier.height(8.dp))
-            Text(
-                text = "Add link",
-                style = MaterialTheme.typography.labelLarge,
-                color = MaterialTheme.colorScheme.primary,
-            )
+        }
+        if (items.isNotEmpty()) {
+            Spacer(Modifier.height(6.dp))
+            LazyRow(
+                contentPadding = PaddingValues(horizontal = 2.dp),
+                horizontalArrangement = Arrangement.spacedBy(10.dp),
+            ) {
+                items(items, key = { it.id }) { item ->
+                    WishlistProductCard(
+                        item = item,
+                        event = item.eventId?.let(eventsById::get),
+                        reservedByName = item.reservedBy?.let { membersById[it]?.name },
+                        hideSecretReservation = item.targetMemberId == myId,
+                        editable = editable,
+                        canDelete = item.createdBy == myId || item.bought,
+                        onOpenUrl = { onOpenUrl(item.url) },
+                        onEventClick = { item.eventId?.let(onEventClick) },
+                        onToggleBought = { onToggleBought(item) },
+                        onToggleReserve = { onToggleReserve(item) },
+                        onEdit = { onEdit(item) },
+                        onDelete = { onDelete(item) },
+                    )
+                }
+            }
         }
     }
 }
@@ -361,6 +329,8 @@ fun WishlistItemSheet(
     var eventId by remember(editing?.id) { mutableStateOf(editing?.eventId) }
     var targetMemberId by remember(editing?.id) { mutableStateOf(editing?.targetMemberId) }
     var lastPreviewedUrl by remember(editing?.id) { mutableStateOf("") }
+    var showWebViewSheet by remember(editing?.id) { mutableStateOf(false) }
+    var wasPreviewLoading by remember(editing?.id) { mutableStateOf(false) }
 
     LaunchedEffect(preview) {
         if (editing == null && preview != null) {
@@ -376,6 +346,15 @@ fun WishlistItemSheet(
         }
     }
 
+    LaunchedEffect(isPreviewLoading) {
+        if (wasPreviewLoading && !isPreviewLoading && editing == null && imageUrl.isNullOrBlank() &&
+            isHttpUrl(url.trim())
+        ) {
+            showWebViewSheet = true
+        }
+        wasPreviewLoading = isPreviewLoading
+    }
+
     LaunchedEffect(url) {
         val trimmed = url.trim()
         if (editing == null && isHttpUrl(trimmed) && trimmed != lastPreviewedUrl) {
@@ -384,10 +363,10 @@ fun WishlistItemSheet(
         }
     }
 
-    val sortedEvents = remember(upcomingEvents) {
-        upcomingEvents.sortedWith(
-            compareByDescending<FamilyEvent> { it.birthdayOf != null }.thenBy { it.startDate },
-        )
+    val birthdayEvents = remember(upcomingEvents) {
+        upcomingEvents
+            .filter { it.isBirthday }
+            .sortedBy { it.startDate }
     }
 
     ModalBottomSheet(onDismissRequest = onDismiss) {
@@ -433,6 +412,25 @@ fun WishlistItemSheet(
                 )
             }
             OutlinedTextField(
+                value = imageUrl.orEmpty(),
+                onValueChange = { imageUrl = it },
+                label = { Text("Image URL (optional)") },
+                singleLine = true,
+                trailingIcon = {
+                    TextButton(onClick = {
+                        clipboard.getText()?.text?.trim()?.takeIf { it.isNotEmpty() }?.let { imageUrl = it }
+                    }) {
+                        Text("Paste")
+                    }
+                },
+                modifier = Modifier.fillMaxWidth(),
+            )
+            if (imageUrl.isNullOrBlank() && isHttpUrl(url.trim()) && !isPreviewLoading) {
+                TextButton(onClick = { showWebViewSheet = true }) {
+                    Text("Load photo in browser")
+                }
+            }
+            OutlinedTextField(
                 value = title,
                 onValueChange = { title = it },
                 label = { Text("Title") },
@@ -449,7 +447,7 @@ fun WishlistItemSheet(
                 modifier = Modifier.fillMaxWidth(),
             )
             EventPickerDropdown(
-                events = sortedEvents,
+                events = birthdayEvents,
                 selectedEventId = eventId,
                 onSelect = { eventId = it },
             )
@@ -461,25 +459,44 @@ fun WishlistItemSheet(
             val parsedPrice = if (priceInput.isBlank()) null else parseTotalMinor(priceInput)
             val priceValid = priceInput.isBlank() || parsedPrice != null
             val urlValid = editing != null || isHttpUrl(url.trim())
+            val imageUrlValid = imageUrl.isNullOrBlank() || isHttpUrl(imageUrl!!.trim())
             val titleValid = title.trim().isNotEmpty() || editing == null
             Button(
                 onClick = {
                     onSave(
                         url.trim(),
                         title.trim(),
-                        imageUrl,
+                        imageUrl?.trim()?.takeIf { it.isNotEmpty() },
                         parsedPrice,
                         eventId,
                         targetMemberId,
                     )
                 },
-                enabled = !saving && urlValid && priceValid && titleValid,
+                enabled = !saving && urlValid && imageUrlValid && priceValid && titleValid,
                 modifier = Modifier.fillMaxWidth(),
             ) {
                 Text(if (saving) "Saving…" else "Save")
             }
             Spacer(Modifier.height(16.dp))
         }
+    }
+    if (showWebViewSheet) {
+        WishlistWebViewSheet(
+            url = url.trim(),
+            onExtracted = { extracted ->
+                showWebViewSheet = false
+                if (!extracted.imageUrl.isNullOrBlank()) {
+                    imageUrl = extracted.imageUrl
+                }
+                if (title.isBlank() && !extracted.title.isNullOrBlank()) {
+                    title = extracted.title.orEmpty()
+                }
+                if (priceInput.isBlank() && extracted.priceMinor != null) {
+                    priceInput = formatMinorForInput(extracted.priceMinor!!)
+                }
+            },
+            onDismiss = { showWebViewSheet = false },
+        )
     }
 }
 

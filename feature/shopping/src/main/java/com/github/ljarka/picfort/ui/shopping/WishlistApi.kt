@@ -83,6 +83,8 @@ interface WishlistBackend {
     suspend fun update(
         id: Long,
         title: String? = null,
+        imageUrl: String? = null,
+        clearImage: Boolean = false,
         priceMinor: Long? = null,
         clearPrice: Boolean = false,
         eventId: Long? = null,
@@ -150,6 +152,8 @@ class WishlistApi @Inject constructor(private val server: PicfortServerClient, p
     override suspend fun update(
         id: Long,
         title: String?,
+        imageUrl: String?,
+        clearImage: Boolean,
         priceMinor: Long?,
         clearPrice: Boolean,
         eventId: Long?,
@@ -163,6 +167,10 @@ class WishlistApi @Inject constructor(private val server: PicfortServerClient, p
         val endpoint = itemUrl(id)
         val body = buildJsonObject {
             if (title != null) put("title", title.trim())
+            when {
+                clearImage -> put("image_url", JsonNull)
+                imageUrl != null -> put("image_url", imageUrl.trim())
+            }
             when {
                 clearPrice -> put("price_minor", JsonNull)
                 priceMinor != null -> put("price_minor", priceMinor)

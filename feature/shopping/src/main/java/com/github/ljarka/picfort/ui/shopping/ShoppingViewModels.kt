@@ -192,11 +192,12 @@ class ShoppingListsViewModel @Inject constructor(
             extra.update { it.copy(savingWishlist = true) }
             try {
                 val editing = extra.value.editingWishlistItem
+                val normalizedImageUrl = imageUrl?.trim()?.takeIf { it.isNotEmpty() }
                 if (editing == null) {
                     wishlistRepository.create(
                         url = url,
                         title = title.ifBlank { null },
-                        imageUrl = imageUrl,
+                        imageUrl = normalizedImageUrl,
                         priceMinor = priceMinor,
                         eventId = eventId,
                         targetMemberId = targetMemberId,
@@ -205,6 +206,7 @@ class ShoppingListsViewModel @Inject constructor(
                     wishlistRepository.update(
                         id = editing.id,
                         title = title,
+                        imageUrl = normalizedImageUrl,
                         priceMinor = priceMinor,
                         eventId = eventId,
                         targetMemberId = targetMemberId,

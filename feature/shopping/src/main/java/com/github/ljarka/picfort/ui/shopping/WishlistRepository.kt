@@ -53,6 +53,7 @@ class WishlistRepository @Inject constructor(private val backend: WishlistBacken
     suspend fun update(
         id: Long,
         title: String,
+        imageUrl: String?,
         priceMinor: Long?,
         eventId: Long?,
         targetMemberId: String?,
@@ -60,6 +61,8 @@ class WishlistRepository @Inject constructor(private val backend: WishlistBacken
         val updated = backend.update(
             id = id,
             title = title,
+            imageUrl = imageUrl,
+            clearImage = imageUrl == null,
             priceMinor = priceMinor,
             clearPrice = priceMinor == null,
             eventId = eventId,
