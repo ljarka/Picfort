@@ -369,6 +369,9 @@ class MainActivity : ComponentActivity() {
                                             onOpenDay = { day ->
                                                 navController.navigate(Screen.Timeline(day.toString()))
                                             },
+                                            onOpenAlbum = { id, name, canDelete ->
+                                                navController.navigate(AlbumRoute(id, name, canDelete))
+                                            },
                                         )
                                     }
                                     composable<Screen.EventForm> {

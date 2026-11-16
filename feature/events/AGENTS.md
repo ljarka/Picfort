@@ -7,6 +7,7 @@ Family events vertical slice: upcoming and past events, details, form, recurrenc
 | File | Purpose |
 |---|---|
 | `ui/events/EventsScreens.kt` | UI: `EventsListContent`, `EventDetailContent` |
+| `ui/events/EventAlbumUi.kt` | Album cover thumbnails, detail card, form album picker & family sharing helpers (T-026) |
 | `ui/events/EventWishlistSection.kt` | "Gift ideas & Wishlist" horizontal carousel on event detail (T-042) |
 | `ui/events/EventFormContent.kt` | UI: `EventFormContent` + form-only pickers (`PickerField`, `RepeatField`) |
 | `ui/events/EventsViewModels.kt` | ViewModels: `EventsListViewModel`, `EventDetailViewModel`, `EventFormViewModel` |
@@ -57,7 +58,7 @@ Family events vertical slice: upcoming and past events, details, form, recurrenc
 
 ## Dependencies & Boundaries
 
-- Depends on `:core:model` (`FamilyEvent`, `EventsSegment`, `FamilyMemberProvider`, `FamilyEventsProvider`, `DayPhotosProvider`).
+- Depends on `:core:model` (`FamilyEvent`, `EventsSegment`, `FamilyMemberProvider`, `FamilyEventsProvider`, `DayPhotosProvider`, `EventAlbumsProvider`, `WishlistProvider`).
 - Depends on `:core:ui` (`PicfortTheme`, `SettingsAction`, `ServerRequiredContent`, `justify`); Coil for thumbnails.
 - Depends on `:core:network` (`PicfortServerClient`, `PicfortServerException`).
 - **NEVER** depends directly on other feature modules (`:feature:wall`, `:feature:shopping`, `:feature:family`).

@@ -17,6 +17,7 @@ data class AlbumDto(
     val albumName: String = "",
     val albumThumbnailAssetId: String? = null,
     val assetCount: Int = 0,
+    val shared: Boolean = false,
     val albumUsers: List<AlbumUserDto> = emptyList(),
 )
 
@@ -37,7 +38,17 @@ val AlbumDto.ownerId: String? get() = albumUsers.firstOrNull { it.role == "owner
 fun AlbumDto.canDelete(myId: String): Boolean = myId.isBlank() || ownerId == null || ownerId == myId
 
 @Serializable
-data class CreateAlbumRequest(val albumName: String, val assetIds: List<String> = emptyList())
+data class CreateAlbumUser(val userId: String, val role: String = "editor")
+
+@Serializable
+data class CreateAlbumRequest(
+    val albumName: String,
+    val assetIds: List<String> = emptyList(),
+    val albumUsers: List<CreateAlbumUser>? = null,
+)
+
+@Serializable
+data class ShareAlbumUsersRequest(val albumUsers: List<CreateAlbumUser>)
 
 @Serializable
 data class BulkIdsRequest(val ids: List<String>)
@@ -103,8 +114,14 @@ interface CollectionsService {
     @GET("/api/albums")
     suspend fun albums(): List<AlbumDto>
 
+    @GET("/api/albums/{id}")
+    suspend fun album(@Path("id") albumId: String): AlbumDto
+
     @POST("/api/albums")
     suspend fun createAlbum(@Body body: CreateAlbumRequest): AlbumDto
+
+    @PUT("/api/albums/{id}/users")
+    suspend fun shareAlbum(@Path("id") albumId: String, @Body body: ShareAlbumUsersRequest): AlbumDto
 
     /** The album only: its photos and videos stay in Immich. 204 No Content. */
     @DELETE("/api/albums/{id}")

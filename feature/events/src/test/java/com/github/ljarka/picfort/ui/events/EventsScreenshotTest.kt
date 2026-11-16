@@ -7,6 +7,7 @@ import app.cash.paparazzi.DeviceConfig
 import app.cash.paparazzi.Paparazzi
 import com.android.resources.NightMode
 import com.github.ljarka.picfort.core.model.DayPhoto
+import com.github.ljarka.picfort.core.model.EventAlbum
 import com.github.ljarka.picfort.core.model.EventRepeat
 import com.github.ljarka.picfort.core.model.EventsSegment
 import com.github.ljarka.picfort.core.model.FamilyEvent
@@ -448,5 +449,71 @@ class EventsScreenshotTest {
     @Test
     fun event_detail_birthday_no_photos() = snap {
         EventDetailContent(birthdayWithPhotos(BirthdayPhotosUi(loading = false)))
+    }
+
+    private val sampleAlbum = EventAlbum(
+        id = "album-1",
+        name = "Mazury 2026",
+        assetCount = 42,
+        ownerId = "mama",
+        memberIds = setOf("mama"),
+    )
+
+    @Test
+    fun event_detail_album() = snap {
+        EventDetailContent(
+            EventDetailUi(
+                event = sampleUpcomingEvents[0].copy(albumId = sampleAlbum.id),
+                today = sampleToday,
+                authorName = "Mama",
+                album = sampleAlbum,
+            ),
+        )
+    }
+
+    @Test
+    fun event_detail_album_unavailable() = snap {
+        EventDetailContent(
+            EventDetailUi(
+                event = sampleUpcomingEvents[0].copy(albumId = "missing"),
+                today = sampleToday,
+                authorName = "Tata",
+                albumUnavailable = true,
+            ),
+        )
+    }
+
+    @Test
+    fun event_form_album_owner_share() = snap {
+        EventFormContent(
+            EventFormUi(
+                isEditing = true,
+                title = "Mazury trip",
+                startDate = sampleToday.plusDays(3),
+                albumId = sampleAlbum.id,
+                albums = listOf(sampleAlbum),
+                myId = "mama",
+                immichUsers = family.filter { it.isImmichUser },
+                members = family,
+                today = sampleToday,
+            ),
+        )
+    }
+
+    @Test
+    fun event_form_album_other_owner() = snap {
+        EventFormContent(
+            EventFormUi(
+                isEditing = true,
+                title = "Mazury trip",
+                startDate = sampleToday.plusDays(3),
+                albumId = sampleAlbum.id,
+                albums = listOf(sampleAlbum),
+                myId = "tata",
+                immichUsers = family.filter { it.isImmichUser },
+                members = family,
+                today = sampleToday,
+            ),
+        )
     }
 }

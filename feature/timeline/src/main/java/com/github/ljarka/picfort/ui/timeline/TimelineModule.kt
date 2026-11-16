@@ -1,6 +1,8 @@
 package com.github.ljarka.picfort.ui.timeline
 
+import com.github.ljarka.picfort.collections.ImmichEventAlbumsProvider
 import com.github.ljarka.picfort.core.model.DayPhotosProvider
+import com.github.ljarka.picfort.core.model.EventAlbumsProvider
 import dagger.Binds
 import dagger.Module
 import dagger.Provides
@@ -20,4 +22,7 @@ class TimelineModule {
 interface TimelineBindingsModule {
     @Binds
     fun bindDayPhotosProvider(impl: DayPhotosRepository): DayPhotosProvider
+
+    @Binds
+    fun bindEventAlbumsProvider(impl: ImmichEventAlbumsProvider): EventAlbumsProvider
 }

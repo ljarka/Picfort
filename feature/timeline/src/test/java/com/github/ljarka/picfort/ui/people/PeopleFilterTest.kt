@@ -44,7 +44,12 @@ class PeopleFilterTest {
         val requests = mutableListOf<MetadataSearchRequest>()
         val service = object : CollectionsService {
             override suspend fun albums(): List<AlbumDto> = emptyList()
+            override suspend fun album(albumId: String) = error("unused")
             override suspend fun createAlbum(body: CreateAlbumRequest) = error("unused")
+            override suspend fun shareAlbum(
+                albumId: String,
+                body: com.github.ljarka.picfort.collections.ShareAlbumUsersRequest,
+            ) = error("unused")
             override suspend fun deleteAlbum(albumId: String) = retrofit2.Response.success(Unit)
             override suspend fun addToAlbum(albumId: String, body: BulkIdsRequest): List<BulkIdResult> = emptyList()
             override suspend fun smartSearch(body: SmartSearchRequest) = SearchResponse()

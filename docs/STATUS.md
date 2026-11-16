@@ -54,7 +54,7 @@ Deeper integration with Android platform features.
 
 | Task | Description | Status |
 |------|-------------|--------|
-| [T-012](tasks/T-012-android-widget.md) | Home screen widget (Glance API) | `ready` |
+| [T-012](tasks/T-012-android-widget.md) | Home screen widget (Glance API) | `closed` |
 | [T-013](tasks/T-013-material-you.md) | Material You / dynamic color & visual rebranding | `done` |
 
 ### Phase 6 — Quality & CI
@@ -98,7 +98,7 @@ Android task except T-017 and T-026 starts with a mockup the owner approves.
 | [T-023](tasks/T-023-events-android.md)                      | Events — Android: upcoming / past, add, edit                                                        | `done`        |
 | [T-024](tasks/T-024-receipt-reading-gemini.md)              | Receipts — read shop, date, total on-device with Gemini Nano (Android, when supported)              | `done`        |
 | [T-025](tasks/T-025-spending-summary-android.md)            | Spending summary — Android: month, 6-month bars, by shop and person                                 | `done`        |
-| [T-026](tasks/T-026-event-albums-android.md)                | Events — link or create a family-shared Immich album (Android)                                      | `ready`       |
+| [T-026](tasks/T-026-event-albums-android.md)                | Events — link or create a family-shared Immich album (Android)                                      | `done`        |
 | [T-027](tasks/T-027-wall-today-panel.md)                    | Family Wall — today panel: date and the day's event                                                 | `done`        |
 | [T-028](tasks/T-028-school-timetable-backend.md)            | School timetable — server API (`school.db`): children, bell schedule, lessons, activities           | `done`        |
 | [T-029](tasks/T-029-school-timetable-android.md)            | School timetable — Android: child chips, "finishes at", week by day, editing                        | `done`        |

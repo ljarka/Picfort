@@ -21,6 +21,7 @@ import androidx.compose.material.icons.filled.Clear
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
+import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DatePicker
 import androidx.compose.material3.DatePickerDialog
@@ -59,6 +60,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.vectorResource
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.unit.dp
+import com.github.ljarka.picfort.core.model.EventAlbum
 import com.github.ljarka.picfort.core.model.EventRepeat
 import com.github.ljarka.picfort.core.model.FamilyMember
 import com.github.ljarka.picfort.core.ui.R
@@ -86,6 +88,11 @@ fun EventFormContent(
     onSave: () -> Unit = {},
     onClose: () -> Unit = {},
     onMessageShown: () -> Unit = {},
+    onSelectNoAlbum: () -> Unit = {},
+    onSelectCreateAlbum: () -> Unit = {},
+    onSelectAlbum: (EventAlbum) -> Unit = {},
+    onShareWithFamilyChange: (Boolean) -> Unit = {},
+    onRetryAlbums: () -> Unit = {},
     albumSection: @Composable () -> Unit = {},
 ) {
     val snackbar = remember { SnackbarHostState() }
@@ -100,6 +107,7 @@ fun EventFormContent(
     var pickingEndDate by remember { mutableStateOf(false) }
     var pickingTime by remember { mutableStateOf(false) }
     var pickingRepeatUntil by remember { mutableStateOf(false) }
+    var pickingAlbum by remember { mutableStateOf(false) }
 
     if (pickingRepeatUntil) {
         val minDate = state.startDate ?: state.today
@@ -392,6 +400,26 @@ fun EventFormContent(
             )
 
             albumSection()
+            EventFormAlbumField(
+                state = state,
+                onOpenPicker = { pickingAlbum = true },
+                onShareWithFamilyChange = onShareWithFamilyChange,
+            )
+            if (pickingAlbum) {
+                EventAlbumPickerSheet(
+                    eventTitle = state.title,
+                    selectedAlbumId = state.albumId,
+                    createNewAlbum = state.createNewAlbum,
+                    albums = state.albums,
+                    isLoading = state.albumsLoading,
+                    error = state.albumsError,
+                    onSelectNone = onSelectNoAlbum,
+                    onSelectCreate = onSelectCreateAlbum,
+                    onSelectAlbum = onSelectAlbum,
+                    onRetry = onRetryAlbums,
+                    onDismiss = { pickingAlbum = false },
+                )
+            }
         }
     }
 }
@@ -469,6 +497,66 @@ private fun RepeatField(repeat: EventRepeat?, onChange: (EventRepeat?) -> Unit) 
                         onChange(option)
                     },
                 )
+            }
+        }
+    }
+}
+
+@Composable
+private fun EventFormAlbumField(
+    state: EventFormUi,
+    onOpenPicker: () -> Unit,
+    onShareWithFamilyChange: (Boolean) -> Unit,
+) {
+    val selected = state.selectedAlbum
+    val newTitle = state.title.trim().ifEmpty { "New event album" }
+    val displayValue = when {
+        state.createNewAlbum -> "Create \"$newTitle\""
+        selected != null -> selected.name
+        state.albumId != null -> "Linked album (not available to you)"
+        else -> "No album"
+    }
+    Column(modifier = Modifier.fillMaxWidth()) {
+        PickerField(
+            label = "Album",
+            value = displayValue,
+            hasValue = state.createNewAlbum || state.albumId != null,
+            onClick = onOpenPicker,
+            modifier = Modifier.fillMaxWidth(),
+        )
+        if (!state.createNewAlbum && selected != null) {
+            val familyIds = familyUserIds(state.immichUsers, state.myId)
+            val missing = missingFamilyMembers(selected, familyIds)
+            if (missing.isNotEmpty()) {
+                val isOwner = state.myId.isNotBlank() && (selected.ownerId == null || selected.ownerId == state.myId)
+                if (isOwner) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable { onShareWithFamilyChange(!state.shareWithFamily) }
+                            .padding(vertical = 4.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Checkbox(
+                            checked = state.shareWithFamily,
+                            onCheckedChange = onShareWithFamilyChange,
+                        )
+                        val count = missing.size
+                        val peopleLabel = if (count == 1) "1 person" else "$count people"
+                        Text(
+                            text = "Share with the family ($peopleLabel)",
+                            style = MaterialTheme.typography.bodyMedium,
+                        )
+                    }
+                } else {
+                    val ownerName = state.members.firstOrNull { it.id == selected.ownerId }?.name ?: "the owner"
+                    Text(
+                        text = "Only $ownerName can share this album with everyone.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.padding(top = 6.dp),
+                    )
+                }
             }
         }
     }

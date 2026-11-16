@@ -1,6 +1,6 @@
 # T-026 — Events: link or create an Immich album (Android)
 
-**Status:** ready (mockup: the album parts are added to `events-v1.png` from T-023)  
+**Status:** done  
 **Component:** Android app  
 **Depends on:** T-023 (event screens), T-022 (`album_id`)
 

@@ -85,6 +85,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.github.ljarka.picfort.core.model.DayPhoto
+import com.github.ljarka.picfort.core.model.EventAlbum
 import com.github.ljarka.picfort.core.model.EventRepeat
 import com.github.ljarka.picfort.core.model.EventsSegment
 import com.github.ljarka.picfort.core.model.FamilyEvent
@@ -122,6 +123,7 @@ data class EventsListUi(
     val members: List<FamilyMember> = emptyList(),
     /** The member the list is filtered to, or null for everyone. */
     val selectedMemberId: String? = null,
+    val albumsById: Map<String, EventAlbum> = emptyMap(),
 )
 
 data class EventDetailUi(
@@ -140,6 +142,8 @@ data class EventDetailUi(
     val reminder: EventReminderUi? = null,
     val myId: String = "",
     val wishlistItems: List<WishlistItem> = emptyList(),
+    val album: EventAlbum? = null,
+    val albumUnavailable: Boolean = false,
 )
 
 data class EventFormUi(
@@ -162,8 +166,17 @@ data class EventFormUi(
     val hasUnsavedChanges: Boolean = false,
     val isSaving: Boolean = false,
     val message: String? = null,
+    val albumId: String? = null,
+    val createNewAlbum: Boolean = false,
+    val shareWithFamily: Boolean = true,
+    val albums: List<EventAlbum> = emptyList(),
+    val albumsLoading: Boolean = false,
+    val albumsError: String? = null,
+    val myId: String = "",
+    val immichUsers: List<FamilyMember> = emptyList(),
 ) {
     val canSave: Boolean get() = title.trim().isNotEmpty() && startDate != null && !isSaving
+    val selectedAlbum: EventAlbum? get() = albumId?.let { id -> albums.firstOrNull { it.id == id } }
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -334,6 +347,7 @@ fun EventsListContent(
                                             isNow = section.isNow,
                                             locale = locale,
                                             who = membersOf(event.who, state.members),
+                                            album = event.albumId?.let(state.albumsById::get),
                                             onClick = { onOpenEvent(event) },
                                         )
                                     }
@@ -369,6 +383,7 @@ private fun EventRow(
     locale: Locale,
     onClick: () -> Unit,
     who: List<FamilyMember> = emptyList(),
+    album: EventAlbum? = null,
 ) {
     val badge = remember(event.startDate, event.endDate, locale) {
         formatEventDateBadge(event.startDate, event.endDate, locale)
@@ -534,6 +549,14 @@ private fun EventRow(
                 Spacer(Modifier.width(8.dp))
                 MemberStack(who)
             }
+            if (album != null) {
+                Spacer(Modifier.width(8.dp))
+                AlbumCoverThumb(
+                    thumbnailUrl = album.thumbnailUrl,
+                    contentDescription = album.name,
+                    sizeDp = if (isUpcoming) 56 else 72,
+                )
+            }
         }
     }
 }
@@ -558,6 +581,7 @@ fun EventDetailContent(
     onReminderChange: (ReminderChoice) -> Unit = {},
     onToggleWishlistBought: (WishlistItem) -> Unit = {},
     onToggleWishlistReserve: (WishlistItem) -> Unit = {},
+    onOpenAlbum: (String, String, Boolean) -> Unit = { _, _, _ -> },
 ) {
     val snackbar = remember { SnackbarHostState() }
     LaunchedEffect(state.message) {
@@ -752,6 +776,16 @@ fun EventDetailContent(
                         }
 
                         albumSlot()
+                        EventAlbumDetailCard(
+                            album = state.album,
+                            unavailable = state.albumUnavailable,
+                            onClick = {
+                                state.album?.let { a ->
+                                    val canDelete = state.myId.isBlank() || a.ownerId == null || a.ownerId == state.myId
+                                    onOpenAlbum(a.id, a.name, canDelete)
+                                }
+                            },
+                        )
 
                         Spacer(Modifier.height(24.dp))
                         HorizontalDivider()

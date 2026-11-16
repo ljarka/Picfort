@@ -1,6 +1,6 @@
 # T-012 — Home screen widget (Glance API)
 
-**Status:** ready  
+**Status:** closed (dropped by owner 2026-11-16: doesn't use widgets)  
 **Component:** Android app  
 **Depends on:** —
 

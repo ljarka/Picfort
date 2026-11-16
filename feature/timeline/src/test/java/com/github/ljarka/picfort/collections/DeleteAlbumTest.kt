@@ -18,7 +18,9 @@ class DeleteAlbumTest {
     private var refuse: Int? = null
     private val service = object : CollectionsService {
         override suspend fun albums(): List<AlbumDto> = emptyList()
+        override suspend fun album(albumId: String) = error("unused")
         override suspend fun createAlbum(body: CreateAlbumRequest) = error("unused")
+        override suspend fun shareAlbum(albumId: String, body: ShareAlbumUsersRequest) = error("unused")
         override suspend fun deleteAlbum(albumId: String): Response<Unit> {
             refuse?.let { return Response.error(it, "{}".toResponseBody()) }
             deleted += albumId

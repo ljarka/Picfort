@@ -24,6 +24,8 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.repeatOnLifecycle
 import androidx.lifecycle.viewModelScope
 import com.github.ljarka.picfort.core.model.DayPhotosProvider
+import com.github.ljarka.picfort.core.model.EventAlbum
+import com.github.ljarka.picfort.core.model.EventAlbumsProvider
 import com.github.ljarka.picfort.core.model.EventRepeat
 import com.github.ljarka.picfort.core.model.EventsSegment
 import com.github.ljarka.picfort.core.model.FamilyEvent
@@ -61,6 +63,7 @@ private const val EVENTS_POLL_MILLIS = 60_000L
 class EventsListViewModel @Inject constructor(
     private val repository: EventsRepository,
     private val family: FamilyMemberProvider,
+    private val eventAlbums: EventAlbumsProvider,
     private val server: PicfortServerClient,
 ) : ViewModel() {
 
@@ -72,6 +75,7 @@ class EventsListViewModel @Inject constructor(
         val memberNames: Map<String, String> = emptyMap(),
         val members: List<FamilyMember> = emptyList(),
         val selectedMemberId: String? = null,
+        val albumsById: Map<String, EventAlbum> = emptyMap(),
     )
 
     private val extra = MutableStateFlow(Extra(configured = server.isConfigured, isLoading = true))
@@ -102,6 +106,7 @@ class EventsListViewModel @Inject constructor(
                     memberNames = ext.memberNames,
                     members = ext.members,
                     selectedMemberId = ext.selectedMemberId?.takeIf { id -> ext.members.any { it.id == id } },
+                    albumsById = ext.albumsById,
                 )
             }.collect { _state.value = it }
         }
@@ -158,6 +163,10 @@ class EventsListViewModel @Inject constructor(
         }
         extra.update { it.copy(configured = true, isLoading = activeEmptyBefore, loadError = null) }
         viewModelScope.launch { family.refresh() }
+        viewModelScope.launch {
+            val map = runCatching { eventAlbums.albums().associateBy { it.id } }.getOrNull()
+            if (map != null) extra.update { it.copy(albumsById = map) }
+        }
         val error = repository.refreshActive()
         extra.update {
             it.copy(
@@ -175,6 +184,7 @@ class EventDetailViewModel @Inject constructor(
     private val dayPhotos: DayPhotosProvider,
     private val reminders: ReminderStore,
     private val wishlist: WishlistProvider,
+    private val eventAlbums: EventAlbumsProvider,
     savedState: SavedStateHandle,
 ) : ViewModel() {
 
@@ -279,12 +289,15 @@ class EventDetailViewModel @Inject constructor(
             _state.update { it.copy(isLoading = it.event == null, loadError = null) }
             try {
                 val fresh = repository.fetchEvent(eventId)
+                val album = fresh.albumId?.let { id -> runCatching { eventAlbums.album(id) }.getOrNull() }
                 _state.update {
                     it.copy(
                         event = fresh,
                         today = repository.rollOverMidnight(),
                         authorName = authorName(fresh),
                         canDelete = canDelete(fresh),
+                        album = album,
+                        albumUnavailable = fresh.albumId != null && album == null,
                         isLoading = false,
                         loadError = null,
                     )
@@ -328,6 +341,7 @@ class EventDetailViewModel @Inject constructor(
 class EventFormViewModel @Inject constructor(
     private val repository: EventsRepository,
     private val family: FamilyMemberProvider,
+    private val eventAlbums: EventAlbumsProvider,
     savedState: SavedStateHandle,
 ) : ViewModel() {
 
@@ -393,9 +407,43 @@ class EventFormViewModel @Inject constructor(
     }
 
     init {
+        loadAlbums()
         viewModelScope.launch {
-            family.allMembers.collect { members -> _state.update { it.copy(members = members) } }
+            family.allMembers.collect { members ->
+                _state.update { it.copy(members = members, myId = family.myId) }
+            }
         }
+        viewModelScope.launch {
+            family.members.collect { immichUsers ->
+                _state.update { it.copy(immichUsers = immichUsers) }
+            }
+        }
+    }
+
+    fun loadAlbums() {
+        viewModelScope.launch {
+            _state.update { it.copy(albumsLoading = true, albumsError = null) }
+            try {
+                val list = eventAlbums.albums()
+                _state.update { it.copy(albums = list, albumsLoading = false, albumsError = null) }
+            } catch (e: Exception) {
+                _state.update {
+                    it.copy(albumsLoading = false, albumsError = e.message ?: "Could not load albums")
+                }
+            }
+        }
+    }
+
+    fun onSelectNoAlbum() = updateDraft { copy(albumId = null, createNewAlbum = false) }
+
+    fun onSelectCreateAlbum() = updateDraft { copy(albumId = null, createNewAlbum = true) }
+
+    fun onSelectAlbum(album: EventAlbum) = updateDraft {
+        copy(albumId = album.id, createNewAlbum = false, shareWithFamily = true)
+    }
+
+    fun onShareWithFamilyChange(share: Boolean) {
+        _state.update { it.copy(shareWithFamily = share) }
     }
 
     /** "Who is it for": adds or removes a member, keeping the order they were chosen in (T-053). */
@@ -407,26 +455,58 @@ class EventFormViewModel @Inject constructor(
         val current = _state.value
         val start = current.startDate ?: return
         if (!current.canSave) return
-        val draft = EventDraft(
-            title = current.title,
-            startDate = start,
-            endDate = current.endDate,
-            startTime = current.startTime,
-            location = current.location,
-            note = current.note,
-            albumId = originalEvent?.albumId,
-            repeat = current.repeat,
-            repeatUntil = current.repeatUntil,
-            memberIds = current.memberIds,
-        )
         _state.update { it.copy(isSaving = true, message = null) }
         viewModelScope.launch {
+            var resolvedAlbumId = current.albumId
+            if (current.createNewAlbum) {
+                val familyIds = familyUserIds(current.immichUsers, family.myId)
+                val createdAlbum = try {
+                    eventAlbums.createAlbum(current.title.trim(), familyIds)
+                } catch (e: Exception) {
+                    _state.update {
+                        it.copy(isSaving = false, message = e.message ?: "Could not create album")
+                    }
+                    return@launch
+                }
+                resolvedAlbumId = createdAlbum.id
+                // Keep the created album id in the form so retrying Save after an event error
+                // never creates a duplicate album.
+                _state.update {
+                    it.copy(
+                        albumId = createdAlbum.id,
+                        createNewAlbum = false,
+                        albums = listOf(createdAlbum) + it.albums.filterNot { a -> a.id == createdAlbum.id },
+                    )
+                }
+            }
+            val draft = EventDraft(
+                title = current.title,
+                startDate = start,
+                endDate = current.endDate,
+                startTime = current.startTime,
+                location = current.location,
+                note = current.note,
+                albumId = resolvedAlbumId,
+                repeat = current.repeat,
+                repeatUntil = current.repeatUntil,
+                memberIds = current.memberIds,
+            )
             try {
                 val saved = if (editEventId != null) {
                     val base = originalEvent ?: repository.fetchEvent(editEventId)
                     repository.update(base, draft)
                 } else {
                     repository.create(draft)
+                }
+                val selected = current.selectedAlbum
+                if (!current.createNewAlbum && selected != null && current.shareWithFamily) {
+                    val missing = missingFamilyMembers(selected, familyUserIds(current.immichUsers, family.myId))
+                    val isOwner = family.myId.isNotBlank() &&
+                        (selected.ownerId == null || selected.ownerId == family.myId)
+                    if (isOwner && missing.isNotEmpty()) {
+                        runCatching { eventAlbums.shareAlbum(selected.id, missing) }
+                            .onFailure { repository.postMessage("Saved, but the album couldn't be shared") }
+                    }
                 }
                 _state.update { it.copy(isSaving = false, hasUnsavedChanges = false) }
                 onSaved(saved.id)
@@ -467,6 +547,7 @@ class EventFormViewModel @Inject constructor(
                 repeatUntil = event.repeatUntil,
                 editsSeries = event.repeats,
                 memberIds = event.memberIds,
+                albumId = event.albumId,
                 today = today,
                 hasUnsavedChanges = false,
             )
@@ -497,7 +578,9 @@ class EventFormViewModel @Inject constructor(
                 ui.startTime != original.startTime ||
                 ui.location.trim().ifEmpty { null } != original.location ||
                 ui.note.trim().ifEmpty { null } != original.note ||
-                ui.memberIds != original.memberIds
+                ui.memberIds != original.memberIds ||
+                ui.createNewAlbum ||
+                ui.albumId != original.albumId
         }
     }
 }
@@ -544,6 +627,7 @@ fun EventDetailScreen(
     onOpenPhoto: (assetId: String, index: Int, source: String) -> Unit = { _, _, _ -> },
     /** A birthday year's title: that day in the Photos timeline (T-056). */
     onOpenDay: (LocalDate) -> Unit = {},
+    onOpenAlbum: (albumId: String, albumName: String, canDelete: Boolean) -> Unit = { _, _, _ -> },
 ) {
     val viewModel = hiltViewModel<EventDetailViewModel>()
     val state by viewModel.state.collectAsStateWithLifecycle()
@@ -584,6 +668,7 @@ fun EventDetailScreen(
         },
         onToggleWishlistBought = viewModel::toggleWishlistBought,
         onToggleWishlistReserve = viewModel::toggleWishlistReserve,
+        onOpenAlbum = onOpenAlbum,
     )
 }
 
@@ -633,5 +718,10 @@ fun EventFormScreen(onBack: () -> Unit, onSaved: (Long) -> Unit, onEventGone: ()
         onSave = { viewModel.save(onSaved = onSaved, onGone = onEventGone) },
         onClose = onBack,
         onMessageShown = viewModel::messageShown,
+        onSelectNoAlbum = viewModel::onSelectNoAlbum,
+        onSelectCreateAlbum = viewModel::onSelectCreateAlbum,
+        onSelectAlbum = viewModel::onSelectAlbum,
+        onShareWithFamilyChange = viewModel::onShareWithFamilyChange,
+        onRetryAlbums = viewModel::loadAlbums,
     )
 }
