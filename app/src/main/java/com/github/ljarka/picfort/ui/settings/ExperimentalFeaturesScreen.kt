@@ -5,7 +5,9 @@ import android.app.AlarmManager
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
+import android.net.Uri
 import android.os.Build
+import android.provider.Settings
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -25,19 +27,25 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
+import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.ViewModel
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.repeatOnLifecycle
 import androidx.lifecycle.viewModelScope
 import com.github.ljarka.picfort.core.model.ReceiptAiStatus
 import com.github.ljarka.picfort.core.model.ReceiptAiStatusProvider
@@ -170,12 +178,41 @@ class ExperimentalFeaturesViewModel @Inject constructor(
 fun ExperimentalFeaturesScreen(onBack: () -> Unit) {
     val viewModel: ExperimentalFeaturesViewModel = hiltViewModel()
     val ui by viewModel.ui.collectAsStateWithLifecycle()
-    ExperimentalFeaturesContent(ui = ui, onBack = onBack, onRefresh = viewModel::refresh)
+    val context = LocalContext.current
+    val lifecycle = LocalLifecycleOwner.current.lifecycle
+    LaunchedEffect(lifecycle) {
+        lifecycle.repeatOnLifecycle(Lifecycle.State.RESUMED) {
+            viewModel.refresh()
+        }
+    }
+    ExperimentalFeaturesContent(
+        ui = ui,
+        onBack = onBack,
+        onRefresh = viewModel::refresh,
+        onOpenAppSettings = {
+            context.startActivity(
+                Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, Uri.parse("package:${context.packageName}")),
+            )
+        },
+        onAllowExactAlarms = {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                context.startActivity(
+                    Intent(Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM, Uri.parse("package:${context.packageName}")),
+                )
+            }
+        },
+    )
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun ExperimentalFeaturesContent(ui: ExperimentalFeaturesUi, onBack: () -> Unit = {}, onRefresh: () -> Unit = {}) {
+fun ExperimentalFeaturesContent(
+    ui: ExperimentalFeaturesUi,
+    onBack: () -> Unit = {},
+    onRefresh: () -> Unit = {},
+    onOpenAppSettings: () -> Unit = {},
+    onAllowExactAlarms: () -> Unit = {},
+) {
     Scaffold(
         topBar = {
             TopAppBar(
@@ -209,8 +246,8 @@ fun ExperimentalFeaturesContent(ui: ExperimentalFeaturesUi, onBack: () -> Unit =
 
             ReceiptAiCard(ui)
             AppFunctionsCard(ui)
-            PhotoBackupPermissionsCard(ui)
-            ExactRemindersCard(ui)
+            PhotoBackupPermissionsCard(ui, onOpenAppSettings)
+            ExactRemindersCard(ui, onAllowExactAlarms)
             DynamicColorsCard(ui)
         }
     }
@@ -264,7 +301,7 @@ private fun AppFunctionsCard(ui: ExperimentalFeaturesUi) {
 }
 
 @Composable
-private fun PhotoBackupPermissionsCard(ui: ExperimentalFeaturesUi) {
+private fun PhotoBackupPermissionsCard(ui: ExperimentalFeaturesUi, onOpenAppSettings: () -> Unit) {
     val photoLabel = when (ui.photoAccess) {
         PhotoAccessLevel.Full -> "Full access"
         PhotoAccessLevel.SelectedOnly -> "Selected photos only"
@@ -287,11 +324,13 @@ private fun PhotoBackupPermissionsCard(ui: ExperimentalFeaturesUi) {
         ),
         description = "Full gallery access lets backup see all photos; ACCESS_MEDIA_LOCATION " +
             "(Android 10+) preserves original GPS data so checksums match Immich.",
+        actionLabel = if (allReady) null else "Open app settings",
+        onAction = onOpenAppSettings,
     )
 }
 
 @Composable
-private fun ExactRemindersCard(ui: ExperimentalFeaturesUi) {
+private fun ExactRemindersCard(ui: ExperimentalFeaturesUi, onAllowExactAlarms: () -> Unit) {
     FeatureStatusCard(
         title = "Exact event reminders",
         badgeText = if (ui.exactAlarmsAllowed) "Allowed" else "Inexact only",
@@ -301,6 +340,8 @@ private fun ExactRemindersCard(ui: ExperimentalFeaturesUi) {
                 if (ui.exactAlarmsAllowed) "granted" else "not granted",
         ),
         description = "Allows family event and birthday reminders to fire at the exact scheduled time.",
+        actionLabel = if (ui.exactAlarmsAllowed) null else "Allow exact alarms",
+        onAction = onAllowExactAlarms,
     )
 }
 
@@ -324,6 +365,8 @@ private fun FeatureStatusCard(
     badgeAvailable: Boolean,
     details: List<String>,
     description: String,
+    actionLabel: String? = null,
+    onAction: () -> Unit = {},
 ) {
     ElevatedCard(
         modifier = Modifier.fillMaxWidth(),
@@ -355,6 +398,12 @@ private fun FeatureStatusCard(
                     style = MaterialTheme.typography.bodySmall,
                     modifier = Modifier.padding(vertical = 2.dp),
                 )
+            }
+            if (actionLabel != null) {
+                Spacer(Modifier.height(12.dp))
+                OutlinedButton(onClick = onAction) {
+                    Text(actionLabel)
+                }
             }
         }
     }
