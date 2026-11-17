@@ -1,8 +1,6 @@
 package com.github.ljarka.picfort.ui.schooljournal
 
 import android.text.format.DateFormat
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -14,8 +12,6 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Check
@@ -26,17 +22,17 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
-import androidx.compose.material3.PrimaryTabRow
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SegmentedButton
+import androidx.compose.material3.SegmentedButtonDefaults
+import androidx.compose.material3.SingleChoiceSegmentedButtonRow
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Surface
-import androidx.compose.material3.Tab
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
@@ -62,6 +58,9 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LifecycleEventEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.github.ljarka.picfort.core.model.FamilyMember
+import com.github.ljarka.picfort.core.ui.avatar.MemberCarousel
+import com.github.ljarka.picfort.core.ui.avatar.avatarColor
 import java.time.Instant
 import java.time.ZoneId
 import java.util.Locale
@@ -267,6 +266,9 @@ private fun JournalShell(state: SchoolJournalUi, clock: JournalClock, actions: S
         },
     ) { padding ->
         Column(Modifier.padding(padding).fillMaxSize()) {
+            if (state.showChildChips) {
+                ChildCarousel(state.children, state.selectedChild, actions.onSelectChild)
+            }
             if (state.syncing || state.status != null) {
                 SyncCard(
                     line = state.status?.let { syncLine(it, clock.now, clock.zone, clock.locale, clock.is24Hour) },
@@ -275,28 +277,29 @@ private fun JournalShell(state: SchoolJournalUi, clock: JournalClock, actions: S
                 )
             }
             state.banner?.let { JournalBannerCard(it, state.cachedAt, clock) }
-            if (state.showChildChips) {
-                ChildChips(state.children, state.selectedChild, actions.onSelectChild)
-            }
-            PrimaryTabRow(selectedTabIndex = state.tab.ordinal) {
-                JournalTab.entries.forEach { tab ->
+            SingleChoiceSegmentedButtonRow(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp, vertical = 8.dp),
+            ) {
+                JournalTab.entries.forEachIndexed { index, tab ->
                     val dot = when (tab) {
                         JournalTab.MESSAGES -> state.news.unreadMessages
                         JournalTab.GRADES -> state.news.unseenGrades
                     }
-                    Tab(
+                    SegmentedButton(
                         selected = state.tab == tab,
                         onClick = { actions.onSelectTab(tab) },
-                        text = {
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                Text(tab.title)
-                                if (dot) {
-                                    Spacer(Modifier.width(6.dp))
-                                    Badge(containerColor = MaterialTheme.colorScheme.error)
-                                }
+                        shape = SegmentedButtonDefaults.itemShape(index = index, count = JournalTab.entries.size),
+                    ) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Text(tab.title)
+                            if (dot) {
+                                Spacer(Modifier.width(6.dp))
+                                Badge(containerColor = MaterialTheme.colorScheme.error)
                             }
-                        },
-                    )
+                        }
+                    }
                 }
             }
             PullToRefreshBox(
@@ -416,20 +419,24 @@ private fun JournalBannerCard(banner: JournalBanner, cachedAt: Instant?, clock: 
 }
 
 @Composable
-private fun ChildChips(children: List<ChildAccount>, selected: String?, onSelect: (String?) -> Unit) {
-    Row(
-        Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()).padding(horizontal = 16.dp),
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
-    ) {
-        FilterChip(selected = selected == null, onClick = { onSelect(null) }, label = { Text("All") })
-        children.forEach { child ->
-            FilterChip(
-                selected = selected == child.id,
-                onClick = { onSelect(child.id) },
-                label = { Text(child.name.ifEmpty { child.login }) },
+private fun ChildCarousel(children: List<ChildAccount>, selected: String?, onSelect: (String?) -> Unit) {
+    val active = selected?.takeIf { id -> children.any { it.id == id } } ?: children.firstOrNull()?.id
+    val members = remember(children) {
+        children.mapIndexed { index, child ->
+            FamilyMember(
+                id = child.id,
+                name = child.name.ifEmpty { child.login },
+                avatarUrl = null,
+                color = avatarColor(null, fallbackIndex = index),
             )
         }
     }
+    MemberCarousel(
+        members = members,
+        selectedId = active,
+        onSelect = { id -> if (id != null) onSelect(id) },
+        onEditMember = null,
+    )
 }
 
 /** The status sheet (spec §4.1), also part of Server settings. */

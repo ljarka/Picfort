@@ -23,7 +23,7 @@ Spec: [docs/specs/school-journal.md](../../docs/specs/school-journal.md). **Remo
 | `SyncLine.kt` | "Last successful sync: today 14:32 (12 min ago) · next 14:47", stale > 1 h, failed flag |
 | `SchoolJournalCache.kt` | Offline copy `filesDir/school-journal/cache.json` (status, children, messages page 1, grades per child + semester), tied to the address, cleared on Disconnect |
 | `SchoolJournalViewModel.kt` | `SchoolJournalUi`: setup vs content, connect (`/health` → `/status` → save), banners, children |
-| `SchoolJournalScreen.kt` | `SchoolJournalScreen`/`SchoolJournalContent`: status line, banner, child chips, tabs, status sheet |
+| `SchoolJournalScreen.kt` | `SchoolJournalScreen`/`SchoolJournalContent`: child avatar row (`MemberCarousel`), status card, banner, segmented Messages/Grades switch, status sheet |
 | `SchoolJournalSetup.kt` | Address + key form + Notifications toggle; as Server settings: status and Disconnect |
 | `SchoolJournalTopBarAction.kt` | Building icon + red dot (`SchoolJournalIcon`, stateless) for Wall and School; polls every 5 min while started |
 | `SchoolJournalNotifications.kt` | `SchoolJournalNotifyWorker` (15 min), `SchoolJournalNotifyScheduler`, `planNotifications`, `EXTRA_OPEN_SCHOOL_JOURNAL` |

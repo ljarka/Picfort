@@ -17,7 +17,7 @@ tags:
     visible: "Family Wall"
     timeout: 20000
 - runFlow: subflows/school-journal-connect.yaml
-- tapOn: "All"
+- tapOn: "Ola"
 - tapOn: "Messages"
 - extendedWaitUntil:
     visible: "Trip on Friday"
@@ -33,9 +33,7 @@ tags:
     visible: "Trip on Friday"
     timeout: 10000
 - assertNotVisible: "Open day on Saturday"
-- tapOn:
-    text: "All"
-    index: 1
+- tapOn: "All"
 # A new message from "another phone": bold with a dot, and the dot on Wall and School
 - runScript:
     file: scripts/school-journal-data.js

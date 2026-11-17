@@ -263,10 +263,13 @@ class SchoolJournalViewModel @Inject constructor(
     private suspend fun loadChildren(connection: Connection) {
         try {
             val children = api.children(connection)
+            val before = _state.value.selectedChild
             val selected = config.child?.takeIf { id -> children.any { it.id == id } }
-            if (selected == null) config.child = null
+                ?: children.firstOrNull()?.id
+            config.child = selected
             _state.update { it.copy(children = children, selectedChild = selected) }
             saveCache { it.copy(children = children) }
+            if (selected != before && _state.value.messages.loaded) loadMessages()
         } catch (e: SchoolJournalError) {
             handle(e)
         }
@@ -287,9 +290,13 @@ class SchoolJournalViewModel @Inject constructor(
     }
 
     fun selectChild(id: String?) {
-        config.child = id
+        val chosen = id ?: _state.value.children.firstOrNull()?.id
+        if (chosen == _state.value.selectedChild && config.child == chosen) return
+        config.child = chosen
         // Another child's grades must not stay on screen if the server can't be reached.
-        _state.update { it.copy(selectedChild = id, grades = it.grades.copy(loaded = false, sections = emptyList())) }
+        _state.update {
+            it.copy(selectedChild = chosen, grades = it.grades.copy(loaded = false, sections = emptyList()))
+        }
         loadMessages()
         if (_state.value.tab == JournalTab.GRADES) loadGrades()
     }
@@ -425,9 +432,13 @@ class SchoolJournalViewModel @Inject constructor(
     private fun showCached(copy: JournalCache) {
         val saved = instantOrNull(copy.savedAt)
         _state.update { ui ->
+            val children = ui.children.ifEmpty { copy.children }
+            val selected = ui.selectedChild?.takeIf { id -> children.isEmpty() || children.any { it.id == id } }
+                ?: children.firstOrNull()?.id
             ui.copy(
                 status = ui.status ?: copy.status,
-                children = ui.children.ifEmpty { copy.children },
+                children = children,
+                selectedChild = selected,
                 cachedAt = if (ui.status == null) saved else ui.cachedAt,
             )
         }

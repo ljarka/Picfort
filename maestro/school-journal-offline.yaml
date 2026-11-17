@@ -18,7 +18,7 @@ tags:
     timeout: 20000
 - runFlow: subflows/school-journal-connect.yaml
 # Load both tabs once, so the copy has them
-- tapOn: "All"
+- tapOn: "Ola"
 - tapOn: "Messages"
 - extendedWaitUntil:
     visible: "Trip on Friday"

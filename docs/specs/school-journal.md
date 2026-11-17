@@ -52,9 +52,9 @@ Also shown (prefilled, with message "The API key is no longer valid") when any c
 
 ```
 ┌ ← School journal                 ⟳  ⋮ ┐   ⟳ = Sync now; ⋮ = Mark all read, Show removed, Server settings
-│ Last successful sync: 14:32 · next 14:47 │ status line → status sheet
-│ [All] [Ola] [Kuba]                    │   child chips (only with ≥ 2 children)
-│ (   Messages •   |   Grades •   )     │   two tabs; dot = new in that tab
+│  (O) Ola   (K) Kuba                   │   child avatars with initials (only with ≥ 2 children; no "All")
+│ Last successful sync: 14:32 · next 14:47 │ status card → status sheet
+│ [   Messages •   |   Grades •   ]     │   segmented switch (like Upcoming / Past); dot = new
 │ …tab content…                         │
 └───────────────────────────────────────┘
 ```
@@ -79,10 +79,10 @@ Also shown (prefilled, with message "The API key is no longer valid") when any c
 
 ### 4.2 Children (`GET /children`)
 
-- Loaded on open. ≥ 2 children → chips **All** + one per child (`name`). Selection kept in
-  preferences; passed as `child=<id>` to subjects, messages and changes.
-- With **All**, every row shows the child's first name (from `childId`).
-- `404 CHILD_NOT_FOUND` → reload children, fall back to All.
+- Loaded on open. ≥ 2 children → avatar row (`MemberCarousel`, circles with initials at the very top,
+  no "All", same as School and Events). One child is always selected (defaults to the first child);
+  selection kept in preferences; passed as `child=<id>` to subjects and messages.
+- `404 CHILD_NOT_FOUND` → reload children, fall back to the first child.
 
 ### 4.3 Messages tab (`GET /messages`, `GET /messages/{id}`)
 
