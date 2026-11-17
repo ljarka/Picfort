@@ -64,9 +64,9 @@ sealed interface Screen {
     @Serializable
     object School : Screen
 
-    /** School journal (ADR 0017, removable): opened from Wall and School. */
+    /** School journal (ADR 0017, removable): opened from Wall, School or a notification ([tab] = `"grades"`). */
     @Serializable
-    object SchoolJournal : Screen
+    data class SchoolJournal(val tab: String? = null) : Screen
 
     /** One school journal message (ADR 0017). */
     @Serializable

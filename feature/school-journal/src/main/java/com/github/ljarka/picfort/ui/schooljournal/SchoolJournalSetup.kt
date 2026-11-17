@@ -1,6 +1,8 @@
 package com.github.ljarka.picfort.ui.schooljournal
 
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -26,6 +28,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
@@ -34,6 +37,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
@@ -120,6 +124,31 @@ fun SchoolJournalSetup(form: SetupForm, status: JournalStatus?, clock: JournalCl
                 } else {
                     Text(if (form.editing) "Save" else "Connect")
                 }
+            }
+            Spacer(Modifier.height(16.dp))
+            Row(
+                Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Column(Modifier.weight(1f).padding(end = 16.dp)) {
+                    Text("Notifications", style = MaterialTheme.typography.bodyLarge)
+                    Text(
+                        form.notificationsHint
+                            ?: "New grades, changed grades and new messages (every 15 min)",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = if (form.notificationsHint != null) {
+                            MaterialTheme.colorScheme.error
+                        } else {
+                            MaterialTheme.colorScheme.onSurfaceVariant
+                        },
+                    )
+                }
+                Switch(
+                    checked = form.notifications,
+                    onCheckedChange = actions.onNotificationsChange,
+                    enabled = !form.connecting,
+                )
             }
             if (form.editing) {
                 Spacer(Modifier.height(24.dp))

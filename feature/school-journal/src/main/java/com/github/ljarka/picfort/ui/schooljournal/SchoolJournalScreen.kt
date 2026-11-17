@@ -73,6 +73,7 @@ data class SchoolJournalActions(
     val onAddressChange: (String) -> Unit = {},
     val onKeyChange: (String) -> Unit = {},
     val onConnect: () -> Unit = {},
+    val onNotificationsChange: (Boolean) -> Unit = {},
     val onCancelSettings: () -> Unit = {},
     val onDisconnect: () -> Unit = {},
     val onShowSettings: () -> Unit = {},
@@ -102,13 +103,38 @@ data class JournalClock(
 
 /** The school journal (spec §3, §4): configuration until connected, then the content. */
 @Composable
-fun SchoolJournalScreen(onBack: () -> Unit, onOpenMessage: (String) -> Unit) {
+fun SchoolJournalScreen(onBack: () -> Unit, onOpenMessage: (String) -> Unit, initialTab: JournalTab? = null) {
     val viewModel = hiltViewModel<SchoolJournalViewModel>()
     val state by viewModel.state.collectAsStateWithLifecycle()
+    LaunchedEffect(initialTab) { if (initialTab != null) viewModel.selectTab(initialTab) }
     LifecycleEventEffect(Lifecycle.Event.ON_START) { viewModel.refresh() }
     val context = LocalContext.current
     val locale = LocalConfiguration.current.locales[0]
     val is24Hour = DateFormat.is24HourFormat(context)
+    val askNotifications = androidx.activity.compose.rememberLauncherForActivityResult(
+        androidx.activity.result.contract.ActivityResultContracts.RequestPermission(),
+    ) { granted ->
+        if (granted) {
+            viewModel.onNotificationsChange(true)
+        } else {
+            viewModel.onNotificationsChange(
+                false,
+                deniedHint = "Notifications permission is off. Allow notifications in Android Settings.",
+            )
+        }
+    }
+    fun ensureNotificationsPermission(enabled: Boolean) {
+        if (
+            enabled &&
+            android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU &&
+            !canPostJournalNotifications(context)
+        ) {
+            viewModel.onNotificationsChange(true)
+            askNotifications.launch(android.Manifest.permission.POST_NOTIFICATIONS)
+        } else {
+            viewModel.onNotificationsChange(enabled)
+        }
+    }
     // "12 min ago" keeps up with the clock.
     var now by remember { mutableStateOf(Instant.now()) }
     LaunchedEffect(Unit) {
@@ -124,7 +150,17 @@ fun SchoolJournalScreen(onBack: () -> Unit, onOpenMessage: (String) -> Unit) {
             onBack = onBack,
             onAddressChange = viewModel::onAddressChange,
             onKeyChange = viewModel::onKeyChange,
-            onConnect = viewModel::connect,
+            onConnect = {
+                if (
+                    state.form.notifications &&
+                    android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU &&
+                    !canPostJournalNotifications(context)
+                ) {
+                    askNotifications.launch(android.Manifest.permission.POST_NOTIFICATIONS)
+                }
+                viewModel.connect()
+            },
+            onNotificationsChange = ::ensureNotificationsPermission,
             onCancelSettings = viewModel::cancelSettings,
             onDisconnect = viewModel::disconnect,
             onShowSettings = { viewModel.showSettings() },

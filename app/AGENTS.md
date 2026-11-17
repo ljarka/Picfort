@@ -27,8 +27,9 @@ Thin Android application shell, navigation root, and Hilt root assembler.
   Photos gets no "+ Family" circle, long-press "Edit" or "Link"; Settings hides "Family" (`FamilyRepository.supported`).
 - A tapped event reminder (T-039) carries `EXTRA_OPEN_EVENT_ID`; `MainActivity` opens `Screen.EventDetail`
   once a tab is shown (onCreate / onNewIntent). Settings embeds `EventReminderSettings` (with a Picfort server).
-- School journal (ADR 0017, removable): `Screen.SchoolJournal`, `Screen.SchoolJournalMessage` and the
-  `topBarActions` icon on Wall and School are the only `:app` lines for it; keep them together so removal stays a short list.
+- School journal (ADR 0017, removable): `Screen.SchoolJournal`, `Screen.SchoolJournalMessage`, the
+  `topBarActions` icon on Wall and School, `schoolJournalNotifyScheduler.start()` in `PicfortApplication`
+  and `EXTRA_OPEN_SCHOOL_JOURNAL` in `MainActivity` are the only `:app` lines for it; keep them together so removal stays a short list.
 - `Screen.Timeline(date)`: a birthday's year opens Photos on that day on top of the event (Back returns
   to it); a tab switch from there pops it without `saveState`, so it never ends up in another tab's stack (T-056).
 

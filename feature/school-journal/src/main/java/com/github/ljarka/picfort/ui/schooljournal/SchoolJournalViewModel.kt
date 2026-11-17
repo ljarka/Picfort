@@ -56,7 +56,7 @@ data class GradesUi(
     val loaded: Boolean = false,
 )
 
-/** The configuration form (spec §3). [editing]: opened from the content, so Cancel and Disconnect. */
+/** The configuration form (spec §3, §4.7). [editing]: opened from the content, so Cancel and Disconnect. */
 data class SetupForm(
     val address: String = "",
     val key: String = "",
@@ -65,6 +65,9 @@ data class SetupForm(
     /** Why the form is shown again, e.g. "The API key is no longer valid". */
     val notice: String? = null,
     val editing: Boolean = false,
+    val notifications: Boolean = true,
+    /** Shown when `POST_NOTIFICATIONS` was denied: how to turn it on in system settings. */
+    val notificationsHint: String? = null,
 )
 
 data class SchoolJournalUi(
@@ -119,12 +122,14 @@ data class SchoolJournalUi(
 
 @HiltViewModel
 class SchoolJournalViewModel @Inject constructor(
+    @dagger.hilt.android.qualifiers.ApplicationContext private val context: android.content.Context,
     private val api: SchoolJournalApi,
     private val config: SchoolJournalConfigStore,
     private val readState: ReadStateStore,
     private val news: SchoolJournalNews,
     private val removed: RemovedMessages,
     private val cache: SchoolJournalCacheStore,
+    private val notifyScheduler: SchoolJournalNotifyScheduler,
 ) : ViewModel() {
     private val _state = MutableStateFlow(initial())
     val state: StateFlow<SchoolJournalUi> = _state.asStateFlow()
@@ -160,7 +165,7 @@ class SchoolJournalViewModel @Inject constructor(
     private val address: String? get() = config.connection.value?.base?.toString()
 
     private fun initial(): SchoolJournalUi = if (config.connection.value == null) {
-        SchoolJournalUi(mode = JournalMode.SETUP)
+        SchoolJournalUi(mode = JournalMode.SETUP, form = SetupForm(notifications = config.notifications))
     } else {
         SchoolJournalUi(mode = JournalMode.CONTENT, selectedChild = config.child, address = config.address)
     }
@@ -168,6 +173,17 @@ class SchoolJournalViewModel @Inject constructor(
     fun onAddressChange(text: String) = _state.update { it.copy(form = it.form.copy(address = text, error = null)) }
 
     fun onKeyChange(text: String) = _state.update { it.copy(form = it.form.copy(key = text, error = null)) }
+
+    fun onNotificationsChange(enabled: Boolean, deniedHint: String? = null) {
+        config.notifications = enabled
+        notifyScheduler.start()
+        _state.update {
+            it.copy(
+                form = it.form.copy(notifications = enabled, notificationsHint = deniedHint),
+                snackbar = if (it.mode == JournalMode.CONTENT && deniedHint != null) deniedHint else it.snackbar,
+            )
+        }
+    }
 
     /** Connect (spec §3): `/health`, then `/status` with the key; only then saved. */
     fun connect() {
@@ -190,11 +206,12 @@ class SchoolJournalViewModel @Inject constructor(
                 api.health(base)
                 val status = api.status(connection)
                 config.save(connection)
+                notifyScheduler.start()
                 val read = readState.ensureStarted(base.toString(), Instant.now(), status.lastEventId)
                 _state.update {
                     it.copy(
                         mode = JournalMode.CONTENT,
-                        form = SetupForm(),
+                        form = SetupForm(notifications = config.notifications),
                         status = status,
                         offline = false,
                         storageProblem = false,
@@ -526,7 +543,10 @@ class SchoolJournalViewModel @Inject constructor(
         loadMessages()
     }
 
-    fun markRead(message: MessageSummary) = changeRead { it.markRead(message.id) }
+    fun markRead(message: MessageSummary) {
+        dismissMessageNotification(context, message.id)
+        changeRead { it.markRead(message.id) }
+    }
 
     fun markUnread(message: MessageSummary) = changeRead { it.markUnread(message) }
 
@@ -548,6 +568,7 @@ class SchoolJournalViewModel @Inject constructor(
         viewModelScope.launch {
             try {
                 val unread = loadUnread(api, c, read, ui.selectedChild)
+                unread.items.forEach { dismissMessageNotification(context, it.id) }
                 val now = Instant.now()
                 updateReadState { s -> if (ui.selectedChild == null) s.markAllRead(now) else s.markRead(unread.items) }
                 val count = unread.items.size
@@ -617,6 +638,7 @@ class SchoolJournalViewModel @Inject constructor(
                     key = connection?.key.orEmpty(),
                     notice = notice,
                     editing = connection != null,
+                    notifications = config.notifications,
                 ),
             )
         }
@@ -624,12 +646,13 @@ class SchoolJournalViewModel @Inject constructor(
 
     fun cancelSettings() {
         if (config.connection.value == null) return
-        _state.update { it.copy(mode = JournalMode.CONTENT, form = SetupForm()) }
+        _state.update { it.copy(mode = JournalMode.CONTENT, form = SetupForm(notifications = config.notifications)) }
     }
 
     fun disconnect() {
         config.clear()
+        notifyScheduler.start()
         news.clear()
-        _state.value = SchoolJournalUi(mode = JournalMode.SETUP)
+        _state.value = SchoolJournalUi(mode = JournalMode.SETUP, form = SetupForm(notifications = config.notifications))
     }
 }

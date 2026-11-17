@@ -72,6 +72,7 @@ data class MessageUi(
 
 @HiltViewModel
 class SchoolJournalMessageViewModel @Inject constructor(
+    @dagger.hilt.android.qualifiers.ApplicationContext private val context: android.content.Context,
     private val api: SchoolJournalApi,
     private val config: SchoolJournalConfigStore,
     private val readStates: ReadStateStore,
@@ -91,6 +92,7 @@ class SchoolJournalMessageViewModel @Inject constructor(
             try {
                 val message = api.message(c, id)
                 readStates.update(c.base.toString()) { it.markRead(id) }
+                dismissMessageNotification(context, id)
                 _state.update { it.copy(loading = false, message = message, read = true, error = null) }
                 news.refresh()
                 val name = runCatching { api.children(c) }.getOrNull()?.takeIf { it.size >= 2 }
@@ -99,6 +101,7 @@ class SchoolJournalMessageViewModel @Inject constructor(
             } catch (e: SchoolJournalError.NotFound) {
                 removed.add(id)
                 readStates.update(c.base.toString()) { it.forget(id) }
+                dismissMessageNotification(context, id)
                 _state.update { it.copy(loading = false, gone = true) }
             } catch (e: SchoolJournalError) {
                 Log.w("SchoolJournal", "Message $id: ${e.message}")
@@ -112,6 +115,7 @@ class SchoolJournalMessageViewModel @Inject constructor(
         val message = _state.value.message ?: return
         val read = !_state.value.read
         readStates.update(c.base.toString()) { if (read) it.markRead(message.id) else it.markUnread(message.summary()) }
+        if (read) dismissMessageNotification(context, message.id)
         _state.update { it.copy(read = read) }
         viewModelScope.launch { news.refresh() }
     }

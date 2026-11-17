@@ -53,6 +53,8 @@ import com.github.ljarka.picfort.ui.frame.PicfortServerSetupScreen
 import com.github.ljarka.picfort.ui.image.ImageDetailsScreen
 import com.github.ljarka.picfort.ui.init.InitScreen
 import com.github.ljarka.picfort.ui.school.SchoolScreen
+import com.github.ljarka.picfort.ui.schooljournal.EXTRA_OPEN_SCHOOL_JOURNAL
+import com.github.ljarka.picfort.ui.schooljournal.JournalTab
 import com.github.ljarka.picfort.ui.schooljournal.SchoolJournalMessageScreen
 import com.github.ljarka.picfort.ui.schooljournal.SchoolJournalScreen
 import com.github.ljarka.picfort.ui.schooljournal.SchoolJournalTopBarAction
@@ -89,8 +91,14 @@ class MainActivity : ComponentActivity() {
     /** An event to open from a tapped reminder (T-039), once the app is past login. */
     private val openEventId = MutableStateFlow<Long?>(null)
 
+    /** A school-journal screen to open from a tapped notification (T-082, ADR 0017). */
+    private val openSchoolJournal = MutableStateFlow<String?>(null)
+
     private fun takeEventFrom(intent: Intent?) {
         intent?.getLongExtra(EXTRA_OPEN_EVENT_ID, -1L)?.takeIf { it > 0 }?.let { openEventId.value = it }
+        intent?.getStringExtra(EXTRA_OPEN_SCHOOL_JOURNAL)?.takeIf { it.isNotBlank() }?.let {
+            openSchoolJournal.value = it
+        }
     }
 
     override fun onNewIntent(intent: Intent) {
@@ -138,6 +146,18 @@ class MainActivity : ComponentActivity() {
                 if (currentTab != null) {
                     openEventId.value = null
                     navController.navigate(Screen.EventDetail(id))
+                }
+            }
+            val pendingJournal by openSchoolJournal.collectAsStateWithLifecycle()
+            LaunchedEffect(pendingJournal, currentTab != null) {
+                val target = pendingJournal ?: return@LaunchedEffect
+                if (currentTab != null) {
+                    openSchoolJournal.value = null
+                    if (target.startsWith("messages:")) {
+                        navController.navigate(Screen.SchoolJournalMessage(target.removePrefix("messages:")))
+                    } else {
+                        navController.navigate(Screen.SchoolJournal(tab = target))
+                    }
                 }
             }
             val onDayJump = destination?.hasRoute(Screen.Timeline::class) == true &&
@@ -205,7 +225,7 @@ class MainActivity : ComponentActivity() {
                                                     },
                                                     topBarActions = {
                                                         SchoolJournalTopBarAction {
-                                                            navController.navigate(Screen.SchoolJournal)
+                                                            navController.navigate(Screen.SchoolJournal())
                                                         }
                                                     },
                                                 )
@@ -271,7 +291,7 @@ class MainActivity : ComponentActivity() {
                                                     onOpenFamily = { navController.navigate(Screen.FamilySettings()) },
                                                     topBarActions = {
                                                         SchoolJournalTopBarAction {
-                                                            navController.navigate(Screen.SchoolJournal)
+                                                            navController.navigate(Screen.SchoolJournal())
                                                         }
                                                     },
                                                 )
@@ -399,12 +419,14 @@ class MainActivity : ComponentActivity() {
                                             },
                                         )
                                     }
-                                    composable<Screen.SchoolJournal> {
+                                    composable<Screen.SchoolJournal> { entry ->
+                                        val tab = entry.toRoute<Screen.SchoolJournal>().tab
                                         SchoolJournalScreen(
                                             onBack = { navController.popBackStack() },
                                             onOpenMessage = { id ->
                                                 navController.navigate(Screen.SchoolJournalMessage(id))
                                             },
+                                            initialTab = if (tab == "grades") JournalTab.GRADES else null,
                                         )
                                     }
                                     composable<Screen.SchoolJournalMessage> { entry ->

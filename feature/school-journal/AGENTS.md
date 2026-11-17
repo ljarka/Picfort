@@ -24,8 +24,9 @@ Spec: [docs/specs/school-journal.md](../../docs/specs/school-journal.md). **Remo
 | `SchoolJournalCache.kt` | Offline copy `filesDir/school-journal/cache.json` (status, children, messages page 1, grades per child + semester), tied to the address, cleared on Disconnect |
 | `SchoolJournalViewModel.kt` | `SchoolJournalUi`: setup vs content, connect (`/health` → `/status` → save), banners, children |
 | `SchoolJournalScreen.kt` | `SchoolJournalScreen`/`SchoolJournalContent`: status line, banner, child chips, tabs, status sheet |
-| `SchoolJournalSetup.kt` | Address + key form; as Server settings: status and Disconnect |
+| `SchoolJournalSetup.kt` | Address + key form + Notifications toggle; as Server settings: status and Disconnect |
 | `SchoolJournalTopBarAction.kt` | Building icon + red dot (`SchoolJournalIcon`, stateless) for Wall and School; polls every 5 min while started |
+| `SchoolJournalNotifications.kt` | `SchoolJournalNotifyWorker` (15 min), `SchoolJournalNotifyScheduler`, `planNotifications`, `EXTRA_OPEN_SCHOOL_JOURNAL` |
 
 ## Rules
 
@@ -49,14 +50,15 @@ Spec: [docs/specs/school-journal.md](../../docs/specs/school-journal.md). **Remo
 | `GET /children` | Child chips, message screen (child name) |
 | `GET /grades/subjects` | `loadGrades` (one call per child with All) |
 | `GET /messages`, `GET /messages/{id}` | Messages tab, `loadUnread`, news, message screen |
-| `GET /changes` | `checkNews` (dot), `loadNewGradeIds` (New markers); notifications in T-082 |
+| `GET /changes` | `checkNews` (dot), `loadNewGradeIds` (New markers), `checkNotifications` (`SchoolJournalNotifyWorker`, T-082) |
 | `POST /sync` | ⟳ `syncNow` |
 | Not used on purpose | `GET /grades`, `PUT/DELETE …/read`, `POST …/read-all` (ADR 0017) |
 
 ## Public Contract
 
-- `SchoolJournalTopBarAction(onClick)`, `SchoolJournalScreen(onBack, onOpenMessage)`,
-  `SchoolJournalMessageScreen(messageId, onBack)` — used only by `:app`.
+- `SchoolJournalTopBarAction(onClick)`, `SchoolJournalScreen(onBack, onOpenMessage, initialTab)`,
+  `SchoolJournalMessageScreen(messageId, onBack)`, `SchoolJournalNotifyScheduler.start()`,
+  `EXTRA_OPEN_SCHOOL_JOURNAL` — used only by `:app`.
 
 ## Dependencies & Boundaries
 

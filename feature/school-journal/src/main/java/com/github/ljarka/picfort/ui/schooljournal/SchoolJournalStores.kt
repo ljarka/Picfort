@@ -18,8 +18,9 @@ import kotlinx.serialization.Serializable
 private const val KEY_URL = "schoolJournal.url"
 private const val KEY_KEY = "schoolJournal.key"
 private const val KEY_CHILD = "schoolJournal.child"
+private const val KEY_NOTIFICATIONS = "schoolJournal.notifications"
 
-/** The school-server address and key (encrypted), and the chosen child (spec §3, §4.2). */
+/** The school-server address and key (encrypted), the chosen child and notifications (spec §3, §4.2, §4.7). */
 @Singleton
 class SchoolJournalConfigStore @Inject constructor(
     private val prefs: SecurePreferencesStore,
@@ -37,17 +38,23 @@ class SchoolJournalConfigStore @Inject constructor(
         get() = prefs.getString(KEY_CHILD).ifEmpty { null }
         set(value) = prefs.putString(KEY_CHILD, value.orEmpty())
 
+    /** On by default (spec §4.7). */
+    var notifications: Boolean
+        get() = prefs.getString(KEY_NOTIFICATIONS) != "false"
+        set(value) = prefs.putString(KEY_NOTIFICATIONS, value.toString())
+
     fun save(connection: Connection) {
         prefs.putString(KEY_URL, connection.base.toString())
         prefs.putString(KEY_KEY, connection.key)
         _connection.value = connection
     }
 
-    /** Disconnect: address, key, child and every file of the module (read state, cache). */
+    /** Disconnect: address, key, child, notifications and every file of the module (read state, cache). */
     fun clear() {
         prefs.putString(KEY_URL, "")
         prefs.putString(KEY_KEY, "")
         prefs.putString(KEY_CHILD, "")
+        prefs.putString(KEY_NOTIFICATIONS, "")
         journalDir(context).deleteRecursively()
         _connection.value = null
     }
@@ -111,6 +118,9 @@ data class ReadState(
     /** Grade changes up to [upTo] are seen; the cursor never moves backwards. */
     fun seenGradesUpTo(upTo: Long): ReadState = copy(gradesSeenCursor = maxOf(gradesSeenCursor, upTo))
 
+    /** Change events up to [upTo] have been notified about; the cursor never moves backwards. */
+    fun notifiedUpTo(upTo: Long): ReadState = copy(notifyCursor = maxOf(notifyCursor, upTo))
+
     companion object {
         /** A fresh start: history is neither unread nor new. */
         fun startingAt(now: Instant, lastEventId: Long) = ReadState(
@@ -124,10 +134,16 @@ data class ReadState(
 
 /** [ReadState] per Immich user and school-server address, as a JSON file in [journalDir]. */
 @Singleton
-class ReadStateStore @Inject constructor(
-    @ApplicationContext private val context: Context,
-    private val tokens: AccessTokenStore,
-) {
+class ReadStateStore internal constructor(private val dir: () -> File, private val userId: () -> String) {
+    @Inject
+    constructor(
+        @ApplicationContext context: Context,
+        tokens: AccessTokenStore,
+    ) : this(
+        dir = { journalDir(context) },
+        userId = { tokens.userId },
+    )
+
     fun load(address: String): ReadState? = file(address).takeIf { it.exists() }?.let { f ->
         runCatching { journalJson.decodeFromString<ReadState>(f.readText()) }.getOrNull()
     }
@@ -150,7 +166,7 @@ class ReadStateStore @Inject constructor(
         load(address) ?: ReadState.startingAt(now, lastEventId).also { save(address, it) }
 
     private fun file(address: String): File =
-        File(journalDir(context), "state-${shortHash(address)}-${shortHash(tokens.userId.ifEmpty { "local" })}.json")
+        File(dir(), "state-${shortHash(address)}-${shortHash(userId().ifEmpty { "local" })}.json")
 }
 
 internal fun shortHash(text: String): String =

@@ -30,6 +30,22 @@
 - Device: fake server adds a grade → notification within one run (trigger with
   `adb shell cmd jobscheduler run` / WorkManager test driver), tap opens the screen.
 
+## Result (2026-11-17)
+
+- [x] `SchoolJournalNotifyWorker` (`@HiltWorker`, periodic 15 min, `NetworkType.CONNECTED`,
+  `school-journal-notify`, `KEEP`) + `SchoolJournalNotifyScheduler.start()` wired in
+  `PicfortApplication.onCreate` and after Connect / Disconnect / toggle.
+- [x] `planNotifications` & `checkNotifications`: grade `created`, grade `updated` with `value` in
+  `diff`, message / announcement `created` not already read on this phone; ignores `deleted` and
+  other updates; collapses > 3 items for one child into one summary; `notifyCursor` per Immich user
+  started at `status.lastEventId` and saved only after all pages succeed.
+- [x] Notification channel `school_journal` ("School journal"), grouped per child; tap launches
+  `MainActivity` with `EXTRA_OPEN_SCHOOL_JOURNAL` (`grades`, `messages`, `messages:<id>`); reading a
+  message in the app cancels its notification (`dismissMessageNotification`).
+- [x] Notifications switch in setup / Server settings (on by default) + `POST_NOTIFICATIONS`
+  request on Connect / toggle (Android 13+).
+- [x] Unit tests (`SchoolJournalNotificationsTest`) and updated setup snapshots.
+
 ## Done when
 
 - A new grade or message on the server shows a notification on each parent's phone without
