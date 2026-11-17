@@ -1,6 +1,6 @@
 # T-077 — School journal: "something new" badge
 
-**Status:** ready  
+**Status:** done (0bf1e0b)  
 **Component:** Android (`:feature:school-journal`)  
 **Depends on:** T-076. Spec §6.
 
