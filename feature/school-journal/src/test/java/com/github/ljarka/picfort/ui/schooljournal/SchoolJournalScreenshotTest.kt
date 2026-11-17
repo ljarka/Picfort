@@ -190,13 +190,13 @@ class SchoolJournalScreenshotTest {
     private val readState =
         ReadState(watermark = "2026-11-15T00:00:00Z", readIds = setOf("m3"), unreadIds = setOf("m2"))
 
-    private fun withMessages(selected: String? = null, unreadOnly: Boolean = false) = SchoolJournalUi(
+    private fun withMessages(selected: String? = null) = SchoolJournalUi(
         mode = JournalMode.CONTENT,
         status = fresh,
         children = children,
         selectedChild = selected,
         readState = readState,
-        messages = MessagesUi(items = messages, loaded = true, unreadOnly = unreadOnly, showRemoved = true),
+        messages = MessagesUi(items = messages, loaded = true, showRemoved = true),
         news = JournalNews(unreadMessages = true),
     )
 
@@ -220,9 +220,9 @@ class SchoolJournalScreenshotTest {
     }
 
     @Test
-    fun messagesEmptyUnreadOnly() = snap {
+    fun messagesEmpty() = snap {
         content(
-            withMessages().copy(messages = MessagesUi(loaded = true, unreadOnly = true), news = JournalNews()),
+            withMessages().copy(messages = MessagesUi(loaded = true), news = JournalNews()),
         )
     }
 

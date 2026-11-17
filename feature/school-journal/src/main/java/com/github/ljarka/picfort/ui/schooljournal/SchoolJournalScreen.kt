@@ -25,7 +25,6 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SegmentedButton
 import androidx.compose.material3.SegmentedButtonDefaults
@@ -81,7 +80,6 @@ data class SchoolJournalActions(
     val onSelectTab: (JournalTab) -> Unit = {},
     val onOpenMessage: (String) -> Unit = {},
     val onLoadMoreMessages: () -> Unit = {},
-    val onToggleUnreadOnly: () -> Unit = {},
     val onSelectKind: (MessageKind?) -> Unit = {},
     val onToggleShowRemoved: () -> Unit = {},
     val onMarkRead: (MessageSummary) -> Unit = {},
@@ -168,7 +166,6 @@ fun SchoolJournalScreen(onBack: () -> Unit, onOpenMessage: (String) -> Unit, ini
             onSelectTab = viewModel::selectTab,
             onOpenMessage = onOpenMessage,
             onLoadMoreMessages = viewModel::loadMoreMessages,
-            onToggleUnreadOnly = viewModel::toggleUnreadOnly,
             onSelectKind = viewModel::selectKind,
             onToggleShowRemoved = viewModel::toggleShowRemoved,
             onMarkRead = viewModel::markRead,
@@ -202,7 +199,6 @@ fun SchoolJournalContent(
 @Composable
 private fun JournalShell(state: SchoolJournalUi, clock: JournalClock, actions: SchoolJournalActions) {
     var menu by remember { mutableStateOf(false) }
-    var statusSheet by remember { mutableStateOf(false) }
     val snackbar = remember { SnackbarHostState() }
     LaunchedEffect(state.snackbar) {
         state.snackbar?.let {
@@ -269,13 +265,6 @@ private fun JournalShell(state: SchoolJournalUi, clock: JournalClock, actions: S
             if (state.showChildChips) {
                 ChildCarousel(state.children, state.selectedChild, actions.onSelectChild)
             }
-            if (state.syncing || state.status != null) {
-                SyncCard(
-                    line = state.status?.let { syncLine(it, clock.now, clock.zone, clock.locale, clock.is24Hour) },
-                    syncing = state.syncing,
-                    onClick = { statusSheet = true },
-                )
-            }
             state.banner?.let { JournalBannerCard(it, state.cachedAt, clock) }
             SingleChoiceSegmentedButtonRow(
                 modifier = Modifier
@@ -314,11 +303,6 @@ private fun JournalShell(state: SchoolJournalUi, clock: JournalClock, actions: S
             }
         }
     }
-    if (statusSheet && state.status != null) {
-        ModalBottomSheet(onDismissRequest = { statusSheet = false }) {
-            StatusDetails(state.status, clock, address = state.address)
-        }
-    }
 }
 
 /**
@@ -328,46 +312,6 @@ private fun JournalShell(state: SchoolJournalUi, clock: JournalClock, actions: S
 @Composable
 fun warningColor(): Color =
     if (MaterialTheme.colorScheme.background.luminance() < 0.5f) Color(0xFFFFB951) else Color(0xFF8A5A00)
-
-/**
- * The status line as a card shaped like the banners (owner request 2026-11-17): neutral while the
- * data is fresh, amber when older than an hour; "Checking the e-journal…" during Sync now.
- */
-@Composable
-private fun SyncCard(line: SyncLine?, syncing: Boolean, onClick: () -> Unit) {
-    val dark = MaterialTheme.colorScheme.background.luminance() < 0.5f
-    val stale = !syncing && line?.stale == true
-    val container = when {
-        stale -> if (dark) Color(0xFF4A3810) else Color(0xFFFFE9C2)
-        else -> MaterialTheme.colorScheme.surfaceContainerHigh
-    }
-    val content = when {
-        stale -> if (dark) Color(0xFFFFD08A) else Color(0xFF5C3D00)
-        else -> MaterialTheme.colorScheme.onSurfaceVariant
-    }
-    Surface(
-        color = container,
-        contentColor = content,
-        shape = MaterialTheme.shapes.medium,
-        onClick = onClick,
-        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp),
-    ) {
-        if (syncing || line == null) {
-            Text(
-                "Checking the e-journal…",
-                style = MaterialTheme.typography.bodyMedium,
-                modifier = Modifier.padding(12.dp),
-            )
-        } else {
-            SyncLineText(
-                line,
-                color = content,
-                style = MaterialTheme.typography.bodyMedium,
-                modifier = Modifier.padding(12.dp),
-            )
-        }
-    }
-}
 
 /** "Last successful sync: …" plus "· last check failed" in the error color (spec §4.1). */
 @Composable

@@ -32,12 +32,11 @@ enum class JournalBanner(val text: String) {
 /** The messages tab (spec §4.3). */
 data class MessagesUi(
     val items: List<MessageSummary> = emptyList(),
-    /** Next page; null = last page (and always with [unreadOnly]). */
+    /** Next page; null = last page. */
     val nextCursor: String? = null,
     val loading: Boolean = false,
     val loadingMore: Boolean = false,
     val loaded: Boolean = false,
-    val unreadOnly: Boolean = false,
     val showRemoved: Boolean = false,
     /** Null = messages and announcements together. */
     val kind: MessageKind? = null,
@@ -370,7 +369,7 @@ class SchoolJournalViewModel @Inject constructor(
         loadGrades()
     }
 
-    /** First page of messages (or every unread one) for the chosen child and filters. */
+    /** First page of messages for the chosen child and filters. */
     fun loadMessages() {
         val c = config.connection.value ?: return
         messagesJob?.cancel()
@@ -378,34 +377,23 @@ class SchoolJournalViewModel @Inject constructor(
         messagesJob = viewModelScope.launch {
             val ui = _state.value
             try {
-                if (ui.messages.unreadOnly) {
-                    val read = ui.readState ?: return@launch
-                    val unread = loadUnread(api, c, read, ui.selectedChild, ui.messages.showRemoved, ui.messages.kind)
-                    if (unread.gone.isNotEmpty()) {
-                        updateReadState { s ->
-                            unread.gone.fold(s) { acc, id -> acc.forget(id) }
-                        }
-                    }
-                    setMessages(unread.items, nextCursor = null)
-                } else {
-                    val page = api.messages(
-                        c,
-                        child = ui.selectedChild,
-                        limit = MESSAGES_PAGE,
-                        includeDeleted = ui.messages.showRemoved,
-                        kind = ui.messages.kind,
+                val page = api.messages(
+                    c,
+                    child = ui.selectedChild,
+                    limit = MESSAGES_PAGE,
+                    includeDeleted = ui.messages.showRemoved,
+                    kind = ui.messages.kind,
+                )
+                setMessages(page.items, page.nextCursor)
+                saveCache {
+                    it.copy(
+                        messages =
+                            it.messages +
+                                (
+                                    messagesKey(ui.selectedChild, ui.messages.showRemoved, ui.messages.kind) to
+                                        page.items
+                                    ),
                     )
-                    setMessages(page.items, page.nextCursor)
-                    saveCache {
-                        it.copy(
-                            messages =
-                                it.messages +
-                                    (
-                                        messagesKey(ui.selectedChild, ui.messages.showRemoved, ui.messages.kind) to
-                                            page.items
-                                        ),
-                        )
-                    }
                 }
             } catch (e: SchoolJournalError) {
                 if (e is SchoolJournalError.ChildNotFound) {
@@ -450,7 +438,7 @@ class SchoolJournalViewModel @Inject constructor(
 
     private fun showCachedMessages(copy: JournalCache? = cached()) {
         val ui = _state.value
-        if (ui.messages.loaded || ui.messages.unreadOnly) return
+        if (ui.messages.loaded) return
         if (copy == null) return
         val kind = ui.messages.kind
         val items = copy.messages[messagesKey(ui.selectedChild, ui.messages.showRemoved, kind)]
@@ -508,7 +496,7 @@ class SchoolJournalViewModel @Inject constructor(
         val c = config.connection.value ?: return
         val ui = _state.value
         val cursor = ui.messages.nextCursor ?: return
-        if (ui.messages.loading || ui.messages.loadingMore || ui.messages.unreadOnly) return
+        if (ui.messages.loading || ui.messages.loadingMore) return
         _state.update { it.copy(messages = it.messages.copy(loadingMore = true)) }
         viewModelScope.launch {
             try {
@@ -535,11 +523,6 @@ class SchoolJournalViewModel @Inject constructor(
                 _state.update { it.copy(messages = it.messages.copy(loadingMore = false)) }
             }
         }
-    }
-
-    fun toggleUnreadOnly() {
-        _state.update { it.copy(messages = it.messages.copy(unreadOnly = !it.messages.unreadOnly)) }
-        loadMessages()
     }
 
     /** Null = messages and announcements together. */
@@ -593,7 +576,6 @@ class SchoolJournalViewModel @Inject constructor(
                     )
                 }
                 news.refresh(ui.status)
-                if (_state.value.messages.unreadOnly) loadMessages()
             } catch (e: SchoolJournalError) {
                 handle(e)
             }

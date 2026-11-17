@@ -48,7 +48,7 @@ import com.github.ljarka.picfort.feature.schooljournal.R
 /** Start loading the next page this many rows before the end. */
 private const val LOAD_MORE_AHEAD = 5
 
-/** The Messages tab (spec §4.3): kind and "Unread only" chips, rows newest first, infinite scroll. */
+/** The Messages tab (spec §4.3): kind filter chips, rows newest first, infinite scroll. */
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun MessagesTab(state: SchoolJournalUi, clock: JournalClock, actions: SchoolJournalActions) {
@@ -75,11 +75,6 @@ fun MessagesTab(state: SchoolJournalUi, clock: JournalClock, actions: SchoolJour
                 KindChip("Announcements", messages.kind == MessageKind.ANNOUNCEMENT) {
                     actions.onSelectKind(MessageKind.ANNOUNCEMENT)
                 }
-                FilterChip(
-                    selected = messages.unreadOnly,
-                    onClick = actions.onToggleUnreadOnly,
-                    label = { Text("Unread only") },
-                )
             }
         }
         when {
@@ -91,7 +86,7 @@ fun MessagesTab(state: SchoolJournalUi, clock: JournalClock, actions: SchoolJour
 
             messages.loaded && messages.items.isEmpty() -> item(key = "empty") {
                 Text(
-                    emptyText(messages.kind, messages.unreadOnly),
+                    emptyText(messages.kind),
                     textAlign = TextAlign.Center,
                     style = MaterialTheme.typography.bodyLarge,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -130,12 +125,9 @@ private fun KindChip(label: String, selected: Boolean, onClick: () -> Unit) {
     FilterChip(selected = selected, onClick = onClick, label = { Text(label) })
 }
 
-private fun emptyText(kind: MessageKind?, unreadOnly: Boolean): String {
-    val what = when (kind) {
-        null, MessageKind.MESSAGE -> "messages"
-        MessageKind.ANNOUNCEMENT -> "announcements"
-    }
-    return if (unreadOnly) "No unread $what" else "No $what"
+private fun emptyText(kind: MessageKind?): String = when (kind) {
+    null, MessageKind.MESSAGE -> "No messages"
+    MessageKind.ANNOUNCEMENT -> "No announcements"
 }
 
 /**
