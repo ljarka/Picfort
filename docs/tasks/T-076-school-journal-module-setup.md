@@ -55,6 +55,20 @@ task the icon opens either the setup screen or an (empty) content shell.
 - Error mapping for every row of spec §5; Connect validation (health down, 401, 429, cleartext).
 - Paparazzi: setup empty / error / connecting; shell with banners; icon.
 
+## Result (2026-11-17)
+
+- [x] Module, DTOs for every schema, client for every used endpoint, error mapping, stores, setup,
+  shell (status line, banners, status sheet, child chips, two empty tabs), icon on Wall and School.
+- [x] Fake server; device check on the emulator against it: wrong key → "Wrong API key", bad address
+  → hint, connect → status line + Ola/Kuba, child kept after restart, status sheet, icon on School,
+  `auth_failed` banner with "3 h ago · last check failed", offline banner, 401 → "The API key is no
+  longer valid", Disconnect removes `files/school-journal`.
+- Changed from the plan: no `Screen.SchoolJournalMessage` placeholder (added with the message
+  screen in T-078); `SchoolJournalScreen(onBack)` only for now. The offline banner says "Pull down
+  to try again" until T-081 brings the offline copy (then: "Showing data from 14:32").
+- Follow-up for T-080: the stale color (`tertiary`) is close to the error red in the brand palette;
+  pick a distinct warning tone when finishing the status line.
+
 ## Done when
 
 - Icon on Wall and School opens setup; connecting to the fake server (`:5101`) on the emulator

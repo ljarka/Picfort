@@ -11,7 +11,9 @@ notifications.
 
 1. Sync now (⟳): `POST /sync`, handle 202 / 409 / 429, poll `/status` every 5 s (max 2 min) until
    `lastSync.status != running`, reload current tab.
-2. Status sheet complete (spec §4.1); status line in the warning color when older than 1 h,
+2. Stale color: `tertiary` looks like the error red in the brand palette (seen in T-076); use a
+   distinct warning tone so "older than 1 h" and "last check failed" differ.
+3. Status sheet complete (spec §4.1); status line in the warning color when older than 1 h,
    "last check failed" when the last run failed.
 
 ## Tests

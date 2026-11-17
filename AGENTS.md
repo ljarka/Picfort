@@ -41,6 +41,7 @@ Do not load the whole project. Each module's `AGENTS.md` tells you what to read.
 | `:feature:frame` | Ambient e-paper frame control, photo push via `FrameSender`, pairing setup | done |
 | `:feature:school` | School timetables: child chips, "finishes at" card, week by day, bell schedule, editing | done |
 | `:feature:timeline` | Photo timeline, justified layout, full-screen viewer, albums, search, sync | done |
+| `:feature:school-journal` | School-server grades & messages, "new" dot on Wall/School; removable (ADR 0017) | in progress |
 | `:app` | Thin shell: `MainActivity`, root navigation graph, `AppShell`, Hilt assembly | done |
 
 ## Architecture rules

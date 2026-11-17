@@ -15,6 +15,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
@@ -114,6 +115,8 @@ fun FamilyWallScreen(
     onOpenEvent: (Long) -> Unit = {},
     onOpenEvents: () -> Unit = {},
     onSetUpServer: () -> Unit = onSettingsClick,
+    /** Extra top bar icons from `:app`, before Settings; this screen doesn't know what they are. */
+    topBarActions: @Composable RowScope.() -> Unit = {},
 ) {
     val viewModel = hiltViewModel<FamilyWallViewModel>()
     val state by viewModel.state.collectAsStateWithLifecycle()
@@ -135,6 +138,7 @@ fun FamilyWallScreen(
         onTogglePin = viewModel::togglePin,
         onSetUpServer = onSetUpServer,
         onMessageShown = viewModel::messageShown,
+        topBarActions = topBarActions,
     )
 }
 
@@ -156,6 +160,7 @@ fun FamilyWallContent(
     onMessageShown: () -> Unit = {},
     /** Fixed "now" for screenshot tests. */
     now: Long = System.currentTimeMillis(),
+    topBarActions: @Composable RowScope.() -> Unit = {},
 ) {
     val snackbar = remember { SnackbarHostState() }
     LaunchedEffect(state.message) {
@@ -210,7 +215,10 @@ fun FamilyWallContent(
         topBar = {
             TopAppBar(
                 title = { Text("Family Wall") },
-                actions = { SettingsAction(onSettingsClick) },
+                actions = {
+                    topBarActions()
+                    SettingsAction(onSettingsClick)
+                },
             )
         },
         floatingActionButton = {

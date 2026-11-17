@@ -41,10 +41,13 @@ Tech stack: Kotlin, Jetpack Compose, Room, Hilt, Retrofit, WorkManager, Media3
 
 ```
 :app  (thin shell: MainActivity, root navigation, Hilt assembly)
-  └─► :feature:{wall, shopping, events, family, frame, school, timeline}
+  └─► :feature:{wall, shopping, events, family, frame, school, timeline, school-journal}
         └─► :core:ui, :core:database, :core:network
               └─► :core:model  (domain models + cross-feature contracts)
 ```
+
+`:feature:school-journal` talks to a separate server (school-server) and is built to be deleted
+without touching other modules ([ADR 0017](decisions/0017-school-journal-removable-module.md)).
 
 - Features never depend on each other. They talk through interfaces in `:core:model`
   (`FamilyMemberProvider`, `FamilyEventsProvider`, `FrameSender`, `DayPhotosProvider`, …),

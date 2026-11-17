@@ -11,7 +11,9 @@
    Show removed (overflow), child name with All. Bold/dot from `isRead`, never the server's `read`.
 2. Row actions: Mark as read / unread (long-press menu and swipe) → `ReadStateStore`.
 3. Overflow Mark all as read (selected child or All, spec §4.6) → snackbar with the count.
-4. `SchoolJournalMessageScreen(messageId, onBack)`: header, `AnnotatedString.fromHtml(bodyHtml)` with
+4. `:app`: `Screen.SchoolJournalMessage(id)` + NavHost entry next to `Screen.SchoolJournal`;
+   `SchoolJournalScreen(onBack, onOpenMessage)`.
+   `SchoolJournalMessageScreen(messageId, onBack)`: header, `AnnotatedString.fromHtml(bodyHtml)` with
    clickable links (`LocalUriHandler`), fallback `bodyText`, attachment names + note; marks read on
    open (locally); Mark as unread action; 404 → back + remove row (and its id from the read state).
 5. After any read change → `SchoolJournalBadgeRepository.refresh()`.

@@ -73,6 +73,7 @@ dependencies {
     implementation(project(":feature:wall"))
     implementation(project(":feature:frame"))
     implementation(project(":feature:timeline"))
+    implementation(project(":feature:school-journal"))
     ksp(libs.hilt.android.compiler)
     ksp(libs.room.compiler)
     ksp(libs.hilt.androidx.compiler)

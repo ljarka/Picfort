@@ -63,6 +63,10 @@ sealed interface Screen {
 
     @Serializable
     object School : Screen
+
+    /** School journal (ADR 0017, removable): opened from Wall and School. */
+    @Serializable
+    object SchoolJournal : Screen
 }
 
 /** One nested graph per bottom-bar tab (T-017), so each tab keeps its own back stack. */

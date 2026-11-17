@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -94,7 +95,13 @@ import kotlinx.coroutines.launch
 
 /** The School tab (T-029): one child's timetable, today's summary, the week day by day. */
 @Composable
-fun SchoolScreen(onSettingsClick: () -> Unit, onOpenFamily: () -> Unit, onSetUpServer: () -> Unit = onSettingsClick) {
+fun SchoolScreen(
+    onSettingsClick: () -> Unit,
+    onOpenFamily: () -> Unit,
+    onSetUpServer: () -> Unit = onSettingsClick,
+    /** Extra top bar icons from `:app`, before Settings; this screen doesn't know what they are. */
+    topBarActions: @Composable RowScope.() -> Unit = {},
+) {
     val viewModel = hiltViewModel<SchoolViewModel>()
     val state by viewModel.state.collectAsStateWithLifecycle()
     val lifecycle = LocalLifecycleOwner.current.lifecycle
@@ -109,6 +116,7 @@ fun SchoolScreen(onSettingsClick: () -> Unit, onOpenFamily: () -> Unit, onSetUpS
         state = state,
         locale = LocalConfiguration.current.locales[0],
         is24Hour = DateFormat.is24HourFormat(context),
+        topBarActions = topBarActions,
         actions = SchoolActions(
             onSelectChild = viewModel::selectChild,
             onSelectDay = viewModel::selectDay,
@@ -171,6 +179,7 @@ fun SchoolContent(
     locale: Locale = Locale.ENGLISH,
     is24Hour: Boolean = true,
     actions: SchoolActions = SchoolActions(),
+    topBarActions: @Composable RowScope.() -> Unit = {},
 ) {
     val time = remember(is24Hour, locale) { timeFormatter(is24Hour, locale) }
     val snackbar = remember { SnackbarHostState() }
@@ -198,6 +207,7 @@ fun SchoolContent(
                             }
                         }
                     }
+                    topBarActions()
                     SettingsAction(actions.onSettingsClick)
                 },
             )

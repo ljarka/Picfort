@@ -35,7 +35,8 @@ Server API: T-028 (`picfort-server/school.py`, `/school`, `school.db`).
 
 ## Public Contract
 
-- `SchoolScreen(onSettingsClick, onOpenFamily, onSetUpServer = onSettingsClick)`
+- `SchoolScreen(onSettingsClick, onOpenFamily, onSetUpServer = onSettingsClick, topBarActions = {})`;
+  `topBarActions`: icons from `:app` before Settings (the school journal's, ADR 0017), unknown here
 - Provides `SchoolMembership` (Hilt `SchoolModule`) to `:feature:family`.
 
 ## Dependencies & Boundaries
