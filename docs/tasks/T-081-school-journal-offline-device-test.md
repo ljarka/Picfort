@@ -11,7 +11,7 @@
 2. Fake server (`maestro/scripts/fake-school-server.py`, built in T-076): extend with whatever the
    flows below need.
 3. `maestro/school-journal.yaml`: Wall icon → setup → connect → messages (open, unread, read all) →
-   grades → changes → Sync now → badge gone on School; `maestro/school-journal-offline.yaml`.
+   grades (New markers) → Sync now → status line → badge gone on School; `maestro/school-journal-offline.yaml`.
 4. Removal dry run on a throwaway branch: follow ADR 0017 "How to remove"; boundaries + tests
    green; record the result in the ADR (status → accepted). Add to
    `check-modular-boundaries.sh`: nothing in `core/` mentions `school-journal` or `schooljournal`.

@@ -7,7 +7,7 @@
 ## Steps
 
 1. `SchoolJournalBadgeRepository` (@Singleton): `hasNew: StateFlow<Boolean>` and per-tab flags
-   (`unreadMessages`, `unseenGrades`), for the current Immich user (spec §4.7, §6).
+   (`unreadMessages`, `unseenGrades`), for the current Immich user (spec §4.6, §6).
    `refresh()` = `GET /messages?since=<watermark>&limit=100` (any id not in `readIds`, or
    `unreadIds` not empty) + `GET /status` and (if `lastEventId > gradesSeenCursor`)
    `GET /changes?after=cursor&type=grade&limit=1`. Errors keep last value.

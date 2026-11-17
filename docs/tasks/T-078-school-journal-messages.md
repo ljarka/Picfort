@@ -7,10 +7,10 @@
 ## Steps
 
 1. Messages tab: paged list (`limit=50`, `cursor`), infinite scroll, pull-to-refresh, Unread only
-   chip (local read state: `since=<watermark>` minus `readIds` + `unreadIds`, spec §4.7),
+   chip (local read state: `since=<watermark>` minus `readIds` + `unreadIds`, spec §4.6),
    Show removed (overflow), child name with All. Bold/dot from `isRead`, never the server's `read`.
 2. Row actions: Mark as read / unread (long-press menu and swipe) → `ReadStateStore`.
-3. Overflow Mark all as read (selected child or All, spec §4.7) → snackbar with the count.
+3. Overflow Mark all as read (selected child or All, spec §4.6) → snackbar with the count.
 4. `SchoolJournalMessageScreen(messageId, onBack)`: header, `AnnotatedString.fromHtml(bodyHtml)` with
    clickable links (`LocalUriHandler`), fallback `bodyText`, attachment names + note; marks read on
    open (locally); Mark as unread action; 404 → back + remove row (and its id from the read state).

@@ -188,7 +188,7 @@ Decided by the owner (2026-11-11), as recommended:
 ---
 
 ### Phase 9 — School journal (optional, removable)
-Grades, messages and changes from the family's [school-server](https://github.com/ljarka/school-server),
+Grades and messages (with a "new" dot and notifications) from the family's [school-server](https://github.com/ljarka/school-server),
 in one removable module `:feature:school-journal` ([spec](specs/school-journal.md), ADR 0017).
 
 | Task | Description | Status |
@@ -197,7 +197,7 @@ in one removable module `:feature:school-journal` ([spec](specs/school-journal.m
 | [T-077](tasks/T-077-school-journal-badge.md) | Red dot badge when there is something new | `ready` |
 | [T-078](tasks/T-078-school-journal-messages.md) | Messages: list, unread, read/unread, read all, message screen | `ready` |
 | [T-079](tasks/T-079-school-journal-grades.md) | Grades: by subject with averages, recent, filters, details | `ready` |
-| [T-080](tasks/T-080-school-journal-changes-sync-status.md) | Changes feed, Sync now, status sheet | `ready` |
+| [T-080](tasks/T-080-school-journal-sync-status.md) | Sync now, status sheet, last successful sync | `ready` |
 | [T-081](tasks/T-081-school-journal-offline-device-test.md) | Offline copy, Maestro flows, removal dry run | `ready` |
 | [T-082](tasks/T-082-school-journal-notifications.md) | Notifications: new grades, changed grades, new messages | `ready` |
 

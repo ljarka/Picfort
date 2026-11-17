@@ -2,7 +2,7 @@
 
 **Status:** ready  
 **Component:** Android (`:feature:school-journal`, `:app` two lines)  
-**Depends on:** T-077, T-078. Spec §4.8. Owner decision 2026-11-17: notifications are wanted.
+**Depends on:** T-077, T-078. Spec §4.7. Owner decision 2026-11-17: notifications are wanted.
 
 ## Steps
 
@@ -13,7 +13,7 @@
 2. `SchoolJournalNotifyScheduler.start()`: enqueue when configured and notifications on, cancel
    otherwise; called from `PicfortApplication.onCreate` (one line, like `reminderScheduler.start()`)
    and after Connect / Disconnect / the toggle.
-3. What notifies (spec §4.8): grade `created`, grade `updated` with `value` in `diff`, message
+3. What notifies (spec §4.7): grade `created`, grade `updated` with `value` in `diff`, message
    `created` not already read on this phone. Nothing for `deleted` or other updates.
 4. Notifications: channel "School journal" (default importance), group per child; > 3 in one run
    for a child → one summary "Ola: 2 new grades, 1 message". Tap → launch intent with

@@ -8,7 +8,7 @@
 
 ## 1. Goal
 
-Show the children's school e-journal data (grades, messages, what changed) inside Picfort, from
+Show the children's school e-journal data (grades and messages, with what is new) inside Picfort, from
 the family's own school-server. The integration lives in **one module** (`:feature:school-journal`)
 that can be deleted without touching any other module except a few lines in `:app`.
 
@@ -40,7 +40,7 @@ Connect does:
    - `401` → "Wrong API key"; `429 TOO_MANY_WRONG_KEYS` → "Too many wrong keys, try again in N min" (`Retry-After`);
    - `CleartextNotAllowedException` → "Plain http only works on the home network; use https".
 3. Success → save address + key (encrypted, `SecurePreferencesStore`), start the current
-   user's "new" state (§4.7: everything already there counts as read / seen), open the content.
+   user's "new" state (§4.6: everything already there counts as read / seen), open the content.
 
 Later: overflow menu → **Server settings** (same form, prefilled, shows server version and
 last sync) with **Disconnect** (confirm) that clears address, key, cursors, cached data.
@@ -52,9 +52,9 @@ Also shown (prefilled, with message "The API key is no longer valid") when any c
 
 ```
 ┌ ← School journal                 ⟳  ⋮ ┐   ⟳ = Sync now; ⋮ = Mark all read, Show removed, Server settings
-│ Checked 14:32 · next 14:47        (i) │   status line → status sheet
+│ Last successful sync: 14:32 · next 14:47 │ status line → status sheet
 │ [All] [Ola] [Kuba]                    │   child chips (only with ≥ 2 children)
-│ ( Messages • | Grades • | Changes )   │   tabs; dot = new in that tab
+│ (   Messages •   |   Grades •   )     │   two tabs; dot = new in that tab
 │ …tab content…                         │
 └───────────────────────────────────────┘
 ```
@@ -67,12 +67,12 @@ Also shown (prefilled, with message "The API key is no longer valid") when any c
   ("Mon 16 Nov, 14:32"); device time format; the relative part refreshes every minute.
   `null` → "No successful sync yet". When the last run failed (`lastSync.status` `error` /
   `auth_failed`), add "· last check failed" in the error color. Shown from the cached copy when
-  offline. Tap → status sheet. Also shown in Server settings.
+  offline. Older than 1 h → the whole line in the warning color (no separate banner).
+  Tap → status sheet. Also shown in Server settings.
 - Banners (one, highest wins):
   1. `auth == auth_failed` → "The server can't log in to the e-journal. Fix its login and restart it." (error color)
   2. `503 NO_DATA_YET` → "First check of the e-journal is still running."
   3. Unreachable → "Offline. Data from 14:32" (cached copy, read only).
-  4. `lastSuccessfulSyncAt` older than 1 h → "School data is not up to date (last check 14:32)."
 - Status sheet: auth state; last sync (started, finished, `status`, `errorCode`,
   `itemsFetched`, `changesDetected`); last successful sync; next sync; counts (grades,
   messages); server version; server address.
@@ -80,7 +80,7 @@ Also shown (prefilled, with message "The API key is no longer valid") when any c
 ### 4.2 Children (`GET /children`)
 
 - Loaded on open. ≥ 2 children → chips **All** + one per child (`name`). Selection kept in
-  preferences; passed as `child=<id>` to grades, subjects, messages, read-all and changes.
+  preferences; passed as `child=<id>` to subjects, messages and changes.
 - With **All**, every row shows the child's first name (from `childId`).
 - `404 CHILD_NOT_FOUND` → reload children, fall back to All.
 
@@ -88,7 +88,7 @@ Also shown (prefilled, with message "The API key is no longer valid") when any c
 
 - List newest first, paged (`limit=50`, `cursor` → `nextCursor`, infinite scroll).
   Row: sender, subject, date, paperclip if `hasAttachments`; unread = bold + dot.
-- Filter chip **Unread only** (from the phone's read state, §4.7). Overflow **Show removed** (`includeDeleted=true`):
+- Filter chip **Unread only** (from the phone's read state, §4.6). Overflow **Show removed** (`includeDeleted=true`):
   removed rows struck through with "Removed from the e-journal".
 - Long-press / swipe: **Mark as read / unread**.
 - Overflow **Mark all as read** (for the selected child, or all) → snackbar "Marked N messages".
@@ -96,36 +96,24 @@ Also shown (prefilled, with message "The API key is no longer valid") when any c
   `bodyHtml` via `AnnotatedString.fromHtml` (links open in the browser; fallback `bodyText`),
   attachment names with a note "Open in the e-journal to download". Opening marks it read;
   action **Mark as unread**. `404` → back to the list, row removed.
-- Read / unread is **per Immich user, kept on the phone** (§4.7); one parent reading a message
+- Read / unread is **per Immich user, kept on the phone** (§4.6); one parent reading a message
   does not clear it for the other.
 
-### 4.4 Grades tab (`GET /grades/subjects`, `GET /grades`)
+### 4.4 Grades tab (`GET /grades/subjects`)
 
 - Semester chips: **Semester 1 · Semester 2 · Whole year** (`semester` param or none);
   default = current semester (the one of the newest grade).
-- Two views (segmented button):
-  - **By subject** (`/grades/subjects`): card per subject: name, weighted `average` ("—" when
-    null), row of grade chips (`value`, colored by `numericValue` 1–6, neutral when null; small
-    weight number). Non-regular kinds (`proposed_semester`, `semester`, `proposed_final`,
-    `final`) shown as labelled values on the card ("Proposed: 4", "Final: 5").
-  - **Recent** (`/grades`, newest `issuedOn` first): rows "5 · Mathematics · Test · 12 Nov".
-    Filters: subject (dropdown from subjects), kind, **New since last visit** (`since`).
-- **Show removed** (shared overflow toggle) → `includeDeleted=true`, struck through.
-- Grades with a change event after the seen cursor carry a **New** marker.
+- One view, **by subject**: card per subject: name, weighted `average` ("—" when null), row of
+  grade chips (`value`, colored by `numericValue` 1–6, neutral when null; small weight number),
+  oldest → newest. Non-regular kinds (`proposed_semester`, `semester`, `proposed_final`, `final`)
+  shown as labelled values on the card ("Proposed: 4", "Final: 5"). Subjects with a new grade first.
+- Grades with a change event after the seen cursor carry a **New** marker (dot on the chip);
+  grade ids come from `GET /changes?after=<gradesSeenCursor>&type=grade`.
+- No separate "Recent" list and no filters (owner decision 2026-11-17, simplification).
 - Tap grade → sheet: value, numeric value, weight, category, kind, counts to average, teacher,
   comment, issued on, first seen, last changed, removed at.
 
-### 4.5 Changes tab (`GET /changes`)
-
-- Newest first. First load: `since = now − 30 days` (+ `child`, + type chip **All / Grades /
-  Messages** → `type`), then page with `after=nextCursor` while `hasMore` (the API forbids
-  `after` with `since`), reverse for display. **Load older** → 90 days, then everything (`after=0`).
-- Row texts: "New grade 5 · Mathematics · Test", "Grade changed 4 → 5 · Mathematics" (from
-  `diff`; unknown fields shown as "field: old → new"), "Grade removed · …", "New message from
-  X: subject", "Message changed", "Message removed". Time = `detectedAt`.
-- Tap: grade → grade sheet; message → message screen.
-
-### 4.6 Sync now (`POST /sync`)
+### 4.5 Sync now (`POST /sync`)
 
 - ⟳ → `202` or `409 SYNC_IN_PROGRESS` → progress indicator, poll `/status` every 5 s (max
   2 min) until `lastSync.status != running`, then reload the current tab.
@@ -133,7 +121,7 @@ Also shown (prefilled, with message "The API key is no longer valid") when any c
   in N min" (`Retry-After`).
 - Pull-to-refresh only reloads from the server (no `/sync`).
 
-### 4.7 Read and seen state (per Immich user, on the phone)
+### 4.6 Read and seen state (per Immich user, on the phone)
 
 Owner decision 2026-11-17: each Immich user has their own "read" and "seen", stored on the phone
 inside the module. The server's shared read state is **not used** (ADR 0017).
@@ -159,10 +147,10 @@ inside the module. The server's shared read state is **not used** (ADR 0017).
 - Lost on app reinstall / data clear (then it starts again: everything read) and not shared
   between two devices of the same person — accepted.
 
-### 4.8 Notifications (owner decision 2026-11-17)
+### 4.7 Notifications (owner decision 2026-11-17)
 
 - Background job in the module (WorkManager, every 15 min, network required) reads
-  `GET /changes?after=<notifyCursor>`; `notifyCursor` is per Immich user (in the §4.7 state file),
+  `GET /changes?after=<notifyCursor>`; `notifyCursor` is per Immich user (in the §4.6 state file),
   started at `status.lastEventId` on connect — no flood of history.
 - Notifies: **new grade** ("New grade · Ola" / "Mathematics 5 · Test"), **changed grade value**
   ("Grade changed · Ola" / "Mathematics 4 → 5"), **new message** ("Message · Ola" /
@@ -172,6 +160,20 @@ inside the module. The server's shared read state is **not used** (ADR 0017).
 - Tap → opens the message, or the Grades tab. Reading a message in the app removes its notification.
 - Server settings: switch **Notifications** (on by default); permission `POST_NOTIFICATIONS`
   asked on Connect (Android 13+).
+
+### 4.8 Server endpoints in use
+
+| Endpoint | Used for |
+|---|---|
+| `GET /health` | Connect |
+| `GET /api/v1/status` | Status line & sheet, Connect, badge, Sync now |
+| `GET /api/v1/children` | Child chips, names |
+| `GET /api/v1/grades/subjects` | Grades tab |
+| `GET /api/v1/messages`, `GET /api/v1/messages/{id}` | Messages tab, message screen, unread |
+| `GET /api/v1/changes` | Badge, New markers, notifications |
+| `POST /api/v1/sync` | Sync now |
+| `GET /api/v1/grades` | Not used: the subjects endpoint already holds every grade |
+| `PUT\|DELETE …/read`, `POST …/read-all` | Not used: read state per Immich user on the phone (§4.6) |
 
 ## 5. Errors
 
@@ -185,7 +187,7 @@ never show `message` to the user (logs only).
 | 401 `UNAUTHORIZED` | Configuration screen "The API key is no longer valid" |
 | 404 `NOT_FOUND` | Item removed locally |
 | 404 `CHILD_NOT_FOUND` | Children reloaded, All selected |
-| 409 `SYNC_IN_PROGRESS` / `AUTH_FAILED` | See §4.6 / auth banner |
+| 409 `SYNC_IN_PROGRESS` / `AUTH_FAILED` | See §4.5 / auth banner |
 | 429 `TOO_MANY_WRONG_KEYS` / `SYNC_TOO_SOON` | "Try again in N min" |
 | 503 `NO_DATA_YET` / `STORAGE_UNAVAILABLE` | Banner "First check still running" / "Server storage problem" |
 | unknown code | Generic error, logged |
@@ -195,15 +197,14 @@ Unknown JSON fields and enum values are ignored (`ignoreUnknownKeys`, enums as s
 
 ## 6. "Something new" (badge) rules
 
-All per current Immich user (§4.7).
+All per current Immich user (§4.6).
 
 - `hasNew = hasUnreadMessages || hasUnseenGradeChanges`.
 - `hasUnreadMessages` = `unreadIds` not empty, or `GET /messages?since=<watermark>&limit=100`
   has an id not in `readIds`.
 - `hasUnseenGradeChanges` = `GET /changes?after=<gradesSeenCursor>&type=grade&limit=1` returns an
   item (asked only when `status.lastEventId > gradesSeenCursor`).
-- `gradesSeenCursor`: advanced to the newest known event id when the Grades or Changes tab has
-  been shown.
+- `gradesSeenCursor`: advanced to the newest known event id when the Grades tab has been shown.
 - Messages clear the badge by being read on this phone.
 - Tab dots: Messages = unread messages; Grades = unseen grade changes.
 - Refresh: while Wall or School is on screen (`STARTED`): immediately and every 5 min
@@ -221,12 +222,12 @@ All per current Immich user (§4.7).
 - Files: `SchoolJournalApi` (every endpoint), `SchoolJournalDtos`, `SchoolJournalError`, `SchoolJournalConfigStore`,
   `SchoolJournalRepository` (data + cache), `SchoolJournalBadgeRepository` (singleton `StateFlow<Boolean>`),
   `SchoolJournalTopBarAction` (+ `SchoolJournalBadgeViewModel`), `SchoolJournalScreen` / `SchoolJournalViewModel`,
-  `SchoolJournalSetup`, `MessageScreen`, `GradesTab`, `ChangesTab`, `MessagesTab`.
+  `SchoolJournalSetup`, `MessageScreen`, `GradesTab`, `MessagesTab`, `SchoolJournalNotifyWorker`.
 - Offline copy: `filesDir/school-journal/cache.json` (status, children, last subjects per child +
   semester, first messages page), tied to the server address; deleted on Disconnect. No Room
   (`:core:database` untouched).
 - Prefs (encrypted): `schoolJournal.url`, `schoolJournal.key`, `schoolJournal.child`. Read / seen
-  state per Immich user in `filesDir/school-journal/state-*.json` (§4.7); Disconnect deletes the folder.
+  state per Immich user in `filesDir/school-journal/state-*.json` (§4.6); Disconnect deletes the folder.
 - Uses `AccessTokenStore.userId` (`:core:network`) for the Immich user id.
 - Public contract (only these are used by `:app`):
   - `SchoolJournalTopBarAction(onClick: () -> Unit)`
@@ -240,10 +241,11 @@ All per current Immich user (§4.7).
 ## 8. Testing
 
 - Unit: DTO parsing from contract fixtures (copied examples of every schema, incl. unknown
-  fields/enums), error mapping, read state (§4.7: start, read/unread around the watermark, read
-  all per child, two Immich users on one phone), badge rules, changes paging (`since` → `after`), cursor handling,
+  fields/enums), error mapping, read state (§4.6: start, read/unread around the watermark, read
+  all per child, two Immich users on one phone), badge rules, New markers, notification filter, cursor handling,
   config validation — with a fake OkHttp `Interceptor`/`MockWebServer`-like transport.
-- Paparazzi: setup (empty, errors), content (each tab, All vs one child, banners, offline),
+- Paparazzi: setup (empty, errors), content (both tabs, All vs one child, status line fresh /
+  stale / failed, banners, offline),
   message screen, grade sheet, top bar icon with/without badge, dark mode.
 - Device (Maestro): against a **fake school-server** (`maestro/scripts/fake-school-server.py`,
   stdlib only, `:5101`, neutral sample data) — never the family's real

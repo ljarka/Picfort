@@ -23,20 +23,20 @@ task the icon opens either the setup screen or an (empty) content shell.
 3. `SchoolJournalApi.kt`: one suspend function per endpoint: `health`, `status`, `children`, `grades`
    (child, subject, semester, kind, since, includeDeleted), `subjects` (child, semester),
    `messages` (child, since, limit, cursor, includeDeleted), `message`, `changes` (child,
-   after | since, type, limit), `sync`. No client for the server's read state (`…/read`,
+   after, type, limit), `sync`. No `GET /grades` (spec §4.8). No client for the server's read state (`…/read`,
    `read-all`, `unread=true`): read is per Immich user on the phone (ADR 0017).
    Own `OkHttpClient` (`CleartextPolicyInterceptor`, `X-School-Key` interceptor, 15 s timeouts).
 4. `SchoolJournalError.kt`: sealed class per spec §5, incl. `Retry-After` and `WWW-Authenticate`.
 5. `SchoolJournalConfigStore.kt`: `schoolJournal.url`, `schoolJournal.key`, `schoolJournal.child`
    in `SecurePreferencesStore`; `configured` StateFlow; `clear()` (also deletes
-   `filesDir/school-journal/`). `ReadStateStore` (spec §4.7): per Immich user
+   `filesDir/school-journal/`). `ReadStateStore` (spec §4.6): per Immich user
    (`AccessTokenStore.userId`) + server, JSON file, started on connect (`watermark = now`,
    `gradesSeenCursor = lastEventId`).
 6. `SchoolJournalSetup.kt` + `SchoolJournalViewModel`: Connect flow (spec §3), errors, Server settings +
    Disconnect.
 7. `SchoolJournalScreen(onBack, onOpenMessage)`: setup when not configured; else shell with the
    always-visible "Last successful sync" line (spec §4.1: date/time, relative, failed last check,
-   no sync yet), banners, status sheet, child chips, three empty tabs (filled by T-078…T-080).
+   no sync yet), banners, status sheet, child chips, two empty tabs (filled by T-078, T-079).
 8. `SchoolJournalTopBarAction(onClick)`: building icon (`ic_school_building.xml`), no badge yet.
 9. `FamilyWallScreen`, `SchoolScreen`: add `topBarActions: @Composable RowScope.() -> Unit = {}`
    before `SettingsAction`. `:app`: `Screen.SchoolJournal`, `Screen.SchoolJournalMessage(id)` (placeholder
