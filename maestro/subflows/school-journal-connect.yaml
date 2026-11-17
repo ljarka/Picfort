@@ -1,0 +1,29 @@
+# Opens the school journal from the current tab and connects it afresh to the fake school-server
+# (10.0.2.2:5101, key test-key). A connected journal is disconnected first (Server settings →
+# Disconnect): the fake server's data was just reset, like a new server, so the phone's read and
+# seen state must start again too.
+appId: com.github.ljarka.picfort
+---
+- tapOn: "School journal.*"
+- waitForAnimationToEnd
+- runFlow:
+    when:
+      notVisible: "Connect your school server.*"
+    commands:
+      - tapOn: "More"
+      - tapOn: "Server settings"
+      - scrollUntilVisible:
+          element: "Disconnect"
+      - tapOn: "Disconnect"
+      - tapOn: "Disconnect"
+      - extendedWaitUntil:
+          visible: "Connect your school server.*"
+          timeout: 5000
+- tapOn: "Server address"
+- inputText: "10.0.2.2:5101"
+- tapOn: "API key"
+- inputText: "test-key"
+- tapOn: "Connect"
+- extendedWaitUntil:
+    visible: "Last successful sync.*"
+    timeout: 15000

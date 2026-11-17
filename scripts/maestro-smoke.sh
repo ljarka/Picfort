@@ -35,5 +35,18 @@ fi
 DEVICE_ARGS=()
 [ -n "${DEVICE:-}" ] && DEVICE_ARGS=(--device "$DEVICE")
 
+# School journal flows (tag school-journal) need the fake school-server on :5101, never the
+# family's: python3 maestro/scripts/fake-school-server.py. Without it they are skipped.
+EXTRA_ARGS=()
+if ! curl -s -m 3 -o /dev/null "http://localhost:5101/_test/ping"; then
+  if [ $# -eq 0 ]; then
+    echo "Fake school-server not running on :5101: skipping the school-journal flows." >&2
+    EXTRA_ARGS=(--exclude-tags school-journal)
+  elif printf '%s\n' "$@" | grep -q 'school-journal'; then
+    echo "Start the fake school-server first: python3 maestro/scripts/fake-school-server.py" >&2
+    exit 1
+  fi
+fi
+
 if [ $# -eq 0 ]; then set -- "$ROOT/maestro"; fi
-exec maestro "${DEVICE_ARGS[@]+"${DEVICE_ARGS[@]}"}" test "$@"
+exec maestro "${DEVICE_ARGS[@]+"${DEVICE_ARGS[@]}"}" test "${EXTRA_ARGS[@]+"${EXTRA_ARGS[@]}"}" "$@"

@@ -6,12 +6,14 @@ import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
 import java.time.Instant
 import javax.inject.Inject
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 private const val TAG = "SchoolJournal"
 
@@ -73,6 +75,8 @@ data class SchoolJournalUi(
     val tab: JournalTab = JournalTab.MESSAGES,
     val refreshing: Boolean = false,
     val offline: Boolean = false,
+    /** The data on screen is the offline copy saved then (spec §7). */
+    val cachedAt: Instant? = null,
     val storageProblem: Boolean = false,
     /** Tab dots (spec §6). */
     val news: JournalNews = JournalNews(),
@@ -118,6 +122,7 @@ class SchoolJournalViewModel @Inject constructor(
     private val readState: ReadStateStore,
     private val news: SchoolJournalNews,
     private val removed: RemovedMessages,
+    private val cache: SchoolJournalCacheStore,
 ) : ViewModel() {
     private val _state = MutableStateFlow(initial())
     val state: StateFlow<SchoolJournalUi> = _state.asStateFlow()
@@ -126,6 +131,12 @@ class SchoolJournalViewModel @Inject constructor(
     private var gradesJob: Job? = null
 
     init {
+        // The offline copy first, so the screen isn't empty while the server answers (or doesn't).
+        address?.let { a ->
+            viewModelScope.launch {
+                withContext(Dispatchers.IO) { cache.load(a) }?.let(::showCached)
+            }
+        }
         viewModelScope.launch { news.news.collect { n -> _state.update { it.copy(news = n) } } }
         // A message opened from here and gone from the server (404) leaves the list.
         viewModelScope.launch {
@@ -190,6 +201,7 @@ class SchoolJournalViewModel @Inject constructor(
                         address = config.address,
                     )
                 }
+                saveCache { it.copy(status = status) }
                 loadChildren(connection)
                 news.refresh(status)
                 loadMessages()
@@ -213,7 +225,10 @@ class SchoolJournalViewModel @Inject constructor(
             try {
                 val status = api.status(connection)
                 val read = readState.ensureStarted(connection.base.toString(), Instant.now(), status.lastEventId)
-                _state.update { it.copy(status = status, offline = false, storageProblem = false, readState = read) }
+                _state.update {
+                    it.copy(status = status, offline = false, storageProblem = false, readState = read, cachedAt = null)
+                }
+                saveCache { it.copy(status = status) }
                 loadChildren(connection)
                 news.refresh(status)
                 if (_state.value.tab == JournalTab.GRADES) loadGrades()
@@ -232,6 +247,7 @@ class SchoolJournalViewModel @Inject constructor(
             val selected = config.child?.takeIf { id -> children.any { it.id == id } }
             if (selected == null) config.child = null
             _state.update { it.copy(children = children, selectedChild = selected) }
+            saveCache { it.copy(children = children) }
         } catch (e: SchoolJournalError) {
             handle(e)
         }
@@ -253,7 +269,8 @@ class SchoolJournalViewModel @Inject constructor(
 
     fun selectChild(id: String?) {
         config.child = id
-        _state.update { it.copy(selectedChild = id, grades = it.grades.copy(loaded = false)) }
+        // Another child's grades must not stay on screen if the server can't be reached.
+        _state.update { it.copy(selectedChild = id, grades = it.grades.copy(loaded = false, sections = emptyList())) }
         loadMessages()
         if (_state.value.tab == JournalTab.GRADES) loadGrades()
     }
@@ -280,6 +297,11 @@ class SchoolJournalViewModel @Inject constructor(
                     targets.map { (id, name) -> GradeSection(id, name, api.subjects(c, id, semester)) }
                 val semester = if (ui.grades.semesterChosen) ui.grades.semester else defaultSemester(fetch(null))
                 val sections = fetch(semester)
+                saveCache { copy ->
+                    val entry = CachedGrades(semester, sections.map { it.toCached() })
+                    val keys = setOf(gradesKey(ui.selectedChild, semester), lastGradesKey(ui.selectedChild))
+                    copy.copy(grades = copy.grades + keys.associateWith { entry })
+                }
                 _state.update {
                     it.copy(
                         grades = it.grades.copy(
@@ -301,13 +323,24 @@ class SchoolJournalViewModel @Inject constructor(
                 }
                 handle(e)
                 _state.update { it.copy(grades = it.grades.copy(loading = false)) }
+                if (e.isOffline && !_state.value.grades.loaded) showCachedGrades()
             }
         }
     }
 
     /** [semester] null = whole year. */
     fun selectSemester(semester: Int?) {
-        _state.update { it.copy(grades = it.grades.copy(semester = semester, semesterChosen = true)) }
+        // Same for another semester's grades.
+        _state.update {
+            it.copy(
+                grades = it.grades.copy(
+                    semester = semester,
+                    semesterChosen = true,
+                    loaded = false,
+                    sections = emptyList(),
+                ),
+            )
+        }
         loadGrades()
     }
 
@@ -336,6 +369,12 @@ class SchoolJournalViewModel @Inject constructor(
                         includeDeleted = ui.messages.showRemoved,
                     )
                     setMessages(page.items, page.nextCursor)
+                    saveCache {
+                        it.copy(
+                            messages =
+                                it.messages + (messagesKey(ui.selectedChild, ui.messages.showRemoved) to page.items),
+                        )
+                    }
                 }
             } catch (e: SchoolJournalError) {
                 if (e is SchoolJournalError.ChildNotFound) {
@@ -344,7 +383,68 @@ class SchoolJournalViewModel @Inject constructor(
                 }
                 handle(e)
                 _state.update { it.copy(messages = it.messages.copy(loading = false)) }
+                if (e.isOffline) showCachedMessages()
             }
+        }
+    }
+
+    private val SchoolJournalError.isOffline: Boolean
+        get() = this is SchoolJournalError.Unreachable || this is SchoolJournalError.CleartextNotAllowed
+
+    /** Saves after a server answer; failures to write only cost the offline copy. */
+    private fun saveCache(transform: (JournalCache) -> JournalCache) {
+        val a = address ?: return
+        viewModelScope.launch(Dispatchers.IO) { runCatching { cache.update(a, transform = transform) } }
+    }
+
+    /** Fills what the server hasn't given yet from the copy (never overwrites fresh data). */
+    private fun showCached(copy: JournalCache) {
+        val saved = instantOrNull(copy.savedAt)
+        _state.update { ui ->
+            ui.copy(
+                status = ui.status ?: copy.status,
+                children = ui.children.ifEmpty { copy.children },
+                cachedAt = if (ui.status == null) saved else ui.cachedAt,
+            )
+        }
+        showCachedMessages(copy)
+        showCachedGrades(copy)
+    }
+
+    private fun cached(): JournalCache? = address?.let { cache.load(it) }
+
+    private fun showCachedMessages(copy: JournalCache? = cached()) {
+        val ui = _state.value
+        if (ui.messages.loaded || ui.messages.unreadOnly) return
+        val items = copy?.messages?.get(messagesKey(ui.selectedChild, ui.messages.showRemoved)) ?: return
+        _state.update {
+            it.copy(
+                messages = it.messages.copy(items = items, nextCursor = null, loaded = true, loading = false),
+                cachedAt = it.cachedAt ?: instantOrNull(copy.savedAt),
+            )
+        }
+    }
+
+    private fun showCachedGrades(copy: JournalCache? = cached()) {
+        val ui = _state.value
+        if (ui.grades.loaded) return
+        val key = if (ui.grades.semesterChosen) {
+            gradesKey(ui.selectedChild, ui.grades.semester)
+        } else {
+            lastGradesKey(ui.selectedChild)
+        }
+        val entry = copy?.grades?.get(key) ?: return
+        _state.update {
+            it.copy(
+                grades = it.grades.copy(
+                    semester = entry.semester,
+                    semesterChosen = true,
+                    sections = entry.sections.map { s -> s.toSection() },
+                    loaded = true,
+                    loading = false,
+                ),
+                cachedAt = it.cachedAt ?: instantOrNull(copy.savedAt),
+            )
         }
     }
 
@@ -459,7 +559,8 @@ class SchoolJournalViewModel @Inject constructor(
             val outcome = syncNow(api, c, _state.value.status)
             when (outcome) {
                 is SyncOutcome.Done -> {
-                    _state.update { it.copy(status = outcome.status, offline = false) }
+                    _state.update { it.copy(status = outcome.status, offline = false, cachedAt = null) }
+                    saveCache { it.copy(status = outcome.status) }
                     news.refresh(outcome.status)
                     when (_state.value.tab) {
                         JournalTab.MESSAGES -> loadMessages()

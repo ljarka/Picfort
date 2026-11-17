@@ -1,0 +1,59 @@
+# School journal offline (T-081): with the fake school-server not answering, the journal shows the
+# copy saved on the phone with "Offline. Showing what was loaded …", then recovers on pull-down.
+# Needs: python3 maestro/scripts/fake-school-server.py (port 5101); its /_test/offline hook
+# drops connections, so nothing has to be stopped by hand.
+appId: com.github.ljarka.picfort
+name: School journal — offline copy (T-081)
+tags:
+  - school-journal
+---
+- runScript:
+    file: scripts/school-journal-data.js
+    env:
+      RESET: "1"
+      OFFLINE: "0"
+- runFlow: subflows/open-app.yaml
+- extendedWaitUntil:
+    visible: "Family Wall"
+    timeout: 20000
+- runFlow: subflows/school-journal-connect.yaml
+# Load both tabs once, so the copy has them
+- tapOn: "All"
+- tapOn: "Messages"
+- extendedWaitUntil:
+    visible: "Trip on Friday"
+    timeout: 10000
+- tapOn: "Grades"
+- extendedWaitUntil:
+    visible: "Average.*"
+    timeout: 10000
+- tapOn: "Messages"
+- runScript:
+    file: scripts/school-journal-data.js
+    env:
+      OFFLINE: "120"
+- runFlow: subflows/open-app.yaml
+- extendedWaitUntil:
+    visible: "Family Wall"
+    timeout: 20000
+- tapOn: "School journal.*"
+- extendedWaitUntil:
+    visible: "Offline. Showing what was loaded.*"
+    timeout: 30000
+- assertVisible: "Last successful sync.*"
+- assertVisible: "Trip on Friday"
+- tapOn: "Grades"
+- extendedWaitUntil:
+    visible: "Average.*"
+    timeout: 10000
+# Back online
+- runScript:
+    file: scripts/school-journal-data.js
+    env:
+      OFFLINE: "0"
+- swipe:
+    start: 50%, 45%
+    end: 50%, 85%
+- extendedWaitUntil:
+    notVisible: "Offline.*"
+    timeout: 20000

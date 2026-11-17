@@ -11,7 +11,10 @@ From the emulator: http://10.0.2.2:5101. Test hooks (no key needed, test only):
     POST /_test/grade    {"childId":"101","subject":"Mathematics","value":"5"}  → new grade + change event
     POST /_test/message  {"childId":"101","sender":"…","subject":"…"}           → new message + change event
     POST /_test/state    {"auth":"auth_failed"|"ok","lastSuccessMinutesAgo":90,"lastRun":"error"|"ok"}
+    GET  /_test/ping                                                               → is it running (also while "offline")
     POST /_test/reset                                                              → back to the sample data
+    POST /_test/offline  {"seconds":60}  → drops every API connection unanswered (the app sees
+                                           "can't reach"); {"seconds":0} ends it
 """
 import itertools
 import json
@@ -28,6 +31,10 @@ LOCK = threading.Lock()
 # Ids never repeat, not even after /_test/reset or a restart: the app remembers read ids, as with
 # a real server.
 IDS = itertools.count(int(time.time()))
+# Change event ids only grow, like the real server's cursor (the app remembers the last seen one).
+EVENT_IDS = itertools.count(int(time.time()))
+# Until this time.time(), API requests get no answer (simulated offline).
+OFFLINE_UNTIL = 0.0
 
 
 def iso(dt):
@@ -123,7 +130,7 @@ class World:
 
     def event(self, entity_type, entity, change, diff, at=None):
         self.events.append({
-            "id": len(self.events) + 1, "childId": entity["childId"], "entityType": entity_type,
+            "id": next(EVENT_IDS), "childId": entity["childId"], "entityType": entity_type,
             "entityId": entity["id"], "changeType": change, "detectedAt": iso(at or now()),
             "entity": entity, "diff": diff,
         })
@@ -140,7 +147,7 @@ class World:
         return {
             "auth": self.auth, "lastSync": last_run,
             "lastSuccessfulSyncAt": iso(self.last_success) if self.last_success else None,
-            "nextSyncAt": iso(t + timedelta(minutes=3)), "lastEventId": len(self.events),
+            "nextSyncAt": iso(t + timedelta(minutes=3)), "lastEventId": self.events[-1]["id"] if self.events else 0,
             "counts": {"grades": len([g for g in self.grades if not g["deletedAt"]]), "messages": len(self.messages),
                        "unreadMessages": len([m for m in self.messages if not m["read"]])},
             "version": "fake-1.0",
@@ -184,6 +191,11 @@ class Handler(BaseHTTPRequestHandler):
         q = {k: v[0] for k, v in parse_qs(url.query).items()}
         # Read the body before taking the lock: a slow or broken client must not block the others.
         body = self.body() if method in ("POST", "PUT") else {}
+        if path == "/_test/ping":  # for scripts/maestro-smoke.sh: answers even "offline"
+            return self.send(200, {"ok": True})
+        if not path.startswith("/_test/") and time.time() < OFFLINE_UNTIL:
+            self.close_connection = True  # no answer at all: the client sees a dropped connection
+            return
         with LOCK:
             w = WORLD
             if path == "/health":
@@ -285,8 +297,11 @@ class Handler(BaseHTTPRequestHandler):
             return self.error(404, "NOT_FOUND", "No such endpoint")
 
     def test_hook(self, path, body):
-        global WORLD
+        global WORLD, OFFLINE_UNTIL
         w = WORLD
+        if path == "/_test/offline":
+            OFFLINE_UNTIL = time.time() + float(body.get("seconds", 60))
+            return self.send(200, {"offlineFor": body.get("seconds", 60)})
         if path == "/_test/reset":
             WORLD = World()
             return self.send(200, {"ok": True})

@@ -53,6 +53,7 @@ import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.withStyle
@@ -228,25 +229,14 @@ private fun JournalShell(state: SchoolJournalUi, clock: JournalClock, actions: S
         },
     ) { padding ->
         Column(Modifier.padding(padding).fillMaxSize()) {
-            if (state.syncing) {
-                Text(
-                    "Checking the e-journal…",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
+            if (state.syncing || state.status != null) {
+                SyncCard(
+                    line = state.status?.let { syncLine(it, clock.now, clock.zone, clock.locale, clock.is24Hour) },
+                    syncing = state.syncing,
+                    onClick = { statusSheet = true },
                 )
-            } else {
-                state.status?.let { status ->
-                    SyncLineText(
-                        line = syncLine(status, clock.now, clock.zone, clock.locale, clock.is24Hour),
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clickable { statusSheet = true }
-                            .padding(horizontal = 16.dp, vertical = 8.dp),
-                    )
-                }
             }
-            state.banner?.let { JournalBannerCard(it) }
+            state.banner?.let { JournalBannerCard(it, state.cachedAt, clock) }
             if (state.showChildChips) {
                 ChildChips(state.children, state.selectedChild, actions.onSelectChild)
             }
@@ -298,10 +288,55 @@ private fun JournalShell(state: SchoolJournalUi, clock: JournalClock, actions: S
 fun warningColor(): Color =
     if (MaterialTheme.colorScheme.background.luminance() < 0.5f) Color(0xFFFFB951) else Color(0xFF8A5A00)
 
+/**
+ * The status line as a card shaped like the banners (owner request 2026-11-17): neutral while the
+ * data is fresh, amber when older than an hour; "Checking the e-journal…" during Sync now.
+ */
+@Composable
+private fun SyncCard(line: SyncLine?, syncing: Boolean, onClick: () -> Unit) {
+    val dark = MaterialTheme.colorScheme.background.luminance() < 0.5f
+    val stale = !syncing && line?.stale == true
+    val container = when {
+        stale -> if (dark) Color(0xFF4A3810) else Color(0xFFFFE9C2)
+        else -> MaterialTheme.colorScheme.surfaceContainerHigh
+    }
+    val content = when {
+        stale -> if (dark) Color(0xFFFFD08A) else Color(0xFF5C3D00)
+        else -> MaterialTheme.colorScheme.onSurfaceVariant
+    }
+    Surface(
+        color = container,
+        contentColor = content,
+        shape = MaterialTheme.shapes.medium,
+        onClick = onClick,
+        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp),
+    ) {
+        if (syncing || line == null) {
+            Text(
+                "Checking the e-journal…",
+                style = MaterialTheme.typography.bodyMedium,
+                modifier = Modifier.padding(12.dp),
+            )
+        } else {
+            SyncLineText(
+                line,
+                color = content,
+                style = MaterialTheme.typography.bodyMedium,
+                modifier = Modifier.padding(12.dp),
+            )
+        }
+    }
+}
+
 /** "Last successful sync: …" plus "· last check failed" in the error color (spec §4.1). */
 @Composable
-fun SyncLineText(line: SyncLine, modifier: Modifier = Modifier) {
-    val base = if (line.stale) warningColor() else MaterialTheme.colorScheme.onSurfaceVariant
+fun SyncLineText(
+    line: SyncLine,
+    modifier: Modifier = Modifier,
+    color: Color = if (line.stale) warningColor() else MaterialTheme.colorScheme.onSurfaceVariant,
+    style: TextStyle = MaterialTheme.typography.bodySmall,
+) {
+    val base = color
     Text(
         buildAnnotatedString {
             withStyle(SpanStyle(color = base)) { append(line.text) }
@@ -311,13 +346,25 @@ fun SyncLineText(line: SyncLine, modifier: Modifier = Modifier) {
                 }
             }
         },
-        style = MaterialTheme.typography.bodySmall,
+        style = style,
         modifier = modifier,
     )
 }
 
 @Composable
-private fun JournalBannerCard(banner: JournalBanner) {
+private fun JournalBannerCard(banner: JournalBanner, cachedAt: Instant?, clock: JournalClock) {
+    val text = if (banner == JournalBanner.OFFLINE && cachedAt != null) {
+        "Offline. Showing what was loaded ${whenText(
+            cachedAt,
+            clock.now,
+            clock.zone,
+            clock.locale,
+            clock.is24Hour,
+            withToday = true,
+        )}."
+    } else {
+        banner.text
+    }
     val error = banner == JournalBanner.AUTH_FAILED || banner == JournalBanner.STORAGE
     val colors = MaterialTheme.colorScheme
     Surface(
@@ -326,7 +373,7 @@ private fun JournalBannerCard(banner: JournalBanner) {
         shape = MaterialTheme.shapes.medium,
         modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp),
     ) {
-        Text(banner.text, style = MaterialTheme.typography.bodyMedium, modifier = Modifier.padding(12.dp))
+        Text(text, style = MaterialTheme.typography.bodyMedium, modifier = Modifier.padding(12.dp))
     }
 }
 

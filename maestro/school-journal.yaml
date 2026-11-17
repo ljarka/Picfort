@@ -1,0 +1,93 @@
+# School journal (T-076…T-080, ADR 0017) against the fake school-server — never the family's.
+# Needs: python3 maestro/scripts/fake-school-server.py (port 5101) and the test account.
+# Messages (new → dot on Wall and School, open, unread, read all), grades (New marker, sheet),
+# Sync now, and the dot gone at the end.
+appId: com.github.ljarka.picfort
+name: School journal — messages, grades, dot, Sync now (T-076…T-080)
+tags:
+  - school-journal
+---
+- runScript:
+    file: scripts/school-journal-data.js
+    env:
+      RESET: "1"
+      OFFLINE: "0"
+- runFlow: subflows/open-app.yaml
+- extendedWaitUntil:
+    visible: "Family Wall"
+    timeout: 20000
+- runFlow: subflows/school-journal-connect.yaml
+- tapOn: "All"
+- tapOn: "Messages"
+- extendedWaitUntil:
+    visible: "Trip on Friday"
+    timeout: 10000
+- assertVisible: ".*Attachment.*"
+# A new message from "another phone": bold with a dot, and the dot on Wall and School
+- runScript:
+    file: scripts/school-journal-data.js
+    env:
+      MESSAGE: "Match on Saturday"
+- swipe:
+    start: 50%, 45%
+    end: 50%, 85%
+- extendedWaitUntil:
+    visible: "Match on Saturday"
+    timeout: 10000
+- tapOn: "Back"
+- extendedWaitUntil:
+    visible: "School journal, new items"
+    timeout: 10000
+- tapOn: "School"
+- extendedWaitUntil:
+    visible: "School journal, new items"
+    timeout: 10000
+# Open it: read, the dot goes
+- tapOn: "School journal, new items"
+- tapOn: "Match on Saturday"
+- extendedWaitUntil:
+    visible: "Mark as unread"
+    timeout: 10000
+- assertVisible: ".*example.com/map.*"
+- tapOn: "Back"
+- tapOn: "Back"
+- extendedWaitUntil:
+    visible: "School journal"
+    timeout: 10000
+- assertNotVisible: "School journal, new items"
+# Unread again (long-press), then Mark all as read
+- tapOn: "School journal"
+- longPressOn: "Match on Saturday"
+- tapOn: "Mark as unread"
+- tapOn: "More"
+- tapOn: "Mark all as read"
+- extendedWaitUntil:
+    visible: "Marked 1 message as read"
+    timeout: 10000
+# A new grade: New marker, sheet
+- runScript:
+    file: scripts/school-journal-data.js
+    env:
+      GRADE: "6"
+- tapOn: "Ola"
+- tapOn: "Grades"
+- extendedWaitUntil:
+    visible: "6, Test, weight 2, new"
+    timeout: 10000
+- tapOn: "6, Test, weight 2, new"
+- extendedWaitUntil:
+    visible: "Counts to the average"
+    timeout: 5000
+- back
+# Sync now
+- tapOn: "Check the e-journal now"
+- extendedWaitUntil:
+    visible: "Checked the e-journal.*"
+    timeout: 30000
+- assertVisible: "Last successful sync: today .*just now.*"
+# Nothing new left: no dot on School
+- tapOn: "Back"
+- extendedWaitUntil:
+    visible: "School journal"
+    timeout: 10000
+- assertNotVisible: "School journal, new items"

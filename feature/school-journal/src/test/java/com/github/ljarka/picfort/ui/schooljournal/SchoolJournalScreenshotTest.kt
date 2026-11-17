@@ -368,6 +368,11 @@ class SchoolJournalScreenshotTest {
     }
 
     @Test
+    fun offlineWithCopy() = snap {
+        content(withMessages().copy(offline = true, cachedAt = Instant.parse("2026-11-17T13:20:00Z")))
+    }
+
+    @Test
     fun contentTabDots() = snap {
         content(
             SchoolJournalUi(
