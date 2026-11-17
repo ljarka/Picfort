@@ -1,6 +1,6 @@
 # T-082 — School journal: background notifications
 
-**Status:** ready  
+**Status:** done (c21df7d)  
 **Component:** Android (`:feature:school-journal`, `:app` two lines)  
 **Depends on:** T-077, T-078. Spec §4.7. Owner decision 2026-11-17: notifications are wanted.
 

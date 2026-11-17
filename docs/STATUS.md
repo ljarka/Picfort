@@ -199,7 +199,7 @@ in one removable module `:feature:school-journal` ([spec](specs/school-journal.m
 | [T-079](tasks/T-079-school-journal-grades.md) | Grades: by subject with averages, New markers, details | `done` |
 | [T-080](tasks/T-080-school-journal-sync-status.md) | Sync now, status sheet, last successful sync | `done` |
 | [T-081](tasks/T-081-school-journal-offline-device-test.md) | Offline copy, Maestro flows, removal dry run | `done` |
-| [T-082](tasks/T-082-school-journal-notifications.md) | Notifications: new grades, changed grades, new messages | `ready` |
+| [T-082](tasks/T-082-school-journal-notifications.md) | Notifications: new grades, changed grades, new messages | `done` |
 
 ---
 
