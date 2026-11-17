@@ -1,6 +1,6 @@
 # T-078 — School journal: messages
 
-**Status:** ready  
+**Status:** done (c9c2077)  
 **Component:** Android (`:feature:school-journal`, `:app` route)  
 **Depends on:** T-076. Spec §4.3.
 
