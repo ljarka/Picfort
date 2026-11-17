@@ -138,6 +138,30 @@ class SchoolJournalScreenshotTest {
     @OptIn(ExperimentalMaterial3Api::class)
     @Test
     fun topBarIcon() = snap {
-        TopAppBar(title = { Text("Family Wall") }, actions = { SchoolJournalTopBarAction {} })
+        TopAppBar(title = { Text("Family Wall") }, actions = { SchoolJournalIcon(hasNew = false) {} })
+    }
+
+    @OptIn(ExperimentalMaterial3Api::class)
+    @Test
+    fun topBarIconWithDot() = snap {
+        TopAppBar(title = { Text("Family Wall") }, actions = { SchoolJournalIcon(hasNew = true) {} })
+    }
+
+    @OptIn(ExperimentalMaterial3Api::class)
+    @Test
+    fun topBarIconWithDotDark() = snap(dark = true) {
+        TopAppBar(title = { Text("School") }, actions = { SchoolJournalIcon(hasNew = true) {} })
+    }
+
+    @Test
+    fun contentTabDots() = snap {
+        content(
+            SchoolJournalUi(
+                mode = JournalMode.CONTENT,
+                status = fresh,
+                children = children,
+                news = JournalNews(unreadMessages = true, unseenGrades = true),
+            ),
+        )
     }
 }

@@ -48,6 +48,8 @@ data class SchoolJournalUi(
     val refreshing: Boolean = false,
     val offline: Boolean = false,
     val storageProblem: Boolean = false,
+    /** Tab dots (spec §6). */
+    val news: JournalNews = JournalNews(),
 ) {
     val banner: JournalBanner?
         get() = when {
@@ -72,9 +74,14 @@ class SchoolJournalViewModel @Inject constructor(
     private val api: SchoolJournalApi,
     private val config: SchoolJournalConfigStore,
     private val readState: ReadStateStore,
+    private val news: SchoolJournalNews,
 ) : ViewModel() {
     private val _state = MutableStateFlow(initial())
     val state: StateFlow<SchoolJournalUi> = _state.asStateFlow()
+
+    init {
+        viewModelScope.launch { news.news.collect { n -> _state.update { it.copy(news = n) } } }
+    }
 
     private fun initial(): SchoolJournalUi = if (config.connection.value == null) {
         SchoolJournalUi(mode = JournalMode.SETUP)
@@ -119,6 +126,7 @@ class SchoolJournalViewModel @Inject constructor(
                     )
                 }
                 loadChildren(connection)
+                news.refresh(status)
             } catch (e: SchoolJournalError) {
                 Log.w(TAG, "Connect failed: ${e.message}")
                 _state.update { it.copy(form = it.form.copy(connecting = false, error = e.userMessage())) }
@@ -137,6 +145,8 @@ class SchoolJournalViewModel @Inject constructor(
                 readState.ensureStarted(connection.base.toString(), Instant.now(), status.lastEventId)
                 _state.update { it.copy(status = status, offline = false, storageProblem = false) }
                 loadChildren(connection)
+                news.refresh(status)
+                if (_state.value.tab == JournalTab.GRADES) news.markGradesSeen(status.lastEventId)
             } catch (e: SchoolJournalError) {
                 handle(e)
             } finally {
@@ -175,7 +185,12 @@ class SchoolJournalViewModel @Inject constructor(
         _state.update { it.copy(selectedChild = id) }
     }
 
-    fun selectTab(tab: JournalTab) = _state.update { it.copy(tab = tab) }
+    fun selectTab(tab: JournalTab) {
+        _state.update { it.copy(tab = tab) }
+        // Showing Grades means its news has been seen (spec §6).
+        val lastEventId = _state.value.status?.lastEventId ?: return
+        if (tab == JournalTab.GRADES) viewModelScope.launch { news.markGradesSeen(lastEventId) }
+    }
 
     /** Server settings from the overflow menu, or after a 401. */
     fun showSettings(notice: String? = null) {
@@ -200,6 +215,7 @@ class SchoolJournalViewModel @Inject constructor(
 
     fun disconnect() {
         config.clear()
+        news.clear()
         _state.value = SchoolJournalUi(mode = JournalMode.SETUP)
     }
 }

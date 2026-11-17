@@ -7,6 +7,7 @@ import dagger.hilt.android.qualifiers.ApplicationContext
 import java.io.File
 import java.security.MessageDigest
 import java.time.Instant
+import java.time.temporal.ChronoUnit
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -82,10 +83,17 @@ data class ReadState(
         return !sent.isAfter(Instant.parse(watermark))
     }
 
+    /** Grade changes up to [upTo] are seen; the cursor never moves backwards. */
+    fun seenGradesUpTo(upTo: Long): ReadState = copy(gradesSeenCursor = maxOf(gradesSeenCursor, upTo))
+
     companion object {
         /** A fresh start: history is neither unread nor new. */
-        fun startingAt(now: Instant, lastEventId: Long) =
-            ReadState(watermark = now.toString(), gradesSeenCursor = lastEventId, notifyCursor = lastEventId)
+        fun startingAt(now: Instant, lastEventId: Long) = ReadState(
+            // Whole seconds: the server compares `since` as written.
+            watermark = now.truncatedTo(ChronoUnit.SECONDS).toString(),
+            gradesSeenCursor = lastEventId,
+            notifyCursor = lastEventId,
+        )
     }
 }
 
@@ -105,6 +113,11 @@ class ReadStateStore @Inject constructor(
         val tmp = File(f.parentFile, f.name + ".tmp")
         tmp.writeText(journalJson.encodeToString(ReadState.serializer(), state))
         tmp.renameTo(f)
+    }
+
+    /** Changes this user's state, if started. */
+    fun update(address: String, transform: (ReadState) -> ReadState) {
+        load(address)?.let { save(address, transform(it)) }
     }
 
     /** Starts this user's state if they have none yet (first connect, or another user on this phone). */

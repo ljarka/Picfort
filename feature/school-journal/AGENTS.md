@@ -13,11 +13,12 @@ Spec: [docs/specs/school-journal.md](../../docs/specs/school-journal.md). **Remo
 | `SchoolJournalApi.kt` | Every used endpoint (spec §4.8), own `OkHttpClient` + `CleartextPolicyInterceptor`; `normalizeJournalAddress` |
 | `SchoolJournalError.kt` | Error codes → sealed errors + `userMessage()` (spec §5); server `message` only in logs |
 | `SchoolJournalStores.kt` | `SchoolJournalConfigStore` (encrypted `schoolJournal.*`), `ReadState` + `ReadStateStore` (per Immich user, `filesDir/school-journal/`) |
+| `SchoolJournalNews.kt` | `checkNews` (dot rules, spec §6) and the singleton `SchoolJournalNews` (icon + tab dots, `markGradesSeen`) |
 | `SyncLine.kt` | "Last successful sync: today 14:32 (12 min ago) · next 14:47", stale > 1 h, failed flag |
 | `SchoolJournalViewModel.kt` | `SchoolJournalUi`: setup vs content, connect (`/health` → `/status` → save), banners, children |
 | `SchoolJournalScreen.kt` | `SchoolJournalScreen`/`SchoolJournalContent`: status line, banner, child chips, tabs, status sheet |
 | `SchoolJournalSetup.kt` | Address + key form; as Server settings: status and Disconnect |
-| `SchoolJournalTopBarAction.kt` | Building icon (`res/drawable/ic_school_building.xml`) for Wall and School |
+| `SchoolJournalTopBarAction.kt` | Building icon + red dot (`SchoolJournalIcon`, stateless) for Wall and School; polls every 5 min while started |
 
 ## Rules
 

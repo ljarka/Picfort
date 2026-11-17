@@ -24,6 +24,18 @@
   (one reads → the other still has the dot).
 - Paparazzi: icon with / without dot, light & dark.
 
+## Result (2026-11-17)
+
+- [x] `checkNews` + `SchoolJournalNews` (singleton, mutex, errors keep the dot), icon dot on Wall and
+  School (refresh on start and every 5 min), tab dots beside the titles, Grades tab marks grades seen.
+- [x] Unit tests for every rule above incl. two users and the cursor; Paparazzi: icon with/without dot
+  (light, dark), tab dots.
+- [x] Emulator + fake server: no dot right after connect; a new message (hook) → dot on School and Wall
+  and on Messages; a new grade → dot on Grades; opening Grades removes only that dot; dot stays with
+  the server down; state file keeps `gradesSeenCursor` after a restart.
+- Not checkable yet on a device: a message read by one user only — reading comes with T-078
+  (covered by `eachImmichUserHasTheirOwnDot`).
+
 ## Done when
 
 - New message on the server → dot on Wall and School within 5 min or on return to the tab;

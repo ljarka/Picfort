@@ -12,11 +12,13 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.MoreVert
+import androidx.compose.material3.Badge
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
@@ -180,7 +182,23 @@ private fun JournalShell(state: SchoolJournalUi, clock: JournalClock, actions: S
             }
             PrimaryTabRow(selectedTabIndex = state.tab.ordinal) {
                 JournalTab.entries.forEach { tab ->
-                    Tab(selected = state.tab == tab, onClick = { actions.onSelectTab(tab) }, text = { Text(tab.title) })
+                    val dot = when (tab) {
+                        JournalTab.MESSAGES -> state.news.unreadMessages
+                        JournalTab.GRADES -> state.news.unseenGrades
+                    }
+                    Tab(
+                        selected = state.tab == tab,
+                        onClick = { actions.onSelectTab(tab) },
+                        text = {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Text(tab.title)
+                                if (dot) {
+                                    Spacer(Modifier.width(6.dp))
+                                    Badge(containerColor = MaterialTheme.colorScheme.error)
+                                }
+                            }
+                        },
+                    )
                 }
             }
             PullToRefreshBox(
