@@ -191,20 +191,3 @@ private fun MessageRow(
         }
     }
 }
-
-/** The Grades tab until T-079. */
-@Composable
-fun GradesPlaceholder() {
-    Column(
-        Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(32.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center,
-    ) {
-        Text(
-            "Grades will show here.",
-            textAlign = TextAlign.Center,
-            style = MaterialTheme.typography.bodyLarge,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
-    }
-}

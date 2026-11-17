@@ -1,6 +1,8 @@
 package com.github.ljarka.picfort.ui.schooljournal
 
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
@@ -229,6 +231,105 @@ class SchoolJournalScreenshotTest {
             ),
             clock,
         )
+    }
+
+    private fun grade(
+        id: String,
+        value: String,
+        numeric: Double?,
+        issued: String,
+        weight: Int? = 2,
+        kind: String = "regular",
+        category: String = "Test",
+    ) = Grade(
+        id = id,
+        childId = "101",
+        value = value,
+        numericValue = numeric,
+        weight = weight,
+        category = category,
+        kind = kind,
+        countsToAverage = kind == "regular",
+        teacher = "A. Teacher",
+        issuedOn = issued,
+        firstSeenAt = issued + "T12:00:00Z",
+        updatedAt = issued + "T12:00:00Z",
+    )
+
+    private val olaSubjects = listOf(
+        SubjectSummary(
+            "Art",
+            null,
+            listOf(grade("a1", "+", null, "2026-10-01", weight = null, category = "Activity")),
+        ),
+        SubjectSummary(
+            "English",
+            5.67,
+            listOf(grade("e1", "6", 6.0, "2026-10-12"), grade("e2", "5", 5.0, "2026-11-02", weight = 1)),
+        ),
+        SubjectSummary(
+            "Mathematics",
+            4.33,
+            listOf(
+                grade("m1", "5", 5.0, "2026-09-20", weight = 3),
+                grade("m2", "4+", 4.5, "2026-10-08", weight = 1),
+                grade("m3", "3-", 2.75, "2026-10-30"),
+                grade("m4", "1", 1.0, "2026-11-05"),
+                grade("m5", "6", 6.0, "2026-11-17", weight = 3),
+                grade("m6", "4", 4.0, "2026-11-10", kind = "proposed_semester", weight = null, category = "Proposed"),
+            ),
+        ),
+    )
+
+    private fun withGrades(sections: List<GradeSection>, newIds: Set<String> = setOf("m5"), selected: String? = "101") =
+        SchoolJournalUi(
+            mode = JournalMode.CONTENT,
+            status = fresh,
+            children = children,
+            selectedChild = selected,
+            tab = JournalTab.GRADES,
+            grades = GradesUi(semester = 1, semesterChosen = true, sections = sections, newIds = newIds, loaded = true),
+        )
+
+    @Test
+    fun gradesOneChildWithNew() = snap { content(withGrades(listOf(GradeSection("101", null, olaSubjects)))) }
+
+    @Test
+    fun gradesOneChildDark() = snap(dark = true) {
+        content(withGrades(listOf(GradeSection("101", null, olaSubjects)), newIds = emptySet()))
+    }
+
+    @Test
+    fun gradesAllChildrenInSections() = snap {
+        content(
+            withGrades(
+                listOf(
+                    GradeSection("101", "Ola", olaSubjects.take(2)),
+                    GradeSection(
+                        "102",
+                        "Kuba",
+                        listOf(SubjectSummary("Physical education", 5.0, listOf(grade("k1", "5", 5.0, "2026-11-01")))),
+                    ),
+                ),
+                newIds = emptySet(),
+                selected = null,
+            ),
+        )
+    }
+
+    @Test
+    fun gradesEmptySemester() = snap { content(withGrades(listOf(GradeSection("101", null, emptyList())))) }
+
+    @Test
+    fun gradeDetails() = snap {
+        Surface(color = MaterialTheme.colorScheme.surfaceContainerLow) {
+            GradeDetails(
+                grade("m5", "6", 6.0, "2026-11-17", weight = 3).copy(comment = "Excellent test, no mistakes"),
+                "Mathematics",
+                isNew = true,
+                clock,
+            )
+        }
     }
 
     @Test

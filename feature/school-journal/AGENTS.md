@@ -17,6 +17,8 @@ Spec: [docs/specs/school-journal.md](../../docs/specs/school-journal.md). **Remo
 | `SchoolJournalMessages.kt` | `loadUnread` (after the watermark minus `readIds` + `unreadIds` one by one, 404 → gone), `Message.summary()` |
 | `MessagesTab.kt` | Messages tab: "Unread only", rows (bold + dot = unread, struck = removed), long-press read/unread, infinite scroll |
 | `SchoolJournalMessageScreen.kt` | One message: `fromHtml` body with links, attachments' names, opening marks read, Mark as unread; 404 → back (`RemovedMessages`) |
+| `SchoolJournalGrades.kt` | `GradeSection` (one per child with All), `loadNewGradeIds`, `defaultSemester`, `orderSubjects`, kinds, `gradeBand` |
+| `GradesTab.kt` | Semester chips, subject cards (average, chips colored by band, weight, New dot, labelled kinds), grade sheet |
 | `SyncLine.kt` | "Last successful sync: today 14:32 (12 min ago) · next 14:47", stale > 1 h, failed flag |
 | `SchoolJournalViewModel.kt` | `SchoolJournalUi`: setup vs content, connect (`/health` → `/status` → save), banners, children |
 | `SchoolJournalScreen.kt` | `SchoolJournalScreen`/`SchoolJournalContent`: status line, banner, child chips, tabs, status sheet |
@@ -29,6 +31,8 @@ Spec: [docs/specs/school-journal.md](../../docs/specs/school-journal.md). **Remo
 - Read / seen state per Immich user on the phone (`AccessTokenStore.userId`); the server's shared read
   state (`…/read`, `read-all`, `unread=true`) and `GET /grades` are deliberately unused (spec §4.6, §4.8).
 - New state starts at "now" (`ReadState.startingAt`): history is never unread or new.
+- Grades: New ids are read before marking grades seen, and kept for the visit. All children → one
+  `/grades/subjects` per child (the server would merge subjects and averages).
 - 401 → setup with "The API key is no longer valid"; unreachable → offline banner, data kept.
 - Neutral names only ("e-journal"), never a provider's name; no real children's data in tests or snapshots.
 

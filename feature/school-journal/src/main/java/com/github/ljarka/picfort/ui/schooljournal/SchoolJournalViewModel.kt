@@ -39,6 +39,19 @@ data class MessagesUi(
     val showRemoved: Boolean = false,
 )
 
+/** The grades tab (spec §4.4). */
+data class GradesUi(
+    /** Null = whole year. */
+    val semester: Int? = null,
+    /** False until the default (semester of the newest grade) has been picked. */
+    val semesterChosen: Boolean = false,
+    val sections: List<GradeSection> = emptyList(),
+    /** "New" markers for this visit: grades changed after the seen cursor. */
+    val newIds: Set<String> = emptySet(),
+    val loading: Boolean = false,
+    val loaded: Boolean = false,
+)
+
 /** The configuration form (spec §3). [editing]: opened from the content, so Cancel and Disconnect. */
 data class SetupForm(
     val address: String = "",
@@ -64,6 +77,7 @@ data class SchoolJournalUi(
     /** Tab dots (spec §6). */
     val news: JournalNews = JournalNews(),
     val messages: MessagesUi = MessagesUi(),
+    val grades: GradesUi = GradesUi(),
     /** This Immich user's read state (spec §4.6); null until started. */
     val readState: ReadState? = null,
     /** One-off snackbar text. */
@@ -105,6 +119,7 @@ class SchoolJournalViewModel @Inject constructor(
     val state: StateFlow<SchoolJournalUi> = _state.asStateFlow()
 
     private var messagesJob: Job? = null
+    private var gradesJob: Job? = null
 
     init {
         viewModelScope.launch { news.news.collect { n -> _state.update { it.copy(news = n) } } }
@@ -196,7 +211,7 @@ class SchoolJournalViewModel @Inject constructor(
                 _state.update { it.copy(status = status, offline = false, storageProblem = false, readState = read) }
                 loadChildren(connection)
                 news.refresh(status)
-                if (_state.value.tab == JournalTab.GRADES) news.markGradesSeen(status.lastEventId)
+                if (_state.value.tab == JournalTab.GRADES) loadGrades()
                 if (full || !_state.value.messages.loaded) loadMessages()
             } catch (e: SchoolJournalError) {
                 handle(e)
@@ -233,8 +248,62 @@ class SchoolJournalViewModel @Inject constructor(
 
     fun selectChild(id: String?) {
         config.child = id
-        _state.update { it.copy(selectedChild = id) }
+        _state.update { it.copy(selectedChild = id, grades = it.grades.copy(loaded = false)) }
         loadMessages()
+        if (_state.value.tab == JournalTab.GRADES) loadGrades()
+    }
+
+    /**
+     * Grades by subject (spec §4.4): one section per child when all of several are shown (the
+     * server would mix their subjects). First the "New" ids (after the seen cursor), then the
+     * subjects, then the grades count as seen (spec §6).
+     */
+    fun loadGrades() {
+        val c = config.connection.value ?: return
+        gradesJob?.cancel()
+        _state.update { it.copy(grades = it.grades.copy(loading = true)) }
+        gradesJob = viewModelScope.launch {
+            val ui = _state.value
+            try {
+                val fresh = ui.readState?.let { loadNewGradeIds(api, c, it.gradesSeenCursor) }.orEmpty()
+                val targets = if (ui.selectedChild == null && ui.showChildChips) {
+                    ui.children.map { it.id to it.name }
+                } else {
+                    listOf(ui.selectedChild to null)
+                }
+                suspend fun fetch(semester: Int?) =
+                    targets.map { (id, name) -> GradeSection(id, name, api.subjects(c, id, semester)) }
+                val semester = if (ui.grades.semesterChosen) ui.grades.semester else defaultSemester(fetch(null))
+                val sections = fetch(semester)
+                _state.update {
+                    it.copy(
+                        grades = it.grades.copy(
+                            semester = semester,
+                            semesterChosen = true,
+                            sections = sections,
+                            newIds = it.grades.newIds + fresh,
+                            loading = false,
+                            loaded = true,
+                        ),
+                    )
+                }
+                ui.status?.let { news.markGradesSeen(it.lastEventId) }
+                address?.let { a -> readState.load(a)?.let { read -> _state.update { it.copy(readState = read) } } }
+            } catch (e: SchoolJournalError) {
+                if (e is SchoolJournalError.ChildNotFound) {
+                    selectChild(null)
+                    return@launch
+                }
+                handle(e)
+                _state.update { it.copy(grades = it.grades.copy(loading = false)) }
+            }
+        }
+    }
+
+    /** [semester] null = whole year. */
+    fun selectSemester(semester: Int?) {
+        _state.update { it.copy(grades = it.grades.copy(semester = semester, semesterChosen = true)) }
+        loadGrades()
     }
 
     /** First page of messages (or every unread one) for the chosen child and filters. */
@@ -378,9 +447,8 @@ class SchoolJournalViewModel @Inject constructor(
 
     fun selectTab(tab: JournalTab) {
         _state.update { it.copy(tab = tab) }
-        // Showing Grades means its news has been seen (spec §6).
-        val lastEventId = _state.value.status?.lastEventId ?: return
-        if (tab == JournalTab.GRADES) viewModelScope.launch { news.markGradesSeen(lastEventId) }
+        // Showing Grades means its news has been seen (spec §6); loadGrades marks it.
+        if (tab == JournalTab.GRADES) loadGrades()
     }
 
     /** Server settings from the overflow menu, or after a 401. */

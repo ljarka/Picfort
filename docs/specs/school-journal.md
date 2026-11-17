@@ -110,6 +110,8 @@ Also shown (prefilled, with message "The API key is no longer valid") when any c
 - Grades with a change event after the seen cursor carry a **New** marker (dot on the chip);
   grade ids come from `GET /changes?after=<gradesSeenCursor>&type=grade`.
 - No separate "Recent" list and no filters (owner decision 2026-11-17, simplification).
+- All children (two or more): one section per child, each from its own `/grades/subjects?child=`;
+  without `child` the server would merge both children's subjects and averages (T-079).
 - Tap grade → sheet: value, numeric value, weight, category, kind, counts to average, teacher,
   comment, issued on, first seen, last changed, removed at.
 

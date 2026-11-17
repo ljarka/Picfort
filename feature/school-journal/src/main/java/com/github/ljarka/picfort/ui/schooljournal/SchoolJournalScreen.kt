@@ -82,6 +82,7 @@ data class SchoolJournalActions(
     val onMarkUnread: (MessageSummary) -> Unit = {},
     val onMarkAllRead: () -> Unit = {},
     val onSnackbarShown: () -> Unit = {},
+    val onSelectSemester: (Int?) -> Unit = {},
 )
 
 /** How times are shown; fixed in screenshot tests. */
@@ -131,6 +132,7 @@ fun SchoolJournalScreen(onBack: () -> Unit, onOpenMessage: (String) -> Unit) {
             onMarkUnread = viewModel::markUnread,
             onMarkAllRead = viewModel::markAllRead,
             onSnackbarShown = viewModel::snackbarShown,
+            onSelectSemester = viewModel::selectSemester,
         ),
     )
 }
@@ -252,7 +254,7 @@ private fun JournalShell(state: SchoolJournalUi, clock: JournalClock, actions: S
             ) {
                 when (state.tab) {
                     JournalTab.MESSAGES -> MessagesTab(state, clock, actions)
-                    JournalTab.GRADES -> GradesPlaceholder() // T-079
+                    JournalTab.GRADES -> GradesTab(state, clock, actions)
                 }
             }
         }
