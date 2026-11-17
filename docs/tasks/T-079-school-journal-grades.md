@@ -1,6 +1,6 @@
 # T-079 — School journal: grades
 
-**Status:** ready  
+**Status:** done (41ec2c0)  
 **Component:** Android (`:feature:school-journal`)  
 **Depends on:** T-076, T-077. Spec §4.4.
 

@@ -196,7 +196,7 @@ in one removable module `:feature:school-journal` ([spec](specs/school-journal.m
 | [T-076](tasks/T-076-school-journal-module-setup.md) | Module, API client, setup screen, icon on Wall & School, fake server | `done` |
 | [T-077](tasks/T-077-school-journal-badge.md) | Red dot badge when there is something new | `done` |
 | [T-078](tasks/T-078-school-journal-messages.md) | Messages: list, unread, read/unread, read all, message screen | `done` |
-| [T-079](tasks/T-079-school-journal-grades.md) | Grades: by subject with averages, recent, filters, details | `ready` |
+| [T-079](tasks/T-079-school-journal-grades.md) | Grades: by subject with averages, New markers, details | `done` |
 | [T-080](tasks/T-080-school-journal-sync-status.md) | Sync now, status sheet, last successful sync | `ready` |
 | [T-081](tasks/T-081-school-journal-offline-device-test.md) | Offline copy, Maestro flows, removal dry run | `ready` |
 | [T-082](tasks/T-082-school-journal-notifications.md) | Notifications: new grades, changed grades, new messages | `ready` |
