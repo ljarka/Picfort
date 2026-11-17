@@ -193,7 +193,7 @@ in one removable module `:feature:school-journal` ([spec](specs/school-journal.m
 
 | Task | Description | Status |
 |------|-------------|--------|
-| [T-076](tasks/T-076-school-journal-module-setup.md) | Module, API client, setup screen, icon on Wall & School, fake server | `ready` |
+| [T-076](tasks/T-076-school-journal-module-setup.md) | Module, API client, setup screen, icon on Wall & School, fake server | `done` |
 | [T-077](tasks/T-077-school-journal-badge.md) | Red dot badge when there is something new | `ready` |
 | [T-078](tasks/T-078-school-journal-messages.md) | Messages: list, unread, read/unread, read all, message screen | `ready` |
 | [T-079](tasks/T-079-school-journal-grades.md) | Grades: by subject with averages, recent, filters, details | `ready` |

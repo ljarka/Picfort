@@ -1,6 +1,6 @@
 # T-076 — School journal: module, API client, setup screen, entry icon
 
-**Status:** ready  
+**Status:** done (bb5f56f)  
 **Component:** Android (`:feature:school-journal` new, `:feature:wall`, `:feature:school`, `:app`)  
 **Depends on:** ADR 0017, [spec](../specs/school-journal.md) §2, §3, §5, §7.
 
