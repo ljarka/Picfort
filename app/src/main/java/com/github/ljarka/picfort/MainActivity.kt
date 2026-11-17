@@ -53,6 +53,7 @@ import com.github.ljarka.picfort.ui.frame.PicfortServerSetupScreen
 import com.github.ljarka.picfort.ui.image.ImageDetailsScreen
 import com.github.ljarka.picfort.ui.init.InitScreen
 import com.github.ljarka.picfort.ui.school.SchoolScreen
+import com.github.ljarka.picfort.ui.schooljournal.SchoolJournalMessageScreen
 import com.github.ljarka.picfort.ui.schooljournal.SchoolJournalScreen
 import com.github.ljarka.picfort.ui.schooljournal.SchoolJournalTopBarAction
 import com.github.ljarka.picfort.ui.settings.AppearanceSettingsStore
@@ -399,7 +400,18 @@ class MainActivity : ComponentActivity() {
                                         )
                                     }
                                     composable<Screen.SchoolJournal> {
-                                        SchoolJournalScreen(onBack = { navController.popBackStack() })
+                                        SchoolJournalScreen(
+                                            onBack = { navController.popBackStack() },
+                                            onOpenMessage = { id ->
+                                                navController.navigate(Screen.SchoolJournalMessage(id))
+                                            },
+                                        )
+                                    }
+                                    composable<Screen.SchoolJournalMessage> { entry ->
+                                        SchoolJournalMessageScreen(
+                                            messageId = entry.toRoute<Screen.SchoolJournalMessage>().id,
+                                            onBack = { navController.popBackStack() },
+                                        )
                                     }
                                     composable<Screen.FamilySettings> {
                                         FamilySettingsScreen(onBack = { navController.popBackStack() })

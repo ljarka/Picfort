@@ -14,6 +14,9 @@ Spec: [docs/specs/school-journal.md](../../docs/specs/school-journal.md). **Remo
 | `SchoolJournalError.kt` | Error codes → sealed errors + `userMessage()` (spec §5); server `message` only in logs |
 | `SchoolJournalStores.kt` | `SchoolJournalConfigStore` (encrypted `schoolJournal.*`), `ReadState` + `ReadStateStore` (per Immich user, `filesDir/school-journal/`) |
 | `SchoolJournalNews.kt` | `checkNews` (dot rules, spec §6) and the singleton `SchoolJournalNews` (icon + tab dots, `markGradesSeen`) |
+| `SchoolJournalMessages.kt` | `loadUnread` (after the watermark minus `readIds` + `unreadIds` one by one, 404 → gone), `Message.summary()` |
+| `MessagesTab.kt` | Messages tab: "Unread only", rows (bold + dot = unread, struck = removed), long-press read/unread, infinite scroll |
+| `SchoolJournalMessageScreen.kt` | One message: `fromHtml` body with links, attachments' names, opening marks read, Mark as unread; 404 → back (`RemovedMessages`) |
 | `SyncLine.kt` | "Last successful sync: today 14:32 (12 min ago) · next 14:47", stale > 1 h, failed flag |
 | `SchoolJournalViewModel.kt` | `SchoolJournalUi`: setup vs content, connect (`/health` → `/status` → save), banners, children |
 | `SchoolJournalScreen.kt` | `SchoolJournalScreen`/`SchoolJournalContent`: status line, banner, child chips, tabs, status sheet |
@@ -31,7 +34,8 @@ Spec: [docs/specs/school-journal.md](../../docs/specs/school-journal.md). **Remo
 
 ## Public Contract
 
-- `SchoolJournalTopBarAction(onClick)`, `SchoolJournalScreen(onBack)` — used only by `:app`.
+- `SchoolJournalTopBarAction(onClick)`, `SchoolJournalScreen(onBack, onOpenMessage)`,
+  `SchoolJournalMessageScreen(messageId, onBack)` — used only by `:app`.
 
 ## Dependencies & Boundaries
 

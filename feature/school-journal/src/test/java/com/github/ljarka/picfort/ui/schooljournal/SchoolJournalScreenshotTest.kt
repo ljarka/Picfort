@@ -153,6 +153,84 @@ class SchoolJournalScreenshotTest {
         TopAppBar(title = { Text("School") }, actions = { SchoolJournalIcon(hasNew = true) {} })
     }
 
+    private val messages = listOf(
+        MessageSummary("m4", "102", "Coach", "Match on Saturday", "2026-11-17T12:10:00Z"),
+        MessageSummary(
+            "m3",
+            "101",
+            "Class teacher",
+            "Trip on Friday: consent form and what to pack",
+            "2026-11-16T07:30:00Z",
+            hasAttachments = true,
+        ),
+        MessageSummary("m2", "101", "School office", "Photo day", "2026-11-12T08:00:00Z"),
+        MessageSummary(
+            "m1",
+            "101",
+            "School office",
+            "Old timetable",
+            "2026-10-02T08:00:00Z",
+            deletedAt = "2026-10-05T00:00:00Z",
+        ),
+    )
+
+    /** m4 and m3 unread: after the watermark, m3 also marked unread on purpose. */
+    private val readState =
+        ReadState(watermark = "2026-11-15T00:00:00Z", readIds = setOf("m3"), unreadIds = setOf("m2"))
+
+    private fun withMessages(selected: String? = null, unreadOnly: Boolean = false) = SchoolJournalUi(
+        mode = JournalMode.CONTENT,
+        status = fresh,
+        children = children,
+        selectedChild = selected,
+        readState = readState,
+        messages = MessagesUi(items = messages, loaded = true, unreadOnly = unreadOnly, showRemoved = true),
+        news = JournalNews(unreadMessages = true),
+    )
+
+    @Test
+    fun messagesAllChildren() = snap { content(withMessages()) }
+
+    @Test
+    fun messagesOneChildDark() = snap(dark = true) { content(withMessages(selected = "101")) }
+
+    @Test
+    fun messagesEmptyUnreadOnly() = snap {
+        content(
+            withMessages().copy(messages = MessagesUi(loaded = true, unreadOnly = true), news = JournalNews()),
+        )
+    }
+
+    private val fullMessage = Message(
+        id = "m3",
+        childId = "101",
+        sender = "Class teacher",
+        subject = "Trip on Friday",
+        sentAt = "2026-11-16T07:30:00Z",
+        hasAttachments = true,
+        bodyHtml = "<p>Dear parents,</p><p>On <b>Friday</b> we go to the museum. Details: " +
+            "<a href=\"https://example.com/trip\">example.com/trip</a></p><ul><li>packed lunch</li><li>rain jacket</li></ul>",
+        bodyText = "Dear parents, …",
+        attachments = listOf(Attachment("consent-form.pdf"), Attachment("plan.pdf")),
+    )
+
+    @Test
+    fun messageScreen() = snap {
+        SchoolJournalMessageContent(MessageUi(loading = false, message = fullMessage, childName = "Ola"), clock)
+    }
+
+    @Test
+    fun messageScreenUnreadRemovedDark() = snap(dark = true) {
+        SchoolJournalMessageContent(
+            MessageUi(
+                loading = false,
+                message = fullMessage.copy(deletedAt = "2026-11-17T00:00:00Z", attachments = emptyList()),
+                read = false,
+            ),
+            clock,
+        )
+    }
+
     @Test
     fun contentTabDots() = snap {
         content(

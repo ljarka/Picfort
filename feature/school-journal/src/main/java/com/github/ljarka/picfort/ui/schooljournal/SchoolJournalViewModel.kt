@@ -6,6 +6,7 @@ import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
 import java.time.Instant
 import javax.inject.Inject
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -25,6 +26,18 @@ enum class JournalBanner(val text: String) {
     OFFLINE("Can't reach the school server. Pull down to try again."),
     STORAGE("The school server has a storage problem."),
 }
+
+/** The messages tab (spec §4.3). */
+data class MessagesUi(
+    val items: List<MessageSummary> = emptyList(),
+    /** Next page; null = last page (and always with [unreadOnly]). */
+    val nextCursor: String? = null,
+    val loading: Boolean = false,
+    val loadingMore: Boolean = false,
+    val loaded: Boolean = false,
+    val unreadOnly: Boolean = false,
+    val showRemoved: Boolean = false,
+)
 
 /** The configuration form (spec §3). [editing]: opened from the content, so Cancel and Disconnect. */
 data class SetupForm(
@@ -50,7 +63,18 @@ data class SchoolJournalUi(
     val storageProblem: Boolean = false,
     /** Tab dots (spec §6). */
     val news: JournalNews = JournalNews(),
+    val messages: MessagesUi = MessagesUi(),
+    /** This Immich user's read state (spec §4.6); null until started. */
+    val readState: ReadState? = null,
+    /** One-off snackbar text. */
+    val snackbar: String? = null,
 ) {
+    fun isRead(message: MessageSummary): Boolean = readState?.isRead(message) ?: true
+
+    /** First name for a row when all children are shown. */
+    fun childName(childId: String): String? =
+        if (selectedChild == null && showChildChips) children.firstOrNull { it.id == childId }?.name else null
+
     val banner: JournalBanner?
         get() = when {
             status?.authFailed == true -> JournalBanner.AUTH_FAILED
@@ -75,13 +99,33 @@ class SchoolJournalViewModel @Inject constructor(
     private val config: SchoolJournalConfigStore,
     private val readState: ReadStateStore,
     private val news: SchoolJournalNews,
+    private val removed: RemovedMessages,
 ) : ViewModel() {
     private val _state = MutableStateFlow(initial())
     val state: StateFlow<SchoolJournalUi> = _state.asStateFlow()
 
+    private var messagesJob: Job? = null
+
     init {
         viewModelScope.launch { news.news.collect { n -> _state.update { it.copy(news = n) } } }
+        // A message opened from here and gone from the server (404) leaves the list.
+        viewModelScope.launch {
+            removed.ids.collect { gone ->
+                _state.update { ui ->
+                    ui.copy(
+                        messages = ui.messages.copy(
+                            items = ui.messages.items.filter {
+                                it.id !in
+                                    gone
+                            },
+                        ),
+                    )
+                }
+            }
+        }
     }
+
+    private val address: String? get() = config.connection.value?.base?.toString()
 
     private fun initial(): SchoolJournalUi = if (config.connection.value == null) {
         SchoolJournalUi(mode = JournalMode.SETUP)
@@ -114,7 +158,7 @@ class SchoolJournalViewModel @Inject constructor(
                 api.health(base)
                 val status = api.status(connection)
                 config.save(connection)
-                readState.ensureStarted(base.toString(), Instant.now(), status.lastEventId)
+                val read = readState.ensureStarted(base.toString(), Instant.now(), status.lastEventId)
                 _state.update {
                     it.copy(
                         mode = JournalMode.CONTENT,
@@ -123,10 +167,12 @@ class SchoolJournalViewModel @Inject constructor(
                         offline = false,
                         storageProblem = false,
                         selectedChild = config.child,
+                        readState = read,
                     )
                 }
                 loadChildren(connection)
                 news.refresh(status)
+                loadMessages()
             } catch (e: SchoolJournalError) {
                 Log.w(TAG, "Connect failed: ${e.message}")
                 _state.update { it.copy(form = it.form.copy(connecting = false, error = e.userMessage())) }
@@ -134,19 +180,24 @@ class SchoolJournalViewModel @Inject constructor(
         }
     }
 
-    /** Reload status and children; called when the screen starts and on pull-to-refresh. */
-    fun refresh() {
+    /**
+     * Reload status, children and the read state. [full] (pull-to-refresh) also reloads the
+     * messages from the first page; on start (e.g. back from a message) only the first load does,
+     * so the list keeps its pages and scroll position.
+     */
+    fun refresh(full: Boolean = false) {
         val connection = config.connection.value ?: return
         if (_state.value.mode != JournalMode.CONTENT) return
         _state.update { it.copy(refreshing = true) }
         viewModelScope.launch {
             try {
                 val status = api.status(connection)
-                readState.ensureStarted(connection.base.toString(), Instant.now(), status.lastEventId)
-                _state.update { it.copy(status = status, offline = false, storageProblem = false) }
+                val read = readState.ensureStarted(connection.base.toString(), Instant.now(), status.lastEventId)
+                _state.update { it.copy(status = status, offline = false, storageProblem = false, readState = read) }
                 loadChildren(connection)
                 news.refresh(status)
                 if (_state.value.tab == JournalTab.GRADES) news.markGradesSeen(status.lastEventId)
+                if (full || !_state.value.messages.loaded) loadMessages()
             } catch (e: SchoolJournalError) {
                 handle(e)
             } finally {
@@ -183,7 +234,147 @@ class SchoolJournalViewModel @Inject constructor(
     fun selectChild(id: String?) {
         config.child = id
         _state.update { it.copy(selectedChild = id) }
+        loadMessages()
     }
+
+    /** First page of messages (or every unread one) for the chosen child and filters. */
+    fun loadMessages() {
+        val c = config.connection.value ?: return
+        messagesJob?.cancel()
+        _state.update { it.copy(messages = it.messages.copy(loading = true)) }
+        messagesJob = viewModelScope.launch {
+            val ui = _state.value
+            try {
+                if (ui.messages.unreadOnly) {
+                    val read = ui.readState ?: return@launch
+                    val unread = loadUnread(api, c, read, ui.selectedChild, ui.messages.showRemoved)
+                    if (unread.gone.isNotEmpty()) {
+                        updateReadState { s ->
+                            unread.gone.fold(s) { acc, id -> acc.forget(id) }
+                        }
+                    }
+                    setMessages(unread.items, nextCursor = null)
+                } else {
+                    val page = api.messages(
+                        c,
+                        child = ui.selectedChild,
+                        limit = MESSAGES_PAGE,
+                        includeDeleted = ui.messages.showRemoved,
+                    )
+                    setMessages(page.items, page.nextCursor)
+                }
+            } catch (e: SchoolJournalError) {
+                if (e is SchoolJournalError.ChildNotFound) {
+                    selectChild(null)
+                    return@launch
+                }
+                handle(e)
+                _state.update { it.copy(messages = it.messages.copy(loading = false)) }
+            }
+        }
+    }
+
+    private fun setMessages(items: List<MessageSummary>, nextCursor: String?) {
+        val gone = removed.ids.value
+        _state.update {
+            it.copy(
+                messages = it.messages.copy(
+                    items = items.filter { m -> m.id !in gone },
+                    nextCursor = nextCursor,
+                    loading = false,
+                    loadingMore = false,
+                    loaded = true,
+                ),
+            )
+        }
+    }
+
+    /** Infinite scroll: the next page, if any. */
+    fun loadMoreMessages() {
+        val c = config.connection.value ?: return
+        val ui = _state.value
+        val cursor = ui.messages.nextCursor ?: return
+        if (ui.messages.loading || ui.messages.loadingMore || ui.messages.unreadOnly) return
+        _state.update { it.copy(messages = it.messages.copy(loadingMore = true)) }
+        viewModelScope.launch {
+            try {
+                val page = api.messages(
+                    c,
+                    child = ui.selectedChild,
+                    limit = MESSAGES_PAGE,
+                    cursor = cursor,
+                    includeDeleted = ui.messages.showRemoved,
+                )
+                _state.update {
+                    val known = it.messages.items.map { m -> m.id }.toSet()
+                    it.copy(
+                        messages = it.messages.copy(
+                            items = it.messages.items + page.items.filter { m -> m.id !in known },
+                            nextCursor = page.nextCursor,
+                            loadingMore = false,
+                        ),
+                    )
+                }
+            } catch (e: SchoolJournalError) {
+                handle(e)
+                _state.update { it.copy(messages = it.messages.copy(loadingMore = false)) }
+            }
+        }
+    }
+
+    fun toggleUnreadOnly() {
+        _state.update { it.copy(messages = it.messages.copy(unreadOnly = !it.messages.unreadOnly)) }
+        loadMessages()
+    }
+
+    fun toggleShowRemoved() {
+        _state.update { it.copy(messages = it.messages.copy(showRemoved = !it.messages.showRemoved)) }
+        loadMessages()
+    }
+
+    fun markRead(message: MessageSummary) = changeRead { it.markRead(message.id) }
+
+    fun markUnread(message: MessageSummary) = changeRead { it.markUnread(message) }
+
+    private fun changeRead(transform: (ReadState) -> ReadState) {
+        updateReadState(transform)
+        viewModelScope.launch { news.refresh(_state.value.status) }
+    }
+
+    private fun updateReadState(transform: (ReadState) -> ReadState) {
+        val address = address ?: return
+        readState.update(address, transform)?.let { new -> _state.update { it.copy(readState = new) } }
+    }
+
+    /** Overflow "Mark all as read" for the chosen child, or every child (spec §4.6). */
+    fun markAllRead() {
+        val c = config.connection.value ?: return
+        val ui = _state.value
+        val read = ui.readState ?: return
+        viewModelScope.launch {
+            try {
+                val unread = loadUnread(api, c, read, ui.selectedChild)
+                val now = Instant.now()
+                updateReadState { s -> if (ui.selectedChild == null) s.markAllRead(now) else s.markRead(unread.items) }
+                val count = unread.items.size
+                _state.update {
+                    it.copy(
+                        snackbar = when (count) {
+                            0 -> "No unread messages"
+                            1 -> "Marked 1 message as read"
+                            else -> "Marked $count messages as read"
+                        },
+                    )
+                }
+                news.refresh(ui.status)
+                if (_state.value.messages.unreadOnly) loadMessages()
+            } catch (e: SchoolJournalError) {
+                handle(e)
+            }
+        }
+    }
+
+    fun snackbarShown() = _state.update { it.copy(snackbar = null) }
 
     fun selectTab(tab: JournalTab) {
         _state.update { it.copy(tab = tab) }

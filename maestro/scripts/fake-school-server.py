@@ -13,9 +13,11 @@ From the emulator: http://10.0.2.2:5101. Test hooks (no key needed, test only):
     POST /_test/state    {"auth":"auth_failed"|"ok","lastSuccessMinutesAgo":90,"lastRun":"error"|"ok"}
     POST /_test/reset                                                              → back to the sample data
 """
+import itertools
 import json
 import os
 import threading
+import time
 from datetime import datetime, timedelta, timezone
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import parse_qs, urlparse
@@ -23,6 +25,9 @@ from urllib.parse import parse_qs, urlparse
 PORT = int(os.environ.get("PORT", "5101"))
 KEY = os.environ.get("KEY", "test-key")
 LOCK = threading.Lock()
+# Ids never repeat, not even after /_test/reset or a restart: the app remembers read ids, as with
+# a real server.
+IDS = itertools.count(int(time.time()))
 
 
 def iso(dt):
@@ -50,8 +55,6 @@ class World:
         self.grades = []
         self.messages = []
         self.events = []
-        self.next_grade = 1
-        self.next_message = 1
         self.auth = "ok"
         self.last_success = t - timedelta(minutes=12)
         self.last_run = "ok"
@@ -89,13 +92,12 @@ class World:
     def add_grade(self, child, subject, value, weight, category, semester, kind, issued, event=True):
         t = now()
         g = {
-            "id": "g_%04d" % self.next_grade, "childId": child, "subject": subject, "value": value,
+            "id": "g_%d" % next(IDS), "childId": child, "subject": subject, "value": value,
             "numericValue": numeric(value), "weight": weight, "category": category, "semester": semester,
             "kind": kind, "countsToAverage": kind == "regular" and numeric(value) is not None,
             "teacher": "A. Teacher", "comment": None, "issuedOn": issued.date().isoformat(),
             "firstSeenAt": iso(issued), "updatedAt": iso(issued), "deletedAt": None,
         }
-        self.next_grade += 1
         self.grades.append(g)
         if event:
             self.event("grade", g, "created", None, at=t)
@@ -103,12 +105,11 @@ class World:
 
     def add_message(self, child, sender, subject, html, attachments, sent, event=True):
         m = {
-            "id": "m_%04d" % self.next_message, "childId": child, "sender": sender, "subject": subject,
+            "id": "m_%d" % next(IDS), "childId": child, "sender": sender, "subject": subject,
             "sentAt": iso(sent), "hasAttachments": bool(attachments), "read": False, "readAt": None,
             "deletedAt": None, "bodyHtml": html, "bodyText": html.replace("<p>", "").replace("</p>", "\n"),
             "attachments": [{"name": a} for a in attachments],
         }
-        self.next_message += 1
         self.messages.append(m)
         if event:
             self.event("message", self.summary(m), "created", None, at=now())

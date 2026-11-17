@@ -17,6 +17,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material3.Badge
 import androidx.compose.material3.CircularProgressIndicator
@@ -30,6 +31,8 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.PrimaryTabRow
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Tab
 import androidx.compose.material3.Text
@@ -71,6 +74,14 @@ data class SchoolJournalActions(
     val onRefresh: () -> Unit = {},
     val onSelectChild: (String?) -> Unit = {},
     val onSelectTab: (JournalTab) -> Unit = {},
+    val onOpenMessage: (String) -> Unit = {},
+    val onLoadMoreMessages: () -> Unit = {},
+    val onToggleUnreadOnly: () -> Unit = {},
+    val onToggleShowRemoved: () -> Unit = {},
+    val onMarkRead: (MessageSummary) -> Unit = {},
+    val onMarkUnread: (MessageSummary) -> Unit = {},
+    val onMarkAllRead: () -> Unit = {},
+    val onSnackbarShown: () -> Unit = {},
 )
 
 /** How times are shown; fixed in screenshot tests. */
@@ -83,7 +94,7 @@ data class JournalClock(
 
 /** The school journal (spec §3, §4): configuration until connected, then the content. */
 @Composable
-fun SchoolJournalScreen(onBack: () -> Unit) {
+fun SchoolJournalScreen(onBack: () -> Unit, onOpenMessage: (String) -> Unit) {
     val viewModel = hiltViewModel<SchoolJournalViewModel>()
     val state by viewModel.state.collectAsStateWithLifecycle()
     LifecycleEventEffect(Lifecycle.Event.ON_START) { viewModel.refresh() }
@@ -109,9 +120,17 @@ fun SchoolJournalScreen(onBack: () -> Unit) {
             onCancelSettings = viewModel::cancelSettings,
             onDisconnect = viewModel::disconnect,
             onShowSettings = { viewModel.showSettings() },
-            onRefresh = viewModel::refresh,
+            onRefresh = { viewModel.refresh(full = true) },
             onSelectChild = viewModel::selectChild,
             onSelectTab = viewModel::selectTab,
+            onOpenMessage = onOpenMessage,
+            onLoadMoreMessages = viewModel::loadMoreMessages,
+            onToggleUnreadOnly = viewModel::toggleUnreadOnly,
+            onToggleShowRemoved = viewModel::toggleShowRemoved,
+            onMarkRead = viewModel::markRead,
+            onMarkUnread = viewModel::markUnread,
+            onMarkAllRead = viewModel::markAllRead,
+            onSnackbarShown = viewModel::snackbarShown,
         ),
     )
 }
@@ -138,7 +157,15 @@ fun SchoolJournalContent(
 private fun JournalShell(state: SchoolJournalUi, clock: JournalClock, actions: SchoolJournalActions) {
     var menu by remember { mutableStateOf(false) }
     var statusSheet by remember { mutableStateOf(false) }
+    val snackbar = remember { SnackbarHostState() }
+    LaunchedEffect(state.snackbar) {
+        state.snackbar?.let {
+            snackbar.showSnackbar(it)
+            actions.onSnackbarShown()
+        }
+    }
     Scaffold(
+        snackbarHost = { SnackbarHost(snackbar) },
         topBar = {
             TopAppBar(
                 title = { Text("School journal") },
@@ -153,6 +180,23 @@ private fun JournalShell(state: SchoolJournalUi, clock: JournalClock, actions: S
                             menu = true
                         }) { Icon(Icons.Default.MoreVert, contentDescription = "More") }
                         DropdownMenu(expanded = menu, onDismissRequest = { menu = false }) {
+                            DropdownMenuItem(
+                                text = { Text("Mark all as read") },
+                                onClick = {
+                                    menu = false
+                                    actions.onMarkAllRead()
+                                },
+                            )
+                            DropdownMenuItem(
+                                text = { Text("Show removed messages") },
+                                trailingIcon = {
+                                    if (state.messages.showRemoved) Icon(Icons.Default.Check, contentDescription = "On")
+                                },
+                                onClick = {
+                                    menu = false
+                                    actions.onToggleShowRemoved()
+                                },
+                            )
                             DropdownMenuItem(
                                 text = { Text("Server settings") },
                                 onClick = {
@@ -206,21 +250,9 @@ private fun JournalShell(state: SchoolJournalUi, clock: JournalClock, actions: S
                 onRefresh = actions.onRefresh,
                 modifier = Modifier.fillMaxSize(),
             ) {
-                // Filled by T-078 (messages) and T-079 (grades).
-                Column(
-                    Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(32.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.Center,
-                ) {
-                    Text(
-                        when (state.tab) {
-                            JournalTab.MESSAGES -> "Messages will show here."
-                            JournalTab.GRADES -> "Grades will show here."
-                        },
-                        textAlign = TextAlign.Center,
-                        style = MaterialTheme.typography.bodyLarge,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
+                when (state.tab) {
+                    JournalTab.MESSAGES -> MessagesTab(state, clock, actions)
+                    JournalTab.GRADES -> GradesPlaceholder() // T-079
                 }
             }
         }

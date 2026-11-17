@@ -82,3 +82,12 @@ class SchoolJournalNews @Inject constructor(
         _news.value = JournalNews()
     }
 }
+
+/** Messages that answered 404 while open (spec §4.3): the list drops them on return. */
+@Singleton
+class RemovedMessages @Inject constructor() {
+    private val _ids = MutableStateFlow<Set<String>>(emptySet())
+    val ids: StateFlow<Set<String>> = _ids.asStateFlow()
+
+    fun add(id: String) = _ids.update { it + id }
+}

@@ -83,6 +83,31 @@ data class ReadState(
         return !sent.isAfter(Instant.parse(watermark))
     }
 
+    /** Opened or marked read on this phone. */
+    fun markRead(id: String): ReadState = copy(readIds = readIds + id, unreadIds = unreadIds - id)
+
+    /** Marked unread: an old message (before the watermark) needs to be remembered as such. */
+    fun markUnread(message: MessageSummary): ReadState {
+        val beforeWatermark = instantOrNull(message.sentAt)?.let { !it.isAfter(Instant.parse(watermark)) } ?: false
+        return copy(
+            readIds = readIds - message.id,
+            unreadIds = if (beforeWatermark) unreadIds + message.id else unreadIds - message.id,
+        )
+    }
+
+    /** Every child (spec §4.6): the watermark moves to now and both sets empty. */
+    fun markAllRead(now: Instant): ReadState =
+        copy(watermark = now.truncatedTo(ChronoUnit.SECONDS).toString(), readIds = emptySet(), unreadIds = emptySet())
+
+    /** One child: their unread [messages] become read. */
+    fun markRead(messages: Collection<MessageSummary>): ReadState {
+        val ids = messages.map { it.id }.toSet()
+        return copy(readIds = readIds + ids, unreadIds = unreadIds - ids)
+    }
+
+    /** A message gone from the server (404) leaves the read state. */
+    fun forget(id: String): ReadState = copy(readIds = readIds - id, unreadIds = unreadIds - id)
+
     /** Grade changes up to [upTo] are seen; the cursor never moves backwards. */
     fun seenGradesUpTo(upTo: Long): ReadState = copy(gradesSeenCursor = maxOf(gradesSeenCursor, upTo))
 
@@ -115,10 +140,10 @@ class ReadStateStore @Inject constructor(
         tmp.renameTo(f)
     }
 
-    /** Changes this user's state, if started. */
-    fun update(address: String, transform: (ReadState) -> ReadState) {
-        load(address)?.let { save(address, transform(it)) }
-    }
+    /** Changes this user's state, if started; returns the new state. */
+    @Synchronized
+    fun update(address: String, transform: (ReadState) -> ReadState): ReadState? =
+        load(address)?.let { transform(it).also { new -> save(address, new) } }
 
     /** Starts this user's state if they have none yet (first connect, or another user on this phone). */
     fun ensureStarted(address: String, now: Instant, lastEventId: Long): ReadState =

@@ -56,3 +56,18 @@ fun relative(age: Duration): String {
         else -> "${minutes / (24 * 60)} days ago"
     }
 }
+
+/** A list row's date: "14:32" today, "16 Nov" this year, "16 Nov 2025" before. */
+fun shortWhen(at: Instant, now: Instant, zone: ZoneId, locale: Locale, is24Hour: Boolean): String {
+    val local = at.atZone(zone)
+    val today = now.atZone(zone).toLocalDate()
+    return when {
+        local.toLocalDate() == today -> local.format(
+            DateTimeFormatter.ofPattern(if (is24Hour) "H:mm" else "h:mm a", locale),
+        )
+
+        local.year == today.year -> local.format(DateTimeFormatter.ofPattern("d MMM", locale))
+
+        else -> local.format(DateTimeFormatter.ofPattern("d MMM yyyy", locale))
+    }
+}
