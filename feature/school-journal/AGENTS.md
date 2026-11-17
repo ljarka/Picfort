@@ -19,6 +19,7 @@ Spec: [docs/specs/school-journal.md](../../docs/specs/school-journal.md). **Remo
 | `SchoolJournalMessageScreen.kt` | One message: `fromHtml` body with links, attachments' names, opening marks read, Mark as unread; 404 → back (`RemovedMessages`) |
 | `SchoolJournalGrades.kt` | `GradeSection` (one per child with All), `loadNewGradeIds`, `defaultSemester`, `orderSubjects`, kinds, `gradeBand` |
 | `GradesTab.kt` | Semester chips, subject cards (average, chips colored by band, weight, New dot, labelled kinds), grade sheet |
+| `SchoolJournalSync.kt` | `syncNow`: `POST /sync`, then `/status` every 5 s (2 min) until a newer run finished; `SyncOutcome.message()` |
 | `SyncLine.kt` | "Last successful sync: today 14:32 (12 min ago) · next 14:47", stale > 1 h, failed flag |
 | `SchoolJournalViewModel.kt` | `SchoolJournalUi`: setup vs content, connect (`/health` → `/status` → save), banners, children |
 | `SchoolJournalScreen.kt` | `SchoolJournalScreen`/`SchoolJournalContent`: status line, banner, child chips, tabs, status sheet |
@@ -35,6 +36,19 @@ Spec: [docs/specs/school-journal.md](../../docs/specs/school-journal.md). **Remo
   `/grades/subjects` per child (the server would merge subjects and averages).
 - 401 → setup with "The API key is no longer valid"; unreachable → offline banner, data kept.
 - Neutral names only ("e-journal"), never a provider's name; no real children's data in tests or snapshots.
+
+## Endpoints (spec §4.8)
+
+| Endpoint | Called from |
+|---|---|
+| `GET /health` | Connect (`SchoolJournalViewModel.connect`) |
+| `GET /status` | Connect, refresh, `SchoolJournalNews`, `syncNow` |
+| `GET /children` | Child chips, message screen (child name) |
+| `GET /grades/subjects` | `loadGrades` (one call per child with All) |
+| `GET /messages`, `GET /messages/{id}` | Messages tab, `loadUnread`, news, message screen |
+| `GET /changes` | `checkNews` (dot), `loadNewGradeIds` (New markers); notifications in T-082 |
+| `POST /sync` | ⟳ `syncNow` |
+| Not used on purpose | `GET /grades`, `PUT/DELETE …/read`, `POST …/read-all` (ADR 0017) |
 
 ## Public Contract
 

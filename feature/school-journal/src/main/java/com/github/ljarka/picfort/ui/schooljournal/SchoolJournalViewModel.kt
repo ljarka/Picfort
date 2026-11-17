@@ -82,6 +82,10 @@ data class SchoolJournalUi(
     val readState: ReadState? = null,
     /** One-off snackbar text. */
     val snackbar: String? = null,
+    /** "Sync now" is running (spec §4.5). */
+    val syncing: Boolean = false,
+    /** Shown in the status sheet. */
+    val address: String? = null,
 ) {
     fun isRead(message: MessageSummary): Boolean = readState?.isRead(message) ?: true
 
@@ -145,7 +149,7 @@ class SchoolJournalViewModel @Inject constructor(
     private fun initial(): SchoolJournalUi = if (config.connection.value == null) {
         SchoolJournalUi(mode = JournalMode.SETUP)
     } else {
-        SchoolJournalUi(mode = JournalMode.CONTENT, selectedChild = config.child)
+        SchoolJournalUi(mode = JournalMode.CONTENT, selectedChild = config.child, address = config.address)
     }
 
     fun onAddressChange(text: String) = _state.update { it.copy(form = it.form.copy(address = text, error = null)) }
@@ -183,6 +187,7 @@ class SchoolJournalViewModel @Inject constructor(
                         storageProblem = false,
                         selectedChild = config.child,
                         readState = read,
+                        address = config.address,
                     )
                 }
                 loadChildren(connection)
@@ -444,6 +449,35 @@ class SchoolJournalViewModel @Inject constructor(
     }
 
     fun snackbarShown() = _state.update { it.copy(snackbar = null) }
+
+    /** ⟳ Sync now (spec §4.5): ask the server to check the e-journal, wait, reload. */
+    fun syncNow() {
+        val c = config.connection.value ?: return
+        if (_state.value.syncing) return
+        _state.update { it.copy(syncing = true) }
+        viewModelScope.launch {
+            val outcome = syncNow(api, c, _state.value.status)
+            when (outcome) {
+                is SyncOutcome.Done -> {
+                    _state.update { it.copy(status = outcome.status, offline = false) }
+                    news.refresh(outcome.status)
+                    when (_state.value.tab) {
+                        JournalTab.MESSAGES -> loadMessages()
+                        JournalTab.GRADES -> loadGrades()
+                    }
+                }
+
+                is SyncOutcome.AuthFailed -> runCatching { api.status(c) }.getOrNull()?.let { status ->
+                    _state.update { it.copy(status = status) }
+                }
+
+                is SyncOutcome.Failed -> handle(outcome.error)
+
+                is SyncOutcome.TooSoon, is SyncOutcome.TimedOut -> Unit
+            }
+            _state.update { it.copy(syncing = false, snackbar = outcome.message() ?: it.snackbar) }
+        }
+    }
 
     fun selectTab(tab: JournalTab) {
         _state.update { it.copy(tab = tab) }

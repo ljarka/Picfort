@@ -21,6 +21,19 @@ notifications.
 - Sync state machine (started, in progress, too soon with Retry-After, auth failed, timeout).
 - Paparazzi: syncing, status sheet, status line fresh / stale / failed, each banner.
 
+## Result (2026-11-17)
+
+- [x] ⟳ Sync now: "Checking the e-journal…" and a spinner in place of ⟳, waits for a run newer than
+  the one before (`startedAt`), reloads the open tab and the dot; snackbars for done (n changes / nothing
+  new / failed), too soon (Retry-After), still running after 2 min; 409 AUTH_FAILED → the banner.
+- [x] Stale line in amber (`warningColor`), "last check failed" stays red; status sheet with the address.
+- [x] Unit tests for the sync states (started → running → done, already running, failed run, too soon,
+  auth failed, timeout, wrong key); Paparazzi: syncing, stale (dark), storage banner, sheet with a
+  failed run. Endpoint checklist in `feature/school-journal/AGENTS.md`.
+- [x] Emulator + fake server: ⟳ → "nothing new" and "just now", ⟳ again → "Try again in 5 min",
+  status sheet with address and version. The fake server now keeps a run's `startedAt` until the next
+  "Sync now", like the real one.
+
 ## Done when
 
 - Every endpoint marked "used" in spec §4.8 is called by the app (checklist in

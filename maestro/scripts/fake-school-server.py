@@ -57,6 +57,8 @@ class World:
         self.events = []
         self.auth = "ok"
         self.last_success = t - timedelta(minutes=12)
+        # The last run: started 12 min ago and took 20 s, until "Sync now" starts a new one (3 s).
+        self.last_started = self.last_success - timedelta(seconds=20)
         self.last_run = "ok"
         self.sync_requested = None
         sample = [
@@ -130,7 +132,8 @@ class World:
         t = now()
         running = self.sync_requested is not None and t - self.sync_requested < timedelta(seconds=3)
         last_run = {
-            "startedAt": iso(t - timedelta(minutes=12)), "finishedAt": None if running else iso(t - timedelta(minutes=11)),
+            "startedAt": iso(self.last_started),
+            "finishedAt": None if running else iso(self.last_started + timedelta(seconds=3 if self.sync_requested else 20)),
             "status": "running" if running else self.last_run, "errorCode": "journal_unavailable" if self.last_run == "error" else None,
             "itemsFetched": len(self.grades) + len(self.messages), "changesDetected": 0,
         }
@@ -275,7 +278,8 @@ class Handler(BaseHTTPRequestHandler):
                     left = 300 - int((t - w.sync_requested).total_seconds())
                     return self.error(429, "SYNC_TOO_SOON", "Wait", {"Retry-After": str(left)})
                 w.sync_requested = t
-                w.last_success = t
+                w.last_started = t
+                w.last_success = t + timedelta(seconds=3)
                 w.last_run = "ok"
                 return self.send(202, {"status": "started"})
             return self.error(404, "NOT_FOUND", "No such endpoint")

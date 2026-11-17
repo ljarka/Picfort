@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -19,6 +20,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.MoreVert
+import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.Badge
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenu
@@ -46,6 +48,8 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.SpanStyle
@@ -83,6 +87,7 @@ data class SchoolJournalActions(
     val onMarkAllRead: () -> Unit = {},
     val onSnackbarShown: () -> Unit = {},
     val onSelectSemester: (Int?) -> Unit = {},
+    val onSyncNow: () -> Unit = {},
 )
 
 /** How times are shown; fixed in screenshot tests. */
@@ -133,6 +138,7 @@ fun SchoolJournalScreen(onBack: () -> Unit, onOpenMessage: (String) -> Unit) {
             onMarkAllRead = viewModel::markAllRead,
             onSnackbarShown = viewModel::snackbarShown,
             onSelectSemester = viewModel::selectSemester,
+            onSyncNow = viewModel::syncNow,
         ),
     )
 }
@@ -177,6 +183,15 @@ private fun JournalShell(state: SchoolJournalUi, clock: JournalClock, actions: S
                     }
                 },
                 actions = {
+                    if (state.syncing) {
+                        Box(Modifier.size(48.dp), contentAlignment = Alignment.Center) {
+                            CircularProgressIndicator(Modifier.size(22.dp), strokeWidth = 2.dp)
+                        }
+                    } else {
+                        IconButton(onClick = actions.onSyncNow) {
+                            Icon(Icons.Default.Refresh, contentDescription = "Check the e-journal now")
+                        }
+                    }
                     Box {
                         IconButton(onClick = {
                             menu = true
@@ -213,14 +228,23 @@ private fun JournalShell(state: SchoolJournalUi, clock: JournalClock, actions: S
         },
     ) { padding ->
         Column(Modifier.padding(padding).fillMaxSize()) {
-            state.status?.let { status ->
-                SyncLineText(
-                    line = syncLine(status, clock.now, clock.zone, clock.locale, clock.is24Hour),
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clickable { statusSheet = true }
-                        .padding(horizontal = 16.dp, vertical = 8.dp),
+            if (state.syncing) {
+                Text(
+                    "Checking the e-journal…",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
                 )
+            } else {
+                state.status?.let { status ->
+                    SyncLineText(
+                        line = syncLine(status, clock.now, clock.zone, clock.locale, clock.is24Hour),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable { statusSheet = true }
+                            .padding(horizontal = 16.dp, vertical = 8.dp),
+                    )
+                }
             }
             state.banner?.let { JournalBannerCard(it) }
             if (state.showChildChips) {
@@ -261,15 +285,23 @@ private fun JournalShell(state: SchoolJournalUi, clock: JournalClock, actions: S
     }
     if (statusSheet && state.status != null) {
         ModalBottomSheet(onDismissRequest = { statusSheet = false }) {
-            StatusDetails(state.status, clock, address = null)
+            StatusDetails(state.status, clock, address = state.address)
         }
     }
 }
 
+/**
+ * Amber for "data older than an hour", apart from the error red of "last check failed"; the brand
+ * palette's tertiary is too close to that red (T-076).
+ */
+@Composable
+fun warningColor(): Color =
+    if (MaterialTheme.colorScheme.background.luminance() < 0.5f) Color(0xFFFFB951) else Color(0xFF8A5A00)
+
 /** "Last successful sync: …" plus "· last check failed" in the error color (spec §4.1). */
 @Composable
 fun SyncLineText(line: SyncLine, modifier: Modifier = Modifier) {
-    val base = if (line.stale) MaterialTheme.colorScheme.tertiary else MaterialTheme.colorScheme.onSurfaceVariant
+    val base = if (line.stale) warningColor() else MaterialTheme.colorScheme.onSurfaceVariant
     Text(
         buildAnnotatedString {
             withStyle(SpanStyle(color = base)) { append(line.text) }

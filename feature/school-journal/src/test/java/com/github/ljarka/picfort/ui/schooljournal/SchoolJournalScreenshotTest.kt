@@ -333,6 +333,41 @@ class SchoolJournalScreenshotTest {
     }
 
     @Test
+    fun syncing() = snap {
+        content(withMessages().copy(syncing = true))
+    }
+
+    @Test
+    fun contentStaleDark() = snap(dark = true) {
+        content(
+            SchoolJournalUi(
+                mode = JournalMode.CONTENT,
+                status = fresh.copy(lastSuccessfulSyncAt = "2026-11-17T11:05:00Z"),
+                children = children,
+            ),
+        )
+    }
+
+    @Test
+    fun contentStorageProblem() = snap {
+        content(SchoolJournalUi(mode = JournalMode.CONTENT, status = fresh, storageProblem = true))
+    }
+
+    @Test
+    fun statusDetailsFailedRun() = snap {
+        Surface(color = MaterialTheme.colorScheme.surfaceContainerLow) {
+            StatusDetails(
+                fresh.copy(
+                    lastSync = fresh.lastSync!!.copy(status = "error", errorCode = "journal_unavailable"),
+                    lastSuccessfulSyncAt = "2026-11-17T09:05:00Z",
+                ),
+                clock,
+                address = "https://school.example.com/",
+            )
+        }
+    }
+
+    @Test
     fun contentTabDots() = snap {
         content(
             SchoolJournalUi(
