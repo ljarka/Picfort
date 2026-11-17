@@ -91,6 +91,11 @@ class World:
                          t - timedelta(days=6), event=False)
         self.add_message("102", "Coach", "Training moved", "<p>Training moves to Thursday 16:00.</p>", [],
                          t - timedelta(days=1), event=False)
+        self.add_message("101", "", "Open day on Saturday",
+                         "<p>The school is open for families on Saturday from 10:00 to 14:00.</p>", [],
+                         t - timedelta(days=3), event=False, kind="announcement",
+                         valid_from=(t - timedelta(days=3)).date().isoformat(),
+                         valid_to=(t + timedelta(days=4)).date().isoformat())
         # A history of changes, including an update with a diff.
         for g in self.grades:
             self.event("grade", g, "created", None, at=t - timedelta(days=1))
@@ -112,11 +117,14 @@ class World:
             self.event("grade", g, "created", None, at=t)
         return g
 
-    def add_message(self, child, sender, subject, html, attachments, sent, event=True):
+    def add_message(self, child, sender, subject, html, attachments, sent, event=True, kind="message",
+                    valid_from=None, valid_to=None):
+        prefix = "a" if kind == "announcement" else "m"
         m = {
-            "id": "m_%d" % next(IDS), "childId": child, "sender": sender, "subject": subject,
+            "id": "%s_%d" % (prefix, next(IDS)), "childId": child, "type": kind, "sender": sender, "subject": subject,
             "sentAt": iso(sent), "hasAttachments": bool(attachments), "read": False, "readAt": None,
-            "deletedAt": None, "bodyHtml": html, "bodyText": html.replace("<p>", "").replace("</p>", "\n"),
+            "deletedAt": None, "validFrom": valid_from, "validTo": valid_to,
+            "bodyHtml": html, "bodyText": html.replace("<p>", "").replace("</p>", "\n"),
             "attachments": [{"name": a} for a in attachments],
         }
         self.messages.append(m)
@@ -240,6 +248,8 @@ class Handler(BaseHTTPRequestHandler):
                 return self.send(200, {"items": out})
             if path == "/api/v1/messages" and method == "GET":
                 items = [m for m in mine(w.messages) if include_deleted or not m["deletedAt"]]
+                if "type" in q:
+                    items = [m for m in items if m["type"] == q["type"]]
                 if q.get("unread") == "true":
                     items = [m for m in items if not m["read"]]
                 if "since" in q:
@@ -313,7 +323,8 @@ class Handler(BaseHTTPRequestHandler):
         if path == "/_test/message":
             m = w.add_message(body.get("childId", "101"), body.get("sender", "Class teacher"),
                               body.get("subject", "New message"), body.get("html", "<p>Hello.</p>"),
-                              body.get("attachments", []), now())
+                              body.get("attachments", []), now(), kind=body.get("type", "message"),
+                              valid_from=body.get("validFrom"), valid_to=body.get("validTo"))
             return self.send(200, w.summary(m))
         if path == "/_test/state":
             if "auth" in body:

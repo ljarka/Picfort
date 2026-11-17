@@ -39,6 +39,8 @@ data class MessagesUi(
     val loaded: Boolean = false,
     val unreadOnly: Boolean = false,
     val showRemoved: Boolean = false,
+    /** Null = messages and announcements together. */
+    val kind: MessageKind? = null,
 )
 
 /** The grades tab (spec §4.4). */
@@ -354,7 +356,7 @@ class SchoolJournalViewModel @Inject constructor(
             try {
                 if (ui.messages.unreadOnly) {
                     val read = ui.readState ?: return@launch
-                    val unread = loadUnread(api, c, read, ui.selectedChild, ui.messages.showRemoved)
+                    val unread = loadUnread(api, c, read, ui.selectedChild, ui.messages.showRemoved, ui.messages.kind)
                     if (unread.gone.isNotEmpty()) {
                         updateReadState { s ->
                             unread.gone.fold(s) { acc, id -> acc.forget(id) }
@@ -367,12 +369,17 @@ class SchoolJournalViewModel @Inject constructor(
                         child = ui.selectedChild,
                         limit = MESSAGES_PAGE,
                         includeDeleted = ui.messages.showRemoved,
+                        kind = ui.messages.kind,
                     )
                     setMessages(page.items, page.nextCursor)
                     saveCache {
                         it.copy(
                             messages =
-                                it.messages + (messagesKey(ui.selectedChild, ui.messages.showRemoved) to page.items),
+                                it.messages +
+                                    (
+                                        messagesKey(ui.selectedChild, ui.messages.showRemoved, ui.messages.kind) to
+                                            page.items
+                                        ),
                         )
                     }
                 }
@@ -416,7 +423,12 @@ class SchoolJournalViewModel @Inject constructor(
     private fun showCachedMessages(copy: JournalCache? = cached()) {
         val ui = _state.value
         if (ui.messages.loaded || ui.messages.unreadOnly) return
-        val items = copy?.messages?.get(messagesKey(ui.selectedChild, ui.messages.showRemoved)) ?: return
+        if (copy == null) return
+        val kind = ui.messages.kind
+        val items = copy.messages[messagesKey(ui.selectedChild, ui.messages.showRemoved, kind)]
+            ?: copy.messages[messagesKey(ui.selectedChild, ui.messages.showRemoved)]
+                ?.filter { kind == null || it.kind == kind }
+            ?: return
         _state.update {
             it.copy(
                 messages = it.messages.copy(items = items, nextCursor = null, loaded = true, loading = false),
@@ -478,6 +490,7 @@ class SchoolJournalViewModel @Inject constructor(
                     limit = MESSAGES_PAGE,
                     cursor = cursor,
                     includeDeleted = ui.messages.showRemoved,
+                    kind = ui.messages.kind,
                 )
                 _state.update {
                     val known = it.messages.items.map { m -> m.id }.toSet()
@@ -498,6 +511,13 @@ class SchoolJournalViewModel @Inject constructor(
 
     fun toggleUnreadOnly() {
         _state.update { it.copy(messages = it.messages.copy(unreadOnly = !it.messages.unreadOnly)) }
+        loadMessages()
+    }
+
+    /** Null = messages and announcements together. */
+    fun selectKind(kind: MessageKind?) {
+        if (_state.value.messages.kind == kind) return
+        _state.update { it.copy(messages = it.messages.copy(kind = kind)) }
         loadMessages()
     }
 

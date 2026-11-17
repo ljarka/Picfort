@@ -94,6 +94,38 @@ class SchoolJournalContractTest {
     }
 
     @Test
+    fun announcementsAndUnknownTypes() {
+        val page = journalJson.decodeFromString<MessagesPage>(
+            """
+            {"items":[
+              {"id":"a_17","childId":"101","type":"announcement","sender":"","subject":"Open day",
+               "sentAt":"2026-11-16T23:00:00Z","hasAttachments":false,"read":false,"readAt":null,
+               "deletedAt":null,"validFrom":"2026-11-17","validTo":"2026-11-20"},
+              {"id":"m_1","childId":"101","type":"message","sender":"Coach","subject":"Training",
+               "sentAt":"2026-11-16T07:30:00Z","hasAttachments":false,"read":false,"readAt":null,
+               "deletedAt":null,"validFrom":null,"validTo":null},
+              {"id":"x_1","childId":"101","type":"poll","subject":"Vote"},
+              $messageSummary
+            ],"nextCursor":null}
+            """.trimIndent(),
+        )
+        val (announcement, message, unknown, old) = page.items
+        assertEquals(MessageKind.ANNOUNCEMENT, announcement.kind)
+        assertEquals("2026-11-17", announcement.validFrom)
+        assertEquals("2026-11-20", announcement.validTo)
+        assertEquals(MessageKind.MESSAGE, message.kind)
+        assertEquals("unknown types count as messages", MessageKind.MESSAGE, unknown.kind)
+        assertEquals("servers before the type field", MessageKind.MESSAGE, old.kind)
+
+        val full = journalJson.decodeFromString<Message>(
+            """{"id":"a_17","type":"announcement","validTo":"2026-11-20","bodyHtml":"<p>Hi</p>"}""",
+        )
+        assertEquals(MessageKind.ANNOUNCEMENT, full.kind)
+        assertEquals(MessageKind.ANNOUNCEMENT, full.summary().kind)
+        assertEquals("2026-11-20", full.summary().validTo)
+    }
+
+    @Test
     fun changeEventsDecodeTheirEntityByType() {
         val page = journalJson.decodeFromString<ChangePage>(
             """

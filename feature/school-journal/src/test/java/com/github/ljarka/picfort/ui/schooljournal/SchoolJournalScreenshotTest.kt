@@ -165,6 +165,16 @@ class SchoolJournalScreenshotTest {
             "2026-11-16T07:30:00Z",
             hasAttachments = true,
         ),
+        MessageSummary(
+            "a_7",
+            "101",
+            "",
+            "Open day at school on Saturday",
+            "2026-11-16T23:00:00Z",
+            type = MESSAGE_TYPE_ANNOUNCEMENT,
+            validFrom = "2026-11-17",
+            validTo = "2026-11-21",
+        ),
         MessageSummary("m2", "101", "School office", "Photo day", "2026-11-12T08:00:00Z"),
         MessageSummary(
             "m1",
@@ -197,6 +207,19 @@ class SchoolJournalScreenshotTest {
     fun messagesOneChildDark() = snap(dark = true) { content(withMessages(selected = "101")) }
 
     @Test
+    fun messagesOnlyAnnouncements() = snap {
+        val ui = withMessages()
+        content(
+            ui.copy(
+                messages = ui.messages.copy(
+                    kind = MessageKind.ANNOUNCEMENT,
+                    items = messages.filter { it.kind == MessageKind.ANNOUNCEMENT },
+                ),
+            ),
+        )
+    }
+
+    @Test
     fun messagesEmptyUnreadOnly() = snap {
         content(
             withMessages().copy(messages = MessagesUi(loaded = true, unreadOnly = true), news = JournalNews()),
@@ -219,6 +242,37 @@ class SchoolJournalScreenshotTest {
     @Test
     fun messageScreen() = snap {
         SchoolJournalMessageContent(MessageUi(loading = false, message = fullMessage, childName = "Ola"), clock)
+    }
+
+    private val announcement = Message(
+        id = "a_7",
+        childId = "101",
+        type = MESSAGE_TYPE_ANNOUNCEMENT,
+        subject = "Open day at school on Saturday",
+        sentAt = "2026-11-16T23:00:00Z",
+        validFrom = "2026-11-17",
+        validTo = "2026-11-21",
+        bodyHtml = "<p>The school is open for families on Saturday from 10:00 to 14:00.</p>",
+    )
+
+    @Test
+    fun announcementScreen() = snap {
+        SchoolJournalMessageContent(
+            MessageUi(loading = false, message = announcement, childName = "Ola", read = true),
+            clock,
+        )
+    }
+
+    @Test
+    fun announcementScreenDark() = snap(dark = true) {
+        SchoolJournalMessageContent(
+            MessageUi(
+                loading = false,
+                message = announcement.copy(sender = "Head teacher", validFrom = null),
+                read = true,
+            ),
+            clock,
+        )
     }
 
     @Test

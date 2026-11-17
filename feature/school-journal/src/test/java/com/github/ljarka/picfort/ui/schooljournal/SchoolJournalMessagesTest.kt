@@ -94,8 +94,14 @@ class SchoolJournalMessagesTest {
     )
     private val c = Connection("http://192.168.1.10:5100/".toHttpUrl(), "k")
 
-    private fun json(id: String, sent: String, child: String = "101", deleted: Boolean = false) =
-        """{"id":"$id","childId":"$child","sender":"S","subject":"$id","sentAt":"$sent","deletedAt":${if (deleted) "\"2026-11-17T12:00:00Z\"" else "null"}}"""
+    private fun json(
+        id: String,
+        sent: String,
+        child: String = "101",
+        deleted: Boolean = false,
+        type: String = "message",
+    ) =
+        """{"id":"$id","childId":"$child","type":"$type","sender":"S","subject":"$id","sentAt":"$sent","deletedAt":${if (deleted) "\"2026-11-17T12:00:00Z\"" else "null"}}"""
 
     private fun unread(state: ReadState, child: String? = null, includeDeleted: Boolean = false) =
         runBlocking { loadUnread(api, c, state, child, includeDeleted) }
@@ -110,6 +116,44 @@ class SchoolJournalMessagesTest {
         assertEquals(listOf("m2", "m4"), result.items.map { it.id })
         assertEquals("2026-11-17T10:00:00Z", requests.first().url.queryParameter("since"))
         assertEquals(2, requests.size)
+    }
+
+    @Test
+    fun unreadCanBeLimitedToOneKind() {
+        pages = mapOf(
+            "" to (
+                listOf(
+                    json("m2", "2026-11-17T11:00:00Z"),
+                    json("a_3", "2026-11-17T11:30:00Z", type = "announcement"),
+                ) to null
+                ),
+        )
+        assertEquals(
+            listOf("a_3"),
+            runBlocking {
+                loadUnread(api, c, start, null, kind = MessageKind.ANNOUNCEMENT)
+            }.items.map { it.id },
+        )
+        assertEquals(
+            listOf("m2"),
+            runBlocking {
+                loadUnread(api, c, start, null, kind = MessageKind.MESSAGE)
+            }.items.map { it.id },
+        )
+        assertEquals(listOf("a_3", "m2"), unread(start).items.map { it.id })
+    }
+
+    @Test
+    fun announcementLabels() {
+        assertEquals("Notice board", senderLabel(MessageKind.ANNOUNCEMENT, " "))
+        assertEquals("Head teacher", senderLabel(MessageKind.ANNOUNCEMENT, "Head teacher"))
+        assertEquals("", senderLabel(MessageKind.MESSAGE, ""))
+        val en = java.util.Locale.ENGLISH
+        assertEquals("On the board 17 Nov – 20 Nov", boardDates("2026-11-17", "2026-11-20", en))
+        assertEquals("On the board on 17 Nov", boardDates("2026-11-17", "2026-11-17", en))
+        assertEquals("On the board until 20 Nov", boardDates(null, "2026-11-20", en))
+        assertEquals("On the board from 17 Nov", boardDates("2026-11-17", null, en))
+        assertEquals(null, boardDates(null, "not a date", en))
     }
 
     @Test

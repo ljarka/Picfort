@@ -41,7 +41,8 @@ fun CachedSection.toSection() = GradeSection(childId, childName, subjects)
 fun GradeSection.toCached() = CachedSection(childId, childName, subjects)
 
 /** The messages view a cache entry belongs to (unread-only isn't cached: it depends on read state). */
-fun messagesKey(child: String?, showRemoved: Boolean) = "${child ?: "all"}|${if (showRemoved) "removed" else "current"}"
+fun messagesKey(child: String?, showRemoved: Boolean, kind: MessageKind? = null) =
+    "${child ?: "all"}|${if (showRemoved) "removed" else "current"}" + (kind?.let { "|${it.apiValue}" } ?: "")
 
 /** One semester's grades for [child] ([semester] null = whole year). */
 fun gradesKey(child: String?, semester: Int?) = "${child ?: "all"}|${semester?.toString() ?: "year"}"

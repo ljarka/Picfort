@@ -6,6 +6,8 @@ import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -16,14 +18,13 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -36,16 +37,19 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import com.github.ljarka.picfort.feature.schooljournal.R
 
 /** Start loading the next page this many rows before the end. */
 private const val LOAD_MORE_AHEAD = 5
 
-/** The Messages tab (spec §4.3): "Unread only" chip, rows newest first, infinite scroll. */
+/** The Messages tab (spec §4.3): kind and "Unread only" chips, rows newest first, infinite scroll. */
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun MessagesTab(state: SchoolJournalUi, clock: JournalClock, actions: SchoolJournalActions) {
     val messages = state.messages
@@ -61,7 +65,16 @@ fun MessagesTab(state: SchoolJournalUi, clock: JournalClock, actions: SchoolJour
     }
     LazyColumn(state = list, modifier = Modifier.fillMaxSize()) {
         item(key = "filters") {
-            Row(Modifier.padding(horizontal = 16.dp, vertical = 8.dp)) {
+            FlowRow(
+                Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalArrangement = Arrangement.spacedBy(4.dp),
+            ) {
+                KindChip("All", messages.kind == null) { actions.onSelectKind(null) }
+                KindChip("Inbox", messages.kind == MessageKind.MESSAGE) { actions.onSelectKind(MessageKind.MESSAGE) }
+                KindChip("Announcements", messages.kind == MessageKind.ANNOUNCEMENT) {
+                    actions.onSelectKind(MessageKind.ANNOUNCEMENT)
+                }
                 FilterChip(
                     selected = messages.unreadOnly,
                     onClick = actions.onToggleUnreadOnly,
@@ -78,7 +91,7 @@ fun MessagesTab(state: SchoolJournalUi, clock: JournalClock, actions: SchoolJour
 
             messages.loaded && messages.items.isEmpty() -> item(key = "empty") {
                 Text(
-                    if (messages.unreadOnly) "No unread messages" else "No messages",
+                    emptyText(messages.kind, messages.unreadOnly),
                     textAlign = TextAlign.Center,
                     style = MaterialTheme.typography.bodyLarge,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -111,6 +124,34 @@ fun MessagesTab(state: SchoolJournalUi, clock: JournalClock, actions: SchoolJour
     }
 }
 
+/** Single choice between all items, only inbox messages and only announcements. */
+@Composable
+private fun KindChip(label: String, selected: Boolean, onClick: () -> Unit) {
+    FilterChip(selected = selected, onClick = onClick, label = { Text(label) })
+}
+
+private fun emptyText(kind: MessageKind?, unreadOnly: Boolean): String {
+    val what = when (kind) {
+        null, MessageKind.MESSAGE -> "messages"
+        MessageKind.ANNOUNCEMENT -> "announcements"
+    }
+    return if (unreadOnly) "No unread $what" else "No $what"
+}
+
+/**
+ * Marks an announcement: megaphone icon in the secondary color (sky), so it is never confused with
+ * the error red of an unread dot (the brand palette's tertiary is coral red).
+ */
+@Composable
+internal fun AnnouncementIcon(modifier: Modifier = Modifier) {
+    Icon(
+        painterResource(R.drawable.ic_announcement),
+        contentDescription = "Announcement",
+        tint = MaterialTheme.colorScheme.secondary,
+        modifier = modifier,
+    )
+}
+
 /** Unread: bold with a dot. Removed from the e-journal: struck through. Long-press: read / unread. */
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
@@ -127,6 +168,7 @@ private fun MessageRow(
     val removed = message.deletedAt != null
     val weight = if (read) FontWeight.Normal else FontWeight.Bold
     val decoration = if (removed) TextDecoration.LineThrough else null
+    val announcement = message.kind == MessageKind.ANNOUNCEMENT
     Box {
         Row(
             Modifier
@@ -141,8 +183,12 @@ private fun MessageRow(
             Spacer(Modifier.width(14.dp))
             Column(Modifier.weight(1f)) {
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween) {
+                    if (announcement) {
+                        AnnouncementIcon(Modifier.size(18.dp))
+                        Spacer(Modifier.width(6.dp))
+                    }
                     Text(
-                        message.sender,
+                        senderLabel(message.kind, message.sender),
                         fontWeight = weight,
                         textDecoration = decoration,
                         style = MaterialTheme.typography.bodyLarge,
@@ -167,7 +213,9 @@ private fun MessageRow(
                     overflow = TextOverflow.Ellipsis,
                 )
                 val details = listOfNotNull(
+                    "Announcement".takeIf { announcement },
                     childName,
+                    boardDates(message.validFrom, message.validTo, clock.locale).takeIf { announcement },
                     "Attachment".takeIf { message.hasAttachments },
                     "Removed from the e-journal".takeIf { removed },
                 )

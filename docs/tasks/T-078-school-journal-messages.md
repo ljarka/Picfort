@@ -42,6 +42,9 @@
 - The fake server's ids are now unique across resets and restarts (the app remembers read ids).
 - A message read by one parent stays unread for the other: covered by tests (state file per Immich
   user); a second Immich user on the emulator was not tried.
+- Notice-board announcements (`type: announcement` from school-server T-016): megaphone icon,
+  "Notice board" when there is no sender, "Announcement" + board dates (`validFrom` / `validTo`) in
+  rows and on the message screen, and **All · Inbox · Announcements** filter chips (`?type=`).
 
 ## Done when
 

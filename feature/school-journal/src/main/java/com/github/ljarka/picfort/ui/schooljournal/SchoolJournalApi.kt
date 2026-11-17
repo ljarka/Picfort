@@ -72,6 +72,8 @@ class SchoolJournalApi internal constructor(private val client: OkHttpClient) {
         limit: Int? = null,
         cursor: String? = null,
         includeDeleted: Boolean = false,
+        /** Null = messages and announcements. */
+        kind: MessageKind? = null,
     ): MessagesPage = call(
         c,
         get(
@@ -82,6 +84,7 @@ class SchoolJournalApi internal constructor(private val client: OkHttpClient) {
             "limit" to limit?.toString(),
             "cursor" to cursor,
             "includeDeleted" to includeDeleted.takeIf { it }?.toString(),
+            "type" to kind?.apiValue,
         ),
         serializer(),
     )

@@ -1,5 +1,9 @@
 package com.github.ljarka.picfort.ui.schooljournal
 
+import java.time.LocalDate
+import java.time.format.DateTimeFormatter
+import java.util.Locale
+
 /** One page of the messages list (spec §4.3). */
 internal const val MESSAGES_PAGE = 50
 
@@ -18,6 +22,8 @@ internal suspend fun loadUnread(
     state: ReadState,
     child: String?,
     includeDeleted: Boolean = false,
+    /** Null = messages and announcements. Filtered here, so read state stays one list. */
+    kind: MessageKind? = null,
 ): UnreadMessages {
     val recent = mutableListOf<MessageSummary>()
     var cursor: String? = null
@@ -48,6 +54,7 @@ internal suspend fun loadUnread(
 
     val unread = (recent + marked)
         .filter { !state.isRead(it) && (includeDeleted || it.deletedAt == null) }
+        .filter { kind == null || it.kind == kind }
         .distinctBy { it.id }
         .sortedByDescending { it.sentAt }
     return UnreadMessages(unread, gone)
@@ -58,6 +65,7 @@ internal data class UnreadMessages(val items: List<MessageSummary>, val gone: Se
 fun Message.summary() = MessageSummary(
     id = id,
     childId = childId,
+    type = type,
     sender = sender,
     subject = subject,
     sentAt = sentAt,
@@ -65,4 +73,25 @@ fun Message.summary() = MessageSummary(
     read = read,
     readAt = readAt,
     deletedAt = deletedAt,
+    validFrom = validFrom,
+    validTo = validTo,
 )
+
+/** Who to show: the sender, or "Notice board" for an announcement without an author. */
+fun senderLabel(kind: MessageKind, sender: String): String =
+    if (kind == MessageKind.ANNOUNCEMENT && sender.isBlank()) "Notice board" else sender
+
+/** When an announcement is on the school's board ("On the board 18 Nov – 20 Nov"); null if unknown. */
+fun boardDates(validFrom: String?, validTo: String?, locale: Locale): String? {
+    val format = DateTimeFormatter.ofPattern("d MMM", locale)
+    fun date(text: String?) = text?.let { runCatching { LocalDate.parse(it) }.getOrNull() }?.format(format)
+    val from = date(validFrom)
+    val to = date(validTo)
+    return when {
+        from != null && to != null && from == to -> "On the board on $from"
+        from != null && to != null -> "On the board $from – $to"
+        to != null -> "On the board until $to"
+        from != null -> "On the board from $from"
+        else -> null
+    }
+}

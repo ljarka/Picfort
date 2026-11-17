@@ -9,14 +9,14 @@ Spec: [docs/specs/school-journal.md](../../docs/specs/school-journal.md). **Remo
 
 | File | Purpose |
 |---|---|
-| `SchoolJournalDtos.kt` | Wire contract (`journalJson`: lenient), `GradeKind` with `UNKNOWN`, `ChangeEvent.grade()/message()`, `instantOrNull` |
+| `SchoolJournalDtos.kt` | Wire contract (`journalJson`: lenient), `GradeKind` with `UNKNOWN`, `MessageKind` (`message` / `announcement`), `ChangeEvent.grade()/message()`, `instantOrNull` |
 | `SchoolJournalApi.kt` | Every used endpoint (spec §4.8), own `OkHttpClient` + `CleartextPolicyInterceptor`; `normalizeJournalAddress` |
 | `SchoolJournalError.kt` | Error codes → sealed errors + `userMessage()` (spec §5); server `message` only in logs |
 | `SchoolJournalStores.kt` | `SchoolJournalConfigStore` (encrypted `schoolJournal.*`), `ReadState` + `ReadStateStore` (per Immich user, `filesDir/school-journal/`) |
 | `SchoolJournalNews.kt` | `checkNews` (dot rules, spec §6) and the singleton `SchoolJournalNews` (icon + tab dots, `markGradesSeen`) |
-| `SchoolJournalMessages.kt` | `loadUnread` (after the watermark minus `readIds` + `unreadIds` one by one, 404 → gone), `Message.summary()` |
-| `MessagesTab.kt` | Messages tab: "Unread only", rows (bold + dot = unread, struck = removed), long-press read/unread, infinite scroll |
-| `SchoolJournalMessageScreen.kt` | One message: `fromHtml` body with links, attachments' names, opening marks read, Mark as unread; 404 → back (`RemovedMessages`) |
+| `SchoolJournalMessages.kt` | `loadUnread` (after the watermark minus `readIds` + `unreadIds` one by one, 404 → gone), `Message.summary()`, `senderLabel`, `boardDates` |
+| `MessagesTab.kt` | Messages tab: All / Inbox / Announcements + "Unread only" chips, rows (megaphone for announcements, bold + dot = unread, struck = removed), long-press read/unread, infinite scroll |
+| `SchoolJournalMessageScreen.kt` | One message or announcement: `fromHtml` body with links, notice-board card + dates, attachments' names, opening marks read, Mark as unread; 404 → back (`RemovedMessages`) |
 | `SchoolJournalGrades.kt` | `GradeSection` (one per child with All), `loadNewGradeIds`, `defaultSemester`, `orderSubjects`, kinds, `gradeBand` |
 | `GradesTab.kt` | Semester chips, subject cards (average, chips colored by band, weight, New dot, labelled kinds), grade sheet |
 | `SchoolJournalSync.kt` | `syncNow`: `POST /sync`, then `/status` every 5 s (2 min) until a newer run finished; `SyncOutcome.message()` |

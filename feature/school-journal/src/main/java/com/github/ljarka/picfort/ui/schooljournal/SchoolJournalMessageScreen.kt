@@ -4,11 +4,14 @@ import android.text.format.DateFormat
 import android.util.Log
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.foundation.verticalScroll
@@ -33,6 +36,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.TextLinkStyles
@@ -44,6 +48,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewModelScope
+import com.github.ljarka.picfort.feature.schooljournal.R
 import dagger.hilt.android.lifecycle.HiltViewModel
 import java.time.Instant
 import javax.inject.Inject
@@ -142,7 +147,9 @@ fun SchoolJournalMessageContent(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Message") },
+                title = {
+                    Text(if (state.message?.kind == MessageKind.ANNOUNCEMENT) "Announcement" else "Message")
+                },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
@@ -191,7 +198,7 @@ private fun MessageBody(message: Message, childName: String?, clock: JournalCloc
         Text(message.subject, style = MaterialTheme.typography.titleLarge)
         Spacer(Modifier.height(8.dp))
         Text(
-            listOfNotNull(message.sender, childName).joinToString(" · "),
+            listOfNotNull(senderLabel(message.kind, message.sender), childName).joinToString(" · "),
             style = MaterialTheme.typography.bodyMedium,
         )
         instantOrNull(message.sentAt)?.let {
@@ -200,6 +207,28 @@ private fun MessageBody(message: Message, childName: String?, clock: JournalCloc
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
+        }
+        if (message.kind == MessageKind.ANNOUNCEMENT) {
+            Spacer(Modifier.height(12.dp))
+            Surface(color = MaterialTheme.colorScheme.secondaryContainer, shape = MaterialTheme.shapes.medium) {
+                Row(Modifier.fillMaxWidth().padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Icon(
+                        painterResource(R.drawable.ic_announcement),
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.onSecondaryContainer,
+                        modifier = Modifier.size(20.dp),
+                    )
+                    Spacer(Modifier.width(10.dp))
+                    Text(
+                        listOfNotNull(
+                            "Announcement from the school notice board",
+                            boardDates(message.validFrom, message.validTo, clock.locale),
+                        ).joinToString("\n"),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSecondaryContainer,
+                    )
+                }
+            }
         }
         if (message.deletedAt != null) {
             Spacer(Modifier.height(12.dp))

@@ -89,6 +89,11 @@ data class MessageSummary(
     val read: Boolean = false,
     val readAt: String? = null,
     val deletedAt: String? = null,
+    /** `message` or `announcement` (notice board); see [kind]. Last, so positional calls keep working. */
+    val type: String = MESSAGE_TYPE_MESSAGE,
+    /** Announcements: first / last day on the board (`yyyy-MM-dd`); null for messages or open-ended. */
+    val validFrom: String? = null,
+    val validTo: String? = null,
 )
 
 @Serializable
@@ -102,11 +107,32 @@ data class Message(
     val read: Boolean = false,
     val readAt: String? = null,
     val deletedAt: String? = null,
+    val type: String = MESSAGE_TYPE_MESSAGE,
+    val validFrom: String? = null,
+    val validTo: String? = null,
     val bodyText: String = "",
     /** Sanitised by the server, safe to render. */
     val bodyHtml: String = "",
     val attachments: List<Attachment> = emptyList(),
 )
+
+const val MESSAGE_TYPE_MESSAGE = "message"
+const val MESSAGE_TYPE_ANNOUNCEMENT = "announcement"
+
+/** The two kinds of items in `/messages`; the API value is [apiValue] (its `type` / `?type=`). */
+enum class MessageKind(val apiValue: String) {
+    MESSAGE(MESSAGE_TYPE_MESSAGE),
+    ANNOUNCEMENT(MESSAGE_TYPE_ANNOUNCEMENT),
+    ;
+
+    companion object {
+        /** Unknown or missing values count as messages (school-server API guide). */
+        fun of(type: String?): MessageKind = if (type == MESSAGE_TYPE_ANNOUNCEMENT) ANNOUNCEMENT else MESSAGE
+    }
+}
+
+val MessageSummary.kind: MessageKind get() = MessageKind.of(type)
+val Message.kind: MessageKind get() = MessageKind.of(type)
 
 @Serializable
 data class MessagesPage(val items: List<MessageSummary> = emptyList(), val nextCursor: String? = null)

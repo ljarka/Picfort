@@ -87,12 +87,18 @@ Also shown (prefilled, with message "The API key is no longer valid") when any c
 ### 4.3 Messages tab (`GET /messages`, `GET /messages/{id}`)
 
 - List newest first, paged (`limit=50`, `cursor` → `nextCursor`, infinite scroll).
-  Row: sender, subject, date, paperclip if `hasAttachments`; unread = bold + dot.
-- Filter chip **Unread only** (from the phone's read state, §4.6). Overflow **Show removed** (`includeDeleted=true`):
+  Each item has `type`: `message` (inbox) or `announcement` (school notice board; unknown values
+  count as `message`).
+  Row: sender (or "Notice board" when an announcement has no author), subject, date,
+  "Attachment" if `hasAttachments`; announcements have a megaphone icon, "Announcement" and
+  their board dates (`validFrom` / `validTo`); unread = bold + dot.
+- Filter chips **All · Inbox · Announcements** (`type` query param) and **Unread only** (from the
+  phone's read state, §4.6). Overflow **Show removed** (`includeDeleted=true`):
   removed rows struck through with "Removed from the e-journal".
 - Long-press / swipe: **Mark as read / unread**.
 - Overflow **Mark all as read** (for the selected child, or all) → snackbar "Marked N messages".
-- Tap → message screen (`Screen.SchoolJournalMessage(id)`): subject, sender, sent at, child, body from
+- Tap → message screen (`Screen.SchoolJournalMessage(id)`): title "Message" or "Announcement",
+  subject, sender, sent at, child, notice-board card with dates for announcements, body from
   `bodyHtml` via `AnnotatedString.fromHtml` (links open in the browser; fallback `bodyText`),
   attachment names with a note "Open in the e-journal to download". Opening marks it read;
   action **Mark as unread**. `404` → back to the list, row removed.
