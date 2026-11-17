@@ -1,6 +1,6 @@
 # T-081 — School journal: offline copy, fake server, device test, removal check
 
-**Status:** in-progress  
+**Status:** done (04e42f9)  
 **Component:** Android (`:feature:school-journal`), `maestro/`, `scripts/`  
 **Depends on:** T-076 … T-080. Spec §7, §8, §9.
 
