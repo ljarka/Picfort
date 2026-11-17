@@ -232,4 +232,4 @@ in one removable module `:feature:school-journal` ([spec](specs/school-journal.m
 | [0014](decisions/0014-browser-frame.md) | The frame in a web browser (`/frame`), only behind the server key |
 | [0015](decisions/0015-event-reminders-on-the-phone.md) | Event reminders planned and stored on each phone (AlarmManager + 6-hourly re-plan) |
 | [0016](decisions/0016-schema-migrations.md) | Data survives schema changes: a migration for every bump |
-| [0017](decisions/0017-school-journal-removable-module.md) | School journal in one removable module, own server and key, no `:core` changes (proposed) |
+| [0017](decisions/0017-school-journal-removable-module.md) | School journal in one removable module, own server and key, no `:core` changes |

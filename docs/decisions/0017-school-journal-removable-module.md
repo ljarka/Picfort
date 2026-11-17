@@ -1,6 +1,6 @@
 # ADR 0017 — School journal as an optional, removable module
 
-**Status:** proposed  
+**Status:** accepted (removal dry run green, 2026-11-17)  
 **Date:** 2026-11-17  
 **Spec:** [docs/specs/school-journal.md](../specs/school-journal.md)
 
@@ -43,6 +43,15 @@ school-server's own ADR says the same from its side: Picfort never depends on it
    `EXTRA_OPEN_SCHOOL_JOURNAL` handling in `MainActivity`.
 4. Docs: root `AGENTS.md` module map row, `docs/ARCHITECTURE.md`, mark this ADR superseded.
 5. `./scripts/check-modular-boundaries.sh && ./gradlew testDebugUnitTest`.
+
+**Dry run (T-081, 2026-11-17)** on a throwaway branch, before T-082 (so steps 3's notification
+scheduler and `EXTRA_OPEN_SCHOOL_JOURNAL` did not exist yet): steps 1–3 touched only
+`settings.gradle.kts`, `app/build.gradle.kts`, `AppNavigation.kt` and `MainActivity.kt` (−37 lines
+outside the module folder). `check-modular-boundaries.sh`, `ktlintCheck`, `testDebugUnitTest` and
+`:app:assembleDebug` were green. `check-modular-boundaries.sh` fails if anything in `core/` mentions
+`school-journal`/`schooljournal`, and checks the module's `AGENTS.md` only while the folder exists.
+Maestro flows `maestro/school-journal*.yaml`, `subflows/school-journal-connect.yaml`,
+`scripts/school-journal-data.js` and `fake-school-server.py` go too (tag `school-journal`).
 
 Leftover `schoolJournal.*` encrypted prefs and `filesDir/school-journal/` on phones are harmless.
 The periodic work `school-journal-notify` disappears with its worker class: WorkManager drops work

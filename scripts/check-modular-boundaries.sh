@@ -42,6 +42,15 @@ else
     echo "  [OK] :core:ui depends only on design tokens and models."
 fi
 
+# School journal is removable (ADR 0017): no core module may know about it.
+if grep -rniE 'school-?journal' core --include='*.kt' --include='*.kts' --include='*.xml' \
+    --exclude-dir=build 2>/dev/null; then
+    echo "  [ERROR] core/ must not mention school-journal (ADR 0017: the module stays removable)!"
+    FAILED=1
+else
+    echo "  [OK] core/ does not mention school-journal."
+fi
+
 # 3. Check AGENTS.md existence and line count (< 80 lines for modular docs)
 echo "3. Checking module AGENTS.md documentation..."
 MODULES=(
@@ -58,6 +67,12 @@ MODULES=(
     "feature/timeline"
     "app"
 )
+# Optional modules (ADR 0017): checked only while they exist, so removing one keeps this green.
+for optional in "feature/school-journal"; do
+    if [ -d "$optional" ]; then
+        MODULES+=("$optional")
+    fi
+done
 
 for mod in "${MODULES[@]}"; do
     AGENTS_FILE="$mod/AGENTS.md"

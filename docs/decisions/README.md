@@ -22,4 +22,4 @@ Each file in this directory documents one major technical decision.
 | [0014](0014-browser-frame.md) | The frame in a web browser (`/frame`), only behind the server key |
 | [0015](0015-event-reminders-on-the-phone.md) | Event reminders planned and stored on each phone (AlarmManager + 6-hourly re-plan) |
 | [0016](0016-schema-migrations.md) | Data survives schema changes: a migration for every bump (server SQLite and Room state) |
-| [0017](0017-school-journal-removable-module.md) | School journal in one removable module, own server and key, no `:core` changes (proposed) |
+| [0017](0017-school-journal-removable-module.md) | School journal in one removable module, own server and key, no `:core` changes |

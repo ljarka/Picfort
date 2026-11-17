@@ -21,6 +21,7 @@ Spec: [docs/specs/school-journal.md](../../docs/specs/school-journal.md). **Remo
 | `GradesTab.kt` | Semester chips, subject cards (average, chips colored by band, weight, New dot, labelled kinds), grade sheet |
 | `SchoolJournalSync.kt` | `syncNow`: `POST /sync`, then `/status` every 5 s (2 min) until a newer run finished; `SyncOutcome.message()` |
 | `SyncLine.kt` | "Last successful sync: today 14:32 (12 min ago) · next 14:47", stale > 1 h, failed flag |
+| `SchoolJournalCache.kt` | Offline copy `filesDir/school-journal/cache.json` (status, children, messages page 1, grades per child + semester), tied to the address, cleared on Disconnect |
 | `SchoolJournalViewModel.kt` | `SchoolJournalUi`: setup vs content, connect (`/health` → `/status` → save), banners, children |
 | `SchoolJournalScreen.kt` | `SchoolJournalScreen`/`SchoolJournalContent`: status line, banner, child chips, tabs, status sheet |
 | `SchoolJournalSetup.kt` | Address + key form; as Server settings: status and Disconnect |
@@ -34,7 +35,9 @@ Spec: [docs/specs/school-journal.md](../../docs/specs/school-journal.md). **Remo
 - New state starts at "now" (`ReadState.startingAt`): history is never unread or new.
 - Grades: New ids are read before marking grades seen, and kept for the visit. All children → one
   `/grades/subjects` per child (the server would merge subjects and averages).
-- 401 → setup with "The API key is no longer valid"; unreachable → offline banner, data kept.
+- 401 → setup with "The API key is no longer valid"; unreachable → offline banner, cached copy, read only.
+- Removal: ADR 0017 "How to remove" (dry run green 2026-11-17); `check-modular-boundaries.sh` fails
+  if anything in `core/` mentions this module.
 - Neutral names only ("e-journal"), never a provider's name; no real children's data in tests or snapshots.
 
 ## Endpoints (spec §4.8)
@@ -66,4 +69,5 @@ Spec: [docs/specs/school-journal.md](../../docs/specs/school-journal.md). **Remo
 ./gradlew :feature:school-journal:testDebugUnitTest :feature:school-journal:verifyPaparazziDebug
 ./gradlew :feature:school-journal:recordPaparazziDebug   # on intentional UI changes
 python3 -I maestro/scripts/fake-school-server.py         # :5101, key test-key; emulator: 10.0.2.2:5101
+./scripts/maestro-smoke.sh maestro/school-journal.yaml maestro/school-journal-offline.yaml  # needs the fake server
 ```

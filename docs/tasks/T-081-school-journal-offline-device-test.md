@@ -25,9 +25,11 @@
   `subflows/school-journal-connect.yaml`, `scripts/school-journal-data.js`; `maestro-smoke.sh`
   skips them without the fake server. Both passed on the emulator.
 - [x] Owner request: "Last successful sync" as a card like the banners (neutral / amber).
-- [ ] Left: removal dry run (step 4) + ADR 0017 → accepted; `check-modular-boundaries.sh` rule
-  (nothing in `core/` mentions the module) and `feature/school-journal` in its module list;
-  root `AGENTS.md` status → done; full `testDebugUnitTest lintDebug` before closing.
+- [x] Removal dry run (throwaway worktree): boundaries, ktlint, `testDebugUnitTest`,
+  `:app:assembleDebug` green; recorded in ADR 0017 (→ accepted).
+- [x] `check-modular-boundaries.sh`: nothing in `core/` mentions `school-journal`/`schooljournal`;
+  module `AGENTS.md` checked while the folder exists. Root `AGENTS.md` status → done.
+- [x] `ktlintCheck testDebugUnitTest verifyPaparazziDebug lintDebug` green.
 
 ## Done when
 
