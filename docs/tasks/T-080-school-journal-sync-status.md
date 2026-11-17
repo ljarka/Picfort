@@ -1,6 +1,6 @@
 # T-080 — School journal: Sync now, status sheet
 
-**Status:** ready  
+**Status:** done (753d3ca)  
 **Component:** Android (`:feature:school-journal`)  
 **Depends on:** T-076, T-078, T-079. Spec §4.1, §4.5, §4.5.
 
