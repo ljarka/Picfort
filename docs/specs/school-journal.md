@@ -61,7 +61,13 @@ Also shown (prefilled, with message "The API key is no longer valid") when any c
 
 ### 4.1 Status line, banners & status sheet (`GET /status`, `GET /health`)
 
-- Status line: "Checked {lastSuccessfulSyncAt} · next {nextSyncAt}" (device time format).
+- Status line, **always visible** under the app bar on every tab (owner request 2026-11-17):
+  "Last successful sync: {lastSuccessfulSyncAt} ({relative}) · next {nextSyncAt}", e.g.
+  "Last successful sync: today 14:32 (12 min ago) · next 14:47". Date shown when not today
+  ("Mon 16 Nov, 14:32"); device time format; the relative part refreshes every minute.
+  `null` → "No successful sync yet". When the last run failed (`lastSync.status` `error` /
+  `auth_failed`), add "· last check failed" in the error color. Shown from the cached copy when
+  offline. Tap → status sheet. Also shown in Server settings.
 - Banners (one, highest wins):
   1. `auth == auth_failed` → "The server can't log in to the e-journal. Fix its login and restart it." (error color)
   2. `503 NO_DATA_YET` → "First check of the e-journal is still running."

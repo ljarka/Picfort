@@ -34,8 +34,9 @@ task the icon opens either the setup screen or an (empty) content shell.
    `gradesSeenCursor = lastEventId`).
 6. `SchoolJournalSetup.kt` + `SchoolJournalViewModel`: Connect flow (spec §3), errors, Server settings +
    Disconnect.
-7. `SchoolJournalScreen(onBack, onOpenMessage)`: setup when not configured; else shell with status
-   line, banners, status sheet, child chips, three empty tabs (filled by T-078…T-080).
+7. `SchoolJournalScreen(onBack, onOpenMessage)`: setup when not configured; else shell with the
+   always-visible "Last successful sync" line (spec §4.1: date/time, relative, failed last check,
+   no sync yet), banners, status sheet, child chips, three empty tabs (filled by T-078…T-080).
 8. `SchoolJournalTopBarAction(onClick)`: building icon (`ic_school_building.xml`), no badge yet.
 9. `FamilyWallScreen`, `SchoolScreen`: add `topBarActions: @Composable RowScope.() -> Unit = {}`
    before `SettingsAction`. `:app`: `Screen.SchoolJournal`, `Screen.SchoolJournalMessage(id)` (placeholder
