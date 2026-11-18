@@ -91,7 +91,7 @@ Also shown (prefilled, with message "The API key is no longer valid") when any c
   count as `message`).
   Row: sender (or "Notice board" when an announcement has no author), subject, date,
   "Attachment" if `hasAttachments`; announcements have a megaphone icon, "Announcement" and
-  their board dates (`validFrom` / `validTo`); unread = bold + dot.
+  their board dates (`validFrom` / `validTo`); unread = bold, red time and a dot on the right (no reserved left margin).
 - Filter chips **All · Inbox · Announcements** (`type` query param) and **Unread only** (from the
   phone's read state, §4.6). Overflow **Show removed** (`includeDeleted=true`):
   removed rows struck through with "Removed from the e-journal".

@@ -104,7 +104,7 @@ fun MessagesTab(state: SchoolJournalUi, clock: JournalClock, actions: SchoolJour
                     onMarkRead = { actions.onMarkRead(message) },
                     onMarkUnread = { actions.onMarkUnread(message) },
                 )
-                HorizontalDivider(Modifier.padding(start = 40.dp))
+                HorizontalDivider(Modifier.padding(horizontal = 16.dp))
             }
         }
         if (messages.loadingMore) {
@@ -144,7 +144,7 @@ internal fun AnnouncementIcon(modifier: Modifier = Modifier) {
     )
 }
 
-/** Unread: bold with a dot. Removed from the e-journal: struck through. Long-press: read / unread. */
+/** Unread: bold, time in red and a dot after it (right edge, no reserved left margin). Removed from the e-journal: struck through. Long-press: read / unread. */
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 private fun MessageRow(
@@ -161,6 +161,7 @@ private fun MessageRow(
     val weight = if (read) FontWeight.Normal else FontWeight.Bold
     val decoration = if (removed) TextDecoration.LineThrough else null
     val announcement = message.kind == MessageKind.ANNOUNCEMENT
+    val timeColor = if (read) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.error
     Box {
         Row(
             Modifier
@@ -169,10 +170,6 @@ private fun MessageRow(
                 .padding(start = 16.dp, end = 16.dp, top = 12.dp, bottom = 12.dp),
             verticalAlignment = Alignment.Top,
         ) {
-            Box(Modifier.padding(top = 6.dp).size(10.dp)) {
-                if (!read) Box(Modifier.size(10.dp).clip(CircleShape).background(MaterialTheme.colorScheme.error))
-            }
-            Spacer(Modifier.width(14.dp))
             Column(Modifier.weight(1f)) {
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween) {
                     if (announcement) {
@@ -189,11 +186,17 @@ private fun MessageRow(
                         modifier = Modifier.weight(1f),
                     )
                     instantOrNull(message.sentAt)?.let {
+                        Spacer(Modifier.width(8.dp))
                         Text(
                             shortWhen(it, clock.now, clock.zone, clock.locale, clock.is24Hour),
                             style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            fontWeight = weight,
+                            color = timeColor,
                         )
+                    }
+                    if (!read) {
+                        Spacer(Modifier.width(6.dp))
+                        Box(Modifier.size(8.dp).clip(CircleShape).background(MaterialTheme.colorScheme.error))
                     }
                 }
                 Text(
