@@ -15,15 +15,15 @@ Spec: [docs/specs/school-journal.md](../../docs/specs/school-journal.md). **Remo
 | `SchoolJournalStores.kt` | `SchoolJournalConfigStore` (encrypted `schoolJournal.*`), `ReadState` + `ReadStateStore` (per Immich user, `filesDir/school-journal/`) |
 | `SchoolJournalNews.kt` | `checkNews` (dot rules, spec §6) and the singleton `SchoolJournalNews` (icon + tab dots, `markGradesSeen`) |
 | `SchoolJournalMessages.kt` | `loadUnread` (after the watermark minus `readIds` + `unreadIds` one by one, 404 → gone), `Message.summary()`, `senderLabel`, `boardDates` |
-| `MessagesTab.kt` | Messages tab: All / Inbox / Announcements + "Unread only" chips, rows (megaphone for announcements, unread = bold + red time + dot on the right, struck = removed), long-press read/unread, infinite scroll |
+| `MessagesTab.kt` | Messages tab: All / Inbox / Announcements chips, rows (megaphone for announcements, unread = bold + red time + dot on the right, struck = removed), long-press read/unread, infinite scroll |
 | `SchoolJournalMessageScreen.kt` | One message or announcement: `fromHtml` body with links, notice-board card + dates, attachments' names, opening marks read, Mark as unread; 404 → back (`RemovedMessages`) |
 | `SchoolJournalGrades.kt` | `GradeSection` (one per child with All), `loadNewGradeIds`, `defaultSemester`, `orderSubjects`, kinds, `gradeBand` |
 | `GradesTab.kt` | Semester chips, subject cards (average, chips colored by band (no weight shown), New dot, labelled kinds), grade sheet |
 | `SchoolJournalSync.kt` | `syncNow`: `POST /sync`, then `/status` every 5 s (2 min) until a newer run finished; `SyncOutcome.message()` |
-| `SyncLine.kt` | "Last successful sync: today 14:32 (12 min ago) · next 14:47", stale > 1 h, failed flag |
+| `SyncLine.kt` | Server settings only: "Last successful sync: today 14:32 (12 min ago) · next 14:47", stale > 1 h, failed flag |
 | `SchoolJournalCache.kt` | Offline copy `filesDir/school-journal/cache.json` (status, children, messages page 1, grades per child + semester), tied to the address, cleared on Disconnect |
 | `SchoolJournalViewModel.kt` | `SchoolJournalUi`: setup vs content, connect (`/health` → `/status` → save), banners, children |
-| `SchoolJournalScreen.kt` | `SchoolJournalScreen`/`SchoolJournalContent`: child avatar row (`MemberCarousel`), status card, banner, segmented Messages/Grades switch, status sheet |
+| `SchoolJournalScreen.kt` | `SchoolJournalScreen`/`SchoolJournalContent`: child avatar row (`MemberCarousel`), banner, segmented Messages/Grades switch; `StatusDetails` (used by Server settings) |
 | `SchoolJournalSetup.kt` | Address + key form + Notifications toggle; as Server settings: status and Disconnect |
 | `SchoolJournalTopBarAction.kt` | Building icon + red dot (`SchoolJournalIcon`, stateless) for Wall and School; polls every 5 min while started |
 | `SchoolJournalNotifications.kt` | `SchoolJournalNotifyWorker` (15 min), `SchoolJournalNotifyScheduler`, `planNotifications`, `EXTRA_OPEN_SCHOOL_JOURNAL` |

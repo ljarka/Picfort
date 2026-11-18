@@ -53,27 +53,25 @@ Also shown (prefilled, with message "The API key is no longer valid") when any c
 ```
 ┌ ← School journal                 ⟳  ⋮ ┐   ⟳ = Sync now; ⋮ = Mark all read, Show removed, Server settings
 │  (O) Ola   (K) Kuba                   │   child avatars with initials (only with ≥ 2 children; no "All")
-│ Last successful sync: 14:32 · next 14:47 │ status card → status sheet
 │ [   Messages •   |   Grades •   ]     │   segmented switch (like Upcoming / Past); dot = new
 │ …tab content…                         │
 └───────────────────────────────────────┘
 ```
 
-### 4.1 Status line, banners & status sheet (`GET /status`, `GET /health`)
+### 4.1 Status line, banners & status details (`GET /status`, `GET /health`)
 
-- Status line, **always visible** under the app bar on every tab (owner request 2026-11-17):
+- Status line, **only in Server settings** (removed from the content screen 2026-11-18, `b458613`):
   "Last successful sync: {lastSuccessfulSyncAt} ({relative}) · next {nextSyncAt}", e.g.
   "Last successful sync: today 14:32 (12 min ago) · next 14:47". Date shown when not today
   ("Mon 16 Nov, 14:32"); device time format; the relative part refreshes every minute.
   `null` → "No successful sync yet". When the last run failed (`lastSync.status` `error` /
   `auth_failed`), add "· last check failed" in the error color. Shown from the cached copy when
   offline. Older than 1 h → the whole line in the warning color (no separate banner).
-  Tap → status sheet. Also shown in Server settings.
 - Banners (one, highest wins):
   1. `auth == auth_failed` → "The server can't log in to the e-journal. Fix its login and restart it." (error color)
   2. `503 NO_DATA_YET` → "First check of the e-journal is still running."
   3. Unreachable → "Offline. Data from 14:32" (cached copy, read only).
-- Status sheet: auth state; last sync (started, finished, `status`, `errorCode`,
+- Status details (Server settings, under the status line): auth state; last sync (started, finished, `status`, `errorCode`,
   `itemsFetched`, `changesDetected`); last successful sync; next sync; counts (grades,
   messages); server version; server address.
 
@@ -92,8 +90,8 @@ Also shown (prefilled, with message "The API key is no longer valid") when any c
   Row: sender (or "Notice board" when an announcement has no author), subject, date,
   "Attachment" if `hasAttachments`; announcements have a megaphone icon, "Announcement" and
   their board dates (`validFrom` / `validTo`); unread = bold, red time and a dot on the right (no reserved left margin).
-- Filter chips **All · Inbox · Announcements** (`type` query param) and **Unread only** (from the
-  phone's read state, §4.6). Overflow **Show removed** (`includeDeleted=true`):
+- Filter chips **All · Inbox · Announcements** (`type` query param) (no "Unread only" filter since 2026-11-18;
+  unread = bold, §4.6). Overflow **Show removed** (`includeDeleted=true`):
   removed rows struck through with "Removed from the e-journal".
 - Long-press / swipe: **Mark as read / unread**.
 - Overflow **Mark all as read** (for the selected child, or all) → snackbar "Marked N messages".
@@ -174,7 +172,7 @@ inside the module. The server's shared read state is **not used** (ADR 0017).
 | Endpoint | Used for |
 |---|---|
 | `GET /health` | Connect |
-| `GET /api/v1/status` | Status line & sheet, Connect, badge, Sync now |
+| `GET /api/v1/status` | Status line & details (Server settings), Connect, badge, Sync now |
 | `GET /api/v1/children` | Child chips, names |
 | `GET /api/v1/grades/subjects` | Grades tab |
 | `GET /api/v1/messages`, `GET /api/v1/messages/{id}` | Messages tab, message screen, unread |
