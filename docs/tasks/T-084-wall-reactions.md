@@ -1,6 +1,6 @@
 # T-084 — Family Wall: reactions and a notification for the first one
 
-**Status:** done  
+**Status:** done (2053ab3)  
 **Component:** Picfort server (`wall.py`, `app.py`, schema v2), Android (`:feature:wall`, `:app` one line)  
 **Depends on:** T-001, T-002. ADR [0018](../decisions/0018-wall-reaction-notifications.md).
 Owner request 2026-11-18: react to wall messages like in Slack (heart, thumbs up), and the author

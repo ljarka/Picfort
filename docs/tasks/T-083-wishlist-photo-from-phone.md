@@ -1,6 +1,6 @@
 # T-083 — Wishlist: take a photo or choose one from the phone
 
-**Status:** done  
+**Status:** done (30105f8)  
 **Component:** Picfort server (`shopping.py`, `app.py`), Android (`:feature:shopping`, `:app` file paths and auth paths)  
 **Depends on:** T-041, T-042. Owner request 2026-11-18: adding a wishlist item only offered an image URL.
 
