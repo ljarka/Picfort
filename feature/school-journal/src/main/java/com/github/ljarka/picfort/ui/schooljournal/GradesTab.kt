@@ -151,13 +151,12 @@ private fun SubjectCard(subject: SubjectSummary, newIds: Set<String>, onOpen: (G
     }
 }
 
-/** A grade: its value on the band's color, the weight small in the corner, a dot when new. */
+/** A grade: its value on the band's color, a dot when new. */
 @Composable
 private fun GradeChip(grade: Grade, isNew: Boolean, onClick: () -> Unit) {
     val (container, content) = bandColors(gradeBand(grade.numericValue))
     val description = buildString {
         append("${grade.value}, ${grade.category}")
-        grade.weight?.let { append(", weight $it") }
         if (isNew) append(", new")
     }
     Box {
@@ -177,14 +176,6 @@ private fun GradeChip(grade: Grade, isNew: Boolean, onClick: () -> Unit) {
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.Bold,
             )
-            grade.weight?.let {
-                Text(
-                    "$it",
-                    color = content.copy(alpha = 0.7f),
-                    style = MaterialTheme.typography.labelSmall,
-                    modifier = Modifier.align(Alignment.BottomEnd).padding(start = 18.dp, top = 18.dp),
-                )
-            }
         }
         if (isNew) NewDot(Modifier.align(Alignment.TopEnd).padding(2.dp))
     }
@@ -248,7 +239,6 @@ fun GradeDetails(grade: Grade, subject: String, isNew: Boolean, clock: JournalCl
         }
         Spacer(Modifier.height(12.dp))
         DetailRow("Kind", grade.gradeKind.label)
-        DetailRow("Weight", grade.weight?.toString() ?: "—")
         DetailRow("As a number", grade.numericValue?.let { averageText(it) } ?: "—")
         DetailRow("Counts to the average", if (grade.countsToAverage) "Yes" else "No")
         DetailRow("Semester", grade.semester.toString())

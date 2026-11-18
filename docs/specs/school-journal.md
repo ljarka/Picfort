@@ -110,7 +110,7 @@ Also shown (prefilled, with message "The API key is no longer valid") when any c
 - Semester chips: **Semester 1 · Semester 2 · Whole year** (`semester` param or none);
   default = current semester (the one of the newest grade).
 - One view, **by subject**: card per subject: name, weighted `average` ("—" when null), row of
-  grade chips (`value`, colored by `numericValue` 1–6, neutral when null; small weight number),
+  grade chips (`value`, colored by `numericValue` 1–6, neutral when null; weight not shown),
   oldest → newest. Non-regular kinds (`proposed_semester`, `semester`, `proposed_final`, `final`)
   shown as labelled values on the card ("Proposed: 4", "Final: 5"). Subjects with a new grade first.
 - Grades with a change event after the seen cursor carry a **New** marker (dot on the chip);
@@ -118,7 +118,7 @@ Also shown (prefilled, with message "The API key is no longer valid") when any c
 - No separate "Recent" list and no filters (owner decision 2026-11-17, simplification).
 - All children (two or more): one section per child, each from its own `/grades/subjects?child=`;
   without `child` the server would merge both children's subjects and averages (T-079).
-- Tap grade → sheet: value, numeric value, weight, category, kind, counts to average, teacher,
+- Tap grade → sheet: value, numeric value, category, kind, counts to average, teacher,
   comment, issued on, first seen, last changed, removed at.
 
 ### 4.5 Sync now (`POST /sync`)

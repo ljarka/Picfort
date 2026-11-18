@@ -18,7 +18,7 @@ Spec: [docs/specs/school-journal.md](../../docs/specs/school-journal.md). **Remo
 | `MessagesTab.kt` | Messages tab: All / Inbox / Announcements + "Unread only" chips, rows (megaphone for announcements, bold + dot = unread, struck = removed), long-press read/unread, infinite scroll |
 | `SchoolJournalMessageScreen.kt` | One message or announcement: `fromHtml` body with links, notice-board card + dates, attachments' names, opening marks read, Mark as unread; 404 → back (`RemovedMessages`) |
 | `SchoolJournalGrades.kt` | `GradeSection` (one per child with All), `loadNewGradeIds`, `defaultSemester`, `orderSubjects`, kinds, `gradeBand` |
-| `GradesTab.kt` | Semester chips, subject cards (average, chips colored by band, weight, New dot, labelled kinds), grade sheet |
+| `GradesTab.kt` | Semester chips, subject cards (average, chips colored by band (no weight shown), New dot, labelled kinds), grade sheet |
 | `SchoolJournalSync.kt` | `syncNow`: `POST /sync`, then `/status` every 5 s (2 min) until a newer run finished; `SyncOutcome.message()` |
 | `SyncLine.kt` | "Last successful sync: today 14:32 (12 min ago) · next 14:47", stale > 1 h, failed flag |
 | `SchoolJournalCache.kt` | Offline copy `filesDir/school-journal/cache.json` (status, children, messages page 1, grades per child + semester), tied to the address, cleared on Disconnect |
