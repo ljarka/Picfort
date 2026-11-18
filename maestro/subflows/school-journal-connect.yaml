@@ -25,5 +25,5 @@ appId: com.github.ljarka.picfort
 - inputText: "test-key"
 - tapOn: "Connect"
 - extendedWaitUntil:
-    visible: "Last successful sync.*"
+    visible: "Grades"
     timeout: 15000

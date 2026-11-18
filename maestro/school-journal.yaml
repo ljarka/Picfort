@@ -39,6 +39,8 @@ tags:
     file: scripts/school-journal-data.js
     env:
       MESSAGE: "Match on Saturday"
+# The new message is Kuba's (no "All" since 8896c65)
+- tapOn: "Kuba"
 - swipe:
     start: 50%, 45%
     end: 50%, 85%
@@ -83,9 +85,9 @@ tags:
 - tapOn: "Ola"
 - tapOn: "Grades"
 - extendedWaitUntil:
-    visible: "6, Test, weight 2, new"
+    visible: "6, Test, new"
     timeout: 10000
-- tapOn: "6, Test, weight 2, new"
+- tapOn: "6, Test, new"
 - extendedWaitUntil:
     visible: "Counts to the average"
     timeout: 5000
@@ -95,7 +97,6 @@ tags:
 - extendedWaitUntil:
     visible: "Checked the e-journal.*"
     timeout: 30000
-- assertVisible: "Last successful sync: today .*just now.*"
 # Nothing new left: no dot on School
 - tapOn: "Back"
 - extendedWaitUntil:

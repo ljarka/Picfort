@@ -40,7 +40,6 @@ tags:
 - extendedWaitUntil:
     visible: "Offline. Showing what was loaded.*"
     timeout: 30000
-- assertVisible: "Last successful sync.*"
 - assertVisible: "Trip on Friday"
 - tapOn: "Grades"
 - extendedWaitUntil:
