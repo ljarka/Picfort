@@ -609,6 +609,16 @@ def register_shopping(app: Flask, shopping: ShoppingStore):
 
 def register_family(app: Flask, family: FamilyStore):
     @app.route("/family", methods=["GET"])
+    @app.route("/wishlist/<int:item_id>/photo", methods=["PUT"])
+    def put_wishlist_photo(item_id):
+        upload = request.files.get("photo")
+        data = upload.read() if upload and upload.filename else b""
+        return jsonify(shopping.set_wishlist_photo(item_id, data))
+
+    @app.route("/wishlist/photo/<filename>")
+    def wishlist_photo(filename):
+        return _send_private_photo(shopping.wishlist_photo_path(filename), filename)
+
     def get_family():
         return jsonify(profiles=family.profiles())
 
@@ -885,3 +895,4 @@ if __name__ == "__main__":
     # waitress, not Flask's development server: made for long-running use, and it handles
     # slow or broken clients without tying up the server.
     serve(app, host="0.0.0.0", port=port, threads=8, ident="picfort")
+        wishlist_photos_dir=os.environ.get("WISHLIST_PHOTOS_PATH", "wishlist_photos"),

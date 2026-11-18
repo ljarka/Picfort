@@ -22,6 +22,7 @@ MAX_TOTAL_MINOR = 100_000_000
 MAX_RECEIPTS_LIMIT = 200
 MAX_SPENDING_MONTHS = 24
 RECEIPT_PHOTO_PREFIX = "/receipts/photo/"
+WISHLIST_PHOTO_PREFIX = "/wishlist/photo/"
 DATE_RE = re.compile(r"^\d{4}-\d{2}-\d{2}$")
 MONTH_RE = re.compile(r"^\d{4}-\d{2}$")
 
@@ -203,9 +204,13 @@ class ShoppingStore(SqliteStore):
         receipts_dir: str = None,
         currency: str = "PLN",
         link_preview=fetch_link_preview,
+        wishlist_photos_dir: str = None,
     ):
         super().__init__(db_path, clock=clock)
-        self.receipts_dir = receipts_dir or os.path.join(os.path.dirname(os.path.abspath(db_path)), "receipts")
+        data_dir = os.path.dirname(os.path.abspath(db_path))
+        self.receipts_dir = receipts_dir or os.path.join(data_dir, "receipts")
+        self.wishlist_photos_dir = wishlist_photos_dir or os.path.join(data_dir, "wishlist_photos")
+        os.makedirs(self.wishlist_photos_dir, exist_ok=True)
         self.currency = (currency or "PLN").strip() or "PLN"
         self.link_preview = link_preview
         os.makedirs(self.receipts_dir, exist_ok=True)
@@ -677,9 +682,11 @@ class ShoppingStore(SqliteStore):
             if "title" in body:
                 updates.append("title = ?")
                 params.append(_text(body["title"], "title", MAX_TEXT))
+            old_photo = None
             if "image_url" in body:
                 updates.append("image_url = ?")
                 params.append(validate_http_url(body["image_url"]) if body["image_url"] is not None else None)
+                old_photo = self._own_photo(row["image_url"])
             if "price_minor" in body:
                 updates.append("price_minor = ?")
                 params.append(_total_minor(body["price_minor"]))
@@ -701,7 +708,54 @@ class ShoppingStore(SqliteStore):
                 params.append(item_id)
                 conn.execute(f"UPDATE wishlist_items SET {', '.join(updates)} WHERE id = ?", params)
                 row = self._wishlist_row(conn, item_id)
+        if old_photo:
+            self._remove_wishlist_photo(old_photo)
         return self._wishlist_json(row)
+
+    def set_wishlist_photo(self, item_id: int, photo: bytes) -> dict:
+        """A photo taken or chosen on the phone (T-083) replaces the item's image; the old own photo goes."""
+        if not photo:
+            raise StoreError("A photo file is required")
+        ext, _, _ = inspect_photo(photo, error_cls=StoreError)
+        filename = f"{uuid.uuid4().hex}.{ext}"
+        path = os.path.join(self.wishlist_photos_dir, filename)
+        with open(path, "wb") as f:
+            f.write(photo)
+        try:
+            with closing(self.connect()) as conn, conn:
+                row = self._wishlist_row(conn, item_id)
+                old_photo = self._own_photo(row["image_url"])
+                conn.execute(
+                    "UPDATE wishlist_items SET image_url = ?, updated = ? WHERE id = ?",
+                    (WISHLIST_PHOTO_PREFIX + filename, self.clock(), item_id),
+                )
+                row = self._wishlist_row(conn, item_id)
+        except Exception:
+            os.remove(path)
+            raise
+        if old_photo:
+            self._remove_wishlist_photo(old_photo)
+        return self._wishlist_json(row)
+
+    def wishlist_photo_path(self, filename: str):
+        if not PHOTO_NAME_RE.match(filename):
+            return None
+        path = os.path.join(self.wishlist_photos_dir, filename)
+        return path if os.path.isfile(path) else None
+
+    @staticmethod
+    def _own_photo(image_url):
+        """The file name when [image_url] is a photo stored here, else None."""
+        if image_url and image_url.startswith(WISHLIST_PHOTO_PREFIX):
+            name = image_url[len(WISHLIST_PHOTO_PREFIX):]
+            return name if PHOTO_NAME_RE.match(name) else None
+        return None
+
+    def _remove_wishlist_photo(self, filename: str):
+        try:
+            os.remove(os.path.join(self.wishlist_photos_dir, filename))
+        except FileNotFoundError:
+            pass
 
     def delete_wishlist_item(self, item_id: int, user_id: str):
         with closing(self.connect()) as conn, conn:
@@ -709,6 +763,9 @@ class ShoppingStore(SqliteStore):
             if row["created_by"] != user_id and not row["bought"]:
                 raise StoreError("Only the creator can delete an unbought wishlist item", 403)
             conn.execute("DELETE FROM wishlist_items WHERE id = ?", (item_id,))
+        own = self._own_photo(row["image_url"])
+        if own:
+            self._remove_wishlist_photo(own)
 
     @staticmethod
     def _wishlist_row(conn, item_id: int):

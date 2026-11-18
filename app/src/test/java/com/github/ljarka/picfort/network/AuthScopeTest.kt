@@ -1,6 +1,7 @@
 package com.github.ljarka.picfort.network
 
 import okhttp3.HttpUrl.Companion.toHttpUrl
+import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -33,5 +34,14 @@ class AuthScopeTest {
         val immich = "https://example.com/immich".toHttpUrl()
         assertTrue("https://example.com/immich/api/users/me".toHttpUrl().isUnder(immich))
         assertFalse("https://example.com/other/api".toHttpUrl().isUnder(immich))
+    }
+
+    /** Same list as the server's AUTH_PREFIXES; a missing one loads that feature's photos without a token (401). */
+    @Test
+    fun `family paths match the server's auth prefixes`() {
+        assertEquals(
+            setOf("wall", "lists", "receipts", "spending", "wishlist", "events", "school", "family"),
+            PICFORT_FAMILY_PATHS.toSet(),
+        )
     }
 }

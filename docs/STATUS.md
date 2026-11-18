@@ -203,6 +203,15 @@ in one removable module `:feature:school-journal` ([spec](specs/school-journal.m
 
 ---
 
+### Phase 10 — Family touches
+Small things the family asked for while using the app.
+
+| Task | Description | Status |
+|------|-------------|--------|
+| [T-083](tasks/T-083-wishlist-photo-from-phone.md) | Wishlist: take a photo or choose one from the phone | `done` |
+
+---
+
 ## Task statuses
 
 - `draft` — idea captured, not yet designed

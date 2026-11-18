@@ -42,6 +42,7 @@ import java.time.format.DateTimeFormatter
 import java.time.format.FormatStyle
 import java.util.UUID
 import javax.inject.Inject
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -52,12 +53,16 @@ import kotlinx.coroutines.launch
 private const val LISTS_POLL_MILLIS = 60_000L
 private const val LIST_POLL_MILLIS = 10_000L
 
+/** Longest edge of a wishlist photo from the phone (T-083): sharp on a card, small to upload. */
+private const val WISHLIST_PHOTO_EDGE = 1600
+
 /** "14:32" in the device's locale, for the offline banner. */
 internal fun Long.asTime(zone: ZoneId = ZoneId.systemDefault()): String =
     DateTimeFormatter.ofLocalizedTime(FormatStyle.SHORT).format(Instant.ofEpochMilli(this).atZone(zone))
 
 @HiltViewModel
 class ShoppingListsViewModel @Inject constructor(
+    @ApplicationContext private val context: Context,
     private val repository: ShoppingRepository,
     private val wishlistRepository: WishlistRepository,
     private val events: FamilyEventsProvider,
@@ -187,13 +192,15 @@ class ShoppingListsViewModel @Inject constructor(
         priceMinor: Long?,
         eventId: Long?,
         targetMemberId: String?,
+        /** A photo taken or chosen on the phone (T-083); uploaded after the item is saved. */
+        photo: Uri? = null,
     ) {
         viewModelScope.launch {
             extra.update { it.copy(savingWishlist = true) }
             try {
                 val editing = extra.value.editingWishlistItem
                 val normalizedImageUrl = imageUrl?.trim()?.takeIf { it.isNotEmpty() }
-                if (editing == null) {
+                val saved = if (editing == null) {
                     wishlistRepository.create(
                         url = url,
                         title = title.ifBlank { null },
@@ -210,7 +217,12 @@ class ShoppingListsViewModel @Inject constructor(
                         priceMinor = priceMinor,
                         eventId = eventId,
                         targetMemberId = targetMemberId,
+                        keepImage = photo != null || normalizedImageUrl == editing.imageUrl,
                     )
+                }
+                if (photo != null) {
+                    val jpeg = compressImageUri(context, photo, maxEdge = WISHLIST_PHOTO_EDGE, jpegQuality = 85)
+                    wishlistRepository.uploadPhoto(saved.id, jpeg)
                 }
                 extra.update {
                     it.copy(
@@ -220,8 +232,10 @@ class ShoppingListsViewModel @Inject constructor(
                         wishlistPreview = null,
                     )
                 }
-            } catch (e: PicfortServerException) {
-                extra.update { it.copy(savingWishlist = false, message = e.message) }
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) { // server errors and unreadable photos
+                extra.update { it.copy(savingWishlist = false, message = e.message ?: "Couldn't save") }
             }
         }
     }

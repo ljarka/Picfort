@@ -6,4 +6,6 @@
     <cache-path name="wall" path="wall/" />
     <!-- Camera photos for shopping receipts (ShoppingListScreen, SpendingScreen). -->
     <cache-path name="receipts" path="receipts/" />
+    <!-- Camera photos for wishlist items (WishlistItemSheet, T-083). -->
+    <cache-path name="wishlist" path="wishlist/" />
 </paths>

@@ -7,9 +7,9 @@ Shopping list vertical slice: collaborative checklists, offline caching, receipt
 | File | Purpose |
 |---|---|
 | `ui/shopping/ShoppingScreens.kt` | UI: `ShoppingListsContent` (cards grid + wishlist carousel) and `ShoppingListContent` (checklist + receipts) |
-| `ui/shopping/WishlistUi.kt` | Wishlist horizontal carousel, product cards, add/edit bottom sheet with link preview |
+| `ui/shopping/WishlistUi.kt` | Wishlist horizontal carousel, product cards, add/edit bottom sheet with link preview, Take / Choose photo (T-083) |
 | `ui/shopping/WishlistWebViewSheet.kt` | In-app WebView bottom sheet fallback when server preview cannot fetch an image |
-| `ui/shopping/WishlistApi.kt` | Server HTTP client: `/wishlist` and `/wishlist/preview` endpoints |
+| `ui/shopping/WishlistApi.kt` | Server HTTP client: `/wishlist`, `/wishlist/preview`, `PUT /wishlist/{id}/photo`; resolves `/wishlist/photo/…` |
 | `ui/shopping/WishlistRepository.kt` | Shared wishlist state & `WishlistProvider` implementation |
 | `ui/shopping/ReceiptSheet.kt` | Receipt modal bottom sheet, date picker, member/list dropdowns, full-screen zoom viewer |
 | `ui/shopping/ReceiptReader.kt` | `ReceiptReader` & `GeminiNanoReceiptReader` (on-device ML Kit GenAI Prompt / AICore) |

@@ -11,6 +11,7 @@ ENV PYTHONUNBUFFERED=1 \
     WALL_PHOTOS_PATH=/data/wall_photos \
     SHOPPING_DB_PATH=/data/shopping.db \
     RECEIPTS_PATH=/data/receipts \
+    WISHLIST_PHOTOS_PATH=/data/wishlist_photos \
     CURRENCY=PLN \
     FAMILY_DB_PATH=/data/family.db \
     PROFILE_PHOTOS_PATH=/data/profile_photos \

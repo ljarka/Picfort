@@ -57,12 +57,14 @@ class WishlistRepository @Inject constructor(private val backend: WishlistBacken
         priceMinor: Long?,
         eventId: Long?,
         targetMemberId: String?,
+        /** True leaves the image as it is (e.g. the server's own photo, which the phone never sends back). */
+        keepImage: Boolean = false,
     ): WishlistItem {
         val updated = backend.update(
             id = id,
             title = title,
-            imageUrl = imageUrl,
-            clearImage = imageUrl == null,
+            imageUrl = imageUrl.takeUnless { keepImage },
+            clearImage = !keepImage && imageUrl == null,
             priceMinor = priceMinor,
             clearPrice = priceMinor == null,
             eventId = eventId,
@@ -86,6 +88,13 @@ class WishlistRepository @Inject constructor(private val backend: WishlistBacken
             clearReservedBy = reservedBy == null,
         )
         replaceItem(updated)
+    }
+
+    /** [jpeg] replaces the item's image on the server (T-083). */
+    suspend fun uploadPhoto(id: Long, jpeg: ByteArray): WishlistItem {
+        val updated = backend.uploadPhoto(id, jpeg)
+        replaceItem(updated)
+        return updated
     }
 
     suspend fun delete(id: Long) {

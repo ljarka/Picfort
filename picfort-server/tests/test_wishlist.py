@@ -168,3 +168,62 @@ class WishlistApiTest(unittest.TestCase):
             401,
             self.client.post("/wishlist/preview", json={"url": "https://a.example"}, headers={"Authorization": ""}).status_code,
         )
+
+
+class WishlistPhotoTest(unittest.TestCase):
+    """A photo taken or chosen on the phone instead of an image URL (T-083)."""
+
+    # The wishlist API test's fixtures, without running its tests again.
+    setUp = WishlistApiTest.setUp
+    tearDown = WishlistApiTest.tearDown
+
+    def create_item(self):
+        r = self.client.post("/wishlist", json={"url": "https://shop.example/bike", "title": "Bike"})
+        self.assertEqual(201, r.status_code, r.get_json())
+        return r.get_json()
+
+    def upload(self, item_id, data, filename="photo.jpg"):
+        from io import BytesIO
+        return self.client.put(f"/wishlist/{item_id}/photo", data={"photo": (BytesIO(data), filename)},
+                               content_type="multipart/form-data")
+
+    def photos(self):
+        return sorted(os.listdir(self.store.wishlist_photos_dir))
+
+    def test_uploaded_photo_becomes_the_image_and_is_served_privately(self):
+        from test_wall import image_bytes
+        item = self.create_item()
+        photo = image_bytes("PNG", (20, 10))
+        r = self.upload(item["id"], photo)
+        self.assertEqual(200, r.status_code, r.get_json())
+        image_url = r.get_json()["image_url"]
+        self.assertRegex(image_url, r"^/wishlist/photo/[0-9a-f]{32}\.png$")
+        served = self.client.get(image_url)
+        self.assertEqual(200, served.status_code)
+        self.assertEqual(photo, served.data)
+        self.assertIn("private", served.headers["Cache-Control"])
+        served.close()
+        self.assertEqual(401, self.client.get(image_url, headers={"Authorization": ""}).status_code)
+
+    def test_new_photo_url_or_delete_removes_the_old_file(self):
+        from test_wall import image_bytes
+        item = self.create_item()
+        self.upload(item["id"], image_bytes())
+        first = self.photos()
+        self.upload(item["id"], image_bytes("PNG"))
+        self.assertEqual(1, len(self.photos()))
+        self.assertNotEqual(first, self.photos())
+        self.client.patch(f"/wishlist/{item['id']}", json={"image_url": "https://shop.example/x.png"})
+        self.assertEqual([], self.photos())
+        self.upload(item["id"], image_bytes())
+        self.assertEqual(204, self.client.delete(f"/wishlist/{item['id']}").status_code)
+        self.assertEqual([], self.photos())
+
+    def test_invalid_uploads(self):
+        item = self.create_item()
+        self.assertEqual(400, self.client.put(f"/wishlist/{item['id']}/photo").status_code)
+        self.assertEqual(415, self.upload(item["id"], b"not an image").status_code)
+        from test_wall import image_bytes
+        self.assertEqual(404, self.upload(999, image_bytes()).status_code)
+        self.assertEqual([], self.photos())
+        self.assertEqual(404, self.client.get("/wishlist/photo/../../etc.jpg").status_code)

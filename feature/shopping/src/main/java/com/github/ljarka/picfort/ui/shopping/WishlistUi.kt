@@ -2,6 +2,9 @@ package com.github.ljarka.picfort.ui.shopping
 
 import android.content.Intent
 import android.net.Uri
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.PickVisualMediaRequest
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -39,6 +42,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -48,24 +52,31 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.vectorResource
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.core.content.FileProvider
 import coil3.compose.AsyncImage
 import com.github.ljarka.picfort.core.model.FamilyEvent
 import com.github.ljarka.picfort.core.model.FamilyMember
 import com.github.ljarka.picfort.core.model.WishlistItem
 import com.github.ljarka.picfort.core.model.WishlistPreview
+import com.github.ljarka.picfort.core.ui.R as CoreUiR
+import java.io.File
+import java.util.UUID
 
 @Composable
 fun WishlistCarouselSection(
@@ -316,10 +327,21 @@ fun WishlistItemSheet(
         priceMinor: Long?,
         eventId: Long?,
         targetMemberId: String?,
+        photo: Uri?,
     ) -> Unit,
     onDismiss: () -> Unit,
 ) {
     val clipboard = LocalClipboardManager.current
+    val context = LocalContext.current
+    // A photo taken or chosen on the phone (T-083); it wins over the image URL.
+    var photo by rememberSaveable(editing?.id) { mutableStateOf<Uri?>(null) }
+    var pendingCamera by rememberSaveable { mutableStateOf<Uri?>(null) }
+    val picker = rememberLauncherForActivityResult(ActivityResultContracts.PickVisualMedia()) { uri ->
+        if (uri != null) photo = uri
+    }
+    val camera = rememberLauncherForActivityResult(ActivityResultContracts.TakePicture()) { taken ->
+        if (taken) photo = pendingCamera
+    }
     var url by remember(editing?.id) { mutableStateOf(editing?.url.orEmpty()) }
     var title by remember(editing?.id) { mutableStateOf(editing?.title.orEmpty()) }
     var imageUrl by remember(editing?.id) { mutableStateOf(editing?.imageUrl) }
@@ -347,7 +369,7 @@ fun WishlistItemSheet(
     }
 
     LaunchedEffect(isPreviewLoading) {
-        if (wasPreviewLoading && !isPreviewLoading && editing == null && imageUrl.isNullOrBlank() &&
+        if (wasPreviewLoading && !isPreviewLoading && editing == null && photo == null && imageUrl.isNullOrBlank() &&
             isHttpUrl(url.trim())
         ) {
             showWebViewSheet = true
@@ -400,9 +422,9 @@ fun WishlistItemSheet(
             if (isPreviewLoading) {
                 LinearProgressIndicator(Modifier.fillMaxWidth())
             }
-            if (!imageUrl.isNullOrBlank()) {
+            if (photo != null || !imageUrl.isNullOrBlank()) {
                 AsyncImage(
-                    model = imageUrl,
+                    model = photo ?: imageUrl,
                     contentDescription = title,
                     contentScale = ContentScale.Crop,
                     modifier = Modifier
@@ -411,21 +433,40 @@ fun WishlistItemSheet(
                         .clip(RoundedCornerShape(12.dp)),
                 )
             }
-            OutlinedTextField(
-                value = imageUrl.orEmpty(),
-                onValueChange = { imageUrl = it },
-                label = { Text("Image URL (optional)") },
-                singleLine = true,
-                trailingIcon = {
-                    TextButton(onClick = {
-                        clipboard.getText()?.text?.trim()?.takeIf { it.isNotEmpty() }?.let { imageUrl = it }
-                    }) {
-                        Text("Paste")
-                    }
+            WishlistPhotoButtons(
+                hasPhoto = photo != null,
+                onTakePhoto = {
+                    val dir = File(context.cacheDir, "wishlist").apply { mkdirs() }
+                    val uri = FileProvider.getUriForFile(
+                        context,
+                        "${context.packageName}.files",
+                        File(dir, "${UUID.randomUUID()}.jpg"),
+                    )
+                    pendingCamera = uri
+                    camera.launch(uri)
                 },
-                modifier = Modifier.fillMaxWidth(),
+                onChoosePhoto = {
+                    picker.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly))
+                },
+                onRemovePhoto = { photo = null },
             )
-            if (imageUrl.isNullOrBlank() && isHttpUrl(url.trim()) && !isPreviewLoading) {
+            if (photo == null) {
+                OutlinedTextField(
+                    value = imageUrl.orEmpty(),
+                    onValueChange = { imageUrl = it },
+                    label = { Text("Image URL (optional)") },
+                    singleLine = true,
+                    trailingIcon = {
+                        TextButton(onClick = {
+                            clipboard.getText()?.text?.trim()?.takeIf { it.isNotEmpty() }?.let { imageUrl = it }
+                        }) {
+                            Text("Paste")
+                        }
+                    },
+                    modifier = Modifier.fillMaxWidth(),
+                )
+            }
+            if (photo == null && imageUrl.isNullOrBlank() && isHttpUrl(url.trim()) && !isPreviewLoading) {
                 TextButton(onClick = { showWebViewSheet = true }) {
                     Text("Load photo in browser")
                 }
@@ -459,7 +500,7 @@ fun WishlistItemSheet(
             val parsedPrice = if (priceInput.isBlank()) null else parseTotalMinor(priceInput)
             val priceValid = priceInput.isBlank() || parsedPrice != null
             val urlValid = editing != null || isHttpUrl(url.trim())
-            val imageUrlValid = imageUrl.isNullOrBlank() || isHttpUrl(imageUrl!!.trim())
+            val imageUrlValid = photo != null || imageUrl.isNullOrBlank() || isHttpUrl(imageUrl!!.trim())
             val titleValid = title.trim().isNotEmpty() || editing == null
             Button(
                 onClick = {
@@ -470,6 +511,7 @@ fun WishlistItemSheet(
                         parsedPrice,
                         eventId,
                         targetMemberId,
+                        photo,
                     )
                 },
                 enabled = !saving && urlValid && imageUrlValid && priceValid && titleValid,
@@ -497,6 +539,31 @@ fun WishlistItemSheet(
             },
             onDismiss = { showWebViewSheet = false },
         )
+    }
+}
+
+/** "Take photo" and "Choose photo" for the item's image (T-083); "Remove photo" once one is picked. */
+@Composable
+internal fun WishlistPhotoButtons(
+    hasPhoto: Boolean,
+    onTakePhoto: () -> Unit,
+    onChoosePhoto: () -> Unit,
+    onRemovePhoto: () -> Unit,
+) {
+    Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
+        OutlinedButton(onClick = onTakePhoto, modifier = Modifier.weight(1f)) {
+            Icon(ImageVector.vectorResource(CoreUiR.drawable.ic_photo_camera), contentDescription = null)
+            Spacer(Modifier.width(6.dp))
+            Text("Take photo", maxLines = 1)
+        }
+        OutlinedButton(onClick = onChoosePhoto, modifier = Modifier.weight(1f)) {
+            Icon(ImageVector.vectorResource(CoreUiR.drawable.ic_image), contentDescription = null)
+            Spacer(Modifier.width(6.dp))
+            Text("Choose photo", maxLines = 1)
+        }
+    }
+    if (hasPhoto) {
+        TextButton(onClick = onRemovePhoto) { Text("Remove photo") }
     }
 }
 

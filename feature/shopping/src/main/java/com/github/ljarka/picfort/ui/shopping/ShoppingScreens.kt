@@ -3,6 +3,7 @@ package com.github.ljarka.picfort.ui.shopping
 import android.app.Activity
 import android.content.Context
 import android.content.ContextWrapper
+import android.net.Uri
 import android.view.WindowManager
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -124,7 +125,7 @@ fun ShoppingListsContent(
     onEditWishlistItem: (WishlistItem) -> Unit = {},
     onCloseWishlistSheet: () -> Unit = {},
     onPreviewWishlistUrl: (String) -> Unit = {},
-    onSaveWishlistItem: (String, String, String?, Long?, Long?, String?) -> Unit = { _, _, _, _, _, _ -> },
+    onSaveWishlistItem: (String, String, String?, Long?, Long?, String?, Uri?) -> Unit = { _, _, _, _, _, _, _ -> },
     onToggleWishlistBought: (WishlistItem) -> Unit = {},
     onToggleWishlistReserve: (WishlistItem) -> Unit = {},
     onDeleteWishlistItem: (WishlistItem) -> Unit = {},

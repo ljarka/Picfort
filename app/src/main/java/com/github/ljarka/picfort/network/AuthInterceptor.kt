@@ -61,7 +61,7 @@ class AuthInterceptor @Inject constructor(
 }
 
 /** Family features on the Picfort server; the same list as the server's AUTH_PREFIXES (T-018). */
-val PICFORT_FAMILY_PATHS = listOf("wall", "lists", "receipts", "spending", "events", "school", "family")
+val PICFORT_FAMILY_PATHS = listOf("wall", "lists", "receipts", "spending", "wishlist", "events", "school", "family")
 
 /**
  * Adds the Immich token to family-feature requests on the Picfort server (`<server>/wall…`,

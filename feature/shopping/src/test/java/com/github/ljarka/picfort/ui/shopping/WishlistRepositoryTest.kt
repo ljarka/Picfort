@@ -4,6 +4,7 @@ import com.github.ljarka.picfort.core.model.WishlistItem
 import com.github.ljarka.picfort.core.model.WishlistPreview
 import kotlinx.coroutines.runBlocking
 import kotlinx.serialization.json.Json
+import okhttp3.HttpUrl.Companion.toHttpUrl
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
@@ -76,6 +77,15 @@ class WishlistRepositoryTest {
         override suspend fun delete(id: Long) {
             items.removeAll { it.id == id }
         }
+
+        val uploads = mutableListOf<Pair<Long, Int>>()
+
+        override suspend fun uploadPhoto(id: Long, jpeg: ByteArray): WishlistItem {
+            uploads += id to jpeg.size
+            val updated = items.first { it.id == id }.copy(imageUrl = "http://server.example/wishlist/photo/$id.jpg")
+            items.replaceAll { if (it.id == id) updated else it }
+            return updated
+        }
     }
 
     @Test
@@ -101,6 +111,40 @@ class WishlistRepositoryTest {
 
         repo.delete(created.id)
         assertFalse(repo.items.value.any { it.id == 3L })
+    }
+
+    @Test
+    fun `uploadPhoto replaces the image and keepImage leaves it alone on update`() = runBlocking {
+        val backend = FakeWishlistBackend()
+        val repo = WishlistRepository(backend)
+        repo.refresh()
+        repo.uploadPhoto(2, ByteArray(10))
+        assertEquals(listOf(2L to 10), backend.uploads)
+        val photo = "http://server.example/wishlist/photo/2.jpg"
+        assertEquals(photo, repo.items.value.first { it.id == 2L }.imageUrl)
+
+        repo.update(
+            2,
+            "Bike",
+            imageUrl = photo,
+            priceMinor = null,
+            eventId = null,
+            targetMemberId = null,
+            keepImage = true,
+        )
+        assertEquals(photo, repo.items.value.first { it.id == 2L }.imageUrl)
+
+        repo.update(2, "Bike", imageUrl = null, priceMinor = null, eventId = null, targetMemberId = null)
+        assertEquals(null, repo.items.value.first { it.id == 2L }.imageUrl)
+    }
+
+    @Test
+    fun `server photo paths resolve against the server address`() {
+        val dto = WishlistItemDto(id = 1, url = "https://a.example", title = "A", imageUrl = "/wishlist/photo/abc.jpg")
+        val base = "http://picfort.example:5050/".toHttpUrl()
+        assertEquals("http://picfort.example:5050/wishlist/photo/abc.jpg", dto.toDomain(base).imageUrl)
+        val shop = dto.copy(imageUrl = "https://shop.example/x.png")
+        assertEquals("https://shop.example/x.png", shop.toDomain(base).imageUrl)
     }
 
     @Test

@@ -13,7 +13,9 @@ import kotlinx.serialization.json.JsonNull
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
+import okhttp3.HttpUrl
 import okhttp3.MediaType.Companion.toMediaType
+import okhttp3.MultipartBody
 import okhttp3.Request
 import okhttp3.RequestBody.Companion.toRequestBody
 
@@ -33,11 +35,12 @@ data class WishlistItemDto(
     val created: String = "",
     val updated: String = "",
 ) {
-    fun toDomain() = WishlistItem(
+    /** [base] resolves the server's own photo paths (`/wishlist/photo/…`, T-083) to absolute URLs. */
+    fun toDomain(base: HttpUrl? = null) = WishlistItem(
         id = id,
         url = url,
         title = title,
-        imageUrl = imageUrl,
+        imageUrl = imageUrl?.let { if (base != null && it.startsWith("/")) base.resolve(it)?.toString() else it },
         priceMinor = priceMinor,
         currency = currency,
         eventId = eventId,
@@ -97,6 +100,9 @@ interface WishlistBackend {
     ): WishlistItem
 
     suspend fun delete(id: Long)
+
+    /** A photo taken or chosen on the phone becomes the item's image (T-083). */
+    suspend fun uploadPhoto(id: Long, jpeg: ByteArray): WishlistItem
 }
 
 @Singleton
@@ -114,7 +120,8 @@ class WishlistApi @Inject constructor(private val server: PicfortServerClient, p
         val raw = server.execute(Request.Builder().url(url).build()) {
             PicfortServerException.Outdated("wishlist")
         }.body
-        return json.decodeFromString<WishlistListDto>(raw).items.map { it.toDomain() }
+        val base = server.base()
+        return json.decodeFromString<WishlistListDto>(raw).items.map { it.toDomain(base) }
     }
 
     override suspend fun preview(url: String): WishlistPreview {
@@ -146,7 +153,7 @@ class WishlistApi @Inject constructor(private val server: PicfortServerClient, p
         val raw = server.execute(Request.Builder().url(endpoint).post(body(body)).build()) {
             PicfortServerException.Outdated("wishlist")
         }.body
-        return json.decodeFromString<WishlistItemDto>(raw).toDomain()
+        return json.decodeFromString<WishlistItemDto>(raw).toDomain(server.base())
     }
 
     override suspend fun update(
@@ -192,13 +199,24 @@ class WishlistApi @Inject constructor(private val server: PicfortServerClient, p
         val raw = server.execute(Request.Builder().url(endpoint).patch(body(body)).build()) {
             PicfortServerException.Gone("This wishlist item no longer exists")
         }.body
-        return json.decodeFromString<WishlistItemDto>(raw).toDomain()
+        return json.decodeFromString<WishlistItemDto>(raw).toDomain(server.base())
     }
 
     override suspend fun delete(id: Long) {
         server.execute(Request.Builder().url(itemUrl(id)).delete().build()) {
             PicfortServerException.Gone("This wishlist item no longer exists")
         }
+    }
+
+    override suspend fun uploadPhoto(id: Long, jpeg: ByteArray): WishlistItem {
+        val endpoint = itemUrl(id).newBuilder().addPathSegment("photo").build()
+        val body = MultipartBody.Builder().setType(MultipartBody.FORM)
+            .addFormDataPart("photo", "wishlist.jpg", jpeg.toRequestBody("image/jpeg".toMediaType()))
+            .build()
+        val raw = server.execute(Request.Builder().url(endpoint).put(body).build()) {
+            PicfortServerException.Outdated("wishlist photos")
+        }.body
+        return json.decodeFromString<WishlistItemDto>(raw).toDomain(server.base())
     }
 
     private fun itemUrl(id: Long) = server.base().newBuilder().addPathSegment("wishlist").addPathSegment("$id").build()
