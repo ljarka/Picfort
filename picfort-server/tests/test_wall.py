@@ -91,7 +91,8 @@ class WallApiTest(unittest.TestCase):
         post = r.get_json()
         self.assertEqual(
             {"author_id": MAMA, "author": "Mama", "text": "Pierwsze pomidory!", "photo_url": None,
-             "photo_width": None, "photo_height": None, "pinned": False, "created": "2026-11-10T12:01:00Z"},
+             "photo_width": None, "photo_height": None, "pinned": False, "created": "2026-11-10T12:01:00Z",
+             "reactions": []},
             {k: v for k, v in post.items() if k != "id"},
         )
         self.assertEqual([post], self.client.get("/wall").get_json())

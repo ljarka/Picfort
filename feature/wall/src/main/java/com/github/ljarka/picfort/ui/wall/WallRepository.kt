@@ -35,6 +35,12 @@ class WallRepository @Inject constructor(
 
     suspend fun togglePin(id: Int): WallPost = api.togglePin(id)
 
+    /** Adds my [emoji] to [post], or removes it when it is already mine (T-084). */
+    suspend fun toggleReaction(post: WallPost, emoji: String): WallPost {
+        val mine = post.reactions.any { it.emoji == emoji && it.isMine(myId) }
+        return api.react(post.id, emoji, add = !mine)
+    }
+
     private suspend fun compress(uri: Uri): ByteArray =
         compressImageUri(context, uri, maxEdge = MAX_EDGE, jpegQuality = JPEG_QUALITY)
 

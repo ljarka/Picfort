@@ -8,7 +8,7 @@ Thin Android application shell, navigation root, and Hilt root assembler.
 |---|---|
 | `MainActivity.kt` | Android activity, root `NavHost`, tab bar coordination, shared element transitions |
 | `AppNavigation.kt` | Navigation contracts and tab graph mapping (`Screen`, `TabGraph`, `Tab.graph`, `Tab.root`) |
-| `PicfortApplication.kt` | Application class, Hilt AndroidApp entry, Coil image loader init |
+| `PicfortApplication.kt` | Application class, Hilt AndroidApp entry, Coil image loader init, starts backup / reminders / journal / wall-reaction schedulers |
 | `network/*` | OkHttp/Retrofit; `AuthInterceptor` (token for Immich and its home address), `PicfortAuthInterceptor` (token for `PICFORT_FAMILY_PATHS` = the server's `AUTH_PREFIXES`), `DebugLoggingInterceptor` (no bodies for uploads/downloads), `UploadTimeoutInterceptor` (5 min for `POST /api/assets` on a slow uplink, T-006) |
 | `AppModule.kt` | Top-level Hilt module: binds cross-feature bridges (e.g. `ImmichUsersSync`) |
 | `assistant/*` | `BasePicfortAppFunctionService` & `PicfortAssistantHandler`: Android 16+ Gemini AppFunctions (T-074) |

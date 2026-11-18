@@ -10,6 +10,8 @@ import javax.inject.Singleton
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.buildJsonObject
+import kotlinx.serialization.json.put
 import okhttp3.HttpUrl
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.MultipartBody
@@ -28,7 +30,41 @@ data class WallPostDto(
     @SerialName("photo_height") val photoHeight: Int? = null,
     val pinned: Boolean = false,
     val created: String,
+    val reactions: List<WallReactionDto> = emptyList(),
 )
+
+/** One emoji on a post with everyone who chose it (T-084). */
+@Serializable
+data class WallReactionDto(
+    val emoji: String,
+    val count: Int = 0,
+    @SerialName("user_ids") val userIds: List<String> = emptyList(),
+    val names: List<String> = emptyList(),
+)
+
+/** A post of mine that got its first reaction from someone else (T-084), for a notification. */
+@Serializable
+data class FirstReactionDto(
+    @SerialName("post_id") val postId: Int,
+    val text: String? = null,
+    @SerialName("has_photo") val hasPhoto: Boolean = false,
+    val at: String,
+    val by: String,
+    val emoji: String,
+)
+
+@Serializable
+private data class FirstReactionsDto(val items: List<FirstReactionDto> = emptyList())
+
+/** The quick reactions, in the order the server and the app show them (T-084). */
+val WALL_REACTIONS =
+    listOf("\u2764\uFE0F", "\uD83D\uDC4D", "\uD83D\uDE02", "\uD83D\uDE2E", "\uD83D\uDE22", "\uD83C\uDF89")
+
+data class WallReaction(val emoji: String, val userIds: List<String>, val names: List<String>) {
+    val count: Int get() = userIds.size
+
+    fun isMine(myId: String) = myId in userIds
+}
 
 data class WallPost(
     val id: Int,
@@ -42,6 +78,8 @@ data class WallPost(
     val photoHeight: Int?,
     val pinned: Boolean,
     val created: Instant,
+    /** Emojis with people, in [WALL_REACTIONS] order; none until someone reacts (T-084). */
+    val reactions: List<WallReaction> = emptyList(),
 ) {
     /** Width / height, or null when unknown. */
     val aspectRatio: Float?
@@ -62,7 +100,42 @@ internal fun WallPostDto.toPost(base: HttpUrl) = WallPost(
     photoHeight = photoHeight,
     pinned = pinned,
     created = runCatching { Instant.parse(created) }.getOrDefault(Instant.EPOCH),
+    reactions = reactions.filter { it.userIds.isNotEmpty() }.map { WallReaction(it.emoji, it.userIds, it.names) },
 )
+
+/** [post] with [myId]'s [emoji] added or removed, for an instant answer before the server's. */
+internal fun WallPost.withReactionToggled(emoji: String, myId: String, myName: String): WallPost {
+    val current = reactions.firstOrNull { it.emoji == emoji }
+    val updated = when {
+        current == null -> reactions + WallReaction(emoji, listOf(myId), listOf(myName))
+
+        current.isMine(myId) -> {
+            val index = current.userIds.indexOf(myId)
+            val left = current.copy(
+                userIds = current.userIds.filterIndexed { i, _ -> i != index },
+                names = current.names.filterIndexed { i, _ -> i != index },
+            )
+            reactions.map { if (it.emoji == emoji) left else it }.filter { it.count > 0 }
+        }
+
+        else -> reactions.map {
+            if (it.emoji == emoji) it.copy(userIds = it.userIds + myId, names = it.names + myName) else it
+        }
+    }
+    return copy(
+        reactions = updated.sortedBy {
+            WALL_REACTIONS.indexOf(it.emoji).let { i ->
+                if (i <
+                    0
+                ) {
+                    Int.MAX_VALUE
+                } else {
+                    i
+                }
+            }
+        },
+    )
+}
 
 /** Family Wall calls to the Picfort server (T-001). */
 @Singleton
@@ -101,6 +174,34 @@ class WallApi @Inject constructor(
         val url = base.newBuilder().addPathSegment("wall").addPathSegment("$id").addPathSegment("pin").build()
         val request = Request.Builder().url(url).put(ByteArray(0).toRequestBody()).build()
         return json.decodeFromString<WallPostDto>(execute(request)).toPost(base)
+    }
+
+    /** Adds ([add]) or removes the caller's [emoji] on post [id] (T-084); the post as it is now. */
+    suspend fun react(id: Int, emoji: String, add: Boolean): WallPost {
+        val base = base()
+        val url = base.newBuilder().addPathSegment("wall").addPathSegment("$id").addPathSegment("reactions")
+            .apply { if (!add) addQueryParameter("emoji", emoji) }
+            .build()
+        val request = if (add) {
+            val body = buildJsonObject {
+                put("emoji", emoji)
+            }.toString().toRequestBody("application/json".toMediaType())
+            Request.Builder().url(url).put(body).build()
+        } else {
+            Request.Builder().url(url).delete().build()
+        }
+        return json.decodeFromString<WallPostDto>(execute(request)).toPost(base)
+    }
+
+    /** My posts whose first reaction by someone else came after [since] (ISO time), oldest first. */
+    suspend fun firstReactions(since: String): List<FirstReactionDto> {
+        val url = base().newBuilder().addPathSegment("wall").addPathSegment("first-reactions")
+            .addQueryParameter("since", since)
+            .build()
+        val text = server.execute(Request.Builder().url(url).build()) {
+            PicfortServerException.Outdated("wall reactions")
+        }.body
+        return json.decodeFromString<FirstReactionsDto>(text).items
     }
 
     private fun base(address: String = settings.frameUrl) = server.base(address)

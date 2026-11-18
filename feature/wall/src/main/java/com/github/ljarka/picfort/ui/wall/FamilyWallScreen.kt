@@ -101,8 +101,8 @@ import java.util.UUID
 
 private val CARD_WIDTH = 200.dp
 
-/** Room for the header and two lines of text (90 dp from the spec fits only one). */
-private val CARD_HEIGHT = 104.dp
+/** Room for the header, two lines of text and the reactions line (T-084). */
+private val CARD_HEIGHT = 124.dp
 private val HERO_HEIGHT = 220.dp
 private val GRID_GUTTER = 12.dp
 private val SPACING = 4.dp
@@ -136,6 +136,7 @@ fun FamilyWallScreen(
         onPost = viewModel::post,
         onDelete = viewModel::delete,
         onTogglePin = viewModel::togglePin,
+        onToggleReaction = viewModel::toggleReaction,
         onSetUpServer = onSetUpServer,
         onMessageShown = viewModel::messageShown,
         topBarActions = topBarActions,
@@ -156,6 +157,7 @@ fun FamilyWallContent(
     onPost: (String, Uri?) -> Unit = { _, _ -> },
     onDelete: (WallPost) -> Unit = {},
     onTogglePin: (WallPost) -> Unit = {},
+    onToggleReaction: (WallPost, String) -> Unit = { _, _ -> },
     onSetUpServer: () -> Unit = {},
     onMessageShown: () -> Unit = {},
     /** Fixed "now" for screenshot tests. */
@@ -170,21 +172,43 @@ fun FamilyWallContent(
         }
     }
     var composing by rememberSaveable { mutableStateOf(false) }
-    var openMessage by remember { mutableStateOf<WallPost?>(null) }
-    var openPhoto by remember { mutableStateOf<WallPost?>(null) }
+    // Ids, so an open post shows reactions as they change.
+    var openMessageId by remember { mutableStateOf<Int?>(null) }
+    var openPhotoId by remember { mutableStateOf<Int?>(null) }
+    val openMessage = openMessageId?.let { id -> state.posts.firstOrNull { it.id == id } }
+    val openPhoto = openPhotoId?.let { id -> state.posts.firstOrNull { it.id == id } }
     var confirmDelete by remember { mutableStateOf<WallPost?>(null) }
 
     openMessage?.let { post ->
         val author = state.authorOf(post)
         AlertDialog(
-            onDismissRequest = { openMessage = null },
+            onDismissRequest = { openMessageId = null },
             icon = { MemberAvatar(author, size = 40.dp) },
             title = { Text(author.name) },
-            text = { Text(post.text.orEmpty()) },
-            confirmButton = { TextButton(onClick = { openMessage = null }) { Text("Close") } },
+            text = {
+                Column {
+                    Text(post.text.orEmpty())
+                    if (post.id > 0) {
+                        ReactionBar(
+                            post = post,
+                            myId = state.myId,
+                            onToggle = { onToggleReaction(post, it) },
+                            modifier = Modifier.padding(top = 16.dp),
+                        )
+                    }
+                }
+            },
+            confirmButton = { TextButton(onClick = { openMessageId = null }) { Text("Close") } },
         )
     }
-    openPhoto?.let { post -> PhotoViewer(post, onDismiss = { openPhoto = null }) }
+    openPhoto?.let { post ->
+        PhotoViewer(
+            post,
+            myId = state.myId,
+            onToggleReaction = { onToggleReaction(post, it) },
+            onDismiss = { openPhotoId = null },
+        )
+    }
     confirmDelete?.let { post ->
         AlertDialog(
             onDismissRequest = { confirmDelete = null },
@@ -266,8 +290,8 @@ fun FamilyWallContent(
                             now = now,
                             onOpenEvent = onOpenEvent,
                             onOpenEvents = onOpenEvents,
-                            onMessageClick = { openMessage = it },
-                            onPhotoClick = { openPhoto = it },
+                            onMessageClick = { openMessageId = it.id },
+                            onPhotoClick = { openPhotoId = it.id },
                             onDelete = { confirmDelete = it },
                             onTogglePin = onTogglePin,
                         )
@@ -452,7 +476,9 @@ private fun MessageCard(
                 style = MaterialTheme.typography.bodyMedium,
                 maxLines = 2,
                 overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.weight(1f),
             )
+            ReactionSummary(post.reactions, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
         PostMenu(menu, post.pinned, onDismiss = { menu = false }, onDelete = onDelete, onTogglePin = onTogglePin)
     }
@@ -509,6 +535,17 @@ private fun PhotoTile(
                     .background(Color.Black.copy(alpha = 0.35f), CircleShape)
                     .padding(4.dp)
                     .size(14.dp),
+            )
+        }
+        if (post.reactions.isNotEmpty()) {
+            ReactionSummary(
+                post.reactions,
+                color = Color.White,
+                modifier = Modifier
+                    .align(Alignment.TopStart)
+                    .padding(8.dp)
+                    .background(Color.Black.copy(alpha = 0.45f), RoundedCornerShape(50))
+                    .padding(horizontal = 8.dp, vertical = 2.dp),
             )
         }
         if (post.id < 0) {
@@ -634,7 +671,7 @@ private fun ComposeSheet(onDismiss: () -> Unit, onSend: (String, Uri?) -> Unit) 
 }
 
 @Composable
-private fun PhotoViewer(post: WallPost, onDismiss: () -> Unit) {
+private fun PhotoViewer(post: WallPost, myId: String, onToggleReaction: (String) -> Unit, onDismiss: () -> Unit) {
     Dialog(onDismissRequest = onDismiss, properties = DialogProperties(usePlatformDefaultWidth = false)) {
         Surface(color = Color.Black, modifier = Modifier.fillMaxSize()) {
             Box(Modifier.clickable(onClick = onDismiss)) {
@@ -644,18 +681,26 @@ private fun PhotoViewer(post: WallPost, onDismiss: () -> Unit) {
                     contentScale = ContentScale.Fit,
                     modifier = Modifier.fillMaxSize(),
                 )
-                if (!post.text.isNullOrBlank()) {
-                    Text(
-                        post.text,
-                        color = Color.White,
-                        style = MaterialTheme.typography.bodyLarge,
-                        modifier = Modifier
-                            .align(Alignment.BottomCenter)
-                            .fillMaxWidth()
-                            .background(Color.Black.copy(alpha = 0.5f))
-                            .navigationBarsPadding()
-                            .padding(16.dp),
-                    )
+                Column(
+                    Modifier
+                        .align(Alignment.BottomCenter)
+                        .fillMaxWidth()
+                        .background(Color.Black.copy(alpha = 0.5f))
+                        .navigationBarsPadding()
+                        .padding(16.dp),
+                ) {
+                    if (!post.text.isNullOrBlank()) {
+                        Text(post.text, color = Color.White, style = MaterialTheme.typography.bodyLarge)
+                    }
+                    if (post.id > 0) {
+                        ReactionBar(
+                            post = post,
+                            myId = myId,
+                            onToggle = onToggleReaction,
+                            onDark = true,
+                            modifier = Modifier.padding(top = if (post.text.isNullOrBlank()) 0.dp else 12.dp),
+                        )
+                    }
                 }
             }
         }

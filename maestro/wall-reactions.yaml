@@ -1,0 +1,46 @@
+# Family Wall reactions (T-084): react to a post, see the count on the card, take it back.
+# Test server only: posts "Reactions check" and deletes it at the end.
+appId: com.github.ljarka.picfort
+name: Wall reactions (T-084)
+tags:
+  - wall
+---
+- runFlow: subflows/open-app.yaml
+- extendedWaitUntil:
+    visible: "Family Wall"
+    timeout: 20000
+- tapOn: "New post"
+- tapOn: "Write something to the family…"
+- inputText: "Reactions check"
+- tapOn: "Post"
+- extendedWaitUntil:
+    visible: "Reactions check"
+    timeout: 15000
+# Open it: every quick reaction is there, none chosen yet
+- tapOn: "Reactions check"
+- extendedWaitUntil:
+    visible: "React ❤️"
+    timeout: 5000
+- assertVisible: "React 🎉"
+- tapOn: "React ❤️"
+- extendedWaitUntil:
+    visible: "❤️, 1"
+    timeout: 10000
+- tapOn: "Close"
+# The card shows it
+- assertVisible: ".*❤️ 1.*"
+# Take it back
+- tapOn: "Reactions check"
+- tapOn: "❤️, 1"
+- extendedWaitUntil:
+    visible: "React ❤️"
+    timeout: 10000
+- tapOn: "Close"
+- assertNotVisible: ".*❤️ 1.*"
+# Clean up
+- longPressOn: "Reactions check"
+- tapOn: "Delete"
+- tapOn: "Delete"
+- extendedWaitUntil:
+    notVisible: "Reactions check"
+    timeout: 10000

@@ -1,6 +1,8 @@
 package com.github.ljarka.picfort.ui.wall
 
+import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.unit.dp
 import app.cash.paparazzi.DeviceConfig
 import app.cash.paparazzi.Paparazzi
 import com.android.resources.NightMode
@@ -42,6 +44,7 @@ class WallScreenshotTest {
         text: String?,
         photo: Pair<Int, Int>? = null,
         pinned: Boolean = false,
+        reactions: List<WallReaction> = emptyList(),
     ) = WallPost(
         id = id,
         authorId = author,
@@ -52,14 +55,24 @@ class WallScreenshotTest {
         photoHeight = photo?.second,
         pinned = pinned,
         created = Instant.ofEpochMilli(NOW - minutesAgo * 60_000),
+        reactions = reactions,
     )
 
+    private fun reacted(emoji: Int, vararg who: String) =
+        WallReaction(WALL_REACTIONS[emoji], who.toList(), who.map { id -> members.first { it.id == id }.name })
+
     private val wallPosts = listOf(
-        wallPost(1, "mama", 25, "Pierwsze pomidory z ogródka! 🍅"),
+        wallPost(
+            1,
+            "mama",
+            25,
+            "Pierwsze pomidory z ogródka! 🍅",
+            reactions = listOf(reacted(0, "tata", "ola"), reacted(1, "babcia")),
+        ),
         wallPost(2, "tata", 90, "Kto odbiera Olę z treningu w czwartek?", pinned = true),
         wallPost(3, "babcia", 300, "Dziękuję za odwiedziny, było cudownie ❤️"),
         wallPost(4, "ola", 600, "Mam piątkę z matmy!!!"),
-        wallPost(5, "mama", 40, "Wycieczka w Tatry", photo = 1920 to 1280),
+        wallPost(5, "mama", 40, "Wycieczka w Tatry", photo = 1920 to 1280, reactions = listOf(reacted(0, "babcia"))),
         wallPost(6, "tata", 120, null, photo = 1080 to 1440),
         wallPost(7, "ola", 200, "Burek", photo = 1440 to 1440),
         wallPost(8, "babcia", 500, null, photo = 1440 to 1080),
@@ -100,6 +113,19 @@ class WallScreenshotTest {
             FamilyWallUiState(members = members, posts = wallPosts, myId = "mama", isLoading = false),
             now = NOW,
         )
+    }
+
+    /** The reactions under an opened post (T-084): mine highlighted, counts, who reacted. */
+    @Test
+    fun wall_reaction_bar() = snap {
+        androidx.compose.material3.Surface {
+            ReactionBar(
+                post = wallPosts.first(),
+                myId = "ola",
+                onToggle = {},
+                modifier = androidx.compose.ui.Modifier.padding(16.dp),
+            )
+        }
     }
 
     @Test

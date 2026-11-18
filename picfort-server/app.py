@@ -24,6 +24,9 @@ the author is the Immich user of that token.
     DELETE /wall/<id>           -> 204 (own posts only)
     PUT    /wall/<id>/pin       -> the post with pinned toggled (own posts only)
     GET    /wall/photo/<file>   -> the photo attached to a post
+    PUT    /wall/<id>/reactions -> the post, with the caller's {"emoji"} added (T-084; anyone, any post)
+    DELETE /wall/<id>/reactions?emoji=<emoji> -> the post, without the caller's emoji
+    GET    /wall/first-reactions?since=<ISO> -> the caller's posts whose first reaction came after since
 
 Shopping lists (see shopping.py, T-018), same token auth; everyone can edit every list.
     GET    /lists[?archived=1]               -> active (or archived) lists with all items
@@ -606,9 +609,6 @@ def register_shopping(app: Flask, shopping: ShoppingStore):
         shopping.delete_wishlist_item(item_id, g.user.id)
         return "", 204
 
-
-def register_family(app: Flask, family: FamilyStore):
-    @app.route("/family", methods=["GET"])
     @app.route("/wishlist/<int:item_id>/photo", methods=["PUT"])
     def put_wishlist_photo(item_id):
         upload = request.files.get("photo")
@@ -619,6 +619,9 @@ def register_family(app: Flask, family: FamilyStore):
     def wishlist_photo(filename):
         return _send_private_photo(shopping.wishlist_photo_path(filename), filename)
 
+
+def register_family(app: Flask, family: FamilyStore):
+    @app.route("/family", methods=["GET"])
     def get_family():
         return jsonify(profiles=family.profiles())
 
@@ -851,6 +854,20 @@ def register_wall(app: Flask, wall: WallStore):
             return failure
         return jsonify(wall.toggle_pin(post_id))
 
+    @app.route("/wall/<int:post_id>/reactions", methods=["PUT"])
+    def add_reaction(post_id):
+        post = wall.react(post_id, g.user.id, g.user.name, json_body().get("emoji"))
+        return jsonify(post) if post else error("Post not found", 404)
+
+    @app.route("/wall/<int:post_id>/reactions", methods=["DELETE"])
+    def remove_reaction(post_id):
+        post = wall.unreact(post_id, g.user.id, request.args.get("emoji"))
+        return jsonify(post) if post else error("Post not found", 404)
+
+    @app.route("/wall/first-reactions", methods=["GET"])
+    def first_reactions():
+        return jsonify(items=wall.first_reactions(g.user.id, request.args.get("since")))
+
     @app.route("/wall/photo/<filename>")
     def wall_photo(filename):
         return _send_private_photo(wall.photo_path(filename), filename)
@@ -878,6 +895,7 @@ if __name__ == "__main__":
         os.environ.get("SHOPPING_DB_PATH", "shopping.db"),
         receipts_dir=os.environ.get("RECEIPTS_PATH", "receipts"),
         currency=os.environ.get("CURRENCY", "PLN"),
+        wishlist_photos_dir=os.environ.get("WISHLIST_PHOTOS_PATH", "wishlist_photos"),
     )
     family_store = FamilyStore(os.environ.get("FAMILY_DB_PATH", "family.db"),
                                os.environ.get("PROFILE_PHOTOS_PATH", "profile_photos"))
@@ -895,4 +913,3 @@ if __name__ == "__main__":
     # waitress, not Flask's development server: made for long-running use, and it handles
     # slow or broken clients without tying up the server.
     serve(app, host="0.0.0.0", port=port, threads=8, ident="picfort")
-        wishlist_photos_dir=os.environ.get("WISHLIST_PHOTOS_PATH", "wishlist_photos"),

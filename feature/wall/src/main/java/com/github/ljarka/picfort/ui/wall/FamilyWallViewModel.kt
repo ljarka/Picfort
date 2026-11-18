@@ -238,6 +238,45 @@ class FamilyWallViewModel @Inject constructor(
         }
     }
 
+    /**
+     * Adds or removes my [emoji] on [post] (T-084): shown at once, then the server's answer;
+     * the post as it was, with a message, when that fails.
+     */
+    fun toggleReaction(post: WallPost, emoji: String) {
+        if (post.id < 0) return
+        val myId = repository.myId
+        val myName = _state.value.members.firstOrNull { it.id == myId }?.name.orEmpty()
+        val current = _state.value.posts.firstOrNull { it.id == post.id } ?: post
+        _state.update { s ->
+            s.copy(
+                posts = s.posts.map {
+                    if (it.id ==
+                        post.id
+                    ) {
+                        current.withReactionToggled(emoji, myId, myName)
+                    } else {
+                        it
+                    }
+                },
+            )
+        }
+        viewModelScope.launch {
+            try {
+                val updated = repository.toggleReaction(current, emoji)
+                _state.update { s -> s.copy(posts = s.posts.map { if (it.id == post.id) updated else it }) }
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                _state.update { s ->
+                    s.copy(
+                        posts = s.posts.map { if (it.id == post.id) current else it },
+                        message = "Couldn't react: ${e.message}",
+                    )
+                }
+            }
+        }
+    }
+
     fun messageShown() {
         _state.update { it.copy(message = null) }
     }

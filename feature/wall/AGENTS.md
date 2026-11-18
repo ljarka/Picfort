@@ -6,19 +6,22 @@ Family wall vertical slice: posts stream, today panel (events/trips/birthdays), 
 
 | File | Purpose |
 |---|---|
-| `ui/wall/FamilyWallScreen.kt` | UI: `FamilyWallScreen`, `FamilyWallContent`, post cards, photo upload dialog, filter chips |
+| `ui/wall/FamilyWallScreen.kt` | UI: `FamilyWallScreen`, `FamilyWallContent`, post cards (reaction line), message dialog & photo viewer (reaction bar), compose sheet |
+| `ui/wall/WallReactions.kt` | `ReactionBar` (six emojis, counts, mine highlighted, who reacted), `ReactionSummary` (T-084) |
+| `ui/wall/WallReactionNotifications.kt` | `WallReactionNotifyWorker` (15 min) + `WallReactionNotifyScheduler`, cursor per Immich user, "Tata reacted ❤️" (ADR 0018) |
 | `ui/wall/TodayPanel.kt` | Today overview panel at the top of the wall (events, ongoing trips, next big event) |
-| `ui/wall/FamilyWallViewModel.kt` | ViewModel: wall stream, polling, new post creation, reaction toggles |
+| `ui/wall/FamilyWallViewModel.kt` | ViewModel: wall stream, polling, new post creation, pin, `toggleReaction` (instant, then the server's answer) |
 | `ui/wall/WallRepository.kt` | Repository: server fetch & polling, optimistic updates |
 | `ui/wall/WallAssistantImpl.kt` | `WallAssistantProvider` for Gemini AppFunctions (T-074) |
-| `ui/wall/WallApi.kt` | Server HTTP client: `/wall/posts`, `/wall/posts/{id}/reactions` |
-| `ui/wall/WallScreenshotTest.kt` | Paparazzi snapshots: wall feed, dark mode, filtered, today panels |
+| `ui/wall/WallApi.kt` | Server HTTP client: `/wall`, `/wall/{id}` (delete, pin), `/wall/{id}/reactions` (PUT/DELETE), `/wall/first-reactions`; `WALL_REACTIONS` |
+| `test/…/WallScreenshotTest.kt` | Paparazzi snapshots: wall feed (with reactions), reaction bar, dark mode, filtered, today panels |
 
 ## Public Contract / Navigation Entry Points
 
 - `FamilyWallScreen(onSettingsClick, onEditMember, onOpenFamily, onOpenEvent, onOpenEvents, onSetUpServer, topBarActions)`;
   `topBarActions`: icons from `:app` before Settings (the school journal's, ADR 0017), unknown here;
   `onOpenFamily` is the "+" circle at the end of the avatar row (opens Family settings).
+- `WallReactionNotifyScheduler.start()`: called once from `PicfortApplication.onCreate`.
 
 ## Dependencies & Boundaries
 
@@ -36,4 +39,5 @@ Family wall vertical slice: posts stream, today panel (events/trips/birthdays), 
 ./gradlew :feature:wall:testDebugUnitTest
 ./gradlew :feature:wall:verifyPaparazziDebug
 ./gradlew :feature:wall:recordPaparazziDebug # on intentional UI changes
+./scripts/maestro-smoke.sh maestro/wall-reactions.yaml   # device, test server: react, count, take back
 ```

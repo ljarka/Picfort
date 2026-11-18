@@ -11,6 +11,7 @@ import com.github.ljarka.picfort.backup.BackupScheduler
 import com.github.ljarka.picfort.local.LocalThumbnailFetcherFactory
 import com.github.ljarka.picfort.ui.events.reminders.ReminderScheduler
 import com.github.ljarka.picfort.ui.schooljournal.SchoolJournalNotifyScheduler
+import com.github.ljarka.picfort.ui.wall.WallReactionNotifyScheduler
 import dagger.hilt.android.HiltAndroidApp
 import javax.inject.Inject
 import okhttp3.OkHttpClient
@@ -34,6 +35,9 @@ class PicfortApplication :
     @Inject
     lateinit var schoolJournalNotifyScheduler: SchoolJournalNotifyScheduler
 
+    @Inject
+    lateinit var wallReactionNotifyScheduler: WallReactionNotifyScheduler
+
     override val workManagerConfiguration: Configuration
         get() = Configuration.Builder().setWorkerFactory(workerFactory).build()
 
@@ -42,6 +46,7 @@ class PicfortApplication :
         backupScheduler.apply() // keep the periodic backup in sync with settings
         reminderScheduler.start() // event reminders follow the events (T-039)
         schoolJournalNotifyScheduler.start() // school journal notifications (T-082, ADR 0017)
+        wallReactionNotifyScheduler.start() // first reaction on my wall posts (T-084)
         SingletonImageLoader.setSafe { context ->
             ImageLoader.Builder(context)
                 .components {

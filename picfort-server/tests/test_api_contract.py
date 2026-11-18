@@ -90,13 +90,15 @@ class ApiContractTest(unittest.TestCase):
             "/wall": ["GET", "POST"],
             "/wall/<int:post_id>": ["DELETE"],
             "/wall/<int:post_id>/pin": ["PUT"],
+            "/wall/<int:post_id>/reactions": ["DELETE", "PUT"],
+            "/wall/first-reactions": ["GET"],
             "/wall/photo/<filename>": ["GET"],
             "/wishlist": ["GET", "POST"],
             "/wishlist/<int:item_id>": ["DELETE", "PATCH"],
-            "/wishlist/preview": ["POST"],
-        }
             "/wishlist/<int:item_id>/photo": ["PUT"],
             "/wishlist/photo/<filename>": ["GET"],
+            "/wishlist/preview": ["POST"],
+        }
 
         actual = {}
         for rule in self.app.url_map.iter_rules():
