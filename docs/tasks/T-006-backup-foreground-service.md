@@ -1,6 +1,6 @@
 # T-006 — Backup: fix Android 12+ 10-minute background limit
 
-**Status:** in-progress (code `0e173d1`; left: a run longer than 10 minutes on a real phone, see below)  
+**Status:** done (`0e173d1`)  
 **Component:** Android app  
 **Depends on:** —
 
@@ -64,12 +64,12 @@ T-006 adds:
 - [x] Notification shows real-time upload count
 - [x] Stop button in notification stops the service
       _Emulator: tapped on the notification; Settings shows "Last backup: Stopped"._
-- [ ] Backup runs beyond 10 minutes without being killed
+- [x] Backup runs beyond 10 minutes without being killed
       _Emulator, uplink throttled to 100 kb/s: a 7-minute run of 20 photos finished in the
       foreground. Longer runs couldn't be made reliably: below ~100 kb/s ordinary calls time out,
       the tunnel in front of the test Immich ends a single upload after ~2.7 min (HTTP 524), and
-      the emulator doesn't throttle traffic to the host. Left: a first backup of many photos on a
-      real phone (screen off), checking it goes on past 10 minutes._
+      the emulator doesn't throttle traffic to the host. Real phone: checked by the owner
+      (reported 2026-11-23)._
 - [x] Scheduled background backup still works as before (same worker; no notification at the end)
 - [x] On completion, notification summarizes result
       _Emulator: "Backup complete · Uploaded 20" / "Home network · Uploaded 1"._

@@ -13,12 +13,6 @@
 - Already shipped: wall, shopping, receipts & spending, events & birthdays, school timetables,
   school journal, timeline, backup, browser frame (see STATUS.md).
 
-## 0. Finish what is open
-
-| Step | Goal | Done when… |
-|---|---|---|
-| **T-006** Backup as a foreground service | Long first backups finish on Android 12+. | A backup longer than 10 minutes completes on a real phone (the code is already merged). |
-
 ## 1. Easy self-hosting
 
 So that another family can install Picfort in under an hour, without help.
