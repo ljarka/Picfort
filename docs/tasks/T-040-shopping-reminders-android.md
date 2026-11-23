@@ -1,6 +1,6 @@
 # T-040 — Shopping list reminders (Android notifications)
 
-**Status:** in-progress (code `d0c90ab`; left: a green run of `maestro/shopping-reminders.yaml` on a device, see below)  
+**Status:** done (`d0c90ab`)  
 **Component:** Android app  
 **Depends on:** T-019 (Shopping list screens)
 
@@ -59,12 +59,10 @@ In the shopping list screen (`ShoppingListScreen`), a bell icon [🔔] in the to
 - A shown reminder is dismissed when its last item is checked off in the app.
 - Bell and status row are shown offline too (the reminder is this phone's); not on archived lists.
 
-## Left
+## Device check
 
-- Run `./scripts/maestro-smoke.sh maestro/shopping-reminders.yaml` on an emulator nobody else is using
-  (12-hour clock; ~8 min). On 2026-11-23 it reached the time picker (bell, sheet, presets, custom date),
-  then other tests on the same emulator broke Maestro's driver before the alarm. Unit and Paparazzi tests,
-  ktlint, lint and boundaries are green. When it passes: status `done (d0c90ab)` and STATUS.md.
+`./scripts/maestro-smoke.sh maestro/shopping-reminders.yaml` passed on an emulator (2026-11-23):
+bell sheet, custom time, notification with "Snooze 1h", tap opens the list, reminder used up.
 
 ## Acceptance criteria
 

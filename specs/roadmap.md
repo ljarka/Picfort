@@ -17,7 +17,6 @@
 
 | Step | Goal | Done when… |
 |---|---|---|
-| **T-040** Shopping reminders | A list can remind this phone before the shop, showing what's left. | Bell sheet with presets works, the notification opens the list and snoozes 1 h, and reminders survive a reboot. |
 | **T-006** Backup as a foreground service | Long first backups finish on Android 12+. | A backup longer than 10 minutes completes on a real phone (the code is already merged). |
 
 ## 1. Easy self-hosting
