@@ -221,7 +221,7 @@ Another family installs Picfort in under an hour, without help ([roadmap](../spe
 
 | Task | Description | Status |
 |------|-------------|--------|
-| [T-085](tasks/T-085-install-guide.md) | Install guide: from "I have Immich" to "the app is connected" (`INSTALL.md`) | `ready` |
+| [T-085](tasks/T-085-install-guide.md) | Install guide: from "I have Immich" to "the app is connected" (`INSTALL.md`) | `in-progress` |
 
 ---
 

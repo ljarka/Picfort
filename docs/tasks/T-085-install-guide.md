@@ -1,6 +1,6 @@
 # T-085 — Install guide: from "I have Immich" to "the app is connected"
 
-**Status:** ready  
+**Status:** in-progress (guide `c64a275`; left: a trial by someone on a clean machine, see below)  
 **Component:** Docs (README, `INSTALL.md`)  
 **Depends on:** —  
 **Roadmap:** [Easy self-hosting](../../specs/roadmap.md#1-easy-self-hosting), first step
@@ -43,10 +43,12 @@ reference material (variables, API key permissions, tunnel, frame).
 
 ## Acceptance criteria
 
-- [ ] `INSTALL.md` covers steps 1–11 above; every command matches `docker/` and the release assets.
-- [ ] Download URLs resolve to the latest release's assets; `docker compose config` accepts the
+- [x] `INSTALL.md` covers steps 1–11 above; every command matches `docker/` and the release assets.
+- [x] Download URLs resolve to the latest release's assets; `docker compose config` accepts the
       downloaded files with a filled-in `.env`.
-- [ ] README links to it at the top and from "Picfort server".
-- [ ] No real hosts or accounts: `photos.example.com`, `192.168.1.20`, `test@example.com`.
+      _2026-11-23: v0.9.17's files started under another name and port with the test Immich:
+      `/status` answered `"status":"ok"`; with an empty key the log showed the line quoted in step 4._
+- [x] README links to it at the top and from "Picfort server".
+- [x] No real hosts or accounts: `photos.example.com`, `192.168.1.20`, `test@example.com`.
 - [ ] *(Owner)* Someone follows it on a clean machine in under an hour. Their notes become fixes
       in the guide or the next self-hosting tasks (first-run checks, release notes).
