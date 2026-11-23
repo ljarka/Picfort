@@ -216,6 +216,15 @@ Small things the family asked for while using the app.
 
 ---
 
+### Phase 11 — Easy self-hosting
+Another family installs Picfort in under an hour, without help ([roadmap](../specs/roadmap.md#1-easy-self-hosting)).
+
+| Task | Description | Status |
+|------|-------------|--------|
+| [T-085](tasks/T-085-install-guide.md) | Install guide: from "I have Immich" to "the app is connected" (`INSTALL.md`) | `ready` |
+
+---
+
 ## Task statuses
 
 - `draft` — idea captured, not yet designed

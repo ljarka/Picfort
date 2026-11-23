@@ -9,6 +9,8 @@ Picfort is a private family hub on top of a self-hosted [Immich](https://immich.
 
 > **Status:** early, personal project.
 
+**Install:** [INSTALL.md](INSTALL.md) takes you from a running Immich to every phone connected, in about 45 minutes.
+
 ## Screenshots
 
 | Family Wall (home) | Photos | Events, no server | Family Wall, dark |
@@ -177,6 +179,8 @@ A small Flask service that puts Immich photos on a picture frame. It is meant to
 **Don't expose the Picfort server to the internet without an API key.** By default the frame endpoints have no authentication (ADR 0004): use it on your home network or over a VPN such as Tailscale. To reach it from outside through a tunnel, set `PICFORT_API_KEY` first (see [Reaching the server from outside](#reaching-the-server-from-outside), ADR 0007).
 
 ### Install with Docker (recommended)
+
+Step by step, with checks and fixes for common mistakes: [INSTALL.md](INSTALL.md). In short:
 
 Like Immich: two files ([`docker-compose.yml`](docker/docker-compose.yml) and the example [`.env`](docker/example.env), with every setting explained) and `docker compose up -d`. Run it on any always-on machine on your home network, for example the one that runs Immich.
 
