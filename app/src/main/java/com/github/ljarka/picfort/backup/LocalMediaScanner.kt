@@ -10,13 +10,13 @@ import kotlinx.coroutines.withContext
 
 data class MediaBucket(val id: String, val name: String, val mediaCount: Int)
 
+private const val BUCKET_ID = MediaStore.Images.ImageColumns.BUCKET_ID
+private const val BUCKET_NAME = MediaStore.Images.ImageColumns.BUCKET_DISPLAY_NAME
+private const val MEDIA_SELECTION = "${MediaStore.Files.FileColumns.MEDIA_TYPE} IN (" +
+    "${MediaStore.Files.FileColumns.MEDIA_TYPE_IMAGE}, ${MediaStore.Files.FileColumns.MEDIA_TYPE_VIDEO})"
+
 /** Lists every photo and video on the phone, for backup. */
 class LocalMediaScanner @Inject constructor(@ApplicationContext private val context: Context) {
-    private val BUCKET_ID = MediaStore.Images.ImageColumns.BUCKET_ID
-    private val BUCKET_NAME = MediaStore.Images.ImageColumns.BUCKET_DISPLAY_NAME
-    private val MEDIA_SELECTION = "${MediaStore.Files.FileColumns.MEDIA_TYPE} IN (" +
-        "${MediaStore.Files.FileColumns.MEDIA_TYPE_IMAGE}, ${MediaStore.Files.FileColumns.MEDIA_TYPE_VIDEO})"
-
     private fun bucketSelection(bucketIds: Set<String>?): Pair<String, Array<String>?> {
         if (bucketIds.isNullOrEmpty()) return MEDIA_SELECTION to null
         val placeholders = bucketIds.joinToString(",") { "?" }
@@ -29,7 +29,9 @@ class LocalMediaScanner @Inject constructor(@ApplicationContext private val cont
         context.contentResolver.query(
             MediaStore.Files.getContentUri("external"),
             arrayOf(MediaStore.MediaColumns._ID),
-            sel, args, null,
+            sel,
+            args,
+            null,
         )?.use { it.count } ?: 0
     }
 
@@ -38,7 +40,11 @@ class LocalMediaScanner @Inject constructor(@ApplicationContext private val cont
         val projection = arrayOf(BUCKET_ID, BUCKET_NAME)
         val counts = mutableMapOf<String, Pair<String, Int>>()
         context.contentResolver.query(
-            MediaStore.Files.getContentUri("external"), projection, MEDIA_SELECTION, null, null,
+            MediaStore.Files.getContentUri("external"),
+            projection,
+            MEDIA_SELECTION,
+            null,
+            null,
         )?.use { c ->
             val idCol = c.getColumnIndex(BUCKET_ID)
             val nameCol = c.getColumnIndex(BUCKET_NAME)

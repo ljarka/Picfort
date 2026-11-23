@@ -153,7 +153,8 @@ class SettingsViewModel @Inject constructor(
         val updated = current.buckets.map { if (it.id == bucketId) it.copy(selected = !it.selected) else it }
         _folders.value = FoldersState.Loaded(updated)
         val allSelected = updated.all { it.selected }
-        settings.selectedBucketIds = if (allSelected) emptySet() else updated.filter { it.selected }.map { it.id }.toSet()
+        settings.selectedBucketIds =
+            if (allSelected) emptySet() else updated.filter { it.selected }.map { it.id }.toSet()
         _backup.update { it.copy(selectedBucketCount = settings.selectedBucketIds.size) }
         // force reload on next open so counts refresh
         if (!allSelected) _folders.value = FoldersState.Loaded(updated)

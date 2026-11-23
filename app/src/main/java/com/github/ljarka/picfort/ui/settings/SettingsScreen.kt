@@ -12,11 +12,11 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
@@ -204,7 +204,13 @@ fun SettingsContent(
             SwitchRow("Back up this phone", "Photos and videos are uploaded to Immich", backup.enabled, onEnable)
             SwitchRow("Only on Wi-Fi", null, backup.wifiOnly, onWifiOnly)
             SwitchRow("Only while charging", null, backup.chargingOnly, onChargingOnly)
-            val folderLabel = if (backup.selectedBucketCount == 0) "All folders" else "${backup.selectedBucketCount} folder(s) selected"
+            val folderLabel = if (backup.selectedBucketCount ==
+                0
+            ) {
+                "All folders"
+            } else {
+                "${backup.selectedBucketCount} folder(s) selected"
+            }
             ListItem(
                 modifier = Modifier.clickable(onClick = onFoldersClick),
                 headlineContent = { Text("Folders to back up") },
@@ -345,11 +351,7 @@ fun backupDone(status: BackupStatus.Running, queue: BackupQueueState): Int =
     if (queue.pending.isEmpty()) status.done else maxOf(status.done, status.total - queue.pending.size)
 
 @Composable
-private fun BackupFolderDialog(
-    state: FoldersState?,
-    onToggle: (String) -> Unit,
-    onDismiss: () -> Unit,
-) {
+private fun BackupFolderDialog(state: FoldersState?, onToggle: (String) -> Unit, onDismiss: () -> Unit) {
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text("Folders to back up") },
@@ -363,6 +365,7 @@ private fun BackupFolderDialog(
                         CircularProgressIndicator()
                     }
                 }
+
                 is FoldersState.Loaded -> {
                     if (state.buckets.isEmpty()) {
                         Text("No media folders found on this phone.")
