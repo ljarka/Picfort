@@ -100,7 +100,7 @@ class BackupEngine @Inject constructor(
             settings.mappingsOwner = owner
         }
 
-        val media = scanner.scanAll()
+        val media = scanner.scanAll(settings.selectedBucketIds.takeIf { it.isNotEmpty() })
         val known = dao.getAll().associateBy { it.localId }
         val present = media.mapTo(HashSet()) { it.id }
         known.keys.filter { it !in present }.chunked(500).forEach { dao.delete(it) }

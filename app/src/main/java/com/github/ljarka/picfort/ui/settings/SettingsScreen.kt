@@ -15,9 +15,13 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
+import androidx.compose.material3.Checkbox
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -37,6 +41,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
@@ -60,6 +65,16 @@ fun SettingsScreen(
     val queue by viewModel.queue.collectAsStateWithLifecycle()
     val showFamily by viewModel.showFamily.collectAsStateWithLifecycle()
     val wallpaperColors by viewModel.wallpaperColors.collectAsStateWithLifecycle()
+
+    val folders by viewModel.folders.collectAsStateWithLifecycle()
+    var showFoldersDialog by remember { mutableStateOf(false) }
+    if (showFoldersDialog) {
+        BackupFolderDialog(
+            state = folders,
+            onToggle = viewModel::toggleFolder,
+            onDismiss = { showFoldersDialog = false },
+        )
+    }
 
     LaunchedEffect(status) { viewModel.reloadCounts() }
     val notificationPermission = rememberLauncherForActivityResult(
@@ -93,6 +108,10 @@ fun SettingsScreen(
         onStopBackup = viewModel::stopBackup,
         onHomeUrl = viewModel::setHomeUrl,
         onLogout = viewModel::logout,
+        onFoldersClick = {
+            viewModel.loadFolders()
+            showFoldersDialog = true
+        },
         eventReminders = if (viewModel.picfortServer.isNotEmpty()) {
             { EventReminderSettings() }
         } else {
@@ -126,6 +145,7 @@ fun SettingsContent(
     onStopBackup: () -> Unit = {},
     onHomeUrl: (String) -> Unit = {},
     onLogout: () -> Unit = {},
+    onFoldersClick: () -> Unit = {},
     /** The "Event reminders" section from `:feature:events` (T-039); null hides it (no Picfort server). */
     eventReminders: (@Composable () -> Unit)? = null,
     /** Fixed "now" for screenshot tests. */
@@ -184,6 +204,12 @@ fun SettingsContent(
             SwitchRow("Back up this phone", "Photos and videos are uploaded to Immich", backup.enabled, onEnable)
             SwitchRow("Only on Wi-Fi", null, backup.wifiOnly, onWifiOnly)
             SwitchRow("Only while charging", null, backup.chargingOnly, onChargingOnly)
+            val folderLabel = if (backup.selectedBucketCount == 0) "All folders" else "${backup.selectedBucketCount} folder(s) selected"
+            ListItem(
+                modifier = Modifier.clickable(onClick = onFoldersClick),
+                headlineContent = { Text("Folders to back up") },
+                supportingContent = { Text(folderLabel) },
+            )
             ListItem(
                 modifier = Modifier.clickable { editHome = true },
                 headlineContent = { Text("Home network address") },
@@ -317,3 +343,57 @@ private fun SwitchRow(title: String, subtitle: String?, checked: Boolean, onChan
  */
 fun backupDone(status: BackupStatus.Running, queue: BackupQueueState): Int =
     if (queue.pending.isEmpty()) status.done else maxOf(status.done, status.total - queue.pending.size)
+
+@Composable
+private fun BackupFolderDialog(
+    state: FoldersState?,
+    onToggle: (String) -> Unit,
+    onDismiss: () -> Unit,
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Folders to back up") },
+        text = {
+            when (state) {
+                null, FoldersState.Loading -> {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier.fillMaxWidth(),
+                    ) {
+                        CircularProgressIndicator()
+                    }
+                }
+                is FoldersState.Loaded -> {
+                    if (state.buckets.isEmpty()) {
+                        Text("No media folders found on this phone.")
+                    } else {
+                        LazyColumn {
+                            items(state.buckets, key = { it.id }) { bucket ->
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .clickable { onToggle(bucket.id) },
+                                ) {
+                                    Checkbox(
+                                        checked = bucket.selected,
+                                        onCheckedChange = { onToggle(bucket.id) },
+                                    )
+                                    Column(Modifier.weight(1f)) {
+                                        Text(bucket.name, style = MaterialTheme.typography.bodyMedium)
+                                        Text(
+                                            "${bucket.mediaCount} items",
+                                            style = MaterialTheme.typography.bodySmall,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        confirmButton = { TextButton(onClick = onDismiss) { Text("Done") } },
+    )
+}

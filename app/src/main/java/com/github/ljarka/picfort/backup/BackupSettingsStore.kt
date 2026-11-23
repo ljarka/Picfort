@@ -52,4 +52,9 @@ class BackupSettingsStore @Inject constructor(@ApplicationContext context: Conte
     var originalChecksums: Boolean
         get() = prefs.getBoolean("originalChecksums", false)
         set(value) = prefs.edit { putBoolean("originalChecksums", value) }
+
+    /** Bucket IDs to include in backup. Empty set means all buckets are backed up (the default). */
+    var selectedBucketIds: Set<String>
+        get() = prefs.getStringSet("selectedBucketIds", emptySet()) ?: emptySet()
+        set(value) = prefs.edit { putStringSet("selectedBucketIds", value) }
 }

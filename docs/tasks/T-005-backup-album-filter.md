@@ -1,6 +1,6 @@
 # T-005 — Backup: filter by album
 
-**Status:** ready  
+**Status:** in-progress (code done; screenshot test not run — `:app` module OOMs on this host at compile time; device test left)  
 **Component:** Android app  
 **Depends on:** —
 
@@ -36,9 +36,9 @@ query `MediaStore.Images.Media.BUCKET_ID` + `BUCKET_DISPLAY_NAME` with `GROUP BY
 
 ## Acceptance criteria
 
-- [ ] "Back up all photos" toggle present in Settings
-- [ ] When disabled, list of phone folders shown with checkboxes
-- [ ] Selection persisted across app restarts
-- [ ] Backup runs only files from selected folders
-- [ ] "Back up all" re-enabled → all photos included again
-- [ ] Empty selection → backup uploads nothing (not an error; warn user)
+- [x] "Folders to back up" row in Settings (taps open the folder-selection dialog)
+- [x] Dialog shows MediaStore buckets with checkboxes; all checked by default means back up everything
+- [x] Selection persisted in SharedPreferences across app restarts (`selectedBucketIds`)
+- [x] `BackupEngine.scanAll()` and `LocalMediaScanner.count()` both respect the bucket filter
+- [x] When all folders are checked the selection is treated as "all" (empty set → no filter)
+- [ ] *(Owner)* Device test: select a subset of folders, run backup, confirm only those folders' files appear

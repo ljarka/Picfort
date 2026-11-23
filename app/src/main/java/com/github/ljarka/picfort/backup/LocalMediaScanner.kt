@@ -8,21 +8,52 @@ import javax.inject.Inject
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
+data class MediaBucket(val id: String, val name: String, val mediaCount: Int)
+
 /** Lists every photo and video on the phone, for backup. */
 class LocalMediaScanner @Inject constructor(@ApplicationContext private val context: Context) {
-    /** Number of photos and videos on the phone. */
-    suspend fun count(): Int = withContext(Dispatchers.IO) {
+    private val BUCKET_ID = MediaStore.Images.ImageColumns.BUCKET_ID
+    private val BUCKET_NAME = MediaStore.Images.ImageColumns.BUCKET_DISPLAY_NAME
+    private val MEDIA_SELECTION = "${MediaStore.Files.FileColumns.MEDIA_TYPE} IN (" +
+        "${MediaStore.Files.FileColumns.MEDIA_TYPE_IMAGE}, ${MediaStore.Files.FileColumns.MEDIA_TYPE_VIDEO})"
+
+    private fun bucketSelection(bucketIds: Set<String>?): Pair<String, Array<String>?> {
+        if (bucketIds.isNullOrEmpty()) return MEDIA_SELECTION to null
+        val placeholders = bucketIds.joinToString(",") { "?" }
+        return "$MEDIA_SELECTION AND $BUCKET_ID IN ($placeholders)" to bucketIds.toTypedArray()
+    }
+
+    /** Number of photos and videos on the phone, optionally filtered to specific buckets. */
+    suspend fun count(bucketIds: Set<String>? = null): Int = withContext(Dispatchers.IO) {
+        val (sel, args) = bucketSelection(bucketIds)
         context.contentResolver.query(
             MediaStore.Files.getContentUri("external"),
             arrayOf(MediaStore.MediaColumns._ID),
-            "${MediaStore.Files.FileColumns.MEDIA_TYPE} IN (" +
-                "${MediaStore.Files.FileColumns.MEDIA_TYPE_IMAGE}, ${MediaStore.Files.FileColumns.MEDIA_TYPE_VIDEO})",
-            null,
-            null,
+            sel, args, null,
         )?.use { it.count } ?: 0
     }
 
-    suspend fun scanAll(): List<LocalMedia> = withContext(Dispatchers.IO) {
+    /** All MediaStore buckets (folders) that contain photos or videos, sorted by size descending. */
+    suspend fun listBuckets(): List<MediaBucket> = withContext(Dispatchers.IO) {
+        val projection = arrayOf(BUCKET_ID, BUCKET_NAME)
+        val counts = mutableMapOf<String, Pair<String, Int>>()
+        context.contentResolver.query(
+            MediaStore.Files.getContentUri("external"), projection, MEDIA_SELECTION, null, null,
+        )?.use { c ->
+            val idCol = c.getColumnIndex(BUCKET_ID)
+            val nameCol = c.getColumnIndex(BUCKET_NAME)
+            while (c.moveToNext()) {
+                val id = c.getString(idCol) ?: continue
+                val name = c.getString(nameCol) ?: id
+                val prev = counts[id]
+                counts[id] = name to ((prev?.second ?: 0) + 1)
+            }
+        }
+        counts.map { (id, pair) -> MediaBucket(id, pair.first, pair.second) }
+            .sortedByDescending { it.mediaCount }
+    }
+
+    suspend fun scanAll(bucketIds: Set<String>? = null): List<LocalMedia> = withContext(Dispatchers.IO) {
         val projection = buildList {
             add(MediaStore.MediaColumns._ID)
             add(MediaStore.MediaColumns.DISPLAY_NAME)
@@ -36,15 +67,14 @@ class LocalMediaScanner @Inject constructor(@ApplicationContext private val cont
                 add(MediaStore.MediaColumns.IS_PENDING)
             }
         }.toTypedArray()
-        val selection = "${MediaStore.Files.FileColumns.MEDIA_TYPE} IN (" +
-            "${MediaStore.Files.FileColumns.MEDIA_TYPE_IMAGE}, ${MediaStore.Files.FileColumns.MEDIA_TYPE_VIDEO})"
+        val (selection, selectionArgs) = bucketSelection(bucketIds)
 
         val result = mutableListOf<LocalMedia>()
         context.contentResolver.query(
             MediaStore.Files.getContentUri("external"),
             projection,
             selection,
-            null,
+            selectionArgs,
             "${MediaStore.MediaColumns.DATE_TAKEN} DESC",
         )?.use { c ->
             val id = c.getColumnIndexOrThrow(MediaStore.MediaColumns._ID)

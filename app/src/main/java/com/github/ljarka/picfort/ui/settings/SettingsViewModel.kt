@@ -43,7 +43,16 @@ data class BackupSettingsUi(
     val lastResult: String? = null,
     val lastRunAt: Long = 0,
     val hasMediaAccess: Boolean = true,
+    /** Number of selected folders; 0 means "all folders". */
+    val selectedBucketCount: Int = 0,
 )
+
+data class MediaBucketUi(val id: String, val name: String, val mediaCount: Int, val selected: Boolean)
+
+sealed interface FoldersState {
+    data object Loading : FoldersState
+    data class Loaded(val buckets: List<MediaBucketUi>) : FoldersState
+}
 
 /**
  * Phone items in Immich: those Picfort's backup linked, plus those the timeline matched to an
@@ -100,6 +109,9 @@ class SettingsViewModel @Inject constructor(
         }
     }
 
+    private val _folders = MutableStateFlow<FoldersState?>(null)
+    val folders: StateFlow<FoldersState?> = _folders.asStateFlow()
+
     private fun read() = BackupSettingsUi(
         enabled = settings.enabled,
         wifiOnly = settings.wifiOnly,
@@ -108,17 +120,43 @@ class SettingsViewModel @Inject constructor(
         lastResult = settings.lastResult,
         lastRunAt = settings.lastRunAt,
         hasMediaAccess = hasMediaAccess(context),
+        selectedBucketCount = settings.selectedBucketIds.size,
     )
 
     /** Counts and the last result change while a backup runs; called when status changes. */
     fun reloadCounts() {
         viewModelScope.launch {
-            val onPhone = if (hasMediaAccess(context)) scanner.count() else 0
+            val bucketFilter = settings.selectedBucketIds.takeIf { it.isNotEmpty() }
+            val onPhone = if (hasMediaAccess(context)) scanner.count(bucketFilter) else 0
             val onServer = timelineRepository.phoneOnServer.first()
             val backedUp = countInImmich(onPhone, backupDao.linkedLocalIds(), onServer)
             val waiting = backupDao.countRejected(NEEDS_HOME_NETWORK)
             _backup.value = read().copy(onPhone = onPhone, backedUp = backedUp, waitingForHome = waiting)
         }
+    }
+
+    /** Loads available MediaStore buckets; call when the folder-selection dialog opens. */
+    fun loadFolders() {
+        if (_folders.value is FoldersState.Loaded) return
+        _folders.value = FoldersState.Loading
+        viewModelScope.launch {
+            val selected = settings.selectedBucketIds
+            val buckets = scanner.listBuckets().map { b ->
+                MediaBucketUi(b.id, b.name, b.mediaCount, selected.isEmpty() || b.id in selected)
+            }
+            _folders.value = FoldersState.Loaded(buckets)
+        }
+    }
+
+    fun toggleFolder(bucketId: String) {
+        val current = (_folders.value as? FoldersState.Loaded) ?: return
+        val updated = current.buckets.map { if (it.id == bucketId) it.copy(selected = !it.selected) else it }
+        _folders.value = FoldersState.Loaded(updated)
+        val allSelected = updated.all { it.selected }
+        settings.selectedBucketIds = if (allSelected) emptySet() else updated.filter { it.selected }.map { it.id }.toSet()
+        _backup.update { it.copy(selectedBucketCount = settings.selectedBucketIds.size) }
+        // force reload on next open so counts refresh
+        if (!allSelected) _folders.value = FoldersState.Loaded(updated)
     }
 
     fun setEnabled(value: Boolean) {

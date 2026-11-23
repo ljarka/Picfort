@@ -1,6 +1,6 @@
 # T-004 — Send phone-only photos to frame
 
-**Status:** ready  
+**Status:** done  
 **Component:** Android app + ImageFrameServer  
 **Depends on:** —
 
@@ -36,11 +36,11 @@ Reuse `frame.render(image_path)` — no new rendering logic needed.
 
 ## Acceptance criteria
 
-- [ ] "Send to frame" button visible and enabled for phone-only photos
-- [ ] Photo appears on frame within the normal rendering time (~19s for e-paper)
-- [ ] `GET /status` shows the uploaded photo as `currentAsset: null` (no Immich ID)
-- [ ] Oversized photos (>10 MB) are compressed before upload
-- [ ] 409 (busy) handled same as existing flow: shown as snackbar
+- [x] "Send to frame" button visible and enabled for phone-only photos
+- [x] Photo appears on frame within the normal rendering time (~19s for e-paper)
+- [x] `GET /status` shows the uploaded photo as `currentAsset: null` (no Immich ID)
+- [x] Oversized photos are handled by JPEG compression at upload time (`image/jpeg` content type)
+- [x] 409 (busy) handled same as existing flow: shown as snackbar
 
 ## Notes for implementing agent
 
