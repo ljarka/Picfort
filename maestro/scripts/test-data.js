@@ -9,6 +9,9 @@
 // ALBUM=<name> to create an Immich album <name> with the newest photo on the test account (T-070);
 // ALBUM_GONE=<name> to check no album <name> is left while that photo still is.
 // REMINDER=<title> to put event <title> today, REMINDER_IN minutes from now (default 3, local time; T-039).
+// SHOPPING=<title> to put a fresh list <title> with "Mleko", "Chleb", "Jajka" (T-040); sets
+// output.reminderHour12 / reminderAmPm / reminderMinute (the time picker's 12-hour dial) and reminderLabel
+// ("Today, 09:45"): the next 5-minute mark at least 2 minutes ahead, local time.
 // Credentials come from MAESTRO_* (scripts/maestro-smoke.sh); nothing is logged.
 
 function check(res, what) {
@@ -149,4 +152,23 @@ if (typeof REMINDER !== "undefined" && REMINDER) {
   } else {
     check(http.post(server + "/events", { headers: headers, body: JSON.stringify(body) }), "POST " + REMINDER)
   }
+}
+
+if (typeof SHOPPING !== "undefined" && SHOPPING) {
+  const lists = check(http.get(server + "/lists", { headers: headers }), "GET /lists")
+  lists.filter(function (l) { return l.title === SHOPPING }).forEach(function (l) {
+    check(http.request(server + "/lists/" + l.id, { method: "DELETE", headers: headers }), "DELETE " + SHOPPING)
+  })
+  check(http.post(server + "/lists", {
+    headers: headers,
+    body: JSON.stringify({ title: SHOPPING, items: ["Mleko", "Chleb", "Jajka"] }),
+  }), "POST " + SHOPPING)
+  const at = new Date(Date.now() + 2 * 60000)
+  at.setMinutes(Math.ceil(at.getMinutes() / 5) * 5, 0, 0)
+  const two = function (n) { return (n < 10 ? "0" : "") + n }
+  output.reminderHour12 = String(at.getHours() % 12 === 0 ? 12 : at.getHours() % 12)
+  output.reminderAmPm = at.getHours() < 12 ? "AM" : "PM"
+  output.reminderMinute = String(at.getMinutes())
+  output.reminderLabel = (at.getDate() === new Date().getDate() ? "Today" : "Tomorrow") + ", " +
+    two(at.getHours()) + ":" + two(at.getMinutes())
 }

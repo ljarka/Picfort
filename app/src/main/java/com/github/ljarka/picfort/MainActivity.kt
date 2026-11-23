@@ -68,6 +68,7 @@ import com.github.ljarka.picfort.ui.shell.TabRoot
 import com.github.ljarka.picfort.ui.shopping.ShoppingListScreen
 import com.github.ljarka.picfort.ui.shopping.ShoppingListsScreen
 import com.github.ljarka.picfort.ui.shopping.SpendingScreen
+import com.github.ljarka.picfort.ui.shopping.reminders.EXTRA_OPEN_SHOPPING_LIST_ID
 import com.github.ljarka.picfort.ui.timeline.AlbumRoute
 import com.github.ljarka.picfort.ui.timeline.ImageDetailsRoute
 import com.github.ljarka.picfort.ui.timeline.TimelineScreen
@@ -91,11 +92,17 @@ class MainActivity : ComponentActivity() {
     /** An event to open from a tapped reminder (T-039), once the app is past login. */
     private val openEventId = MutableStateFlow<Long?>(null)
 
+    /** A shopping list to open from a tapped reminder (T-040). */
+    private val openShoppingListId = MutableStateFlow<Long?>(null)
+
     /** A school-journal screen to open from a tapped notification (T-082, ADR 0017). */
     private val openSchoolJournal = MutableStateFlow<String?>(null)
 
     private fun takeEventFrom(intent: Intent?) {
         intent?.getLongExtra(EXTRA_OPEN_EVENT_ID, -1L)?.takeIf { it > 0 }?.let { openEventId.value = it }
+        intent?.getLongExtra(EXTRA_OPEN_SHOPPING_LIST_ID, -1L)?.takeIf { it > 0 }?.let {
+            openShoppingListId.value = it
+        }
         intent?.getStringExtra(EXTRA_OPEN_SCHOOL_JOURNAL)?.takeIf { it.isNotBlank() }?.let {
             openSchoolJournal.value = it
         }
@@ -146,6 +153,14 @@ class MainActivity : ComponentActivity() {
                 if (currentTab != null) {
                     openEventId.value = null
                     navController.navigate(Screen.EventDetail(id))
+                }
+            }
+            val pendingList by openShoppingListId.collectAsStateWithLifecycle()
+            LaunchedEffect(pendingList, currentTab != null) {
+                val id = pendingList ?: return@LaunchedEffect
+                if (currentTab != null) {
+                    openShoppingListId.value = null
+                    navController.navigate(Screen.ShoppingList(id))
                 }
             }
             val pendingJournal by openSchoolJournal.collectAsStateWithLifecycle()

@@ -101,6 +101,10 @@ import com.github.ljarka.picfort.core.ui.component.SettingsAction
 import com.github.ljarka.picfort.core.ui.component.aboveFloatingTabBar
 import com.github.ljarka.picfort.core.ui.theme.AccentTheme
 import com.github.ljarka.picfort.core.ui.theme.BrandAccent
+import com.github.ljarka.picfort.ui.shopping.reminders.ReminderBell
+import com.github.ljarka.picfort.ui.shopping.reminders.ReminderSheet
+import com.github.ljarka.picfort.ui.shopping.reminders.ReminderStatus
+import java.time.LocalDateTime
 
 private const val PREVIEW_ITEMS = 6
 
@@ -395,6 +399,10 @@ fun ShoppingListContent(
     focusAdd: Boolean = false,
     /** Start with the checked section open (screenshots). */
     checkedOpen: Boolean = false,
+    onSetReminder: (LocalDateTime) -> Unit = {},
+    onRemoveReminder: () -> Unit = {},
+    /** The clock the reminder presets count from; fixed in screenshots. */
+    now: () -> LocalDateTime = LocalDateTime::now,
 ) {
     ResizeForKeyboard()
     val snackbar = remember { SnackbarHostState() }
@@ -414,6 +422,22 @@ fun ShoppingListContent(
     }
     val list = state.list
     var dialog by remember { mutableStateOf<ListDialog?>(null) }
+    var remindering by remember { mutableStateOf(false) }
+    if (remindering && list != null) {
+        ReminderSheet(
+            current = state.reminderAt,
+            now = remember { now() },
+            onPick = {
+                remindering = false
+                onSetReminder(it)
+            },
+            onRemove = {
+                remindering = false
+                onRemoveReminder()
+            },
+            onDismiss = { remindering = false },
+        )
+    }
     if (list != null) {
         when (dialog) {
             ListDialog.Rename -> RenameDialog(list.title, onDismiss = { dialog = null }) {
@@ -450,6 +474,10 @@ fun ShoppingListContent(
                 title = { Text(list?.title.orEmpty(), maxLines = 1, overflow = TextOverflow.Ellipsis) },
                 navigationIcon = { IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back") } },
                 actions = {
+                    // A reminder is this phone's, so it can be set from the offline copy too.
+                    if (list != null && !list.archived) {
+                        ReminderBell(active = state.reminderAt != null) { remindering = true }
+                    }
                     if (list != null && state.editable) {
                         var receiptMenu by remember { mutableStateOf(false) }
                         Box {
@@ -528,6 +556,9 @@ fun ShoppingListContent(
 
                 else -> {
                     state.offlineSince?.let { OfflineBanner(it) }
+                    state.reminderAt?.let { at ->
+                        ReminderStatus(at, today = remember { now() }.toLocalDate()) { remindering = true }
+                    }
                     PullToRefreshBox(isRefreshing = false, onRefresh = onRefresh, modifier = Modifier.weight(1f)) {
                         ItemList(
                             state = state,

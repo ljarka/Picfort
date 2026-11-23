@@ -1,7 +1,9 @@
 package com.github.ljarka.picfort.ui.shopping
 
+import android.Manifest
 import android.content.Context
 import android.net.Uri
+import android.os.Build
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
@@ -32,11 +34,17 @@ import com.github.ljarka.picfort.core.model.pollEvery
 import com.github.ljarka.picfort.core.network.PicfortServerClient
 import com.github.ljarka.picfort.core.network.PicfortServerException
 import com.github.ljarka.picfort.core.network.compressImageUri
+import com.github.ljarka.picfort.ui.shopping.reminders.ShoppingReminderSync
+import com.github.ljarka.picfort.ui.shopping.reminders.ShoppingReminders
+import com.github.ljarka.picfort.ui.shopping.reminders.reminderLabel
+import com.github.ljarka.picfort.ui.shopping.reminders.toEpochMillis
+import com.github.ljarka.picfort.ui.shopping.reminders.toLocalDateTime
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
 import java.io.File
 import java.time.Instant
 import java.time.LocalDate
+import java.time.LocalDateTime
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.time.format.FormatStyle
@@ -68,6 +76,7 @@ class ShoppingListsViewModel @Inject constructor(
     private val events: FamilyEventsProvider,
     private val family: FamilyMemberProvider,
     private val server: PicfortServerClient,
+    reminderSync: ShoppingReminderSync,
     savedState: SavedStateHandle,
 ) : ViewModel() {
     val archived: Boolean = savedState.get<Boolean>("archived") ?: false
@@ -76,6 +85,7 @@ class ShoppingListsViewModel @Inject constructor(
     val state: StateFlow<ShoppingListsUi> = _state.asStateFlow()
 
     init {
+        reminderSync.start()
         viewModelScope.launch {
             combine(
                 repository.lists,
@@ -278,6 +288,8 @@ class ShoppingListViewModel @Inject constructor(
     private val repository: ShoppingRepository,
     private val family: FamilyMemberProvider,
     private val receiptReader: ReceiptReader,
+    private val reminders: ShoppingReminders,
+    reminderSync: ShoppingReminderSync,
     savedState: SavedStateHandle,
 ) : ViewModel() {
     val listId: Long = savedState.get<Long>("id") ?: 0L
@@ -322,6 +334,37 @@ class ShoppingListViewModel @Inject constructor(
         }
         viewModelScope.launch { repository.messages.collect { msg -> extra.update { it.copy(message = msg) } } }
         viewModelScope.launch { repository.refreshReceipts(listId) }
+        reminderSync.start()
+        viewModelScope.launch {
+            reminders.reminders.collect { all ->
+                extra.update { it.copy(reminderAt = all[listId]?.at?.toLocalDateTime()) }
+            }
+        }
+    }
+
+    /** False when notifications are off on this phone: the reminder is kept but won't show. */
+    fun canNotify(): Boolean = reminders.canPostNotifications()
+
+    fun setReminder(at: LocalDateTime) {
+        val title = repository.lists.value[listId]?.title ?: return
+        reminders.dismiss(listId)
+        reminders.set(listId, title, at.toEpochMillis())
+        extra.update {
+            it.copy(
+                message = "You'll be reminded ${reminderLabel(at, LocalDate.now()).replaceFirstChar { c ->
+                    c.lowercase()
+                }}",
+            )
+        }
+    }
+
+    fun removeReminder() {
+        reminders.cancel(listId)
+        extra.update { it.copy(message = "Reminder removed") }
+    }
+
+    fun notificationsOff() {
+        extra.update { it.copy(message = "Notifications are off for Picfort: the reminder won't show") }
     }
 
     suspend fun keepFresh() {
@@ -574,6 +617,9 @@ fun ShoppingListScreen(onBack: () -> Unit, focusAdd: Boolean) {
     val camera = rememberLauncherForActivityResult(ActivityResultContracts.TakePicture()) { taken ->
         if (taken) pendingCamera?.let(viewModel::addReceipt)
     }
+    val notificationPermission = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) {
+        if (!it) viewModel.notificationsOff()
+    }
     ShoppingListContent(
         state = state,
         onBack = onBack,
@@ -610,5 +656,16 @@ fun ShoppingListScreen(onBack: () -> Unit, focusAdd: Boolean) {
         onDeleteReceipt = viewModel::deleteReceipt,
         onReadReceiptAgain = viewModel::readReceiptAgain,
         focusAdd = focusAdd,
+        onSetReminder = { at ->
+            viewModel.setReminder(at)
+            if (!viewModel.canNotify()) {
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                    notificationPermission.launch(Manifest.permission.POST_NOTIFICATIONS)
+                } else {
+                    viewModel.notificationsOff()
+                }
+            }
+        },
+        onRemoveReminder = viewModel::removeReminder,
     )
 }

@@ -23,7 +23,19 @@ Shopping list vertical slice: collaborative checklists, offline caching, receipt
 | `ui/shopping/ShoppingAssistantImpl.kt` | `ShoppingAssistantProvider` for Gemini AppFunctions (T-074) |
 | `ui/shopping/ShoppingApi.kt` | Server HTTP client: `/lists` and `/receipts` endpoints |
 | `ui/shopping/ShoppingModels.kt` | UI state: `ShoppingListsUi`, `ShoppingListUi` |
-| `ui/shopping/ShoppingScreenshotTest.kt` | Paparazzi snapshots: cards, empty state, offline banner, list items, receipts & sheet |
+| `ui/shopping/reminders/*` | List reminders (T-040): `ShoppingReminderTimes` (pure: presets, labels, text, gone/finished lists), `ShoppingReminders` (store, alarms, notification), `ShoppingReminderReceiver` (+ rearm receiver, `ShoppingReminderSync`), `ShoppingReminderUi` (bell, status row, sheet) |
+| `ui/shopping/ShoppingScreenshotTest.kt` | Paparazzi snapshots: cards, empty state, offline banner, list items, receipts & sheet, reminders |
+
+## Reminders (T-040, like ADR 0015)
+
+- Per phone, nothing on the server: one `ShoppingReminder(listId, title, at)` per list in preferences
+  `shopping_reminders`; AlarmManager exact when allowed, else inexact. Receivers are in this module's manifest.
+- Fired: `ShoppingRepository.refresh()` (8 s, else the offline copy) → "Time for groceries: <title>" with
+  up to 5 unchecked items. Nothing left, or the list deleted/archived → no notification, reminder dropped.
+- Actions: Open list (launch intent with `EXTRA_OPEN_SHOPPING_LIST_ID`, read by `MainActivity`), Snooze 1h.
+- `ShoppingReminderSync` (started by both ViewModels and the receiver) drops reminders of lists that
+  vanish or get archived and dismisses a shown one once all items are checked. Re-armed after reboot,
+  update or clock change; one missed by more than 12 h is dropped.
 
 ## Public Contract / Navigation Entry Points
 
@@ -45,4 +57,5 @@ Shopping list vertical slice: collaborative checklists, offline caching, receipt
 ./gradlew :feature:shopping:testDebugUnitTest
 ./gradlew :feature:shopping:verifyPaparazziDebug
 ./gradlew :feature:shopping:recordPaparazziDebug # on intentional UI changes
+./scripts/maestro-smoke.sh maestro/shopping-reminders.yaml # T-040 on a device, test server only (~8 min)
 ```

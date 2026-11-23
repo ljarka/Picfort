@@ -1,0 +1,55 @@
+# T-040: a shopping list's reminder: bell sheet, custom time, notification with the items left,
+# tapping it opens the list. Test server only: scripts/test-data.js puts a fresh "Zakupy T040".
+# Takes up to ~8 minutes (the custom time is the next 5-minute mark at least 2 minutes ahead).
+# Expects the emulator's 12-hour clock (the time picker's dial is tapped by its labels).
+appId: com.github.ljarka.picfort
+name: Shopping — list reminder (T-040)
+---
+- runScript:
+    file: scripts/test-data.js
+    env:
+      SHOPPING: "Zakupy T040"
+- runFlow: subflows/open-app.yaml
+# Another tab may ask for notifications first (Android 13+).
+- runFlow:
+    when:
+      visible: "Allow"
+    commands:
+      - tapOn: "Allow"
+- tapOn: "Shopping"
+- extendedWaitUntil:
+    visible: "Zakupy T040"
+    timeout: 15000
+- tapOn: "Zakupy T040"
+- extendedWaitUntil:
+    visible: "Mleko"
+    timeout: 15000
+- tapOn: "Set reminder"
+- assertVisible: "Remind me"
+- assertVisible: "Tomorrow at 10:00"
+- tapOn: "Custom date & time…"
+- tapOn: "Next"
+- tapOn: "${output.reminderHour12} o'clock"
+- tapOn: "${output.reminderMinute} minutes"
+- tapOn: "${output.reminderAmPm}"
+- tapOn: "Set"
+- extendedWaitUntil:
+    visible: "Reminder · ${output.reminderLabel}"
+    timeout: 5000
+
+# Away from the app: the notification names what is left to buy.
+- pressKey: Home
+- swipe:
+    start: "50%, 1%"
+    end: "50%, 70%"
+- extendedWaitUntil:
+    visible: "Time for groceries: Zakupy T040"
+    timeout: 480000
+- assertVisible: "Snooze 1h"
+- tapOn: "Time for groceries: Zakupy T040"
+- extendedWaitUntil:
+    visible: "Mleko"
+    timeout: 15000
+- assertVisible: "Zakupy T040"
+# Used up: the list shows no reminder any more.
+- assertNotVisible: "Reminder · .*"

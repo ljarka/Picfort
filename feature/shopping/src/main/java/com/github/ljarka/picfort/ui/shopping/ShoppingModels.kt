@@ -6,6 +6,7 @@ import com.github.ljarka.picfort.core.model.Receipt
 import com.github.ljarka.picfort.core.model.ShoppingList
 import com.github.ljarka.picfort.core.model.WishlistItem
 import com.github.ljarka.picfort.core.model.WishlistPreview
+import java.time.LocalDateTime
 
 /** The Shopping tab: the family's lists as cards and the wishlist carousel. */
 data class ShoppingListsUi(
@@ -46,6 +47,8 @@ data class ShoppingListUi(
     val aiSupported: Boolean = false,
     val readingReceipt: Boolean = false,
     val receiptReadHint: String? = null,
+    /** This phone's reminder for the list (T-040). */
+    val reminderAt: LocalDateTime? = null,
 ) {
     val editable: Boolean get() = offlineSince == null
     val isMine: Boolean get() = list?.createdBy == myId

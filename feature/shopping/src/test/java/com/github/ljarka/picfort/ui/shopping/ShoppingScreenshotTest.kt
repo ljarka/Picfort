@@ -1,5 +1,6 @@
 package com.github.ljarka.picfort.ui.shopping
 
+import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
 import app.cash.paparazzi.DeviceConfig
 import app.cash.paparazzi.Paparazzi
@@ -12,7 +13,9 @@ import com.github.ljarka.picfort.core.model.ShoppingList
 import com.github.ljarka.picfort.core.model.WishlistItem
 import com.github.ljarka.picfort.core.ui.avatar.avatarColor
 import com.github.ljarka.picfort.core.ui.theme.PicfortTheme
+import com.github.ljarka.picfort.ui.shopping.reminders.ReminderSheetContent
 import java.time.LocalDate
+import java.time.LocalDateTime
 import org.junit.Rule
 import org.junit.Test
 
@@ -121,6 +124,32 @@ class ShoppingScreenshotTest {
     @Test
     fun shopping_list() = snap {
         ShoppingListContent(ShoppingListUi(list = groceries, members = members, myId = "mama"))
+    }
+
+    /** Thursday 26 Nov 2026, 14:00: every preset is still ahead. */
+    private val reminderNow = LocalDateTime.of(2026, 11, 26, 14, 0)
+
+    @Test
+    fun shopping_list_reminder() = snap {
+        ShoppingListContent(
+            ShoppingListUi(
+                list = groceries,
+                members = members,
+                myId = "mama",
+                reminderAt = LocalDateTime.of(2026, 11, 27, 17, 0),
+            ),
+            now = { reminderNow },
+        )
+    }
+
+    @Test
+    fun reminder_sheet() = snap {
+        Surface { ReminderSheetContent(current = null, now = reminderNow) }
+    }
+
+    @Test
+    fun reminder_sheet_set_dark() = snap(dark = true) {
+        Surface { ReminderSheetContent(current = LocalDateTime.of(2026, 11, 27, 17, 0), now = reminderNow) }
     }
 
     @Test
