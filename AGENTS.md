@@ -17,6 +17,7 @@ This file is the index. Keep it short (< 150 lines); details live where the tabl
 
 | Need | Read |
 |---|---|
+| **Why, how, what next (constitution)** | [specs/mission.md](specs/mission.md), [specs/tech-stack.md](specs/tech-stack.md), [specs/roadmap.md](specs/roadmap.md) |
 | **What to do next, exactly** | [docs/tasks/](docs/tasks/README.md) (task queue) |
 | Architecture & Modularization | [ADR 0011](docs/decisions/0011-modular-architecture.md) |
 | Architecture decisions | [docs/decisions/](docs/decisions/README.md) (ADRs) |

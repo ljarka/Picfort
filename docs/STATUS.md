@@ -1,5 +1,8 @@
 # Picfort — Roadmap & Status
 
+> What comes next, in order: [specs/roadmap.md](../specs/roadmap.md). This file keeps the history
+> and each task's status. Why and how: [mission](../specs/mission.md), [tech stack](../specs/tech-stack.md).
+
 ## Vision
 
 Privacy-first family hub on top of Immich. Unified timeline of Immich + phone photos,
