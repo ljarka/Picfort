@@ -1,6 +1,6 @@
 # T-086 — First-run checks: each setup mistake says what to fix
 
-**Status:** ready  
+**Status:** done (`f302302`)  
 **Component:** Picfort server, Android app (`:core:network`, `:feature:frame`, `:app`)  
 **Depends on:** T-058 (one-page setup), T-085 (install guide)  
 **Roadmap:** [Easy self-hosting](../../specs/roadmap.md#1-easy-self-hosting), second step
@@ -37,8 +37,17 @@ never reported (only the frame silently found no photos).
 
 ## Acceptance criteria
 
-- [ ] Server: `check()` results and `/status` "immich" unit-tested; the API contract test lists the key.
-- [ ] Server start log names the problem and the fix for each result (checked against the test Immich).
-- [ ] App: `SetupHintsTest` for every message; setup and Settings use them.
-- [ ] Setup page: Paparazzi snapshot of a server with an Immich problem ("Continue anyway").
-- [ ] INSTALL.md: step 4 explains the log line; the trouble table lists the new app messages.
+- [x] Server: `check()` results and `/status` "immich" unit-tested; the API contract test lists the key.
+- [x] Server start log names the problem and the fix for each result (checked against the test Immich).
+- [x] App: `SetupHintsTest` for every message; setup and Settings use them.
+- [x] Setup page: Paparazzi snapshot of a server with an Immich problem ("Continue anyway").
+- [x] INSTALL.md: step 4 explains the log line; the trouble table lists the new app messages.
+
+## Checks (2026-11-23)
+
+- Server start against the test Immich: right key → "connected, the API key works"; wrong key →
+  "rejects IMMICH_API_KEY …"; nothing at the address → "Can't reach Immich …"; the Picfort test
+  server as `IMMICH_URL` → "answers, but it isn't Immich".
+- Emulator, clean install, a local server with a wrong Immich key: setup shows "Connected, but Immich
+  rejects the server's API key…", Try again and Continue anyway; Continue anyway opens the Wall.
+  `maestro/setup-errors.yaml` still passes.
