@@ -23,11 +23,11 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.github.ljarka.picfort.core.model.FrameResult
 import com.github.ljarka.picfort.core.network.FrameSettingsStore
 import com.github.ljarka.picfort.core.network.PicfortServerClient
 import com.github.ljarka.picfort.core.network.PicfortServerException
 import com.github.ljarka.picfort.core.network.normalizeFrameUrl
+import com.github.ljarka.picfort.core.network.picfortImmichProblem
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
 import kotlinx.coroutines.CancellationException
@@ -61,9 +61,7 @@ fun wallTestResult(error: Exception?): ConnectionTest = when (error) {
         "Connected. This server has no Family Wall yet, update the server.",
     )
 
-    is PicfortServerException.ImmichUnreachable -> ConnectionTest.Partial(
-        "Connected, but the server can't reach Immich.",
-    )
+    is PicfortServerException.ImmichUnreachable -> ConnectionTest.Partial(picfortImmichProblem("unreachable")!!)
 
     else -> ConnectionTest.Partial("Connected, but the Family Wall didn't answer: ${error.message}")
 }
@@ -108,7 +106,8 @@ class PicfortServerCheck @Inject constructor(
 ) {
     suspend fun check(address: String, apiKey: String): ConnectionTest =
         when (val status = repository.testConnection(address, apiKey)) {
-            FrameResult.Sent -> try {
+            // The server can't use Immich: the wall would fail too, and this says how to fix it.
+            is StatusCheck.Picfort -> status.immichProblem?.let { ConnectionTest.Partial(it) } ?: try {
                 serverClient.pingWall(address = address, apiKey = apiKey)
                 wallTestResult(null)
             } catch (e: CancellationException) {
@@ -117,9 +116,7 @@ class PicfortServerCheck @Inject constructor(
                 wallTestResult(e)
             }
 
-            is FrameResult.Error -> ConnectionTest.Failed(status.message)
-
-            else -> ConnectionTest.Failed("Unexpected response")
+            is StatusCheck.Failed -> ConnectionTest.Failed(status.message)
         }
 
     fun save(address: String, apiKey: String) {

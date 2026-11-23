@@ -115,7 +115,7 @@ class ApiContractTest(unittest.TestCase):
         self.assertEqual(200, status.status_code)
         body = status.get_json()
         self.assertEqual(
-            {"status", "busy", "currentAsset", "lastError", "width", "height", "hardware", "slideshow"},
+            {"status", "busy", "currentAsset", "lastError", "width", "height", "hardware", "slideshow", "immich"},
             set(body.keys()),
         )
         self.assertEqual(

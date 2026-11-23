@@ -20,7 +20,7 @@ So that another family can install Picfort in under an hour, without help.
 | Step | Goal | Done when… |
 |---|---|---|
 | **T-085** Install guide | One page from "I have Immich" to "the app is connected": server, API key, APK, first run. | Someone follows it on a clean machine in under an hour; README links to it. |
-| **First-run checks** *(to write)* | The app and server say clearly what is missing (server unreachable, Immich key missing, wrong address). | Each common setup mistake shows a plain message with the fix, covered by tests. |
+| **T-086** First-run checks | The app and server say clearly what is missing (server unreachable, Immich key missing, wrong address). | Each common setup mistake shows a plain message with the fix, covered by tests. |
 | **Release notes & upgrades** *(to write)* | Each release says what changed and how to update safely. | Releases carry notes; the update path (`docker compose pull`) is tested with a migration in CI. |
 
 ## 2. Frame review

@@ -22,6 +22,8 @@ import com.github.ljarka.picfort.core.model.FamilyMember
 import com.github.ljarka.picfort.core.model.ReceiptAiStatus
 import com.github.ljarka.picfort.core.model.ShoppingItem
 import com.github.ljarka.picfort.core.model.ShoppingList
+import com.github.ljarka.picfort.core.network.picfortImmichProblem
+import com.github.ljarka.picfort.core.network.picfortUnreachableMessage
 import com.github.ljarka.picfort.core.ui.avatar.avatarColor
 import com.github.ljarka.picfort.core.ui.theme.AccentTheme
 import com.github.ljarka.picfort.core.ui.theme.PicfortTheme
@@ -255,7 +257,21 @@ class ScreenshotTest {
                 password = "",
                 signedIn = true,
                 picfortAddress = "picfort.example.com",
-                picfortError = "Can't reach https://picfort.example.com",
+                picfortError = picfortUnreachableMessage("picfort.example.com", 443),
+            ),
+        )
+    }
+
+    /** T-086: the server answers but can't reach Immich; saved, with the fix and "Continue anyway". */
+    @Test
+    fun setup_picfort_immich_problem() = snap {
+        SetupContent(
+            setupFilled.copy(
+                password = "",
+                signedIn = true,
+                picfortAddress = "192.168.0.10:5000",
+                picfortError = picfortImmichProblem("unreachable"),
+                picfortSavedWithProblem = true,
             ),
         )
     }

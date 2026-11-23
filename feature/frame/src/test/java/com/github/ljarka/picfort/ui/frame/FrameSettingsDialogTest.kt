@@ -12,7 +12,7 @@ class FrameSettingsDialogTest {
         listOf(
             PicfortServerException.NotAccepted() to "didn't accept your Immich login",
             PicfortServerException.NoWall() to "no Family Wall yet",
-            PicfortServerException.ImmichUnreachable() to "can't reach Immich",
+            PicfortServerException.ImmichUnreachable() to "IMMICH_URL in the server's .env",
             PicfortServerException.Unreachable("x") to "didn't answer",
         ).forEach { (error, expected) ->
             val result = wallTestResult(error)

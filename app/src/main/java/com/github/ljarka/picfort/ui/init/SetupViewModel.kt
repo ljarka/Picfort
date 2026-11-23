@@ -6,8 +6,10 @@ import com.github.ljarka.picfort.core.network.AccessTokenStore
 import com.github.ljarka.picfort.core.network.CleartextNotAllowedException
 import com.github.ljarka.picfort.core.network.FrameSettingsStore
 import com.github.ljarka.picfort.core.network.ServerUrlStore
+import com.github.ljarka.picfort.core.network.immichUnreachableMessage
 import com.github.ljarka.picfort.core.network.isLocalNetworkHost
 import com.github.ljarka.picfort.core.network.normalizeFrameUrl
+import com.github.ljarka.picfort.core.network.notImmichMessage
 import com.github.ljarka.picfort.network.normalizeServerUrl
 import com.github.ljarka.picfort.ui.frame.ConnectionTest
 import com.github.ljarka.picfort.ui.frame.PicfortServerCheck
@@ -56,6 +58,11 @@ data class SetupUi(
     val immichError: String? = null,
     val loginError: String? = null,
     val picfortError: String? = null,
+    /**
+     * The Picfort server answered and is saved, but it has a problem of its own ([picfortError] says
+     * which and how to fix it, T-086): Try again after fixing, or Continue anyway.
+     */
+    val picfortSavedWithProblem: Boolean = false,
 ) {
     val busy: Boolean get() = step != SetupStep.Idle && step != SetupStep.Done
     val canConnect: Boolean
@@ -99,8 +106,13 @@ class SetupViewModel @Inject constructor(
     fun onImmichAddress(value: String) = _state.update { it.copy(immichAddress = value, immichError = null) }
     fun onEmail(value: String) = _state.update { it.copy(email = value, loginError = null) }
     fun onPassword(value: String) = _state.update { it.copy(password = value, loginError = null) }
-    fun onPicfortAddress(value: String) = _state.update { it.copy(picfortAddress = value, picfortError = null) }
-    fun onPicfortApiKey(value: String) = _state.update { it.copy(picfortApiKey = value, picfortError = null) }
+    fun onPicfortAddress(value: String) =
+        _state.update { it.copy(picfortAddress = value, picfortError = null, picfortSavedWithProblem = false) }
+    fun onPicfortApiKey(value: String) =
+        _state.update { it.copy(picfortApiKey = value, picfortError = null, picfortSavedWithProblem = false) }
+
+    /** A server saved with a problem during this setup, then changed and not working: not kept on Skip. */
+    private var savedDuringSetup = false
     fun showApiKey() = _state.update { it.copy(showApiKey = true) }
 
     /** Signed in, but the user wants another Immich account or server. */
@@ -111,6 +123,7 @@ class SetupViewModel @Inject constructor(
 
     /** The Picfort server failed after signing in: go on without it (Settings has it later). */
     fun skipPicfort() {
+        if (savedDuringSetup && !_state.value.picfortSavedWithProblem) picfortServer.save("", "")
         picfortServer.markPrompted()
         _state.update { it.copy(step = SetupStep.Done) }
     }
@@ -130,10 +143,20 @@ class SetupViewModel @Inject constructor(
             val apiKey = _state.value.picfortApiKey
             when (val result = picfortServer.check(picfort, apiKey)) {
                 is ConnectionTest.Failed -> _state.update {
-                    it.copy(step = SetupStep.Idle, picfortError = result.message)
+                    it.copy(step = SetupStep.Idle, picfortError = result.message, picfortSavedWithProblem = false)
                 }
 
-                else -> { // Ok, or it answers but the wall has a problem: saved, details in Settings.
+                // It answers, but has a problem (e.g. can't reach Immich): the address is right, so it is
+                // saved, and the page says what to fix on the server before going on (T-086).
+                is ConnectionTest.Partial -> {
+                    picfortServer.save(picfort, apiKey)
+                    savedDuringSetup = true
+                    _state.update {
+                        it.copy(step = SetupStep.Idle, picfortError = result.message, picfortSavedWithProblem = true)
+                    }
+                }
+
+                else -> {
                     picfortServer.save(picfort, apiKey)
                     picfortServer.markPrompted()
                     _state.update { it.copy(step = SetupStep.Done) }
@@ -191,13 +214,13 @@ class SetupViewModel @Inject constructor(
             if (response.isSuccessful && "pong" in body) {
                 null
             } else {
-                "No Immich server found at $baseUrl (HTTP ${response.code})"
+                notImmichMessage(baseUrl, response.code, response.header("Server"), request.url.port)
             }
         }
     } catch (e: CleartextNotAllowedException) {
         e.message
     } catch (e: IOException) {
-        "Can't connect to $baseUrl"
+        immichUnreachableMessage(baseUrl)
     } catch (e: IllegalArgumentException) {
         "That doesn't look like a server address"
     }

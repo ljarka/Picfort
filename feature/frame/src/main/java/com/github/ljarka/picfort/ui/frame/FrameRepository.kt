@@ -8,7 +8,10 @@ import com.github.ljarka.picfort.core.network.CleartextNotAllowedException
 import com.github.ljarka.picfort.core.network.FrameSettingsStore
 import com.github.ljarka.picfort.core.network.isPicfortKeyRejected
 import com.github.ljarka.picfort.core.network.normalizeFrameUrl
+import com.github.ljarka.picfort.core.network.notPicfortMessage
+import com.github.ljarka.picfort.core.network.picfortImmichProblem
 import com.github.ljarka.picfort.core.network.picfortKey
+import com.github.ljarka.picfort.core.network.picfortUnreachableMessage
 import com.github.ljarka.picfort.core.network.readParsedBody
 import dagger.hilt.android.qualifiers.ApplicationContext
 import java.io.IOException
@@ -36,7 +39,16 @@ private data class FrameResponse(
     val status: String = "",
     val message: String? = null,
     @SerialName("retry_after") val retryAfter: Int? = null,
+    /** The server's check of Immich (T-086): "ok", "unreachable", "not_immich", "key_rejected"; null on older servers. */
+    val immich: String? = null,
 )
+
+/** What `/status` said when testing an address (T-086). */
+sealed interface StatusCheck {
+    /** A Picfort server; [immichProblem] is what it reports about Immich, null when that works. */
+    data class Picfort(val immichProblem: String?) : StatusCheck
+    data class Failed(val message: String) : StatusCheck
+}
 
 /**
  * Talks to the Picfort server on the local network.
@@ -104,14 +116,34 @@ class FrameRepository @Inject constructor(
     }
 
     /** Checks that [address] points at a running frame server that accepts [apiKey]. */
-    suspend fun testConnection(address: String, apiKey: String): FrameResult {
-        val base = normalizeFrameUrl(address) ?: return FrameResult.Error("Invalid address")
+    suspend fun testConnection(address: String, apiKey: String): StatusCheck {
+        val base = normalizeFrameUrl(address) ?: return StatusCheck.Failed("Invalid address")
         val url = base.newBuilder().addPathSegment("status").build()
-        return request(url, apiKey) { code, body ->
-            if (code == 200 && body?.status == "ok") {
-                FrameResult.Sent
-            } else {
-                FrameResult.Error("Not a Picfort server (HTTP $code)")
+        val request = Request.Builder().url(url).picfortKey(apiKey).build()
+        return withContext(Dispatchers.IO) {
+            try {
+                client.newCall(request).execute().use { response ->
+                    if (response.isPicfortKeyRejected()) return@use StatusCheck.Failed(WRONG_API_KEY)
+                    val payload = response.readParsedBody<FrameResponse>(json)
+                    val body = payload.value
+                    if (response.code == 200 && body?.status == "ok") {
+                        StatusCheck.Picfort(picfortImmichProblem(body.immich))
+                    } else {
+                        StatusCheck.Failed(
+                            notPicfortMessage(
+                                url.host,
+                                url.port,
+                                response.code,
+                                response.header("Server"),
+                                payload.text,
+                            ),
+                        )
+                    }
+                }
+            } catch (e: CleartextNotAllowedException) {
+                StatusCheck.Failed(e.message ?: "Use https:// for frames outside your network")
+            } catch (e: IOException) {
+                StatusCheck.Failed(picfortUnreachableMessage(url.host, url.port))
             }
         }
     }
@@ -134,7 +166,7 @@ class FrameRepository @Inject constructor(
         } catch (e: CleartextNotAllowedException) {
             FrameResult.Error(e.message ?: "Use https:// for frames outside your network")
         } catch (e: IOException) {
-            FrameResult.Error("Can't reach the Picfort server at ${url.host}")
+            FrameResult.Error(picfortUnreachableMessage(url.host, url.port))
         }
     }
 }

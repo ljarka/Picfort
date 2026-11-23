@@ -66,9 +66,16 @@ docker compose ps                     # picfort_server should be "Up" (or "runni
 curl http://localhost:5000/status     # the answer contains "status":"ok"
 ```
 
-If it isn't running, look at the log: `docker compose logs`. The line
-`Set IMMICH_URL and IMMICH_API_KEY (in .env), then start the server again.` means one of them is
-empty; fix `.env` and run `docker compose up -d` again.
+Then look at the log: `docker compose logs`. Near the top it says whether the server reaches
+Immich with your key:
+
+- `Immich at … connected, the API key works.`: all good.
+- `Can't reach Immich at …`, `… answers, but it isn't Immich`, or `Immich at … rejects IMMICH_API_KEY`:
+  the line says what to fix in `.env` (see step 3 for `IMMICH_URL`, step 2 for the key).
+- `Set IMMICH_URL and IMMICH_API_KEY (in .env), then start the server again.`: one of them is empty.
+
+After changing `.env`, run `docker compose up -d` again. The app's check (step 7, and Settings →
+Picfort server → Test) shows the same problems with their fix.
 
 ## 5. Find the machine's address
 
@@ -123,8 +130,10 @@ Names and photos in Picfort can be changed under **Settings → Family** (and te
 | The app can't reach Immich | Open the same address in the phone's browser. If that fails too, the phone isn't on the home network, or the port is wrong (Immich's default is 2283). |
 | "Picfort server doesn't answer" | Phone and server on the same network? Right port? `curl http://localhost:5000/status` on the server machine works? A firewall on the machine may block the port. |
 | `curl` works on the machine but not from the phone | A firewall on the machine: allow the port (e.g. `sudo ufw allow 5000/tcp`). |
-| The container keeps restarting | `docker compose logs`: usually an empty or wrong `IMMICH_URL` / `IMMICH_API_KEY`. |
-| Port 5000 already in use (Mac) | `PICFORT_PORT=5050` in `.env`, `docker compose up -d`, and `:5050` in the app. |
+| The container keeps restarting | `docker compose logs`: usually an empty `IMMICH_URL` or `IMMICH_API_KEY`. |
+| "Connected, but the server can't reach Immich" (in the app) | `IMMICH_URL` in `.env` is wrong for the server: see the table in step 3, then `docker compose up -d` and Try again. |
+| "Immich rejects the server's API key" (in the app) | Create a new key with the four permissions from step 2, put it in `IMMICH_API_KEY`, `docker compose up -d`. |
+| Port 5000 already in use, or the app says "AirPlay Receiver" (Mac) | `PICFORT_PORT=5050` in `.env`, `docker compose up -d`, and `:5050` in the app. |
 | Someone is missing from the family row | They need their own Immich user; hidden members come back under Settings → Family. |
 | Android won't install the APK | Allow "Install unknown apps" for your browser in Android settings. An older Picfort signed with another key must be uninstalled first. |
 

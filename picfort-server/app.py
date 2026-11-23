@@ -1,6 +1,7 @@
 """HTTP API used by the Picfort app to control the frame.
 
-    GET  /status                -> {"status": "ok", "busy": bool, "currentAsset": …, "slideshow": {…}}
+    GET  /status                -> {"status": "ok", "busy": bool, "currentAsset": …, "slideshow": {…},
+                                    "immich": "ok" | "unreachable" | "not_immich" | "key_rejected"}
     POST /run-local             -> 202 {"status": "accepted"} renders multipart JPEG bytes directly
                                    (no Immich ID needed; use field name 'photo').
     GET  /run?assetId=<uuid>    -> 202 {"status": "accepted"} once the photo is fetched and rendered;
@@ -89,7 +90,7 @@ from browser_frame import FRAME_PAGE_PATH, register_browser_frame
 from auth import Authenticator, AuthError, AuthUnavailable, immich_lookup
 from events import DEFAULT_LIMIT as EVENTS_DEFAULT_LIMIT, EventStore
 from family import FamilyStore
-from immich import ImmichClient
+from immich import IMMICH_CHECK_LOG, IMMICH_OK, ImmichClient
 from shopping import ShoppingStore
 from school import SchoolStore
 from slideshow import INTERVALS, MODES, Picker, SettingsStore, Slideshow, SlideshowSettings
@@ -241,6 +242,26 @@ def settings_json(slideshow: Slideshow):
     }
 
 
+class _CachedCheck:
+    """Runs [check] at most once a minute while it is fine, every 5 s while it isn't: /status is
+    polled, Immich needn't be, and a fixed .env shows up at the next Test."""
+
+    OK_TTL, PROBLEM_TTL = 60.0, 5.0
+
+    def __init__(self, check, clock):
+        self.check, self.clock = check, clock
+        self.lock = threading.Lock()
+        self.value, self.at = None, None
+
+    def __call__(self):
+        with self.lock:
+            now = self.clock()
+            ttl = self.OK_TTL if self.value == IMMICH_OK else self.PROBLEM_TTL
+            if self.at is None or now - self.at >= ttl:
+                self.value, self.at = self.check(), now
+            return self.value
+
+
 def create_app(controller: FrameController, slideshow: Slideshow, immich: ImmichClient,
                wall: WallStore = None, auth: Authenticator = None, api_key: str = "",
                shopping: ShoppingStore = None, family: FamilyStore = None,
@@ -253,6 +274,7 @@ def create_app(controller: FrameController, slideshow: Slideshow, immich: Immich
     # The photo plus a little room for the text fields; larger requests get 413.
     app.config["MAX_CONTENT_LENGTH"] = MAX_PHOTO_BYTES + 64 * 1024
     controller.on_shown = slideshow.photo_changed
+    immich_health = _CachedCheck(immich.check, clock)
 
     @app.route("/run")
     def run():
@@ -284,6 +306,8 @@ def create_app(controller: FrameController, slideshow: Slideshow, immich: Immich
                 hardware=bool(controller.config.driver),
             )
         body["slideshow"] = settings_json(slideshow)
+        # Whether this server reaches Immich with its key (T-086): the app's Test names the fix.
+        body["immich"] = immich_health()
         return jsonify(body)
 
     @app.route("/current")
@@ -882,6 +906,8 @@ if __name__ == "__main__":
         log.error("Set IMMICH_URL and IMMICH_API_KEY (in .env), then start the server again.")
         sys.exit(1)
     immich_client = ImmichClient(config.immich_url, config.immich_api_key)
+    immich_state = immich_client.check()
+    (log.info if immich_state == IMMICH_OK else log.error)(IMMICH_CHECK_LOG[immich_state], config.immich_url)
     frame_controller = FrameController(config, float(os.environ.get("FRAME_MIN_INTERVAL", "30")))
     show_slideshow = Slideshow(
         SettingsStore(os.environ.get("FRAME_STATE_PATH", "slideshow.json")),

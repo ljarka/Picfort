@@ -18,6 +18,7 @@ import app.cash.paparazzi.DeviceConfig
 import app.cash.paparazzi.Paparazzi
 import com.android.resources.NightMode
 import com.github.ljarka.picfort.core.network.PicfortServerException
+import com.github.ljarka.picfort.core.network.picfortUnreachableMessage
 import com.github.ljarka.picfort.core.ui.theme.PicfortTheme
 import org.junit.Rule
 import org.junit.Test
@@ -90,7 +91,7 @@ class FrameScreenshotTest {
                     wallTestResult(null),
                     wallTestResult(PicfortServerException.NotAccepted()),
                     wallTestResult(PicfortServerException.NoWall()),
-                    ConnectionTest.Failed("Can't reach the Picfort server at 192.168.0.105"),
+                    ConnectionTest.Failed(picfortUnreachableMessage("192.168.0.105", 5000)),
                     ConnectionTest.Failed(WRONG_API_KEY),
                 ).forEach { test ->
                     PicfortServerForm(

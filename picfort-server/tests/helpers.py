@@ -10,6 +10,7 @@ class FakeImmich:
         self.library = library or []
         self.by_day = by_day or {}
         self.calls = []
+        self.health = "ok"
 
     def random_images(self, size=50, album_id=None):
         self.calls.append(("random", album_id))
@@ -21,6 +22,10 @@ class FakeImmich:
 
     def albums(self):
         return [{"id": k, "name": f"Album {k}"} for k in self.album]
+
+    def check(self):
+        self.calls.append(("check", None))
+        return self.health
 
 
 class Clock:

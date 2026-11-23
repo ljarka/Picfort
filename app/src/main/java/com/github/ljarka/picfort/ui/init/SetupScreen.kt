@@ -195,7 +195,8 @@ fun SetupContent(
             }
             if (state.signedIn && state.picfortError != null) {
                 TextButton(onClick = onSkipPicfort, modifier = Modifier.align(Alignment.CenterHorizontally)) {
-                    Text("Skip the Picfort server for now")
+                    // Saved with a server-side problem: the app works, the wall waits for the fix.
+                    Text(if (state.picfortSavedWithProblem) "Continue anyway" else "Skip the Picfort server for now")
                 }
             }
         }
