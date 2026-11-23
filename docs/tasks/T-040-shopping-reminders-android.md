@@ -1,6 +1,6 @@
 # T-040 — Shopping list reminders (Android notifications)
 
-**Status:** ready  
+**Status:** in-progress (code `d0c90ab`; left: a green run of `maestro/shopping-reminders.yaml` on a device, see below)  
 **Component:** Android app  
 **Depends on:** T-019 (Shopping list screens)
 
@@ -51,12 +51,27 @@ In the shopping list screen (`ShoppingListScreen`), a bell icon [🔔] in the to
 4. **Auto-cleanup:**
    - When a shopping list is archived or deleted, any active reminder is cancelled.
 
+## As built
+
+- Reminders are stored in preferences, not Room, like event reminders (ADR 0015). The rearm receiver is
+  the shopping module's own (features don't share code), with the same broadcasts as T-039's.
+- A list with nothing left to buy (all checked, or empty) gets no notification; the reminder is dropped.
+- A shown reminder is dismissed when its last item is checked off in the app.
+- Bell and status row are shown offline too (the reminder is this phone's); not on archived lists.
+
+## Left
+
+- Run `./scripts/maestro-smoke.sh maestro/shopping-reminders.yaml` on an emulator nobody else is using
+  (12-hour clock; ~8 min). On 2026-11-23 it reached the time picker (bell, sheet, presets, custom date),
+  then other tests on the same emulator broke Maestro's driver before the alarm. Unit and Paparazzi tests,
+  ktlint, lint and boundaries are green. When it passes: status `done (d0c90ab)` and STATUS.md.
+
 ## Acceptance criteria
 
-- [ ] Bell icon in shopping list top bar opens reminder bottom sheet with presets.
-- [ ] Active reminder is clearly indicated with a badge or status text in the list.
-- [ ] Notification displays the list title and the actual pending items to buy.
-- [ ] Tapping the notification opens the specific shopping list.
-- [ ] "Snooze 1h" action postpones the alert by one hour.
-- [ ] If all items are checked off before the alert time, the reminder automatically cancels.
-- [ ] Device reboot preserves scheduled shopping reminders.
+- [x] Bell icon in shopping list top bar opens reminder bottom sheet with presets.
+- [x] Active reminder is clearly indicated with a badge or status text in the list.
+- [x] Notification displays the list title and the actual pending items to buy.
+- [x] Tapping the notification opens the specific shopping list.
+- [x] "Snooze 1h" action postpones the alert by one hour.
+- [x] If all items are checked off before the alert time, the reminder automatically cancels.
+- [x] Device reboot preserves scheduled shopping reminders.
