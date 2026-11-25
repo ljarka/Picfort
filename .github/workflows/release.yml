@@ -62,6 +62,22 @@ jobs:
           PICFORT_VERSION_CODE: ${{ github.run_number }}0
         run: ./gradlew verifyPaparazziDebug assembleRelease
 
+      - name: Build release notes
+        run: |
+          PREV_TAG=$(git describe --tags --abbrev=0 "${GITHUB_REF_NAME}^" 2>/dev/null || echo "")
+          {
+            if [ -n "$PREV_TAG" ]; then
+              FEATS=$(git log "${PREV_TAG}..${GITHUB_REF_NAME}" --pretty="%s" --no-merges | grep -E "^feat" | sed 's/^/- /')
+              FIXES=$(git log "${PREV_TAG}..${GITHUB_REF_NAME}" --pretty="%s" --no-merges | grep -E "^fix" | sed 's/^/- /')
+              if [ -n "$FEATS" ]; then printf '## ✨ New\n%s\n\n' "$FEATS"; fi
+              if [ -n "$FIXES" ]; then printf '## 🐛 Fixed\n%s\n\n' "$FIXES"; fi
+            else
+              echo "First release."
+              echo ""
+            fi
+            cat .github/release-upgrade-guide.md
+          } > release-notes.md
+
       - name: Publish release
         env:
           GH_TOKEN: ${{ github.token }}
@@ -69,7 +85,7 @@ jobs:
           apk="picfort-${GITHUB_REF_NAME}.apk"
           cp app/build/outputs/apk/release/app-release.apk "$apk"
           gh release create "$GITHUB_REF_NAME" "$apk" docker/docker-compose.yml docker/example.env \
-            --title "Picfort $GITHUB_REF_NAME" --generate-notes
+            --title "Picfort $GITHUB_REF_NAME" --notes-file release-notes.md
 
   server-image:
     runs-on: ubuntu-latest

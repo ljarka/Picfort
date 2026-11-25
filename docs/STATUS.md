@@ -223,6 +223,7 @@ Another family installs Picfort in under an hour, without help ([roadmap](../spe
 |------|-------------|--------|
 | [T-085](tasks/T-085-install-guide.md) | Install guide: from "I have Immich" to "the app is connected" (`INSTALL.md`) | `in-progress` |
 | [T-086](tasks/T-086-first-run-checks.md) | First-run checks: each setup mistake says what to fix (app and server log) | `done` |
+| [T-087](tasks/T-087-release-notes-upgrades.md) | Release notes & upgrades: grouped changelog + upgrade guide on every release page | `done` |
 
 ---
 
