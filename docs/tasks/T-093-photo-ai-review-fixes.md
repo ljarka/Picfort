@@ -1,6 +1,6 @@
 # T-093 — Review fixes for T-088..T-092 (photo AI worker, frame privacy, tags)
 
-**Status:** in-progress  
+**Status:** done (`84fe55a`)  
 **Component:** Server (`photo_ai.py`, `slideshow.py`), Android (`:feature:frame`, `:feature:timeline`, `:core:database`)  
 **Depends on:** T-088, T-089, T-090, T-092
 
