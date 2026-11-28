@@ -1,6 +1,6 @@
 # T-094 — Timeline: "Best of the month" strip at the top of each month
 
-**Status:** in-progress  
+**Status:** done (`16f6958`)  
 **Component:** Android (`:feature:timeline`, `:core:database`)  
 **Depends on:** T-089 (`ai/best/frame-worthy` tag in Immich), T-092 (Settings -> Timeline)
 
