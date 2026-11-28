@@ -1,6 +1,6 @@
 # T-108 — Hardening, privacy isolation & review fixes (P0)
 
-**Status:** ready  
+**Status:** done (`c79be94`)  
 **Component:** Picfort server (`picfort-server/`), Android (`:core:network`, `:core:ui`, `:feature:wall`, `:feature:timeline`)  
 **Origin:** Code review of T-088..T-107 and earlier server/Android foundations (2026-11-28).
 
@@ -68,10 +68,10 @@ adding more features.
 
 ## Acceptance criteria
 
-- [ ] Unit tests for `owner_id` isolation in `/photo-insights/cleanup`, `dismiss`, `delete`,
+- [x] Unit tests for `owner_id` isolation in `/photo-insights/cleanup`, `dismiss`, `delete`,
       `album-suggestions`, and `frame_worthy_ids()`.
-- [ ] Unit tests for SSRF blocking in `test_wishlist.py` (private IPs, loopback, redirects).
-- [ ] Unit test for `SecurePreferencesStore` recovery from corrupted/undecryptable preferences.
-- [ ] Unit test for `PhotoAiWorker.server_user()` retrying after transient errors.
-- [ ] `PhotoBackdrop` fade-out and Android < 12 downscale verified; Paparazzi tests green.
-- [ ] `./scripts/check-modular-boundaries.sh`, `./gradlew ktlintCheck`, unit tests, and pytest green.
+- [x] Unit tests for SSRF blocking in `test_wishlist.py` (private IPs, loopback, redirects).
+- [x] Unit test for `SecurePreferencesStore` recovery from corrupted/undecryptable preferences.
+- [x] Unit test for `PhotoAiWorker.server_user()` retrying after transient errors.
+- [x] `PhotoBackdrop` fade-out and Android < 12 downscale verified; Paparazzi tests green.
+- [x] `./scripts/check-modular-boundaries.sh`, `./gradlew ktlintCheck`, unit tests, and pytest green.
