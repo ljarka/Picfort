@@ -192,7 +192,7 @@ fun parseSearchDuration(value: JsonElement?): Long? = (value as? JsonPrimitive)?
 /** A tag chip shown in Search (T-090). */
 data class SearchTag(val id: String, val label: String, val value: String)
 
-private val CURATED_AI_TAG_LABELS = linkedMapOf(
+internal val CURATED_AI_TAG_LABELS = linkedMapOf(
     "ai/best/frame-worthy" to "Best",
     "ai/type/nature" to "Nature",
     "ai/type/kids-art" to "Kids' art",
@@ -202,6 +202,30 @@ private val CURATED_AI_TAG_LABELS = linkedMapOf(
     "ai/type/meme" to "Memes",
     "ai/privacy/sensitive" to "Sensitive",
 )
+
+/** AI clean-up tags, shown by name on a photo's details (T-097); left out of Search chips. */
+private val CLEANUP_TAG_LABELS = mapOf(
+    "ai/cleanup/low-quality" to "Low quality",
+    "ai/cleanup/blurry" to "Blurry",
+    "ai/cleanup/accidental" to "Accidental",
+    "ai/cleanup/closed-eyes" to "Closed eyes",
+)
+
+/**
+ * A photo's tags as short labels for its details (T-097): Picfort's `ai/` tags by their friendly
+ * names first, in the Search order, then the rest by name (the full value for nested user tags).
+ */
+fun assetTagLabels(values: List<String>): List<String> {
+    val curatedOrder = CURATED_AI_TAG_LABELS.keys.toList()
+    val distinct = values.map { it.trim() }.filter { it.isNotEmpty() }.distinctBy { it.lowercase() }
+    val (ai, user) = distinct.partition { it.lowercase().startsWith("ai/") }
+    val aiLabels = ai.sortedBy { v -> curatedOrder.indexOf(v.lowercase()).let { if (it < 0) Int.MAX_VALUE else it } }
+        .map { v ->
+            CURATED_AI_TAG_LABELS[v.lowercase()] ?: CLEANUP_TAG_LABELS[v.lowercase()]
+                ?: v.substringAfterLast('/').replace('-', ' ').replaceFirstChar { it.uppercase() }
+        }
+    return aiLabels.distinct() + user.sortedBy { it.lowercase() }
+}
 
 /** Orders curated `ai/` tags first (skipping cleanup tags), followed by user tags. */
 internal fun formatSearchTags(raw: List<TagDto>): List<SearchTag> {

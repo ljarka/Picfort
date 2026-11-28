@@ -222,6 +222,7 @@ Small things the family asked for while using the app.
 | [T-094](tasks/T-094-best-of-month-carousel.md) | Timeline: "Best of the month" strip from `ai/best/frame-worthy` | `done` |
 | [T-095](tasks/T-095-server-dashboard.md) | Server dashboard: `/dashboard` page (health, version, photo AI coverage, stores, recent problems) | `done` |
 | [T-096](tasks/T-096-memories-screen.md) | Memories screen from Immich, opened by a "Memories" button on the Wall's frame card | `done` |
+| [T-097](tasks/T-097-photo-details-tags.md) | Photo details: Immich tags as chips on top | `in-progress` |
 
 ---
 

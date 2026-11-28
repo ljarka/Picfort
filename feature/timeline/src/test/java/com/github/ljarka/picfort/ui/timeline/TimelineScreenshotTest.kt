@@ -304,6 +304,11 @@ class TimelineScreenshotTest {
                 latitude = 50.0614, longitude = 19.9366,
             ),
             people = listOf(PersonInfo("Ala"), PersonInfo("Tomek")),
+            tags = listOf(
+                com.github.ljarka.picfort.assets.AssetTagInfo("nature", "ai/type/nature"),
+                com.github.ljarka.picfort.assets.AssetTagInfo("frame-worthy", "ai/best/frame-worthy"),
+                com.github.ljarka.picfort.assets.AssetTagInfo("Wakacje", "Wakacje"),
+            ),
         ).toDetails(ZoneId.of("Europe/Warsaw"))
         Surface(color = MaterialTheme.colorScheme.surfaceContainerLow, modifier = Modifier.fillMaxSize()) {
             Column(Modifier.padding(top = 24.dp)) { AssetDetailsList(DetailsState.Loaded(details)) }

@@ -55,4 +55,25 @@ class AssetDetailsTest {
                 .toDetails(utc).rows.single().value,
         )
     }
+
+    @Test
+    fun `ai tags first by friendly name in Search order, then user tags by name`() {
+        val details = AssetInfo(
+            id = "x",
+            tags = listOf(
+                AssetTagInfo("Zoo", "Trips/Zoo"),
+                AssetTagInfo("nature", "ai/type/nature"),
+                AssetTagInfo("blurry", "ai/cleanup/blurry"),
+                AssetTagInfo("frame-worthy", "ai/best/frame-worthy"),
+                AssetTagInfo("birthday", "Birthday"),
+                AssetTagInfo("nature", "ai/type/nature"),
+            ),
+        ).toDetails(utc)
+        assertEquals(listOf("Best", "Nature", "Blurry", "Birthday", "Trips/Zoo"), details.tags)
+    }
+
+    @Test
+    fun `no tags, no chips`() {
+        assertEquals(emptyList<String>(), AssetInfo(id = "x").toDetails(utc).tags)
+    }
 }

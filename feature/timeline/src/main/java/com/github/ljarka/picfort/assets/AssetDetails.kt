@@ -1,5 +1,6 @@
 package com.github.ljarka.picfort.assets
 
+import com.github.ljarka.picfort.collections.assetTagLabels
 import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
@@ -11,6 +12,8 @@ data class DetailRow(val label: String, val value: String)
 
 data class AssetDetails(
     val rows: List<DetailRow>,
+    /** Tag labels shown on top of the details (T-097). */
+    val tags: List<String> = emptyList(),
     /** Latitude/longitude, for opening a map. */
     val location: Pair<Double, Double>? = null,
 )
@@ -82,5 +85,9 @@ fun AssetInfo.toDetails(deviceZone: ZoneId = ZoneId.systemDefault()): AssetDetai
         people.map { it.name }.filter { it.isNotBlank() }.takeIf { it.isNotEmpty() }
             ?.let { DetailRow("People", it.joinToString(", ")) },
     )
-    return AssetDetails(rows, if (lat != null && lon != null) lat to lon else null)
+    return AssetDetails(
+        rows = rows,
+        tags = assetTagLabels(tags.map { it.value.ifBlank { it.name } }),
+        location = if (lat != null && lon != null) lat to lon else null,
+    )
 }

@@ -15,7 +15,12 @@ data class AssetInfo(
     val fileCreatedAt: String? = null,
     val exifInfo: ExifInfo? = null,
     val people: List<PersonInfo> = emptyList(),
+    /** Immich tags on the asset (T-097); `value` is the full path, e.g. `ai/type/nature`. */
+    val tags: List<AssetTagInfo> = emptyList(),
 )
+
+@Serializable
+data class AssetTagInfo(val name: String = "", val value: String = "")
 
 /** Numbers are Double because older servers send e.g. 4000.0 for integers. */
 @Serializable

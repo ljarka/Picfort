@@ -16,6 +16,7 @@ Immich photo timeline, gallery, full-screen viewer, collections, and media sync 
 | `ui/timeline/LocalDuplicates.kt` | `localIdsOnServer`: phone media already in Immich (backup link, SHA-1, or file name + time taken ± zone offset) is hidden, shown once as the Immich copy |
 | `ui/timeline/SyncTimelineSource.kt` | Local copy of Immich assets + EXIF (`AssetExifV1`) + daily OCR document ids (T-088) and `ai/best/frame-worthy` ids (T-094) |
 | `ui/image/ImageDetailsScreen.kt` | Full-screen photo/video viewer, shared element transition |
+| `ui/image/AssetDetailsSheet.kt`, `assets/AssetDetails.kt` | "Details" sheet: tag chips on top (`assetTagLabels`, T-097), then date, file, camera, place, people |
 | `ui/image/ImageDetailsViewModel.kt` | Viewer ViewModel: zoom, EXIF metadata, pushing photo to frame via `FrameSender` |
 | `collections/CollectionsScreens.kt` | Albums list, album view, search screen (text + Immich people, T-057; All/Photos/Videos `MediaFilter`, T-071; Immich tag chips, T-090) |
 | `collections/CollectionsRepository.kt` | Album contents via `timeline/bucket?albumId`; durations text or ms (`parseSearchDuration`, T-061); `deleteAlbum` (T-070) |
