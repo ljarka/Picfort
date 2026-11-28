@@ -219,6 +219,7 @@ Small things the family asked for while using the app.
 | [T-091](tasks/T-091-wall-frame-photo.md) | Family Wall: show the current `/frame/photo` card (tapping opens Frame) | `done` |
 | [T-092](tasks/T-092-timeline-settings-and-tags.md) | Settings -> Timeline: hide screenshots/documents & delete Immich tags | `done` |
 | [T-093](tasks/T-093-photo-ai-review-fixes.md) | Review fixes: photo AI worker robustness, sensitive photos off the frame, `ai/*` tags | `done` |
+| [T-094](tasks/T-094-best-of-month-carousel.md) | Timeline: "Best of the month" strip from `ai/best/frame-worthy` | `in-progress` |
 
 ---
 

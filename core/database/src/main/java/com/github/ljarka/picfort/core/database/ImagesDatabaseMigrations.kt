@@ -20,4 +20,11 @@ internal val MIGRATION_23_24 = object : Migration(23, 24) {
     }
 }
 
-internal val IMAGES_DATABASE_MIGRATIONS = arrayOf(MIGRATION_23_24)
+internal val MIGRATION_24_25 = object : Migration(24, 25) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        // T-094: best-of-the-month cache, filled by the next tag refresh.
+        db.execSQL("CREATE TABLE IF NOT EXISTS `remote_best` (`assetId` TEXT NOT NULL, PRIMARY KEY(`assetId`))")
+    }
+}
+
+internal val IMAGES_DATABASE_MIGRATIONS = arrayOf(MIGRATION_23_24, MIGRATION_24_25)

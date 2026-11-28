@@ -62,3 +62,7 @@ data class RemoteAssetExifEntity(@PrimaryKey val assetId: String, val hasCameraE
 /** Immich asset ids matched by document/receipt OCR terms (T-088). */
 @Entity(tableName = "remote_documents")
 data class RemoteDocumentEntity(@PrimaryKey val assetId: String)
+
+/** Immich asset ids tagged `ai/best/frame-worthy` by the Picfort server (T-094). */
+@Entity(tableName = "remote_best")
+data class RemoteBestEntity(@PrimaryKey val assetId: String)

@@ -320,6 +320,16 @@ class TimelineScreenshotTest {
         snapshot(TimelineState(LoadingState.LOADED, layout))
     }
 
+    /** T-094: "Best" strip under the month header. */
+    @Test
+    fun timeline_best() {
+        val layout = layoutOf(
+            month(3L, start = 0, seed = 0, count = 11).copy(best = listOf(0, 1, 3, 5, 8)),
+            month(2L, start = 11, seed = 20, count = 9),
+        )
+        snapshot(TimelineState(LoadingState.LOADED, layout))
+    }
+
     // --- T-052: family carousel on Photos -------------------------------------------------
 
     private val family = listOf(

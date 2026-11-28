@@ -22,6 +22,17 @@ data class TilesRow(val month: Long, val row: Int, val tiles: List<Tile>, val he
     override val key: String get() = "m${month}_$row"
 }
 
+/**
+ * "Best of the month" strip right under a month's header (T-094): square tiles of [size] px,
+ * scrolled sideways. Tile widths equal [size].
+ */
+data class BestRow(val month: Long, val tiles: List<Tile>, val size: Float) : TimelineRow {
+    override val key: String get() = "m${month}_best"
+}
+
+/** Best tiles are this fraction of a grid row's target height. */
+private const val BEST_SIZE_FACTOR = 0.7f
+
 /** A month's title and the position of its header in [TimelineLayout.rows] (for the fast scroller). */
 data class MonthMarker(val month: Long, val title: String, val rowIndex: Int)
 
@@ -36,7 +47,9 @@ data class TimelineLayout(val rows: List<TimelineRow>, val months: List<MonthMar
         val endOfDay = day.plusDays(1).atStartOfDay(ZoneOffset.UTC).toInstant().toEpochMilli()
         val row = rows.indexOfFirst { r -> r is TilesRow && r.tiles.any { it.asset.dateTaken < endOfDay } }
             .takeIf { it >= 0 } ?: rows.indexOfLast { it is TilesRow }.takeIf { it >= 0 } ?: return null
-        return if (row > 0 && rows[row - 1] is MonthHeaderRow) row - 1 else row
+        var top = row
+        if (top > 0 && rows[top - 1] is BestRow) top--
+        return if (top > 0 && rows[top - 1] is MonthHeaderRow) top - 1 else row
     }
 
     companion object {
@@ -75,6 +88,14 @@ fun layoutTimeline(
         val title = titleOf(month.key)
         months += MonthMarker(month.key, title, rows.size)
         rows += MonthHeaderRow(month.key, title)
+        if (month.best.isNotEmpty()) {
+            val size = target * BEST_SIZE_FACTOR
+            val tiles = month.best.map { k ->
+                val asset = month.assets[k]
+                Tile(asset, month.start + k, urlOf(asset), size)
+            }
+            rows += BestRow(month.key, tiles, size)
+        }
         justify(month.assets.map { it.ratio }, viewport.width, target, viewport.spacing)
             .forEachIndexed { r, row ->
                 val tiles = row.widths.mapIndexed { k, w ->

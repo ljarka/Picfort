@@ -3,7 +3,7 @@
 Room database, entities and DAOs for local caching and offline storage.
 
 ## Scope & Table Classification (ADR 0016)
-`ImagesDatabase` (version 24) keeps `fallbackToDestructiveMigration(dropAllTables = true)` because **every table in it is a cache** that can be rebuilt without data loss. Cheap additive steps live in `ImagesDatabaseMigrations.kt` (`MIGRATION_23_24`, SQL copied from Room's generated `createAllTables`) so such updates skip the full re-sync:
+`ImagesDatabase` (version 25) keeps `fallbackToDestructiveMigration(dropAllTables = true)` because **every table in it is a cache** that can be rebuilt without data loss. Cheap additive steps live in `ImagesDatabaseMigrations.kt` (`MIGRATION_23_24`, `MIGRATION_24_25`, SQL copied from Room's generated `createAllTables`) so such updates skip the full re-sync:
 
 | Table | Entity | Kind | Rebuilt from |
 |---|---|---|---|
@@ -11,6 +11,7 @@ Room database, entities and DAOs for local caching and offline storage.
 | `remote_assets` | `RemoteAssetEntity` | cache | Immich sync stream |
 | `remote_asset_exif` | `RemoteAssetExifEntity` | cache | Immich sync stream (`AssetExifV1`, T-088) |
 | `remote_documents` | `RemoteDocumentEntity` | cache | Immich metadata OCR search (T-088) |
+| `remote_best` | `RemoteBestEntity` | cache | Immich `ai/best/frame-worthy` tag search (T-094) |
 | `remote_stacks` | `RemoteStackEntity` | cache | Immich sync stream |
 | `partners` | `PartnerEntity` | cache | Immich sync stream |
 | `sync_state` | `SyncStateEntity` | cache | Immich sync cursor (full re-sync on wipe) |

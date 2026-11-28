@@ -2,9 +2,11 @@ package com.github.ljarka.picfort.ui.timeline
 
 import androidx.room.withTransaction
 import com.github.ljarka.picfort.collections.CollectionsService
+import com.github.ljarka.picfort.collections.MetadataSearchRequest
 import com.github.ljarka.picfort.collections.OcrSearchRequest
 import com.github.ljarka.picfort.core.database.ImagesDatabase
 import com.github.ljarka.picfort.core.database.RemoteAssetEntity
+import com.github.ljarka.picfort.core.database.RemoteBestEntity
 import com.github.ljarka.picfort.core.database.RemoteDocumentEntity
 import com.github.ljarka.picfort.core.network.AccessTokenStore
 import com.github.ljarka.picfort.core.network.ServerUrlStore
@@ -22,6 +24,11 @@ import kotlinx.coroutines.flow.map
 
 private val DOCUMENT_OCR_TERMS = listOf("PARAGON", "NIP", "FAKTURA", "SUMA PLN", "VAT", "UMOWA", "PESEL")
 private const val OCR_REFRESH_INTERVAL_MS = 24L * 60 * 60 * 1000
+
+/** Tag the Picfort server gives its frame-worthy picks (ADR 0019); feeds "Best of the month" (T-094). */
+const val BEST_TAG_VALUE = "ai/best/frame-worthy"
+private const val BEST_PAGE_SIZE = 1000
+private const val BEST_MAX_PAGES = 50
 
 /**
  * The timeline's Immich assets: a local copy kept up to date by the sync stream (ADR 0005).
@@ -56,6 +63,7 @@ class SyncTimelineSource @Inject constructor(
         val now = System.currentTimeMillis()
         if (result.wasReset || lastOcrRefreshAt == 0L || now - lastOcrRefreshAt >= OCR_REFRESH_INTERVAL_MS) {
             refreshDocumentsQuietly(now)
+            refreshBestQuietly()
         }
         return result.wasReset || result.lines > 1 // a stream with no changes is just SyncCompleteV1
     }
@@ -80,6 +88,46 @@ class SyncTimelineSource @Inject constructor(
             // Optional signal: keep whatever was cached previously.
         }
     }
+
+    /**
+     * Refreshes the ids tagged [BEST_TAG_VALUE] (T-094). No such tag (server tagging off) empties
+     * the cache; any failure keeps what was cached before.
+     */
+    private suspend fun refreshBestQuietly() {
+        try {
+            val service = collections.get()
+            val tagId = service.tags().firstOrNull { it.value.equals(BEST_TAG_VALUE, ignoreCase = true) }?.id
+            val ids = LinkedHashSet<String>()
+            if (tagId != null) {
+                var page = 1
+                while (page <= BEST_MAX_PAGES) {
+                    val result = service.metadataSearch(
+                        MetadataSearchRequest(
+                            personIds = emptyList(),
+                            page = page,
+                            size = BEST_PAGE_SIZE,
+                            order = "desc",
+                            type = "IMAGE",
+                            tagIds = listOf(tagId),
+                        ),
+                    ).assets
+                    result.items.forEach { ids += it.id }
+                    page = result.nextPage?.toIntOrNull() ?: break
+                }
+            }
+            database.withTransaction {
+                dao.clearBest()
+                if (ids.isNotEmpty()) dao.upsertBest(ids.map(::RemoteBestEntity))
+            }
+        } catch (e: CancellationException) {
+            throw e
+        } catch (_: Exception) {
+            // Optional signal: keep whatever was cached previously.
+        }
+    }
+
+    /** Immich asset ids tagged [BEST_TAG_VALUE] (T-094). */
+    fun bestAssetIds(): Flow<Set<String>> = dao.bestAssetIdsFlow().map { it.toSet() }
 
     /** The timeline's Immich assets, newest first; follows every change to the copy. */
     @OptIn(ExperimentalCoroutinesApi::class)

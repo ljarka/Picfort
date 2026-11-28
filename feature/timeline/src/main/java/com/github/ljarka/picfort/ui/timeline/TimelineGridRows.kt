@@ -7,9 +7,11 @@ import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
@@ -19,6 +21,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
+import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -52,6 +55,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil3.compose.AsyncImage
 import com.github.ljarka.picfort.core.database.AssetType
 import com.github.ljarka.picfort.core.ui.R
+import com.github.ljarka.picfort.ui.timeline.layout.BestRow
 import com.github.ljarka.picfort.ui.timeline.layout.MonthHeaderRow
 import com.github.ljarka.picfort.ui.timeline.layout.Tile
 import com.github.ljarka.picfort.ui.timeline.layout.TilesRow
@@ -93,10 +97,22 @@ internal fun TimelineList(
         items(
             items = layout.rows,
             key = { it.key },
-            contentType = { if (it is MonthHeaderRow) "month" else "row" },
+            contentType = {
+                when (it) {
+                    is MonthHeaderRow -> "month"
+                    is BestRow -> "best"
+                    is TilesRow -> "row"
+                }
+            },
         ) { row ->
             when (row) {
                 is MonthHeaderRow -> ImagesBucketTitle(row.title)
+
+                is BestRow -> BestOfMonthStrip(
+                    row = row,
+                    size = with(density) { row.size.toDp() },
+                    onClick = { tile -> if (!isInEditMode) onImageClick(tile.asset.id, tile.asset.type, tile.index) },
+                )
 
                 is TilesRow -> Row(horizontalArrangement = Arrangement.spacedBy(GRID_SPACING)) {
                     val height = with(density) { row.height.toDp() }
@@ -132,6 +148,36 @@ internal fun TimelineList(
                         )
                     }
                 }
+            }
+        }
+    }
+}
+
+/**
+ * "Best of the month" (T-094): the month's `ai/best/frame-worthy` photos, scrolled sideways.
+ * No shared-element transition: the same photo is also a grid tile, and one key can't be in two places.
+ */
+@Composable
+private fun BestOfMonthStrip(row: BestRow, size: Dp, onClick: (Tile) -> Unit) {
+    Column(Modifier.fillMaxWidth().padding(bottom = 8.dp)) {
+        Text(
+            text = "Best",
+            style = MaterialTheme.typography.labelLarge,
+            color = MaterialTheme.colorScheme.primary,
+            modifier = Modifier.padding(start = 4.dp, bottom = 6.dp),
+        )
+        LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            items(row.tiles, key = { it.asset.id }) { tile ->
+                AsyncImage(
+                    model = tile.url,
+                    contentDescription = null,
+                    contentScale = ContentScale.Crop,
+                    modifier = Modifier
+                        .size(size)
+                        .clip(RoundedCornerShape(12.dp))
+                        .background(PLACEHOLDER_COLOR)
+                        .clickable { onClick(tile) },
+                )
             }
         }
     }

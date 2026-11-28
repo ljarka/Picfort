@@ -22,8 +22,31 @@ data class TimelineAsset(
     val thumbhash: String? = null,
 )
 
-/** A month of the timeline; [key] is midnight UTC on its 1st, [start] its first global index. */
-data class TimelineMonth(val key: Long, val start: Int, val assets: List<TimelineAsset>)
+/**
+ * A month of the timeline; [key] is midnight UTC on its 1st, [start] its first global index.
+ * [best]: positions in [assets] of its "Best of the month" photos, newest first (T-094).
+ */
+data class TimelineMonth(
+    val key: Long,
+    val start: Int,
+    val assets: List<TimelineAsset>,
+    val best: List<Int> = emptyList(),
+)
+
+/** At most this many photos in a month's "Best" strip (T-094). */
+const val BEST_PER_MONTH = 12
+
+/** Fewer best photos than this and the month shows no strip, so half-analyzed months don't look broken. */
+const val BEST_MIN = 3
+
+/** Positions of [assets]' Immich photos whose id is in [bestIds], newest first; empty below [BEST_MIN]. */
+internal fun bestOfMonth(assets: List<TimelineAsset>, bestIds: Set<String>): List<Int> {
+    if (bestIds.isEmpty()) return emptyList()
+    val best = assets.indices
+        .filter { assets[it].type == AssetType.REMOTE && !assets[it].isVideo && assets[it].id in bestIds }
+        .take(BEST_PER_MONTH)
+    return if (best.size >= BEST_MIN) best else emptyList()
+}
 
 /** The whole timeline, newest first: Immich assets and phone-only media, merged. */
 class TimelineIndex(val months: List<TimelineMonth>) {
@@ -77,6 +100,7 @@ fun buildTimelineIndex(
     hideNonPhotos: Boolean = false,
     nonCameraIds: Set<String> = emptySet(),
     documentIds: Set<String> = emptySet(),
+    bestIds: Set<String> = emptySet(),
 ): TimelineIndex {
     val assets = ArrayList<TimelineAsset>(remote.size + local.size)
     remote.forEach { a ->
@@ -114,7 +138,8 @@ fun buildTimelineIndex(
         val key = monthKey(assets[i].dateTaken)
         var end = i
         while (end < assets.size && monthKey(assets[end].dateTaken) == key) end++
-        months += TimelineMonth(key, start, assets.subList(i, end).toList())
+        val monthAssets = assets.subList(i, end).toList()
+        months += TimelineMonth(key, start, monthAssets, bestOfMonth(monthAssets, bestIds))
         start += end - i
         i = end
     }

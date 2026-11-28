@@ -27,8 +27,11 @@ import retrofit2.HttpException
 
 private const val TIMELINE_PREFS = "timeline_prefs"
 private const val KEY_HIDE_NON_PHOTOS = "hide_non_photos"
+private const val KEY_SHOW_BEST = "show_best_of_month"
 
 private class Merged(val index: TimelineIndex, val onServer: Set<Long>)
+
+private data class NonPhotoFilter(val nonCameraIds: Set<String>, val documentIds: Set<String>, val enabled: Boolean)
 
 /** The phone's media and what Picfort's backup knows of it: Immich ids and SHA-1s (hex). */
 private class LocalSnapshot(
@@ -61,16 +64,25 @@ class TimelineRepository @Inject constructor(
         prefs.edit().putBoolean(KEY_HIDE_NON_PHOTOS, enabled).apply()
     }
 
+    private val _showBest = MutableStateFlow(prefs.getBoolean(KEY_SHOW_BEST, true))
+
+    /** "Best of the month" strips at the top of each month (T-094). */
+    val showBest: StateFlow<Boolean> = _showBest.asStateFlow()
+
+    fun setShowBest(enabled: Boolean) {
+        _showBest.value = enabled
+        prefs.edit().putBoolean(KEY_SHOW_BEST, enabled).apply()
+    }
+
     /** Null until the phone's media has been read once. */
     private val local = MutableStateFlow<LocalSnapshot?>(null)
 
     private val merged: StateFlow<Merged?> = combine(
         remote.assets(),
         local.filterNotNull(),
-        remote.nonCameraAssetIds(),
-        remote.documentAssetIds(),
-        _hideNonPhotos,
-    ) { assets, snapshot, nonCameraIds, documentIds, hideNonPhotos ->
+        combine(remote.nonCameraAssetIds(), remote.documentAssetIds(), _hideNonPhotos, ::NonPhotoFilter),
+        combine(remote.bestAssetIds(), _showBest) { ids, show -> if (show) ids else emptySet() },
+    ) { assets, snapshot, filter, bestIds ->
         val zone = ZoneId.systemDefault()
         val onServer = localIdsOnServer(assets, snapshot.media, snapshot.backupLinks, snapshot.checksums, zone)
         Merged(
@@ -79,9 +91,10 @@ class TimelineRepository @Inject constructor(
                 local = snapshot.media,
                 onServerLocalIds = onServer,
                 zone = zone,
-                hideNonPhotos = hideNonPhotos,
-                nonCameraIds = nonCameraIds,
-                documentIds = documentIds,
+                hideNonPhotos = filter.enabled,
+                nonCameraIds = filter.nonCameraIds,
+                documentIds = filter.documentIds,
+                bestIds = bestIds,
             ),
             onServer = onServer,
         )

@@ -126,4 +126,38 @@ class TimelineIndexTest {
         )
         assertEquals(9, unfiltered.size)
     }
+
+    @Test
+    fun `best of the month keeps Immich photos in the best set, newest first, between min and max`() {
+        val photos = List(BEST_PER_MONTH + 3) { remote("b$it", "2026-10-%02dT12:00:00Z".format(25 - it)) }
+        val video = remote("bv", "2026-10-28T12:00:00Z").copy(isVideo = true)
+        val other = remote("plain", "2026-10-27T12:00:00Z")
+        val index = buildTimelineIndex(
+            remote = photos + video + other,
+            local = listOf(local(9, "2026-10-26T10:00:00Z")),
+            onServerLocalIds = emptySet(),
+            zone = warsaw,
+            bestIds = photos.map { it.id }.toSet() + "bv" + "9",
+        )
+        val month = index.months.single()
+        val best = month.best.map { month.assets[it].id }
+        assertEquals(photos.take(BEST_PER_MONTH).map { it.id }, best)
+    }
+
+    @Test
+    fun `too few best photos show no strip, hidden photos don't count`() {
+        val a = remote("a", "2026-10-20T12:00:00Z")
+        val b = remote("b", "2026-10-19T12:00:00Z")
+        val shot = remote("c", "2026-10-18T12:00:00Z").copy(originalFileName = "Screenshot_1.png")
+        fun bestCount(hide: Boolean) = buildTimelineIndex(
+            remote = listOf(a, b, shot),
+            local = emptyList(),
+            onServerLocalIds = emptySet(),
+            zone = warsaw,
+            hideNonPhotos = hide,
+            bestIds = setOf("a", "b", "c"),
+        ).months.single().best.size
+        assertEquals(BEST_MIN, bestCount(hide = false))
+        assertEquals(0, bestCount(hide = true))
+    }
 }

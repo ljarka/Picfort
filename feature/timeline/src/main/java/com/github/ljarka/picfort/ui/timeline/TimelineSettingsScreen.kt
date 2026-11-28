@@ -68,6 +68,7 @@ class TimelineSettingsViewModel @Inject constructor(
     private val photoInsights: PhotoInsightsClient,
 ) : ViewModel() {
     val hideNonPhotos: StateFlow<Boolean> = timelineRepository.hideNonPhotos
+    val showBest: StateFlow<Boolean> = timelineRepository.showBest
 
     private val _state = MutableStateFlow(TimelineSettingsUi())
     val state: StateFlow<TimelineSettingsUi> = _state.asStateFlow()
@@ -86,6 +87,8 @@ class TimelineSettingsViewModel @Inject constructor(
     }
 
     fun setHideNonPhotos(enabled: Boolean) = timelineRepository.setHideNonPhotos(enabled)
+
+    fun setShowBest(enabled: Boolean) = timelineRepository.setShowBest(enabled)
 
     fun loadTags() {
         _state.update { it.copy(loadingTags = true, tagsError = null) }
@@ -133,9 +136,12 @@ class TimelineSettingsViewModel @Inject constructor(
 fun TimelineSettingsScreen(onBack: () -> Unit, onCleanupClick: (() -> Unit)? = null) {
     val viewModel: TimelineSettingsViewModel = hiltViewModel()
     val hideNonPhotos by viewModel.hideNonPhotos.collectAsStateWithLifecycle()
+    val showBest by viewModel.showBest.collectAsStateWithLifecycle()
     val state by viewModel.state.collectAsStateWithLifecycle()
     TimelineSettingsContent(
         hideNonPhotos = hideNonPhotos,
+        showBest = showBest,
+        onShowBest = viewModel::setShowBest,
         state = state,
         onBack = onBack,
         onCleanupClick = onCleanupClick,
@@ -151,6 +157,8 @@ fun TimelineSettingsScreen(onBack: () -> Unit, onCleanupClick: (() -> Unit)? = n
 internal fun TimelineSettingsContent(
     hideNonPhotos: Boolean,
     state: TimelineSettingsUi,
+    showBest: Boolean = true,
+    onShowBest: (Boolean) -> Unit = {},
     onBack: () -> Unit = {},
     onCleanupClick: (() -> Unit)? = null,
     onHideNonPhotos: (Boolean) -> Unit = {},
@@ -219,6 +227,14 @@ internal fun TimelineSettingsContent(
                         Text("Skip screenshots, saved images and OCR-detected receipts on your timeline")
                     },
                     trailingContent = { Switch(checked = hideNonPhotos, onCheckedChange = onHideNonPhotos) },
+                )
+                ListItem(
+                    modifier = Modifier.clickable { onShowBest(!showBest) },
+                    headlineContent = { Text("Show best of the month") },
+                    supportingContent = {
+                        Text("A strip of AI-picked best photos at the top of each month")
+                    },
+                    trailingContent = { Switch(checked = showBest, onCheckedChange = onShowBest) },
                 )
                 if (onCleanupClick != null) {
                     val subtitle = when (val n = state.cleanupCount) {

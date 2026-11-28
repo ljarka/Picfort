@@ -101,4 +101,14 @@ interface RemoteAssetsDao {
     /** Asset ids matched by document/receipt OCR queries (T-088). */
     @Query("SELECT assetId FROM remote_documents")
     fun documentAssetIdsFlow(): Flow<List<String>>
+
+    @Upsert
+    suspend fun upsertBest(best: List<RemoteBestEntity>)
+
+    @Query("DELETE FROM remote_best")
+    suspend fun clearBest()
+
+    /** Asset ids tagged `ai/best/frame-worthy` (T-094). */
+    @Query("SELECT assetId FROM remote_best")
+    fun bestAssetIdsFlow(): Flow<List<String>>
 }

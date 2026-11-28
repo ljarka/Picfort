@@ -106,4 +106,30 @@ class TimelineRowsTest {
         assertEquals(0, days.rowIndexOf(LocalDate.parse("2026-01-01")))
         assertNull(TimelineLayout.EMPTY.rowIndexOf(LocalDate.parse("2025-11-16")))
     }
+
+    @Test
+    fun `a best strip sits under its month header and the day jump still lands on the header`() {
+        val nov = (days.rows.first() as MonthHeaderRow).month
+        val withBest = layoutTimeline(
+            TimelineIndex(
+                listOf(
+                    TimelineMonth(
+                        nov,
+                        0,
+                        List(3) { TimelineAsset("2025-11-20-$it", AssetType.REMOTE, at("2025-11-20", 20 - it), 1f) },
+                        best = listOf(0, 2),
+                    ),
+                ),
+            ),
+            Viewport(1080f, 2000f, spacing = 8f),
+            titleOf = { "month $it" },
+            urlOf = { it.id },
+        )
+        assertTrue(withBest.rows[0] is MonthHeaderRow)
+        val best = withBest.rows[1] as BestRow
+        assertEquals(listOf(0, 2), best.tiles.map { it.index })
+        assertTrue(best.tiles.all { it.width == best.size })
+        assertEquals(0, withBest.rowIndexOf(LocalDate.parse("2025-11-20")))
+        assertEquals(withBest.rows.size, withBest.rows.map { it.key }.toSet().size)
+    }
 }
