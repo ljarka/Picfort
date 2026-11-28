@@ -8,9 +8,11 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.TopAppBarScrollBehavior
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.vectorResource
 import com.github.ljarka.picfort.core.ui.R
@@ -23,9 +25,19 @@ fun TimelineAppBar(
     onSearchClick: () -> Unit,
     onAlbumsClick: () -> Unit,
     modifier: Modifier = Modifier,
+    /** Over a photo backdrop (T-107): let it show through. */
+    transparent: Boolean = false,
 ) {
     TopAppBar(
         modifier = modifier,
+        colors = if (transparent) {
+            TopAppBarDefaults.topAppBarColors(
+                containerColor = Color.Transparent,
+                scrolledContainerColor = Color.Transparent,
+            )
+        } else {
+            TopAppBarDefaults.topAppBarColors()
+        },
         title = {
             Text(text = "Timeline")
         },

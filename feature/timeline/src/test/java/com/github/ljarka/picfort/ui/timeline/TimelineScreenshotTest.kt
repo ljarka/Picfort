@@ -108,16 +108,26 @@ class TimelineScreenshotTest {
         account: TimelineAccount? = null,
         header: (@Composable () -> Unit)? = null,
         overlay: @Composable BoxScope.() -> Unit = {},
+        /** T-107: the blurred Best photo of the top month behind the timeline. */
+        backdrop: Boolean = false,
     ) {
+        val backdropUrl = if (backdrop) state.layout?.backdropUrlAt(0) else null
         paparazzi.snapshot {
             PicfortTheme(dynamicColor = false) {
                 WithSamplePhotos {
                     SharedTransitionLayout {
                         AnimatedVisibility(visible = true) {
                             Box(Modifier.fillMaxSize()) {
+                                com.github.ljarka.picfort.core.ui.component.PhotoBackdrop(backdropUrl)
                                 Scaffold(
+                                    containerColor = if (backdropUrl != null) {
+                                        androidx.compose.ui.graphics.Color.Transparent
+                                    } else {
+                                        MaterialTheme.colorScheme.background
+                                    },
                                     topBar = {
                                         TimelineAppBar(
+                                            transparent = backdropUrl != null,
                                             scrollBehavior = TopAppBarDefaults.enterAlwaysScrollBehavior(),
                                             onSettingsClick = {},
                                             onSearchClick = {},
@@ -333,6 +343,16 @@ class TimelineScreenshotTest {
             month(2L, start = 11, seed = 20, count = 9),
         )
         snapshot(TimelineState(LoadingState.LOADED, layout))
+    }
+
+    /** T-107: the month's first Best photo, blurred, tints the timeline. */
+    @Test
+    fun timeline_best_backdrop() {
+        val layout = layoutOf(
+            month(3L, start = 0, seed = 0, count = 11).copy(best = listOf(0, 1, 3, 5, 8)),
+            month(2L, start = 11, seed = 20, count = 9),
+        )
+        snapshot(TimelineState(LoadingState.LOADED, layout), backdrop = true)
     }
 
     // --- T-052: family carousel on Photos -------------------------------------------------

@@ -185,4 +185,26 @@ class TimelineRowsTest {
         }
         assertEquals(listOf(true, false, true), l.months.map { l.rows[it.rowIndex + 1] is BestRow })
     }
+
+    @Test
+    fun `the backdrop is the first Best photo of the month at the top, none without a strip`() {
+        fun m(key: Long, start: Int, best: List<Int>) = TimelineMonth(
+            key,
+            start,
+            List(6) { TimelineAsset("$key-$it", AssetType.REMOTE, key, 1f) },
+            best = best,
+        )
+        val l = layoutTimeline(
+            TimelineIndex(listOf(m(3L, 0, listOf(2, 4, 5)), m(2L, 6, emptyList()), m(1L, 12, listOf(1, 3, 4)))),
+            Viewport(1080f, 2000f, spacing = 8f),
+            titleOf = { "month $it" },
+            urlOf = { "url/${it.id}" },
+        )
+        val (march, feb, jan) = l.months
+        assertEquals("url/3-2", l.backdropUrlAt(march.rowIndex))
+        assertEquals("url/3-2", l.backdropUrlAt(feb.rowIndex - 1)) // still March's rows
+        assertNull(l.backdropUrlAt(feb.rowIndex)) // February has no strip
+        assertEquals("url/1-1", l.backdropUrlAt(jan.rowIndex + 2))
+        assertNull(TimelineLayout.EMPTY.backdropUrlAt(0))
+    }
 }

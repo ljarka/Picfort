@@ -60,6 +60,15 @@ data class TimelineLayout(val rows: List<TimelineRow>, val months: List<MonthMar
         return if (top > 0 && rows[top - 1] is MonthHeaderRow) top - 1 else row
     }
 
+    /**
+     * The photo that tints the background while [firstRow] is at the top (T-107): the first of
+     * the "Best" strip of the month that row belongs to; null when that month has no strip.
+     */
+    fun backdropUrlAt(firstRow: Int): String? {
+        val marker = months.lastOrNull { it.rowIndex <= firstRow } ?: months.firstOrNull() ?: return null
+        return (rows.getOrNull(marker.rowIndex + 1) as? BestRow)?.tiles?.firstOrNull()?.url
+    }
+
     companion object {
         val EMPTY = TimelineLayout(emptyList(), emptyList())
     }

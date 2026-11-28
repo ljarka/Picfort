@@ -61,6 +61,7 @@ import androidx.compose.material3.ripple
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -94,6 +95,7 @@ import com.github.ljarka.picfort.collections.AddToAlbumDialog
 import com.github.ljarka.picfort.collections.GridAsset
 import com.github.ljarka.picfort.core.database.AssetType
 import com.github.ljarka.picfort.core.ui.R
+import com.github.ljarka.picfort.core.ui.component.PhotoBackdrop
 import com.github.ljarka.picfort.core.ui.component.aboveFloatingTabBar
 import com.github.ljarka.picfort.local.RequestMediaPermission
 import com.github.ljarka.picfort.ui.people.PeopleFilterRow
@@ -251,8 +253,18 @@ fun TimelineScreen(
         MenuClosedObserver(sheetState = scaffoldState.bottomSheetState) {
             viewModel.clearSelection()
         }
+        // The first "Best" photo of the month at the top, blurred, tints the timeline (T-107).
+        val backdropUrl by remember(state.layout, header, people.selectedId) {
+            derivedStateOf {
+                if (people.selectedId != null) return@derivedStateOf null
+                val firstRow = listState.firstVisibleItemIndex - (if (header != null) 1 else 0)
+                state.layout?.backdropUrlAt(firstRow.coerceAtLeast(0))
+            }
+        }
+        PhotoBackdrop(backdropUrl)
         val scrollBehavior = enterAlwaysScrollBehavior()
         BottomSheetScaffold(
+            containerColor = if (backdropUrl != null) Color.Transparent else MaterialTheme.colorScheme.surface,
             sheetPeekHeight = 0.dp,
             // Messages sit above the floating tab bar, not under it.
             snackbarHost = { SnackbarHost(it, Modifier.aboveFloatingTabBar()) },
@@ -278,6 +290,7 @@ fun TimelineScreen(
             topBar = {
                 TimelineAppBar(
                     scrollBehavior = scrollBehavior,
+                    transparent = backdropUrl != null,
                     onSettingsClick = onSettingsClick,
                     onSearchClick = onSearchClick,
                     onAlbumsClick = onAlbumsClick,
