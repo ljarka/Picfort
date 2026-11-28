@@ -29,6 +29,7 @@ Gaps documented in the [README](../README.md#known-limitations) that affect day-
 
 | Task | Description | Status |
 |------|-------------|--------|
+| [T-088](tasks/T-088-local-duplicates-own-assets-only.md) | **BUG (HIGH)** Photos — phone-copy deduplication incorrectly matches partners' assets; partners' photos appear in "clean up" and can't be deleted | `ready` |
 | [T-004](tasks/T-004-phone-only-to-frame.md) | Send phone-only photos to frame | `done` |
 | [T-005](tasks/T-005-backup-album-filter.md) | Backup: filter by album | `in-progress` |
 | [T-006](tasks/T-006-backup-foreground-service.md) | Backup: fix Android 12+ 10-min background limit | `done` |
