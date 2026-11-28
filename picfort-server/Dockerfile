@@ -17,7 +17,8 @@ ENV PYTHONUNBUFFERED=1 \
     PROFILE_PHOTOS_PATH=/data/profile_photos \
     EVENTS_DB_PATH=/data/events.db \
     SCHOOL_DB_PATH=/data/school.db \
-    CHILD_PHOTOS_PATH=/data/child_photos
+    CHILD_PHOTOS_PATH=/data/child_photos \
+    PHOTO_AI_DB_PATH=/data/photo_ai.db
 
 WORKDIR /app
 COPY requirements.txt requirements-heif.txt ./
