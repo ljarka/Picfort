@@ -214,6 +214,7 @@ Small things the family asked for while using the app.
 | [T-083](tasks/T-083-wishlist-photo-from-phone.md) | Wishlist: take a photo or choose one from the phone | `done` |
 | [T-084](tasks/T-084-wall-reactions.md) | Family Wall: reactions (❤️ 👍 …) and a notification for the first one | `done` |
 | [T-088](tasks/T-088-hide-screenshots-documents.md) | Hide screenshots & documents on Photos timeline and frame slideshow (EXIF + Immich OCR) | `done` |
+| [T-089](tasks/T-089-ollama-photo-insights-cleanup.md) | Ollama photo insights, Immich `ai/*` tagging & Clean up screen (ADR 0019) | `done` |
 
 ---
 
@@ -259,3 +260,4 @@ Another family installs Picfort in under an hour, without help ([roadmap](../spe
 | [0016](decisions/0016-schema-migrations.md) | Data survives schema changes: a migration for every bump |
 | [0017](decisions/0017-school-journal-removable-module.md) | School journal in one removable module, own server and key, no `:core` changes |
 | [0018](decisions/0018-wall-reaction-notifications.md) | Wall reaction notifications: the author's phone asks every 15 min, no push service |
+| [0019](decisions/0019-ollama-photo-insights.md) | Optional server-side Ollama photo insights, `ai/*` Immich tags & Clean up screen |
