@@ -149,6 +149,20 @@ class PhotoAiWorkerAndStoreTest(unittest.TestCase):
         self.assertEqual(1, self.store.stats()["cleanup_count"])
         self.assertEqual([], immich.tagged)
 
+    def test_frame_worthy_ids_and_best_only_picker(self):
+        from datetime import date
+        from helpers import FakeImmich
+        from slideshow import Picker, SlideshowSettings
+
+        self.store.save("good1", "m", {"category": "photo", "quality": 5, "frame_worthy": True})
+        self.store.save("meh", "m", {"category": "photo", "quality": 3, "frame_worthy": True})
+        self.store.save("doc", "m", {"category": "document", "quality": 5, "frame_worthy": True})
+        self.assertEqual(["good1"], self.store.frame_worthy_ids())
+
+        picker = Picker(FakeImmich(library=["other1", "other2"]), photo_ai=self.store)
+        s = SlideshowSettings(mode="random", best_only=True)
+        self.assertEqual("good1", picker.next(s, date(2026, 11, 28)))
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -34,6 +34,8 @@ class SlideshowSettings:
     quiet_end: int | None = None
     # Skip screenshots and OCR-detected documents in random/memories modes (T-088).
     filter_photos: bool = True
+    # Prefer AI-picked frame-worthy photos in random/memories modes when available (T-090).
+    best_only: bool = False
 
     @staticmethod
     def from_dict(d: dict) -> "SlideshowSettings":
@@ -44,6 +46,7 @@ class SlideshowSettings:
             quiet_start=d.get("quiet_start"),
             quiet_end=d.get("quiet_end"),
             filter_photos=bool(d.get("filter_photos", True)),
+            best_only=bool(d.get("best_only", False)),
         )
         s.validate()
         return s
@@ -128,14 +131,21 @@ class Picker:
             candidates = self.immich.random_images(album_id=s.album_id)
         elif s.mode == "memories":
             candidates = self._filter_docs(self._on_this_day(today, s.filter_photos), s, today)
+            if s.best_only:
+                best = self._best_ids()
+                if best:
+                    best_set = set(best)
+                    candidates = [c for c in candidates if c in best_set] or best
             if not candidates:
                 candidates = self._filter_docs(
                     self.immich.random_images(filter_photos=s.filter_photos), s, today
                 )
         elif s.mode == "random":
-            candidates = self._filter_docs(
-                self.immich.random_images(filter_photos=s.filter_photos), s, today
-            )
+            candidates = self._best_ids() if s.best_only else []
+            if not candidates:
+                candidates = self._filter_docs(
+                    self.immich.random_images(filter_photos=s.filter_photos), s, today
+                )
         else:
             return None
         if not candidates:
@@ -144,6 +154,15 @@ class Picker:
         choice = random.choice(fresh or candidates)
         self.history.append(choice)
         return choice
+
+    def _best_ids(self) -> list[str]:
+        if self.photo_ai is None:
+            return []
+        try:
+            return list(self.photo_ai.frame_worthy_ids())
+        except Exception as e:
+            log.warning("Photo AI frame-worthy lookup failed: %s", e)
+            return []
 
     def _filter_docs(self, candidates: list[str], s: SlideshowSettings, today: date) -> list[str]:
         if not s.filter_photos or not candidates:

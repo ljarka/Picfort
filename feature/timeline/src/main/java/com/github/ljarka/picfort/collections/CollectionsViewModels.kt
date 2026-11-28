@@ -156,6 +156,10 @@ data class SearchUi(
     val addedToRow: List<String> = emptyList(),
     /** Only photos or only videos; alone it lists them all, newest first (T-071). */
     val media: MediaFilter = MediaFilter.All,
+    /** Immich tags available as quick filter chips (curated `ai/` + user tags, T-090). */
+    val tags: List<SearchTag> = emptyList(),
+    /** Photos must have all selected tags; alone or combined with query/people/media. */
+    val selectedTags: Set<String> = emptySet(),
 )
 
 /** "Ola", "Ola and Kuba", "Ola, Kuba and Staś" (the people picked, in Immich's order). */
@@ -191,7 +195,9 @@ class SearchViewModel @Inject constructor(
     private var job: Job? = null
 
     val source: String get() = _state.value.let {
-        "search:${it.query}:${it.selectedPeople.sorted().joinToString(",")}:${it.media}"
+        "search:${it.query}:${it.selectedPeople.sorted().joinToString(
+            ",",
+        )}:${it.selectedTags.sorted().joinToString(",")}:${it.media}"
     }
 
     init {
@@ -206,13 +212,23 @@ class SearchViewModel @Inject constructor(
             }
             _state.update { it.copy(people = people) }
         }
+        viewModelScope.launch {
+            val tags = try {
+                repository.tags()
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                emptyList()
+            }
+            _state.update { it.copy(tags = tags) }
+        }
     }
 
     fun search(query: String) {
         val s = _state.value
         job?.cancel()
-        if (query.isBlank() && s.selectedPeople.isEmpty() && s.media == MediaFilter.All) {
-            _state.value = SearchUi(people = s.people, addedToRow = s.addedToRow)
+        if (query.isBlank() && s.selectedPeople.isEmpty() && s.selectedTags.isEmpty() && s.media == MediaFilter.All) {
+            _state.value = SearchUi(people = s.people, addedToRow = s.addedToRow, tags = s.tags)
             return
         }
         _state.value = SearchUi(
@@ -223,6 +239,8 @@ class SearchViewModel @Inject constructor(
             selectedPeople = s.selectedPeople,
             addedToRow = s.addedToRow,
             media = s.media,
+            tags = s.tags,
+            selectedTags = s.selectedTags,
         )
         fetch(page = 1)
     }
@@ -246,6 +264,15 @@ class SearchViewModel @Inject constructor(
         search(query)
     }
 
+    /** Picks or drops a tag chip and searches again with the text in the field (T-090). */
+    fun toggleTag(id: String, query: String) {
+        _state.update { s ->
+            val next = if (id in s.selectedTags) s.selectedTags - id else s.selectedTags + id
+            s.copy(selectedTags = next)
+        }
+        search(query)
+    }
+
     /** Called when the user scrolls near the end. */
     fun loadMore() {
         val s = _state.value
@@ -258,10 +285,11 @@ class SearchViewModel @Inject constructor(
         val query = _state.value.query
         val people = _state.value.selectedPeople
         val media = _state.value.media
+        val tags = _state.value.selectedTags
         val source = source
         job = viewModelScope.launch {
             try {
-                val result = repository.search(query, page, people, media)
+                val result = repository.search(query, page, people, media, tags)
                 _state.update {
                     val all = (if (page == 1) emptyList() else it.results) + result.assets
                     repository.putList(source, all)

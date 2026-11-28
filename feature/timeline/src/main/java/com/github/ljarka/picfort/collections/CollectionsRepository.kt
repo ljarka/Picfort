@@ -87,16 +87,18 @@ class CollectionsRepository @Inject constructor(
     }
 
     /**
-     * Search: by text (CLIP), with the [personIds] in it (all of them), or only by people and/or
-     * [media] type, newest first. At least one of them must be given.
+     * Search: by text (CLIP), with the [personIds] and [tagIds] in it (all of them), or only by
+     * people/tags/[media] type, newest first. At least one of them must be given.
      */
     suspend fun search(
         query: String,
         page: Int,
         personIds: Set<String> = emptySet(),
         media: MediaFilter = MediaFilter.All,
+        tagIds: Set<String> = emptySet(),
     ): SearchPage {
         val text = query.trim()
+        val tags = tagIds.toList().ifEmpty { null }
         val response = if (text.isEmpty()) {
             service.get().metadataSearch(
                 MetadataSearchRequest(
@@ -105,6 +107,7 @@ class CollectionsRepository @Inject constructor(
                     size = 100,
                     order = "desc",
                     type = media.immichType,
+                    tagIds = tags,
                 ),
             )
         } else {
@@ -112,9 +115,8 @@ class CollectionsRepository @Inject constructor(
                 SmartSearchRequest(
                     text,
                     page,
-                    personIds = personIds.toList().ifEmpty {
-                        null
-                    },
+                    personIds = personIds.toList().ifEmpty { null },
+                    tagIds = tags,
                     type = media.immichType,
                 ),
             )
@@ -126,6 +128,9 @@ class CollectionsRepository @Inject constructor(
             nextPage = response.nextPage?.toIntOrNull(),
         )
     }
+
+    /** Immich tags formatted for Search chips (curated `ai/` tags first, then user tags, T-090). */
+    suspend fun tags(): List<SearchTag> = formatSearchTags(service.get().tags())
 
     /** Named, visible people in my Immich library, in Immich's order (most photos first). */
     suspend fun people(): List<SearchPerson> {
@@ -170,6 +175,33 @@ class CollectionsRepository @Inject constructor(
 /** Search and album buckets: "0:00:12.500000" (Immich < 3) or 12500 (milliseconds, Immich 3+). */
 fun parseSearchDuration(value: JsonElement?): Long? = (value as? JsonPrimitive)?.let { p ->
     if (p.isString) parseImmichDuration(p.content) else p.longOrNull?.takeIf { it > 0 }
+}
+
+/** A tag chip shown in Search (T-090). */
+data class SearchTag(val id: String, val label: String, val value: String)
+
+private val CURATED_AI_TAG_LABELS = linkedMapOf(
+    "ai/best/frame-worthy" to "Best",
+    "ai/type/nature" to "Nature",
+    "ai/type/kids-art" to "Kids' art",
+    "ai/type/receipt" to "Receipts",
+    "ai/type/document" to "Documents",
+    "ai/type/screenshot" to "Screenshots",
+    "ai/type/meme" to "Memes",
+)
+
+/** Orders curated `ai/` tags first (skipping cleanup tags), followed by user tags. */
+internal fun formatSearchTags(raw: List<TagDto>): List<SearchTag> {
+    val byValue = raw.associateBy { it.value.lowercase() }
+    val curated = CURATED_AI_TAG_LABELS.mapNotNull { (value, label) ->
+        byValue[value]?.let { SearchTag(it.id, label, it.value) }
+    }
+    val userTags = raw
+        .filter { !it.value.lowercase().startsWith("ai/") && it.value.lowercase() != "ai" }
+        .filter { (it.name.ifBlank { it.value }).isNotBlank() }
+        .sortedBy { it.name.ifBlank { it.value }.lowercase() }
+        .map { SearchTag(it.id, it.name.ifBlank { it.value }.trim(), it.value) }
+    return curated + userTags
 }
 
 @Module

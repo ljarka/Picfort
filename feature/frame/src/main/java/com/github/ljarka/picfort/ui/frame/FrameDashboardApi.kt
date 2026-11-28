@@ -31,6 +31,7 @@ data class SlideshowState(
     @SerialName("quiet_start") val quietStart: Int? = null,
     @SerialName("quiet_end") val quietEnd: Int? = null,
     @SerialName("filter_photos") val filterPhotos: Boolean = true,
+    @SerialName("best_only") val bestOnly: Boolean = false,
     /** Unix seconds. */
     @SerialName("next_change_at") val nextChangeAt: Double? = null,
     @SerialName("last_error") val lastError: String? = null,

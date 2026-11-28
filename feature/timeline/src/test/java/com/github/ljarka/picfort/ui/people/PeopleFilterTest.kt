@@ -65,6 +65,7 @@ class PeopleFilterTest {
             }
             override suspend fun ocrSearch(body: com.github.ljarka.picfort.collections.OcrSearchRequest) =
                 SearchResponse()
+            override suspend fun tags(): List<com.github.ljarka.picfort.collections.TagDto> = emptyList()
         }
         val repository = CollectionsRepository({ service }, { error("unused") })
         val page = repository.personAssets("person-ola", page = 1)

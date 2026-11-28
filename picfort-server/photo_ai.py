@@ -263,6 +263,17 @@ class PhotoAiStore(SqliteStore):
             ).fetchall()
         return {r["asset_id"] for r in rows}
 
+    def frame_worthy_ids(self) -> list[str]:
+        """AI-picked sharp, pleasant photos suitable for a wall frame (T-090)."""
+        with closing(self.connect()) as conn:
+            rows = conn.execute(
+                """
+                SELECT asset_id FROM photo_insights
+                WHERE frame_worthy = 1 AND category = 'photo' AND quality >= 4 AND dismissed = 0
+                """
+            ).fetchall()
+        return [r["asset_id"] for r in rows]
+
 
 class OllamaAnalyzer:
     """Calls local Ollama /api/chat with a vision model and strict JSON schema."""

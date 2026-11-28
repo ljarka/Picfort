@@ -237,6 +237,7 @@ def settings_json(slideshow: Slideshow):
         "quiet_start": s.quiet_start,
         "quiet_end": s.quiet_end,
         "filter_photos": s.filter_photos,
+        "best_only": s.best_only,
         "next_change_at": slideshow.next_change_at(),
         "last_error": slideshow.last_error,
         "modes": list(MODES),

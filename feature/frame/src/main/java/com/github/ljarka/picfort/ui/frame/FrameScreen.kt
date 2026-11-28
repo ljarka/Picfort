@@ -82,6 +82,7 @@ fun FrameScreen(onBack: () -> Unit) {
         onInterval = viewModel::setInterval,
         onQuietHours = viewModel::setQuietHours,
         onFilterPhotos = viewModel::setFilterPhotos,
+        onBestOnly = viewModel::setBestOnly,
         onMessageShown = viewModel::messageShown,
     )
 }
@@ -101,6 +102,7 @@ fun FrameContent(
     onInterval: (Int) -> Unit = {},
     onQuietHours: (Int?, Int?) -> Unit = { _, _ -> },
     onFilterPhotos: (Boolean) -> Unit = {},
+    onBestOnly: (Boolean) -> Unit = {},
     onMessageShown: () -> Unit = {},
 ) {
     val snackbar = remember { SnackbarHostState() }
@@ -143,7 +145,7 @@ fun FrameContent(
 
                 state.error != null -> Centered(state.error, "Retry", onRefresh)
 
-                else -> Dashboard(state, onNext, onMode, onAlbum, onInterval, onQuietHours, onFilterPhotos)
+                else -> Dashboard(state, onNext, onMode, onAlbum, onInterval, onQuietHours, onFilterPhotos, onBestOnly)
             }
         }
     }
@@ -171,6 +173,7 @@ private fun Dashboard(
     onInterval: (Int) -> Unit,
     onQuietHours: (Int?, Int?) -> Unit,
     onFilterPhotos: (Boolean) -> Unit,
+    onBestOnly: (Boolean) -> Unit,
 ) {
     val slideshow = state.slideshow
     // The panel as it hangs on the wall: a white mat around the picture.
@@ -320,6 +323,21 @@ private fun Dashboard(
                 },
                 trailingContent = {
                     Switch(checked = slideshow.filterPhotos, onCheckedChange = onFilterPhotos)
+                },
+            )
+            ListItem(
+                headlineContent = { Text("Best photos only") },
+                supportingContent = {
+                    Text(
+                        if (slideshow.bestOnly) {
+                            "Show only AI-picked frame-worthy photos"
+                        } else {
+                            "Show all passing photos"
+                        },
+                    )
+                },
+                trailingContent = {
+                    Switch(checked = slideshow.bestOnly, onCheckedChange = onBestOnly)
                 },
             )
         }

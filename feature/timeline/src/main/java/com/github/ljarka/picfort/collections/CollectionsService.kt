@@ -56,13 +56,14 @@ data class BulkIdsRequest(val ids: List<String>)
 @Serializable
 data class BulkIdResult(val id: String, val success: Boolean = false, val error: String? = null)
 
-/** [personIds]: only photos with all of them (null is left out: the app's Json skips defaults). */
+/** [personIds] and [tagIds]: only photos matching all of them (null is left out: Json skips defaults). */
 @Serializable
 data class SmartSearchRequest(
     val query: String,
     val page: Int = 1,
     val size: Int = 100,
     val personIds: List<String>? = null,
+    val tagIds: List<String>? = null,
     /** "IMAGE" or "VIDEO"; null for both (T-071). */
     val type: String? = null,
 )
@@ -74,7 +75,11 @@ data class PersonDto(val id: String, val name: String = "", val isHidden: Boolea
 @Serializable
 data class PeopleResponse(val people: List<PersonDto> = emptyList(), val hasNextPage: Boolean = false)
 
-/** Photos with a person (T-052). No default values: the app's Json doesn't encode defaults. */
+/** An Immich tag (hierarchical value like `"ai/type/nature"`, T-090). */
+@Serializable
+data class TagDto(val id: String, val name: String = "", val value: String = "")
+
+/** Photos with a person and/or tag (T-052, T-090). No default values on required fields: Json skips defaults. */
 @Serializable
 data class MetadataSearchRequest(
     val personIds: List<String>,
@@ -83,6 +88,7 @@ data class MetadataSearchRequest(
     val order: String,
     /** "IMAGE" or "VIDEO"; null (left out) for both (T-071). */
     val type: String? = null,
+    val tagIds: List<String>? = null,
 )
 
 /** Document/receipt OCR search (T-088). No defaults: the app's Json skips default values. */
@@ -151,4 +157,7 @@ interface CollectionsService {
 
     @POST("/api/search/metadata")
     suspend fun ocrSearch(@Body body: OcrSearchRequest): SearchResponse
+
+    @GET("/api/tags")
+    suspend fun tags(): List<TagDto>
 }

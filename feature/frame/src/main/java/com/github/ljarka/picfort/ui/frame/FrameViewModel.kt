@@ -105,6 +105,7 @@ class FrameViewModel @Inject constructor(private val api: FrameDashboardApi) : V
     fun setInterval(minutes: Int) = update(mapOf("interval_minutes" to minutes))
     fun setQuietHours(start: Int?, end: Int?) = update(mapOf("quiet_start" to start, "quiet_end" to end))
     fun setFilterPhotos(enabled: Boolean) = update(mapOf("filter_photos" to enabled))
+    fun setBestOnly(enabled: Boolean) = update(mapOf("best_only" to enabled))
 
     fun next() {
         viewModelScope.launch {

@@ -5,12 +5,14 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
@@ -31,6 +33,7 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -302,6 +305,7 @@ fun SearchScreen(onBack: () -> Unit, onAssetClick: (asset: GridAsset, index: Int
         personThumbnail = viewModel::personThumbnail,
         onTogglePerson = viewModel::togglePerson,
         onMedia = viewModel::setMedia,
+        onToggleTag = viewModel::toggleTag,
         onAssetClick = { asset, index -> onAssetClick(asset, index, viewModel.source) },
     )
 }
@@ -320,6 +324,8 @@ fun SearchContent(
     onTogglePerson: (id: String, query: String) -> Unit = { _, _ -> },
     /** All / Photos / Videos picked, with the text in the field (T-071). */
     onMedia: (MediaFilter, query: String) -> Unit = { _, _ -> },
+    /** An Immich tag chip tapped above the results (T-090). */
+    onToggleTag: (id: String, query: String) -> Unit = { _, _ -> },
 ) {
     var query by rememberSaveable { mutableStateOf(state.query) }
     var showAllPeople by rememberSaveable { mutableStateOf(false) }
@@ -366,6 +372,25 @@ fun SearchContent(
                         shape = SegmentedButtonDefaults.itemShape(i, MediaFilter.entries.size),
                         label = { Text(media.label, maxLines = 1) },
                     )
+                }
+            }
+            if (state.tags.isNotEmpty()) {
+                LazyRow(
+                    contentPadding = PaddingValues(horizontal = 12.dp),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp),
+                ) {
+                    items(state.tags.size, key = { state.tags[it].id }) { i ->
+                        val tag = state.tags[i]
+                        FilterChip(
+                            selected = tag.id in state.selectedTags,
+                            onClick = {
+                                keyboard?.hide()
+                                onToggleTag(tag.id, query)
+                            },
+                            label = { Text(tag.label) },
+                        )
+                    }
                 }
             }
             if (state.people.isNotEmpty()) {
