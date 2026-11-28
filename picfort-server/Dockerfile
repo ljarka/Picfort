@@ -24,8 +24,13 @@ WORKDIR /app
 COPY requirements.txt requirements-heif.txt ./
 # requirements-heif.txt: HEIC originals from iPhones (optional outside Docker).
 RUN pip install --no-cache-dir -r requirements.txt -r requirements-heif.txt
-COPY *.py frame_page.html ./
+COPY *.py frame_page.html dashboard_page.html ./
 COPY docker-entrypoint.sh /usr/local/bin/
+# Shown on /dashboard (T-095); release.yml passes the tag and commit. Late, so pip's layer stays cached.
+ARG PICFORT_VERSION=dev
+ARG PICFORT_REVISION=
+ENV PICFORT_VERSION=$PICFORT_VERSION \
+    PICFORT_REVISION=$PICFORT_REVISION
 
 # The server runs as this user, not root (docker-entrypoint.sh drops root after fixing /data).
 RUN groupadd --system --gid 1000 picfort \

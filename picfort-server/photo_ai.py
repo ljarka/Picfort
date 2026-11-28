@@ -362,6 +362,48 @@ class PhotoAiStore(SqliteStore):
             ).fetchall()
         return {r["asset_id"] for r in rows}
 
+    def dashboard_stats(self) -> dict:
+        """Counts for the server dashboard (T-095); no scenes or ids."""
+        with closing(self.connect()) as conn:
+            row = conn.execute(
+                """
+                SELECT COUNT(*) AS analyzed,
+                       SUM(CASE WHEN cleanup_candidate = 1 AND dismissed = 0 THEN 1 ELSE 0 END) AS cleanup,
+                       SUM(CASE WHEN dismissed = 1 THEN 1 ELSE 0 END) AS kept,
+                       SUM(CASE WHEN frame_worthy = 1 AND is_sensitive = 0 AND category = 'photo'
+                                 AND quality >= 4 AND dismissed = 0 THEN 1 ELSE 0 END) AS frame_worthy,
+                       SUM(is_sensitive) AS sensitive,
+                       MAX(analyzed_at) AS last_analyzed_at
+                FROM photo_insights
+                """
+            ).fetchone()
+            categories = {
+                r["category"]: r["n"]
+                for r in conn.execute(
+                    "SELECT category, COUNT(*) AS n FROM photo_insights GROUP BY category ORDER BY n DESC"
+                )
+            }
+            failures = conn.execute(
+                """
+                SELECT SUM(CASE WHEN attempts >= ? THEN 1 ELSE 0 END) AS skipped,
+                       SUM(CASE WHEN attempts < ? THEN 1 ELSE 0 END) AS retrying
+                FROM photo_failures
+                """,
+                (MAX_ATTEMPTS, MAX_ATTEMPTS),
+            ).fetchone()
+        return {
+            "analyzed": row["analyzed"] or 0,
+            "cleanup": row["cleanup"] or 0,
+            "kept": row["kept"] or 0,
+            "frame_worthy": row["frame_worthy"] or 0,
+            "sensitive": row["sensitive"] or 0,
+            "last_analyzed_at": row["last_analyzed_at"],
+            "categories": categories,
+            "failed_skipped": failures["skipped"] or 0,
+            "failed_retrying": failures["retrying"] or 0,
+            "scan_page": self.scan_page(),
+        }
+
     def sensitive_ids(self) -> set[str]:
         """Assets with private data or intimate moments: never shown on the frame, in any mode."""
         with closing(self.connect()) as conn:

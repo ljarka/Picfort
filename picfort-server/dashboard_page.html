@@ -1,0 +1,289 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex">
+<title>Picfort server</title>
+<!-- T-095: read-only server dashboard. Shares the key with /frame (same localStorage entry). -->
+<style>
+  :root {
+    color-scheme: light dark;
+    --bg: #f6f5f1; --card: #ffffff; --text: #1d1d1f; --muted: #6b6b70; --line: #e4e2dc;
+    --accent: #3d5afe; --ok: #2e9d5b; --warn: #d99a00; --err: #d93a3a; --chip: #efede7;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #121214; --card: #1c1c1f; --text: #ececee; --muted: #9a9aa2; --line: #2c2c31;
+      --accent: #8c9eff; --ok: #4cc27f; --warn: #f0b429; --err: #ff6b6b; --chip: #26262b;
+    }
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; background: var(--bg); color: var(--text);
+    font: 15px/1.45 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+  header { display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
+    padding: 20px 16px 8px; max-width: 1200px; margin: 0 auto; }
+  header h1 { font-size: 22px; margin: 0; font-weight: 650; }
+  header .sub { color: var(--muted); font-size: 13px; }
+  header .spacer { flex: 1; }
+  button { font: inherit; border: 0; border-radius: 16px; padding: 6px 14px; cursor: pointer;
+    background: var(--chip); color: var(--text); }
+  button.primary { background: var(--accent); color: #fff; }
+  main { max-width: 1200px; margin: 0 auto; padding: 8px 16px 40px;
+    display: grid; gap: 14px; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); }
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 14px 16px;
+    min-width: 0; }
+  .card.wide { grid-column: 1 / -1; }
+  .card h2 { font-size: 15px; margin: 0 0 10px; display: flex; align-items: center; gap: 8px; }
+  .dot { width: 10px; height: 10px; border-radius: 50%; background: var(--muted); flex: none; }
+  .dot.ok { background: var(--ok); } .dot.warn { background: var(--warn); } .dot.err { background: var(--err); }
+  dl { display: grid; grid-template-columns: max-content 1fr; gap: 4px 14px; margin: 0; }
+  dt { color: var(--muted); }
+  dd { margin: 0; overflow-wrap: anywhere; font-variant-numeric: tabular-nums; }
+  .bar { height: 8px; border-radius: 4px; background: var(--chip); overflow: hidden; margin: 8px 0 4px; }
+  .bar > div { height: 100%; background: var(--accent); }
+  .muted { color: var(--muted); font-size: 13px; }
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  th, td { text-align: left; padding: 5px 6px; border-top: 1px solid var(--line); vertical-align: top; }
+  th { color: var(--muted); font-weight: 500; border-top: 0; }
+  td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
+  .table-wrap { overflow-x: auto; }
+  .problems { display: flex; flex-direction: column; gap: 6px; }
+  .problem { display: flex; gap: 8px; align-items: baseline; }
+  .chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+  .chip { background: var(--chip); border-radius: 10px; padding: 2px 8px; font-size: 12px; }
+  #thumb { width: 100%; max-height: 220px; object-fit: contain; border-radius: 10px; margin-top: 10px;
+    background: var(--chip); display: none; }
+  .log-level { font-weight: 600; font-size: 11px; }
+  .log-level.ERROR, .log-level.CRITICAL { color: var(--err); } .log-level.WARNING { color: var(--warn); }
+  #login { display: none; max-width: 360px; margin: 12vh auto; padding: 0 16px; }
+  #login form { display: flex; flex-direction: column; gap: 12px; }
+  #login input { font: inherit; padding: 12px; border-radius: 10px; border: 1px solid var(--line);
+    background: var(--card); color: var(--text); }
+  #error { color: var(--err); min-height: 1.4em; }
+  body.login header, body.login main { display: none; }
+  body.login #login { display: block; }
+  #offline { color: var(--err); font-size: 13px; display: none; }
+</style>
+</head>
+<body>
+<header>
+  <h1>Picfort server</h1>
+  <span class="sub" id="updated">Loading…</span>
+  <span id="offline">Can't reach the server, showing the last data</span>
+  <span class="spacer"></span>
+  <button id="refresh" type="button">Refresh</button>
+  <button id="forget" type="button">Forget key</button>
+</header>
+<main id="main"></main>
+<div id="login">
+  <form id="form">
+    <h1>Picfort server</h1>
+    <p class="muted">Enter the Picfort server key (the same as in the app). This browser remembers it for
+      this dashboard and the frame page.</p>
+    <input id="key" type="password" autocomplete="current-password" placeholder="Server key" required>
+    <div id="error"></div>
+    <button class="primary" type="submit">Open dashboard</button>
+  </form>
+</div>
+<script>
+(() => {
+  // Same entry as frame_page.html: a key entered on either page opens both (T-095).
+  const STORE = "picfortFrameKey", REFRESH_MS = 30000;
+  const $ = (id) => document.getElementById(id);
+  let key = read(), timer = null, thumbUrl = null, thumbAsset = null;
+
+  function read() { try { return localStorage.getItem(STORE) || ""; } catch (e) { return ""; } }
+  function write(v) { try { v ? localStorage.setItem(STORE, v) : localStorage.removeItem(STORE); } catch (e) {} }
+
+  class KeyError extends Error {}
+  async function get(path) {
+    const headers = key ? { "X-Picfort-Key": key } : {};
+    const r = await fetch(path, { headers, cache: "no-store" });
+    if (r.status === 401) throw new KeyError(key ? "Wrong key" : "");
+    if (r.status === 429) throw new KeyError("Too many wrong keys. Try again in a few minutes.");
+    if (!r.ok) throw new Error("HTTP " + r.status);
+    return r;
+  }
+
+  const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+  const num = (n) => n == null ? "–" : Number(n).toLocaleString();
+  function bytes(n) {
+    if (n == null) return "–";
+    const u = ["B", "KB", "MB", "GB", "TB"]; let i = 0;
+    while (n >= 1024 && i < u.length - 1) { n /= 1024; i++; }
+    return (i ? n.toFixed(1) : n) + " " + u[i];
+  }
+  function duration(s) {
+    const d = Math.floor(s / 86400), h = Math.floor(s % 86400 / 3600), m = Math.floor(s % 3600 / 60);
+    return d ? `${d} d ${h} h` : h ? `${h} h ${m} min` : `${m} min`;
+  }
+  const when = (iso) => iso ? new Date(iso).toLocaleString() : "–";
+  const ago = (iso) => {
+    if (!iso) return "–";
+    const s = Math.max(0, (Date.now() - new Date(iso).getTime()) / 1000);
+    return s < 90 ? "just now" : duration(s) + " ago";
+  };
+  const hour = (h) => h == null ? "–" : String(h).padStart(2, "0") + ":00";
+  const dot = (cls) => `<span class="dot ${cls}"></span>`;
+  const rows = (pairs) => "<dl>" + pairs.filter(Boolean).map(([k, v]) => `<dt>${esc(k)}</dt><dd>${v}</dd>`).join("") + "</dl>";
+
+  function card(title, state, body, wide) {
+    return `<section class="card${wide ? " wide" : ""}"><h2>${dot(state)}${esc(title)}</h2>${body}</section>`;
+  }
+
+  function problemsCard(d) {
+    if (!d.problems.length) return card("All good", "ok", `<p class="muted">Nothing needs attention.</p>`, true);
+    const list = d.problems.map((p) => `<div class="problem">${dot(p.level === "error" ? "err" : "warn")}<span>${esc(p.text)}</span></div>`).join("");
+    return card("Needs attention", d.problems.some((p) => p.level === "error") ? "err" : "warn", `<div class="problems">${list}</div>`, true);
+  }
+
+  function serverCard(s) {
+    const disk = s.disk;
+    const used = disk ? 1 - disk.free_bytes / disk.total_bytes : null;
+    const low = disk && disk.free_bytes / disk.total_bytes < 0.05;
+    return card("Server", low ? "warn" : "ok", rows([
+      ["Version", esc(s.version) + (s.revision ? ` <span class="muted">${esc(s.revision.slice(0, 7))}</span>` : "")],
+      ["Up", `${duration(s.uptime_seconds)} <span class="muted">since ${when(s.started_at)}</span>`],
+      ["Data", bytes(s.data_bytes)],
+      disk && ["Disk free", `${bytes(disk.free_bytes)} of ${bytes(disk.total_bytes)}`],
+      ["Server key", s.api_key ? "set" : "not set (home network only)"],
+      ["Python", esc(s.python)],
+    ]) + (used != null ? `<div class="bar"><div style="width:${(used * 100).toFixed(1)}%"></div></div>` : ""));
+  }
+
+  const IMMICH_TEXT = { ok: "connected", unreachable: "unreachable", not_immich: "something else answers", key_rejected: "API key rejected" };
+  function immichCard(i) {
+    const lib = i.library;
+    return card("Immich", i.state === "ok" ? "ok" : "err", rows([
+      ["State", esc(IMMICH_TEXT[i.state] || i.state)],
+      ["Version", esc(i.version || "–")],
+      ["Check", i.check_ms + " ms"],
+      ["Photos", lib ? num(lib.images) : `<span class="muted">needs asset.statistics on the key</span>`],
+      lib && ["Videos", num(lib.videos)],
+    ]));
+  }
+
+  function frameCard(f) {
+    const s = f.slideshow;
+    const err = f.last_error || s.last_error;
+    const quiet = s.quiet_start != null ? `${hour(s.quiet_start)}–${hour(s.quiet_end)}` : "off";
+    const next = s.next_change_at ? new Date(s.next_change_at * 1000).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) : "–";
+    return card("Frame", err ? "warn" : "ok", rows([
+      ["Mode", esc(s.mode) + (s.album_id ? ` <span class="muted">album</span>` : "")],
+      ["Every", s.interval_minutes + " min"],
+      ["Next change", next],
+      ["Quiet hours", quiet],
+      ["Filters", [s.filter_photos && "hide screenshots", s.best_only && "best only"].filter(Boolean).join(", ") || "none"],
+      ["Panel", `${f.width}×${f.height}` + (f.hardware ? "" : ` <span class="muted">(no e-paper driver)</span>`) + (f.busy ? " · drawing" : "")],
+      ["Browser frame", f.browser_frame ? `<a href="/frame">open</a>` : "off (needs the server key)"],
+      err && ["Last error", esc(err)],
+    ]) + `<img id="thumb" alt="What the frame shows">`);
+  }
+
+  function aiCard(a) {
+    if (!a) return "";
+    if (!a.enabled) return card("Photo AI", "", `<p class="muted">Off. Set OLLAMA_URL and OLLAMA_MODEL to analyze photos (ADR 0019).</p>` +
+      (a.analyzed ? rows([["Analyzed", num(a.analyzed)]]) : ""));
+    const pct = a.coverage != null ? (a.coverage * 100).toFixed(a.coverage < 0.1 ? 1 : 0) + "%" : null;
+    const hours = a.active_hours ? `${hour(a.active_hours[0])}–${hour(a.active_hours[1])}` : "always";
+    const cats = Object.entries(a.categories || {}).map(([k, v]) => `<span class="chip">${esc(k.replace("_", " "))} ${num(v)}</span>`).join("");
+    return card("Photo AI", a.last_error ? "warn" : "ok", rows([
+      ["Model", esc(a.model)],
+      ["Status", a.running ? "analyzing now" : `idle · runs ${hours}, ${a.batch_size} every ${a.interval_minutes} min`],
+      ["Analyzed", num(a.analyzed) + (pct ? ` <span class="muted">(${pct} of the library)</span>` : "")],
+      ["Last analyzed", ago(a.last_analyzed_at)],
+      ["Best for the frame", num(a.frame_worthy)],
+      ["Clean-up candidates", num(a.cleanup) + (a.kept ? ` <span class="muted">· ${num(a.kept)} kept</span>` : "")],
+      ["Sensitive", num(a.sensitive)],
+      ["Failed", `${num(a.failed_skipped)} skipped` + (a.failed_retrying ? ` · ${num(a.failed_retrying)} retrying` : "")],
+      ["Immich tags", a.tag_immich ? "on" : "off"],
+      a.last_error && ["Last error", esc(a.last_error)],
+    ]) + (a.coverage != null ? `<div class="bar"><div style="width:${Math.min(100, a.coverage * 100).toFixed(1)}%"></div></div>` : "") +
+      (cats ? `<div class="chips">${cats}</div>` : ""));
+  }
+
+  function storesCard(stores, backups) {
+    const bad = Object.values(stores).some((s) => s.migration_error);
+    const body = Object.entries(stores).map(([name, s]) => {
+      const tables = Object.entries(s.tables).map(([t, n]) => `${esc(t)} ${num(n)}`).join(" · ");
+      const version = s.schema_version === s.expected_version ? `v${s.schema_version}` : `v${s.schema_version} → v${s.expected_version}`;
+      return `<tr><td>${dot(s.migration_error ? "err" : "ok")} ${esc(name)}</td><td class="num">${bytes(s.size_bytes)}</td>` +
+        `<td>${esc(version)}</td><td class="muted">${s.migration_error ? esc(s.migration_error) : tables}</td></tr>`;
+    }).join("");
+    const bak = backups.length
+      ? `<p class="muted">Migration backups in /data: ${backups.map((b) => `${esc(b.file)} (${bytes(b.size_bytes)}, ${when(b.modified)})`).join(" · ")}</p>`
+      : "";
+    return card("Data stores", bad ? "err" : "ok",
+      `<div class="table-wrap"><table><tr><th>Store</th><th class="num">Size</th><th>Schema</th><th>Rows</th></tr>${body}</table></div>${bak}`, true);
+  }
+
+  function logsCard(logs) {
+    if (!logs.length) return card("Recent problems", "ok", `<p class="muted">No warnings or errors since the server started.</p>`, true);
+    const body = logs.map((r) => `<tr><td class="muted">${when(r.time)}</td><td><span class="log-level ${esc(r.level)}">${esc(r.level)}</span></td>` +
+      `<td class="muted">${esc(r.logger)}</td><td>${esc(r.message)}</td></tr>`).join("");
+    const errors = logs.some((r) => r.level === "ERROR" || r.level === "CRITICAL");
+    return card(`Recent problems (${logs.length})`, errors ? "warn" : "ok",
+      `<div class="table-wrap"><table><tr><th>Time</th><th>Level</th><th>Where</th><th>Message</th></tr>${body}</table></div>` +
+      `<p class="muted">The last ${logs.length} warnings and errors, kept in memory until a restart.</p>`, true);
+  }
+
+  async function loadThumb(asset) {
+    const img = $("thumb");
+    if (!img || !asset) return;
+    if (asset === thumbAsset && thumbUrl) { img.src = thumbUrl; img.style.display = "block"; return; }
+    try {
+      const blob = await (await get("/current")).blob();
+      if (thumbUrl) URL.revokeObjectURL(thumbUrl);
+      thumbUrl = URL.createObjectURL(blob);
+      thumbAsset = asset;
+      img.src = thumbUrl;
+      img.style.display = "block";
+    } catch (e) { /* no picture yet: leave it hidden */ }
+  }
+
+  function render(d) {
+    $("main").innerHTML = problemsCard(d) + serverCard(d.server) + immichCard(d.immich) + frameCard(d.frame) +
+      aiCard(d.photo_ai) + storesCard(d.stores, d.backups) + logsCard(d.recent_logs);
+    $("updated").textContent = "Updated " + new Date().toLocaleTimeString();
+    loadThumb(d.frame.current_asset);
+  }
+
+  async function load() {
+    clearTimeout(timer);
+    try {
+      render(await (await get("/dashboard/data")).json());
+      document.body.classList.remove("login");
+      $("offline").style.display = "none";
+    } catch (e) {
+      if (e instanceof KeyError) return askForKey(e.message);
+      $("offline").style.display = "inline";
+    }
+    timer = setTimeout(load, REFRESH_MS);
+  }
+
+  function askForKey(message) {
+    clearTimeout(timer);
+    document.body.classList.add("login");
+    $("error").textContent = message || "";
+    $("key").value = "";
+    $("key").focus();
+  }
+
+  $("form").addEventListener("submit", (ev) => {
+    ev.preventDefault();
+    key = $("key").value.trim();
+    if (!key) return;
+    write(key);
+    load();
+  });
+  $("forget").addEventListener("click", () => { key = ""; write(""); askForKey(""); });
+  $("refresh").addEventListener("click", load);
+  document.addEventListener("visibilitychange", () => { if (!document.hidden) load(); });
+  window.addEventListener("storage", (ev) => { if (ev.key === STORE) { key = read(); load(); } });
+
+  load(); // tries without a key first: a server without PICFORT_API_KEY answers anyway
+})();
+</script>
+</body>
+</html>

@@ -98,6 +98,8 @@ class ApiContractTest(unittest.TestCase):
             "/wishlist/<int:item_id>/photo": ["PUT"],
             "/wishlist/photo/<filename>": ["GET"],
             "/wishlist/preview": ["POST"],
+            "/dashboard": ["GET"],
+            "/dashboard/data": ["GET"],
         }
 
         actual = {}

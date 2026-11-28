@@ -7,6 +7,7 @@ the error is logged, the database file is left untouched, and the store's endpoi
 """
 
 import logging
+import os
 import shutil
 import sqlite3
 from contextlib import closing
@@ -39,6 +40,32 @@ class SqliteStore:
         self.clock = clock
         self.migration_error: str | None = None
         self._init_schema()
+
+    def summary(self) -> dict:
+        """File size, schema version and row counts per table, for the dashboard (T-095).
+
+        Counts only: no contents. Works even when a migration failed (reads the raw file).
+        """
+        info = {
+            "file": os.path.basename(self.db_path),
+            "size_bytes": os.path.getsize(self.db_path) if os.path.exists(self.db_path) else None,
+            "schema_version": None,
+            "expected_version": self.SCHEMA_VERSION,
+            "migration_error": self.migration_error,
+            "tables": {},
+        }
+        try:
+            with closing(self._raw_connect()) as conn:
+                info["schema_version"] = conn.execute("PRAGMA user_version").fetchone()[0]
+                names = [r[0] for r in conn.execute(
+                    "SELECT name FROM sqlite_master WHERE type = 'table' AND name NOT LIKE 'sqlite_%' ORDER BY name"
+                )]
+                for name in names:
+                    quoted = '"' + name.replace('"', '""') + '"'
+                    info["tables"][name] = conn.execute(f"SELECT COUNT(*) FROM {quoted}").fetchone()[0]
+        except sqlite3.Error as e:
+            info["error"] = str(e)
+        return info
 
     def require_ready(self):
         if self.migration_error:

@@ -81,6 +81,7 @@ picfort-server/          Python service: family data (wall, lists, events, schoo
   tests/                 unittest suite (no hardware or Immich needed)
   frame.py               Fetches from Immich, renders for the panel, drives the display
   browser_frame.py       The frame in a web browser (/frame, frame_page.html), behind the key
+  dashboard.py           Server dashboard (/dashboard, dashboard_page.html), behind the key
   wall.py, auth.py       Family Wall storage and Immich token check
   Dockerfile             Server image (ghcr.io/ljarka/picfort-server)
 docker/                  docker-compose.yml and example.env for installing the server
@@ -242,6 +243,10 @@ A tablet or computer can show the frame too: open `https://picfort.example.com/f
   This is your normal Edge profile, so the key entered once stays. Edge's kiosk mode (`--kiosk … --edge-kiosk-type=fullscreen`) also works, but it may not keep the key between starts.
 - 10 wrong keys from one address within 15 minutes block that address for a while.
 - The app shows the link under **Settings → Picture frame → Frame in a browser**.
+
+### Server dashboard
+
+`http://<server>:5000/dashboard` (or `https://picfort.example.com/dashboard`) shows how the server is doing: version and uptime, the Immich connection, the frame, how far the photo AI is (ADR 0019), the size and schema of each database, migration backups, and the last warnings and errors. It is read-only and shows counts only, never names, texts or amounts. It uses the same key as `/frame`: entered on one page, the other opens too. Immich's library size needs `asset.statistics` on `IMMICH_API_KEY` (optional; without it the dashboard leaves the coverage out).
 
 ### Install without Docker
 

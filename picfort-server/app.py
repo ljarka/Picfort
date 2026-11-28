@@ -87,6 +87,7 @@ from werkzeug.exceptions import RequestEntityTooLarge
 
 import frame
 from browser_frame import FRAME_PAGE_PATH, register_browser_frame
+from dashboard import DASHBOARD_PAGE_PATH, register_dashboard
 from auth import Authenticator, AuthError, AuthUnavailable, immich_lookup
 from events import DEFAULT_LIMIT as EVENTS_DEFAULT_LIMIT, EventStore
 from family import FamilyStore
@@ -271,11 +272,11 @@ def create_app(controller: FrameController, slideshow: Slideshow, immich: Immich
                events: EventStore = None, school: SchoolStore = None,
                photo_ai: PhotoAiStore = None, photo_ai_worker: PhotoAiWorker = None,
                photo_ai_tagger: ImmichTagger = None,
-               frame_fetch=None, clock=time.monotonic) -> Flask:
+               frame_fetch=None, clock=time.monotonic, data_dir: str | None = None) -> Flask:
     app = Flask(__name__)
     if api_key:
-        # The browser frame's page itself has no secrets: it asks for the key (T-072).
-        require_api_key(app, api_key, open_paths={FRAME_PAGE_PATH}, clock=clock)
+        # The browser frame's and dashboard's pages have no secrets: they ask for the key (T-072, T-095).
+        require_api_key(app, api_key, open_paths={FRAME_PAGE_PATH, DASHBOARD_PAGE_PATH}, clock=clock)
     # The photo plus a little room for the text fields; larger requests get 413.
     app.config["MAX_CONTENT_LENGTH"] = MAX_PHOTO_BYTES + 64 * 1024
     controller.on_shown = slideshow.photo_changed
@@ -394,6 +395,19 @@ def create_app(controller: FrameController, slideshow: Slideshow, immich: Immich
     if family is not None and events is not None:
         family.events = events
         events.family = family
+    stores = {
+        name: store
+        for name, store in (
+            ("wall", wall), ("shopping", shopping), ("family", family), ("events", events),
+            ("school", school), ("photo_ai", photo_ai),
+        )
+        if store is not None
+    }
+    register_dashboard(
+        app, controller=controller, slideshow=slideshow, settings_json=settings_json, immich=immich,
+        immich_health=immich_health, stores=stores, photo_ai=photo_ai, photo_ai_worker=photo_ai_worker,
+        browser_frame=bool(api_key), data_dir=data_dir, clock=clock,
+    )
     return app
 
 

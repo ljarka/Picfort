@@ -125,6 +125,20 @@ class ImmichClient:
         )
         r.raise_for_status()
 
+    def server_version(self, timeout: float = 3.0) -> str:
+        """Immich's version, e.g. "v3.3.5" (public endpoint, T-095)."""
+        r = requests.get(f"{self.base_url}/api/server/version", headers=self.headers, timeout=timeout)
+        r.raise_for_status()
+        v = r.json()
+        return f"v{v.get('major')}.{v.get('minor')}.{v.get('patch')}"
+
+    def asset_statistics(self, timeout: float = 5.0) -> dict:
+        """Library size {"images", "videos", "total"} (needs asset.statistics on the key, T-095)."""
+        r = requests.get(f"{self.base_url}/api/assets/statistics", headers=self.headers, timeout=timeout)
+        r.raise_for_status()
+        s = r.json()
+        return {"images": s.get("images"), "videos": s.get("videos"), "total": s.get("total")}
+
     def check(self, timeout: float = 3.0) -> str:
         """Whether IMMICH_URL is Immich and accepts IMMICH_API_KEY; one of the IMMICH_* values."""
         try:
