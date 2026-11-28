@@ -40,6 +40,7 @@ import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewModelScope
+import com.github.ljarka.picfort.cleanup.PhotoInsightsClient
 import com.github.ljarka.picfort.collections.CollectionsRepository
 import com.github.ljarka.picfort.collections.TagDto
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -56,6 +57,7 @@ data class TimelineSettingsUi(
     val loadingTags: Boolean = true,
     val tagsError: String? = null,
     val deletingTagId: String? = null,
+    val cleanupCount: Int? = null,
     val message: String? = null,
 )
 
@@ -63,6 +65,7 @@ data class TimelineSettingsUi(
 class TimelineSettingsViewModel @Inject constructor(
     private val timelineRepository: TimelineRepository,
     private val collections: CollectionsRepository,
+    private val photoInsights: PhotoInsightsClient,
 ) : ViewModel() {
     val hideNonPhotos: StateFlow<Boolean> = timelineRepository.hideNonPhotos
 
@@ -71,6 +74,15 @@ class TimelineSettingsViewModel @Inject constructor(
 
     init {
         loadTags()
+        loadCleanupStatus()
+    }
+
+    fun loadCleanupStatus() {
+        if (!photoInsights.isConfigured) return
+        viewModelScope.launch {
+            val status = photoInsights.status()
+            _state.update { it.copy(cleanupCount = status?.cleanupCount) }
+        }
     }
 
     fun setHideNonPhotos(enabled: Boolean) = timelineRepository.setHideNonPhotos(enabled)
@@ -115,10 +127,10 @@ class TimelineSettingsViewModel @Inject constructor(
     fun messageShown() = _state.update { it.copy(message = null) }
 }
 
-/** Settings -> Timeline: photo filtering and Immich tag management (T-092). */
+/** Settings -> Timeline: photo filtering, AI cleanup entry, and Immich tag management (T-092). */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun TimelineSettingsScreen(onBack: () -> Unit) {
+fun TimelineSettingsScreen(onBack: () -> Unit, onCleanupClick: (() -> Unit)? = null) {
     val viewModel: TimelineSettingsViewModel = hiltViewModel()
     val hideNonPhotos by viewModel.hideNonPhotos.collectAsStateWithLifecycle()
     val state by viewModel.state.collectAsStateWithLifecycle()
@@ -126,6 +138,7 @@ fun TimelineSettingsScreen(onBack: () -> Unit) {
         hideNonPhotos = hideNonPhotos,
         state = state,
         onBack = onBack,
+        onCleanupClick = onCleanupClick,
         onHideNonPhotos = viewModel::setHideNonPhotos,
         onReloadTags = viewModel::loadTags,
         onDeleteTag = viewModel::deleteTag,
@@ -139,6 +152,7 @@ internal fun TimelineSettingsContent(
     hideNonPhotos: Boolean,
     state: TimelineSettingsUi,
     onBack: () -> Unit = {},
+    onCleanupClick: (() -> Unit)? = null,
     onHideNonPhotos: (Boolean) -> Unit = {},
     onReloadTags: () -> Unit = {},
     onDeleteTag: (TagDto) -> Unit = {},
@@ -197,6 +211,19 @@ internal fun TimelineSettingsContent(
                     },
                     trailingContent = { Switch(checked = hideNonPhotos, onCheckedChange = onHideNonPhotos) },
                 )
+                if (onCleanupClick != null) {
+                    val subtitle = when (val n = state.cleanupCount) {
+                        null -> "Review low-quality photos, screenshots and receipts"
+                        0 -> "No photos flagged for cleanup yet"
+                        1 -> "1 photo flagged for review"
+                        else -> "$n photos flagged for review"
+                    }
+                    ListItem(
+                        modifier = Modifier.clickable(onClick = onCleanupClick),
+                        headlineContent = { Text("Clean up photos") },
+                        supportingContent = { Text(subtitle) },
+                    )
+                }
                 HorizontalDivider(Modifier.padding(vertical = 8.dp))
                 Text(
                     "Search tags",

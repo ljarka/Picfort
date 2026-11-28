@@ -41,11 +41,8 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CheckCircle
-import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.AssistChip
-import androidx.compose.material3.AssistChipDefaults
 import androidx.compose.material3.BottomSheetScaffold
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -135,14 +132,11 @@ fun TimelineScreen(
     onOpenFamily: (() -> Unit)? = null,
     /** Opened on a day (a birthday's year, T-056): scrolled there once, when the timeline is laid out. */
     scrollToDate: LocalDate? = null,
-    /** Opens the AI Clean up screen when the server has cleanup candidates (T-089); null without server. */
-    onCleanupClick: (() -> Unit)? = null,
 ) {
     Box(modifier = modifier.fillMaxSize()) {
         val viewModel: TimelineViewModel = hiltViewModel()
         val state by viewModel.state.collectAsStateWithLifecycle()
         val syncLines by viewModel.syncLines.collectAsStateWithLifecycle()
-        val cleanupCount by viewModel.cleanupCount.collectAsStateWithLifecycle()
         // Back from the background (another app, the Immich web UI…): sync again.
         LifecycleEventEffect(Lifecycle.Event.ON_START) { viewModel.onForeground() }
         val listState = rememberLazyListState()
@@ -176,38 +170,10 @@ fun TimelineScreen(
                 if (result == SnackbarResult.ActionPerformed) onEditMember?.invoke(member.id)
             }
         }
-        val showCleanupChip = cleanupCount > 0 && onCleanupClick != null
-        val header: (@Composable () -> Unit)? = if (people.members.isEmpty() && !showCleanupChip) {
+        val header: (@Composable () -> Unit)? = if (people.members.isEmpty()) {
             null
         } else {
-            {
-                Column(Modifier.fillMaxWidth()) {
-                    if (people.members.isNotEmpty()) {
-                        PeopleFilterRow(people, peopleViewModel::select, onEditMember, onOpenFamily)
-                    }
-                    if (showCleanupChip) {
-                        Row(
-                            Modifier
-                                .fillMaxWidth()
-                                .horizontalScroll(rememberScrollState())
-                                .padding(horizontal = 12.dp, vertical = 4.dp),
-                            horizontalArrangement = Arrangement.spacedBy(8.dp),
-                        ) {
-                            AssistChip(
-                                onClick = onCleanupClick!!,
-                                label = { Text("Clean up ($cleanupCount)") },
-                                leadingIcon = {
-                                    Icon(
-                                        imageVector = Icons.Default.Delete,
-                                        contentDescription = null,
-                                        modifier = Modifier.size(AssistChipDefaults.IconSize),
-                                    )
-                                },
-                            )
-                        }
-                    }
-                }
-            }
+            { PeopleFilterRow(people, peopleViewModel::select, onEditMember, onOpenFamily) }
         }
         // Saved, so coming back to this tab later doesn't jump again.
         var scrolledToDate by rememberSaveable { mutableStateOf(false) }
@@ -370,13 +336,11 @@ fun TimelineScreen(
 
         val months = state.layout?.months.orEmpty()
         if (months.isNotEmpty() && people.selectedId == null) {
-            val extraTop = (if (people.members.isNotEmpty()) CAROUSEL_HEIGHT else 0.dp) +
-                (if (showCleanupChip) FILTER_ROW_HEIGHT else 0.dp)
             FastScrollComponent(
                 months = months,
                 listState = listState,
                 firstRowIndex = if (header != null) 1 else 0,
-                extraTop = extraTop,
+                extraTop = if (header != null) CAROUSEL_HEIGHT else 0.dp,
             )
         }
     }
@@ -384,9 +348,6 @@ fun TimelineScreen(
 
 /** The family carousel above the timeline (T-052): the month pill starts below it. */
 private val CAROUSEL_HEIGHT = 104.dp
-
-/** Height of the "Hide screenshots & documents" filter chip row (T-088). */
-private val FILTER_ROW_HEIGHT = 48.dp
 
 /** Gap between tiles and rows, and the list's side margin. */
 private val SPACING = 4.dp

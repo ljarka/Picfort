@@ -9,7 +9,6 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.github.ljarka.picfort.assets.AssetActions
 import com.github.ljarka.picfort.assets.SelectedAsset
-import com.github.ljarka.picfort.cleanup.PhotoInsightsClient
 import com.github.ljarka.picfort.collections.CollectionsRepository
 import com.github.ljarka.picfort.core.database.AssetType
 import com.github.ljarka.picfort.core.model.FrameResult
@@ -61,31 +60,11 @@ class TimelineViewModel @Inject constructor(
     private val collections: CollectionsRepository,
     private val accessTokenStore: AccessTokenStore,
     private val serverUrlStore: ServerUrlStore,
-    private val photoInsights: PhotoInsightsClient,
     syncEngine: SyncEngine,
 ) : ViewModel(),
     TimelineGridModel {
     /** Lines applied by a running sync, for progress on a still-empty timeline; null when idle. */
     val syncLines: StateFlow<Int?> = syncEngine.linesApplied
-
-    /** Whether screenshots and OCR-detected documents are hidden on the timeline (T-088). */
-    val hideNonPhotos: StateFlow<Boolean> = timelineRepository.hideNonPhotos
-
-    /** Number of AI cleanup candidates waiting on the Picfort server (0 when disabled/none, T-089). */
-    private val _cleanupCount = MutableStateFlow(0)
-    val cleanupCount: StateFlow<Int> = _cleanupCount.asStateFlow()
-
-    fun toggleHideNonPhotos() = timelineRepository.toggleHideNonPhotos()
-
-    fun refreshCleanupCount() {
-        if (!photoInsights.isConfigured) {
-            _cleanupCount.value = 0
-            return
-        }
-        viewModelScope.launch {
-            _cleanupCount.value = photoInsights.status()?.cleanupCount ?: 0
-        }
-    }
 
     /** Shown on an empty timeline. Read once: logging out leaves this screen. */
     val account = TimelineAccount(accessTokenStore.userEmail, serverUrlStore.serverUrl)
@@ -263,7 +242,6 @@ class TimelineViewModel @Inject constructor(
 
     init {
         refresh()
-        refreshCleanupCount()
     }
 
     private var refreshAgain = false
@@ -271,7 +249,6 @@ class TimelineViewModel @Inject constructor(
 
     /** The app came back to the foreground: pick up changes made elsewhere, at most once a minute. */
     fun onForeground() {
-        refreshCleanupCount()
         if (System.currentTimeMillis() - lastRefreshAt > 60_000) refresh()
     }
 

@@ -360,11 +360,6 @@ class MainActivity : ComponentActivity() {
                                                     scrollToDate = entry.toRoute<Screen.Timeline>().date?.let(
                                                         LocalDate::parse,
                                                     ),
-                                                    onCleanupClick = if (picfortServer.configured) {
-                                                        { navController.navigate(Screen.Cleanup) }
-                                                    } else {
-                                                        null
-                                                    },
                                                 )
                                             }
                                         }
@@ -416,7 +411,15 @@ class MainActivity : ComponentActivity() {
                                         )
                                     }
                                     composable<Screen.TimelineSettings> {
-                                        TimelineSettingsScreen(onBack = { navController.popBackStack() })
+                                        val picfortServer = hiltViewModel<ServerStatusViewModel>()
+                                        TimelineSettingsScreen(
+                                            onBack = { navController.popBackStack() },
+                                            onCleanupClick = if (picfortServer.configured) {
+                                                { navController.navigate(Screen.Cleanup) }
+                                            } else {
+                                                null
+                                            },
+                                        )
                                     }
                                     composable<Screen.ExperimentalFeatures> {
                                         ExperimentalFeaturesScreen(onBack = { navController.popBackStack() })
