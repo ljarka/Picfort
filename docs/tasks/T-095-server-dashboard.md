@@ -28,7 +28,7 @@ is, and what went wrong recently. Read-only; it changes nothing.
 
 1. **Server:** version and git revision, start time and uptime, Python version, free disk on
    `/data`, size of `/data`.
-   - Version: `ARG PICFORT_VERSION` / `ARG PICFORT_REVISION` in the `Dockerfile` -> `ENV`;
+   - Version: `ARG PICFORT_BUILD_VERSION` / `ARG PICFORT_BUILD_REVISION` (not `PICFORT_VERSION`: in `.env` it picks the image tag and `env_file` would override it) in the `Dockerfile` -> `ENV`;
      `release.yml` passes `build-args` from the tag and `github.sha`. Local builds show `dev`.
 2. **Immich:** `immich_health()` state (ok / unreachable / not_immich / key_rejected) with the
    check's latency, Immich version (`GET /api/server/version`), library size

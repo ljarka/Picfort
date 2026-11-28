@@ -27,10 +27,11 @@ RUN pip install --no-cache-dir -r requirements.txt -r requirements-heif.txt
 COPY *.py frame_page.html dashboard_page.html ./
 COPY docker-entrypoint.sh /usr/local/bin/
 # Shown on /dashboard (T-095); release.yml passes the tag and commit. Late, so pip's layer stays cached.
-ARG PICFORT_VERSION=dev
-ARG PICFORT_REVISION=
-ENV PICFORT_VERSION=$PICFORT_VERSION \
-    PICFORT_REVISION=$PICFORT_REVISION
+# Not PICFORT_VERSION: that one in .env picks the image tag, and env_file would override this.
+ARG PICFORT_BUILD_VERSION=dev
+ARG PICFORT_BUILD_REVISION=
+ENV PICFORT_BUILD_VERSION=$PICFORT_BUILD_VERSION \
+    PICFORT_BUILD_REVISION=$PICFORT_BUILD_REVISION
 
 # The server runs as this user, not root (docker-entrypoint.sh drops root after fixing /data).
 RUN groupadd --system --gid 1000 picfort \

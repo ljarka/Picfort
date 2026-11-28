@@ -162,8 +162,8 @@ def register_dashboard(app: Flask, *, controller, slideshow, settings_json, immi
             disk = None
         t = now()
         return {
-            "version": os.environ.get("PICFORT_VERSION", "dev"),
-            "revision": os.environ.get("PICFORT_REVISION", ""),
+            "version": os.environ.get("PICFORT_BUILD_VERSION", "dev"),
+            "revision": os.environ.get("PICFORT_BUILD_REVISION", ""),
             "started_at": datetime.fromtimestamp(started_at, timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
             "uptime_seconds": int(t - started_at),
             "now": datetime.fromtimestamp(t, timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),

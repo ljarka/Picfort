@@ -74,6 +74,17 @@ class DashboardTest(unittest.TestCase):
         self.assertEqual({"server", "immich", "frame", "photo_ai", "stores", "backups", "recent_logs", "problems"},
                          set(d))
         self.assertEqual("dev", d["server"]["version"])
+
+    def test_version_comes_from_the_build_not_the_compose_tag(self):
+        old = dict(os.environ)
+        try:
+            # .env's PICFORT_VERSION picks the image tag and reaches the container via env_file.
+            os.environ.update(PICFORT_VERSION="latest", PICFORT_BUILD_VERSION="v0.9.27", PICFORT_BUILD_REVISION="abc")
+            d = self.client(api_key="").get("/dashboard/data").get_json()
+            self.assertEqual(("v0.9.27", "abc"), (d["server"]["version"], d["server"]["revision"]))
+        finally:
+            os.environ.clear()
+            os.environ.update(old)
         self.assertEqual({"state": "ok", "version": "v3.3.5"},
                          {k: d["immich"][k] for k in ("state", "version")})
         ai = d["photo_ai"]
