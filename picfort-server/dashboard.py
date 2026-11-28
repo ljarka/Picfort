@@ -256,16 +256,18 @@ def register_dashboard(app: Flask, *, controller, slideshow, settings_json, immi
             return round(min(1.0, analyzed / images), 4) if images else None
 
         own = counts.get(server_id, 0) if server_id else 0
-        # Without user.read the server can't tell its owner: everything not a member's counts as its own.
-        partners = sum(n for o, n in counts.items() if o not in member_ids and o != server_id)
+        unknown = counts.get("", 0)  # analyzed before owners were recorded; the worker fills them in
+        partners = sum(n for o, n in counts.items() if o not in ("", "-") and o not in member_ids and o != server_id)
         if not server_id:
-            own, partners = partners, 0
+            # Without user.read the server can't tell its owner: everything not a member's is its own.
+            own, partners, unknown = partners + unknown, 0, 0
         images = (server_library or {}).get("images")
         rows = [{
             "name": server_user["name"] if server_user else "Server key (IMMICH_API_KEY)",
             "via": "server key",
             "analyzed": own,
             "partners": partners,
+            "unknown": unknown,
             "images": images,
             "coverage": coverage(own, images),
             "last_error": photo_ai_worker.last_error if photo_ai_worker else None,

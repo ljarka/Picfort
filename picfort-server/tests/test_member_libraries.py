@@ -173,6 +173,7 @@ class MemberLibrariesTest(unittest.TestCase):
         self.store.save("d1", "m", {"category": "photo"}, owner_id=DAD)
         self.store.save("m1", "m", {"category": "photo"}, owner_id=MOM)
         self.store.save("x1", "m", {"category": "photo"}, owner_id="someone-else")  # a partner without a key
+        self.store.save("old", "m", {"category": "photo"})  # analyzed before owners were recorded
         cfg = frame.Config(immich_url="http://immich", immich_api_key="k",
                            preview_path=os.path.join(self.tmp.name, "p.png"))
         controller = FrameController(cfg, min_interval=0, display=lambda _: None, prepare=lambda a: a)
@@ -184,9 +185,26 @@ class MemberLibrariesTest(unittest.TestCase):
                          data_dir=self.tmp.name)
         libs = app.test_client().get("/dashboard/data").get_json()["photo_ai"]["libraries"]
         self.assertEqual(["11111111-1111-1111-1111-111111111111", "Mom"], [lib["name"] for lib in libs])
-        self.assertEqual((1, 1), (libs[0]["analyzed"], libs[0]["partners"]))
+        self.assertEqual((1, 1, 1), (libs[0]["analyzed"], libs[0]["partners"], libs[0]["unknown"]))
         self.assertEqual((1, 2, 0.5), (libs[1]["analyzed"], libs[1]["images"], libs[1]["coverage"]))
         self.assertNotIn("mom-key", str(libs))
+
+
+    def test_owners_of_older_analyses_are_filled_from_immich(self):
+        self.store.save("d1", "m", {"category": "photo"})
+        self.store.save("m1", "m", {"category": "photo"})
+        self.store.save("gone", "m", {"category": "photo"})
+        owners = {"d1": DAD, "m1": MOM}
+
+        def asset_owner(asset_id):
+            if asset_id not in owners:
+                raise http_error(404)
+            return owners[asset_id]
+
+        self.server.asset_owner = asset_owner
+        self.assertEqual(3, self.worker.fill_unknown_owners())
+        self.assertEqual({DAD: 1, MOM: 1, "-": 1}, self.store.owned_counts())  # "gone" is not asked again
+        self.assertEqual(0, self.worker.fill_unknown_owners())
 
 
 if __name__ == "__main__":

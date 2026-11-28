@@ -207,6 +207,8 @@ def tags_for_insight(insight: dict) -> list[str]:
 
 # The library analyzed with the server's own IMMICH_API_KEY; members' libraries use their user id (T-104).
 SERVER_LIBRARY = "server"
+# owner_id of an analyzed asset Immich no longer has (T-104 owner backfill).
+GONE_OWNER = "-"
 
 # An asset whose analysis failed this many times is skipped for good (no poison pill, T-093).
 MAX_ATTEMPTS = 3
@@ -496,6 +498,11 @@ class PhotoAiStore(SqliteStore):
             return
         with closing(self.connect()) as conn, conn:
             conn.executemany("UPDATE photo_insights SET owner_id = ? WHERE asset_id = ? AND owner_id = ''", pairs)
+
+    def unknown_owner_ids(self, limit: int = 50) -> list[str]:
+        with closing(self.connect()) as conn:
+            rows = conn.execute("SELECT asset_id FROM photo_insights WHERE owner_id = '' LIMIT ?", (limit,)).fetchall()
+        return [r["asset_id"] for r in rows]
 
     def owned_counts(self) -> dict[str, int]:
         with closing(self.connect()) as conn:
@@ -1084,6 +1091,7 @@ class PhotoAiWorker:
         lib = libs[self._turn % len(libs)]
         self._turn += 1
         try:
+            self.fill_unknown_owners()
             if lib.user_id:
                 self._tag_backlog(lib)
             todo = self._pick_unanalyzed(self.config.batch_size, lib)
@@ -1120,6 +1128,22 @@ class PhotoAiWorker:
         finally:
             self.running = False
         return analyzed
+
+    def fill_unknown_owners(self, limit: int = 50) -> int:
+        """Asks Immich who owns photos analyzed before T-104 recorded owners, a few at a time."""
+        if not hasattr(self.immich, "asset_owner"):
+            return 0
+        owners: dict[str, str] = {}
+        for asset_id in self.store.unknown_owner_ids(limit):
+            try:
+                owners[asset_id] = self.immich.asset_owner(asset_id) or GONE_OWNER
+            except requests.HTTPError as e:
+                if e.response is None or e.response.status_code not in (400, 404):
+                    raise
+                # Gone from Immich (deleted): marked so the queue moves on instead of asking forever.
+                owners[asset_id] = GONE_OWNER
+        self.store.fill_owners(owners)
+        return len(owners)
 
     def _tag_backlog(self, lib: Library, limit: int = 60) -> int:
         """Tags a member's photos analyzed before their key arrived (through a partner's key)."""
@@ -1225,6 +1249,12 @@ class PhotoAiWorker:
         )
 
         def loop():
+            try:
+                # Owners first, so the Best clean-up below untags with the right key.
+                while self.fill_unknown_owners(limit=200):
+                    pass
+            except Exception as e:
+                log.warning("Photo AI owner backfill failed: %s", e)
             try:
                 self.reconcile_best_tags()
             except Exception as e:

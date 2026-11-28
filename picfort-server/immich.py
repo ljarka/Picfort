@@ -34,6 +34,12 @@ class ImmichClient:
         self.headers = {"x-api-key": api_key}
         self.timeout = timeout
 
+    def asset_owner(self, asset_id: str, timeout: float = 10.0) -> str:
+        """The owner's user id of one asset (asset.read; T-104 fills owners of older analyses)."""
+        r = requests.get(f"{self.base_url}/api/assets/{asset_id}", headers=self.headers, timeout=timeout)
+        r.raise_for_status()
+        return r.json().get("ownerId") or ""
+
     def me(self, timeout: float = 5.0) -> dict:
         """The key's owner {"id", "name"} (needs user.read; T-104)."""
         r = requests.get(f"{self.base_url}/api/users/me", headers=self.headers, timeout=timeout)
