@@ -1,6 +1,6 @@
 # T-095 — Server dashboard: `/dashboard` web page with stats and health
 
-**Status:** in-progress  
+**Status:** done (`0c38387`)  
 **Component:** Server (`picfort-server`), release workflow  
 **Depends on:** T-072 (browser frame page and key handling), T-093 (photo AI worker state)
 
