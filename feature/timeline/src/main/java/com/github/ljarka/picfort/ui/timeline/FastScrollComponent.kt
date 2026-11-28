@@ -22,7 +22,9 @@ import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.github.ljarka.picfort.ui.timeline.layout.MonthMarker
@@ -43,9 +45,11 @@ fun FastScrollComponent(
     firstRowIndex: Int = 0,
     /** Room above the month pill (the family carousel's height). */
     extraTop: Dp = 0.dp,
+    /** Keeps the track clear of what floats at the bottom (the tab bar), so the pill stays grabbable. */
+    modifier: Modifier = Modifier,
 ) {
     BoxWithConstraints(
-        modifier = Modifier.fillMaxSize(),
+        modifier = modifier.fillMaxSize(),
     ) {
         var numberOfItems = months.size
         var maxOffset = with(LocalDensity.current) { (maxHeight - 208.dp - extraTop).toPx() }
@@ -53,15 +57,21 @@ fun FastScrollComponent(
         var offsetY by rememberSaveable { mutableStateOf(0) }
         var index by rememberSaveable { mutableStateOf(0) }
         var coroutineScope = rememberCoroutineScope()
-        var text by remember { mutableStateOf(months.first().title) }
+        // Keyed on the months: after a filter or a sync the pill never shows a month that is gone.
+        var text by remember(months) { mutableStateOf(months.first().title) }
+        val haptics = LocalHapticFeedback.current
         var currentJob by remember { mutableStateOf<Job?>(null) }
         var isDragging by remember { mutableStateOf(false) }
         val draggableState = rememberDraggableState(onDelta = { delta ->
-            offsetY = (offsetY + delta).toInt()
-            index = minOf(
-                maxOf((offsetY / minDelta).roundToInt(), 0),
-                months.size - 1,
-            )
+            // Kept on the track: dragging past either end and back moves the pill at once,
+            // instead of first making up the distance dragged beyond the end.
+            offsetY = (offsetY + delta).toInt().coerceIn(0, maxOffset.toInt().coerceAtLeast(0))
+            val newIndex = fastScrollIndex(offsetY.toFloat(), minDelta, months.size)
+            if (newIndex != index) {
+                // A light tick per month, so months are felt while dragging.
+                haptics.performHapticFeedback(HapticFeedbackType.SegmentTick)
+            }
+            index = newIndex
 
             currentJob?.cancel()
             currentJob = coroutineScope.launch {
@@ -109,4 +119,10 @@ fun FastScrollComponent(
             Text(text = text)
         }
     }
+}
+
+/** The month under the pill at [offsetY] on a track of [count] months [step] px apart. */
+internal fun fastScrollIndex(offsetY: Float, step: Float, count: Int): Int {
+    if (count <= 0 || step <= 0f) return 0
+    return (offsetY / step).roundToInt().coerceIn(0, count - 1)
 }

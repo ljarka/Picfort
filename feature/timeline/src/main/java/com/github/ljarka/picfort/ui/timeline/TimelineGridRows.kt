@@ -165,7 +165,8 @@ private fun BestOfMonthStrip(row: BestRow, height: Dp, onClick: (Tile) -> Unit) 
             items(row.tiles, key = { it.asset.id }) { tile ->
                 AsyncImage(
                     model = tile.url,
-                    contentDescription = null,
+                    // For TalkBack and the T-101 Maestro flow: the strip has no visible label.
+                    contentDescription = "Best of the month",
                     contentScale = ContentScale.Crop,
                     modifier = Modifier
                         .size(with(density) { tile.width.toDp() }, height)

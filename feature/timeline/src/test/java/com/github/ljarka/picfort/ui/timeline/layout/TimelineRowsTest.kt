@@ -153,4 +153,36 @@ class TimelineRowsTest {
         assertEquals(0, withBest.rowIndexOf(LocalDate.parse("2025-11-20")))
         assertEquals(withBest.rows.size, withBest.rows.map { it.key }.toSet().size)
     }
+
+    @Test
+    fun `fast scroll markers still point at month headers when months have best strips`() {
+        fun m(key: Long, start: Int, n: Int, best: List<Int>) = TimelineMonth(
+            key,
+            start,
+            List(n) { TimelineAsset("$key-$it", AssetType.REMOTE, key, 1f) },
+            best = best,
+        )
+        val l = layoutTimeline(
+            TimelineIndex(
+                listOf(m(3L, 0, 9, listOf(0, 1, 2)), m(2L, 9, 4, emptyList()), m(1L, 13, 6, listOf(1, 3, 5))),
+            ),
+            Viewport(1080f, 2000f, spacing = 8f),
+            titleOf = { "month $it" },
+            urlOf = { it.id },
+        )
+        l.months.forEach { assertEquals(MonthHeaderRow(it.month, "month ${it.month}"), l.rows[it.rowIndex]) }
+        // Every row after a marker, up to the next one, belongs to that month (the pill's label while scrolling).
+        l.months.forEachIndexed { i, marker ->
+            val end = l.months.getOrNull(i + 1)?.rowIndex ?: l.rows.size
+            l.rows.subList(marker.rowIndex, end).forEach { row ->
+                val month = when (row) {
+                    is MonthHeaderRow -> row.month
+                    is BestRow -> row.month
+                    is TilesRow -> row.month
+                }
+                assertEquals(marker.month, month)
+            }
+        }
+        assertEquals(listOf(true, false, true), l.months.map { l.rows[it.rowIndex + 1] is BestRow })
+    }
 }

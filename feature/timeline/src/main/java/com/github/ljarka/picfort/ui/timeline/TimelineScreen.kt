@@ -339,6 +339,8 @@ fun TimelineScreen(
                 listState = listState,
                 firstRowIndex = if (header != null) 1 else 0,
                 extraTop = if (header != null) CAROUSEL_HEIGHT else 0.dp,
+                // At the end of the track the pill stopped under the floating tab bar, out of reach.
+                modifier = Modifier.navigationBarsPadding().aboveFloatingTabBar(),
             )
         }
     }

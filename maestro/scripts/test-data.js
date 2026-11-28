@@ -12,6 +12,8 @@
 // SHOPPING=<title> to put a fresh list <title> with "Mleko", "Chleb", "Jajka" (T-040); sets
 // output.reminderHour12 / reminderAmPm / reminderMinute (the time picker's 12-hour dial) and reminderLabel
 // ("Today, 09:45"): the next 5-minute mark at least 2 minutes ahead, local time.
+// BEST=1 to tag 3 photos of one month on the test account with ai/best/frame-worthy, as the Picfort
+// server's photo AI would (T-094, T-097, T-101); output.bestMonth is that month ("July, 2025").
 // Credentials come from MAESTRO_* (scripts/maestro-smoke.sh); nothing is logged.
 
 function check(res, what) {
@@ -171,4 +173,32 @@ if (typeof SHOPPING !== "undefined" && SHOPPING) {
   output.reminderMinute = String(at.getMinutes())
   output.reminderLabel = (at.getDate() === new Date().getDate() ? "Today" : "Tomorrow") + ", " +
     two(at.getHours()) + ":" + two(at.getMinutes())
+}
+
+if (typeof BEST !== "undefined" && BEST === "1") {
+  const tags = check(http.request(immich + "/api/tags", {
+    method: "PUT", headers: headers, body: JSON.stringify({ tags: ["ai/best/frame-worthy"] }),
+  }), "PUT /api/tags")
+  const tag = tags.find(function (t) { return t.value === "ai/best/frame-worthy" })
+  if (!tag) throw new Error("ai/best/frame-worthy tag missing after upsert")
+  const recent = check(http.post(immich + "/api/search/metadata", {
+    headers: headers, body: JSON.stringify({ type: "IMAGE", size: 200, order: "desc" }),
+  }), "search newest photos").assets.items
+  const byMonth = {}
+  recent.forEach(function (a) {
+    const month = (a.localDateTime || a.fileCreatedAt || "").substring(0, 7)
+    if (!month) return
+    if (!byMonth[month]) byMonth[month] = []
+    byMonth[month].push(a.id)
+  })
+  // The newest month with at least 3 photos: the strip shows from 3 best photos (BEST_MIN).
+  const month = Object.keys(byMonth).sort().reverse().find(function (m) { return byMonth[m].length >= 3 })
+  if (!month) throw new Error("No month with 3 photos on the test account")
+  check(http.request(immich + "/api/tags/assets", {
+    method: "PUT", headers: headers,
+    body: JSON.stringify({ tagIds: [tag.id], assetIds: byMonth[month].slice(0, 3) }),
+  }), "tag best photos")
+  const names = ["January", "February", "March", "April", "May", "June", "July", "August", "September",
+    "October", "November", "December"]
+  output.bestMonth = names[parseInt(month.substring(5, 7), 10) - 1] + ", " + month.substring(0, 4)
 }

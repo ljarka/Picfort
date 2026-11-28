@@ -1,0 +1,40 @@
+# T-094, T-097, T-100, T-101: the "Best of the month" strip, tags on top of a photo's Details, and
+# a tapped tag opening Search filtered by it. Test account only: the script tags 3 photos of one
+# month with ai/best/frame-worthy, as the Picfort server's photo AI would.
+appId: com.github.ljarka.picfort
+name: Photos — Best strip, Details tags, tag search
+---
+- runScript:
+    file: scripts/test-data.js
+    env:
+      BEST: "1"
+- runFlow: subflows/open-app.yaml
+- tapOn: "Photos"
+- extendedWaitUntil:
+    visible: "Timeline"
+    timeout: 15000
+# The app refreshes the best ids with the first sync after a start.
+- scrollUntilVisible:
+    element: "Best of the month"
+    direction: DOWN
+    timeout: 60000
+    centerElement: true
+- assertVisible: ${output.bestMonth}
+- tapOn:
+    text: "Best of the month"
+    index: 0
+- extendedWaitUntil:
+    visible: "Details"
+    timeout: 10000
+- tapOn: "Details"
+# The tag chip sits on top of Details, under its title.
+- extendedWaitUntil:
+    visible: "Best"
+    timeout: 10000
+- tapOn: "Best"
+# Search opens with the "Best" chip picked and the tagged photos listed.
+- extendedWaitUntil:
+    visible: "Best"
+    timeout: 10000
+- assertNotVisible: "Describe what's in the photo, or pick people above."
+- assertNotVisible: "Details"
