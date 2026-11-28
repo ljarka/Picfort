@@ -129,6 +129,16 @@ class CollectionsRepository @Inject constructor(
         )
     }
 
+    /** A new Immich API key for the Picfort photo AI (T-104); `secret` is shown only now. */
+    suspend fun createPhotoAiKey(): ApiKeyCreated =
+        service.get().createApiKey(ApiKeyCreateRequest(PHOTO_AI_KEY_NAME, PHOTO_AI_KEY_PERMISSIONS))
+
+    /** Deletes an Immich API key; a key already gone counts as deleted (T-104). */
+    suspend fun deleteApiKey(id: String) {
+        val response = service.get().deleteApiKey(id)
+        if (!response.isSuccessful && response.code() != 404) throw HttpException(response)
+    }
+
     /** Immich memories showing now (T-096). */
     suspend fun memories(): List<com.github.ljarka.picfort.memories.MemoryDto> = service.get().memories()
 
@@ -209,6 +219,20 @@ private val CLEANUP_TAG_LABELS = mapOf(
     "ai/cleanup/blurry" to "Blurry",
     "ai/cleanup/accidental" to "Accidental",
     "ai/cleanup/closed-eyes" to "Closed eyes",
+)
+
+/** Name of the Immich API key the app creates for the photo AI (T-104); shown in Immich's settings. */
+const val PHOTO_AI_KEY_NAME = "Picfort photo AI"
+
+/** Exactly what the photo AI worker uses: search, previews, library size, tags, whose key it is. */
+val PHOTO_AI_KEY_PERMISSIONS = listOf(
+    "asset.read",
+    "asset.view",
+    "asset.statistics",
+    "tag.read",
+    "tag.create",
+    "tag.asset",
+    "user.read",
 )
 
 /** A tag on a photo's details (T-097): tapping it searches by [id] (T-100). */

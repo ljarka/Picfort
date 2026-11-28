@@ -7,7 +7,7 @@ Immich photo timeline, gallery, full-screen viewer, collections, and media sync 
 | File | Purpose |
 |---|---|
 | `ui/timeline/TimelineScreen.kt` | UI: `TimelineScreen`, `TimeLineContent`, month groupings, fast scroll; selection sheet padded above the floating tab bar |
-| `ui/timeline/TimelineSettingsScreen.kt` | Settings -> Timeline: "Hide screenshots & documents" and "Show best of the month" (T-094) switches + Immich tag list & delete (`DELETE /api/tags/{id}`, T-092) |
+| `ui/timeline/TimelineSettingsScreen.kt` | Settings -> Timeline: "Hide screenshots & documents" and "Show best of the month" (T-094) switches, "Photo AI for my photos" (own Immich key created via `/api/api-keys`, `/photo-insights/my-library`, T-104) + Immich tag list & delete (`DELETE /api/tags/{id}`, T-092) |
 | `ui/timeline/TimelineGridRows.kt` | Timeline grid row/tile rendering; `BestOfMonthStrip` for `BestRow` (T-094) |
 | `ui/timeline/TimelineViewModel.kt` | ViewModel: layout engine, viewports, selection mode, asset actions |
 | `core/ui/src/main/java/com/github/ljarka/picfort/core/ui/layout/JustifiedLayout.kt` | Shared justified row computation (`justify`) used by timeline layout |

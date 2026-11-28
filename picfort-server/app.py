@@ -81,6 +81,7 @@ import sys
 import threading
 import time
 
+import requests
 from flask import Flask, g, jsonify, request, send_file
 from waitress import serve
 from werkzeug.exceptions import RequestEntityTooLarge
@@ -88,7 +89,7 @@ from werkzeug.exceptions import RequestEntityTooLarge
 import frame
 from browser_frame import FRAME_PAGE_PATH, register_browser_frame
 from dashboard import DASHBOARD_PAGE_PATH, register_dashboard
-from auth import Authenticator, AuthError, AuthUnavailable, immich_lookup
+from auth import Authenticator, AuthError, AuthUnavailable, immich_lookup, immich_partners
 from events import DEFAULT_LIMIT as EVENTS_DEFAULT_LIMIT, EventStore
 from family import FamilyStore
 from immich import IMMICH_CHECK_LOG, IMMICH_OK, ImmichClient
@@ -272,7 +273,8 @@ def create_app(controller: FrameController, slideshow: Slideshow, immich: Immich
                events: EventStore = None, school: SchoolStore = None,
                photo_ai: PhotoAiStore = None, photo_ai_worker: PhotoAiWorker = None,
                photo_ai_tagger: ImmichTagger = None,
-               frame_fetch=None, clock=time.monotonic, data_dir: str | None = None) -> Flask:
+               frame_fetch=None, clock=time.monotonic, data_dir: str | None = None,
+               partner_lookup=None) -> Flask:
     app = Flask(__name__)
     if api_key:
         # The browser frame's and dashboard's pages have no secrets: they ask for the key (T-072, T-095).
@@ -391,7 +393,7 @@ def create_app(controller: FrameController, slideshow: Slideshow, immich: Immich
     if school is not None:
         register_school(app, school)
     if photo_ai is not None:
-        register_photo_insights(app, photo_ai, photo_ai_worker, photo_ai_tagger)
+        register_photo_insights(app, photo_ai, photo_ai_worker, photo_ai_tagger, partner_lookup)
     if family is not None and events is not None:
         family.events = events
         events.family = family
@@ -922,7 +924,79 @@ def register_wall(app: Flask, wall: WallStore):
 
 
 def register_photo_insights(app: Flask, store: PhotoAiStore, worker: PhotoAiWorker = None,
-                            tagger: ImmichTagger = None):
+                            tagger: ImmichTagger = None, partner_lookup=None):
+    """`partner_lookup(token)`: ids of users who share their library with the caller (Immich
+    partners); None: labels are limited to the caller's own photos (T-104)."""
+
+    def my_owners() -> set[str]:
+        owners = {g.user.id}
+        if partner_lookup is not None:
+            try:
+                owners |= set(partner_lookup(request.headers.get("Authorization", "")))
+            except Exception as e:
+                log.warning("Partner lookup failed: %s", e)
+        return owners
+
+    def my_library() -> dict:
+        me = g.user.id
+        row = next((k for k in store.library_keys() if k["user_id"] == me), None)
+        via_server = bool(worker and worker.server_user_id() == me)
+        images = None
+        try:
+            if row and worker and worker.client_factory:
+                images = worker.client_factory(row["api_key"]).asset_statistics().get("images")
+            elif via_server:
+                images = worker.immich.asset_statistics().get("images")
+        except Exception:
+            images = None
+        return {
+            "ai_enabled": bool(worker and worker.config.enabled),
+            "enabled": row is not None,
+            "via_server": via_server,
+            "key_id": row["key_id"] if row else "",
+            "analyzed": store.owned_counts().get(me, 0),
+            "images": images,
+            "last_error": (row["last_error"] or None) if row else None,
+        }
+
+    @app.route("/photo-insights/my-library", methods=["GET"])
+    def photo_insights_my_library():
+        """Whether the caller's own Immich library is analyzed and tagged (T-104)."""
+        return jsonify(my_library())
+
+    @app.route("/photo-insights/my-library", methods=["PUT"])
+    def photo_insights_add_my_library():
+        """The caller's own Immich API key, so the worker analyzes and tags their library (T-104).
+
+        Checked against Immich: it must belong to the caller. Stored on the server, never returned.
+        """
+        if worker is None or worker.client_factory is None:
+            return error("Photo AI is not set up on this server", 404)
+        body = json_body()
+        api_key = str(body.get("api_key") or "").strip()
+        key_id = str(body.get("key_id") or "").strip()
+        if not api_key:
+            return error("api_key is required", 400)
+        try:
+            owner = worker.client_factory(api_key).me()
+        except requests.HTTPError:
+            return error("Immich rejected this API key (it needs user.read, asset.read, asset.view and tag.*)", 400)
+        except requests.RequestException as e:
+            return error(f"Could not reach Immich: {e}", 502)
+        if owner.get("id") != g.user.id:
+            return error("This API key belongs to another Immich user", 403)
+        store.set_library_key(g.user.id, g.user.name, api_key, key_id)
+        log.info("Photo AI: %s added their library", g.user.name)
+        return jsonify(my_library())
+
+    @app.route("/photo-insights/my-library", methods=["DELETE"])
+    def photo_insights_remove_my_library():
+        """Forgets the caller's key; answers its Immich key id so the app can delete it there."""
+        key_id = store.delete_library_key(g.user.id)
+        if key_id is None:
+            return error("No key stored for you", 404)
+        log.info("Photo AI: %s removed their library", g.user.name)
+        return jsonify(key_id=key_id)
     @app.route("/photo-insights/status", methods=["GET"])
     def photo_insights_status():
         stats = store.stats()
@@ -936,8 +1010,10 @@ def register_photo_insights(app: Flask, store: PhotoAiStore, worker: PhotoAiWork
 
     @app.route("/photo-insights/labels", methods=["GET"])
     def photo_insights_labels():
-        """Every analyzed asset as [id, category, sensitive 0/1], compact for the app's cache (T-102)."""
-        items = [[asset_id, category, 1 if sensitive else 0] for asset_id, category, sensitive in store.labels()]
+        """Analyzed assets the caller can see, as [id, category, sensitive 0/1], compact for the app's
+        cache (T-102): their own and their Immich partners' (T-104)."""
+        rows = store.labels_for_owners(my_owners())
+        items = [[asset_id, category, 1 if sensitive else 0] for asset_id, category, sensitive in rows]
         return jsonify(items=items, count=len(items))
 
     @app.route("/photo-insights/cleanup", methods=["GET"])
@@ -958,8 +1034,10 @@ def register_photo_insights(app: Flask, store: PhotoAiStore, worker: PhotoAiWork
         dismissed = store.dismiss(asset_id)
         if not dismissed:
             return error("Photo insight not found", 404)
-        if tagger is not None:
-            tagger.remove_cleanup_tags(asset_id, dismissed.get("tags_applied"))
+        # Only the owner's key may untag it in Immich (T-104).
+        owner_tagger = worker.tagger_for_asset(asset_id) if worker is not None else tagger
+        if owner_tagger is not None:
+            owner_tagger.remove_cleanup_tags(asset_id, dismissed.get("tags_applied"))
         return jsonify(status="dismissed", asset_id=asset_id)
 
     @app.route("/photo-insights/<asset_id>", methods=["DELETE"])
@@ -1006,6 +1084,8 @@ if __name__ == "__main__":
         immich_client,
         OllamaAnalyzer(photo_ai_config.ollama_url, photo_ai_config.ollama_model),
         photo_ai_tagger,
+        # Family members add their own keys in the app (T-104).
+        client_factory=lambda key: ImmichClient(config.immich_url, key),
     )
     photo_ai_worker.start()
     frame_controller = FrameController(config, float(os.environ.get("FRAME_MIN_INTERVAL", "30")))
@@ -1034,7 +1114,8 @@ if __name__ == "__main__":
         log.info("PICFORT_API_KEY is not set: anyone who can reach this server can use it.")
     app = create_app(frame_controller, show_slideshow, immich_client, family_wall, wall_auth, api_key,
                      shopping_store, family_store, event_store, school_store,
-                     photo_ai_store, photo_ai_worker, photo_ai_tagger)
+                     photo_ai_store, photo_ai_worker, photo_ai_tagger,
+                     partner_lookup=immich_partners(config.immich_url))
     port = int(os.environ.get("PORT", "5000"))
     log.info("Listening on port %s", port)
     # waitress, not Flask's development server: made for long-running use, and it handles

@@ -199,7 +199,9 @@
       ["Failed", `${num(a.failed_skipped)} skipped` + (a.failed_retrying ? ` · ${num(a.failed_retrying)} retrying` : "")],
       ["Immich tags", a.tag_immich ? "on" : "off"],
       a.last_error && ["Last error", esc(a.last_error)],
-    ]) + (a.coverage != null ? `<div class="bar"><div style="width:${Math.min(100, a.coverage * 100).toFixed(1)}%"></div></div>` : "") +
+    ]) + (a.libraries && a.libraries.length > 1 ? `<p class="muted" style="margin:10px 0 2px">Libraries</p>` + rows(
+      a.libraries.map((l) => [l.name, num(l.analyzed) + " analyzed" + (l.last_error ? ` · <span style="color:var(--err)">${esc(l.last_error)}</span>` : "")]),
+    ) : "") + (a.coverage != null ? `<div class="bar"><div style="width:${Math.min(100, a.coverage * 100).toFixed(1)}%"></div></div>` : "") +
       (cats ? `<div class="chips">${cats}</div>` : ""));
   }
 

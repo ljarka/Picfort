@@ -452,4 +452,36 @@ class TimelineScreenshotTest {
             preview = { id, _ -> id },
         )
     }
+
+    // --- T-104: photo AI for my own library ----------------------------------------------
+
+    private fun settings(library: com.github.ljarka.picfort.cleanup.MyLibraryStatus) = snap {
+        TimelineSettingsContent(
+            hideNonPhotos = true,
+            state = TimelineSettingsUi(
+                tags = listOf(
+                    com.github.ljarka.picfort.collections.TagDto("t1", "nature", "ai/type/nature"),
+                    com.github.ljarka.picfort.collections.TagDto("t2", "Zoo", "Trips/Zoo"),
+                ),
+                loadingTags = false,
+                cleanupCount = 12,
+                myLibrary = library,
+            ),
+            onCleanupClick = {},
+        )
+    }
+
+    @Test
+    fun timeline_settings_my_library_off() =
+        settings(com.github.ljarka.picfort.cleanup.MyLibraryStatus(aiEnabled = true))
+
+    @Test
+    fun timeline_settings_my_library_on() = settings(
+        com.github.ljarka.picfort.cleanup.MyLibraryStatus(
+            aiEnabled = true,
+            enabled = true,
+            analyzed = 1240,
+            images = 30266,
+        ),
+    )
 }

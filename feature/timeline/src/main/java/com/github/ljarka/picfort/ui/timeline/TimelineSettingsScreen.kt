@@ -6,6 +6,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
@@ -40,7 +41,9 @@ import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewModelScope
+import com.github.ljarka.picfort.cleanup.MyLibraryStatus
 import com.github.ljarka.picfort.cleanup.PhotoInsightsClient
+import com.github.ljarka.picfort.collections.ApiKeyCreated
 import com.github.ljarka.picfort.collections.CollectionsRepository
 import com.github.ljarka.picfort.collections.TagDto
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -59,6 +62,9 @@ data class TimelineSettingsUi(
     val deletingTagId: String? = null,
     val cleanupCount: Int? = null,
     val message: String? = null,
+    /** The user's own library on the photo AI (T-104); null: no server or no photo AI. */
+    val myLibrary: MyLibraryStatus? = null,
+    val myLibraryBusy: Boolean = false,
 )
 
 @HiltViewModel
@@ -76,6 +82,66 @@ class TimelineSettingsViewModel @Inject constructor(
     init {
         loadTags()
         loadCleanupStatus()
+        loadMyLibrary()
+    }
+
+    fun loadMyLibrary() {
+        if (!photoInsights.isConfigured) return
+        viewModelScope.launch {
+            _state.update { it.copy(myLibrary = photoInsights.myLibrary()) }
+        }
+    }
+
+    /**
+     * Turns the photo AI on for the user's own library (T-104): creates a narrow Immich API key
+     * with the user's session and hands it to the Picfort server. If the server refuses it, the
+     * key is deleted again so no stray key is left in Immich.
+     */
+    fun enableMyLibrary() {
+        if (_state.value.myLibraryBusy) return
+        _state.update { it.copy(myLibraryBusy = true) }
+        viewModelScope.launch {
+            var created: ApiKeyCreated? = null
+            try {
+                created = collections.createPhotoAiKey()
+                val status = photoInsights.addMyLibrary(created.secret, created.apiKey.id)
+                _state.update {
+                    it.copy(myLibrary = status, myLibraryBusy = false, message = "Photo AI turned on for your photos")
+                }
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                created?.let { key -> runCatching { collections.deleteApiKey(key.apiKey.id) } }
+                _state.update {
+                    it.copy(myLibraryBusy = false, message = e.message ?: "Couldn't turn the photo AI on")
+                }
+            }
+        }
+    }
+
+    /** Takes the user's key off the server and deletes it in Immich (T-104). */
+    fun disableMyLibrary() {
+        if (_state.value.myLibraryBusy) return
+        _state.update { it.copy(myLibraryBusy = true) }
+        viewModelScope.launch {
+            try {
+                val keyId = photoInsights.removeMyLibrary()
+                if (keyId.isNotEmpty()) runCatching { collections.deleteApiKey(keyId) }
+                _state.update {
+                    it.copy(
+                        myLibrary = photoInsights.myLibrary(),
+                        myLibraryBusy = false,
+                        message = "Photo AI turned off for your photos",
+                    )
+                }
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                _state.update {
+                    it.copy(myLibraryBusy = false, message = e.message ?: "Couldn't turn the photo AI off")
+                }
+            }
+        }
     }
 
     fun loadCleanupStatus() {
@@ -142,6 +208,8 @@ fun TimelineSettingsScreen(onBack: () -> Unit, onCleanupClick: (() -> Unit)? = n
         hideNonPhotos = hideNonPhotos,
         showBest = showBest,
         onShowBest = viewModel::setShowBest,
+        onEnableMyLibrary = viewModel::enableMyLibrary,
+        onDisableMyLibrary = viewModel::disableMyLibrary,
         state = state,
         onBack = onBack,
         onCleanupClick = onCleanupClick,
@@ -159,6 +227,8 @@ internal fun TimelineSettingsContent(
     state: TimelineSettingsUi,
     showBest: Boolean = true,
     onShowBest: (Boolean) -> Unit = {},
+    onEnableMyLibrary: () -> Unit = {},
+    onDisableMyLibrary: () -> Unit = {},
     onBack: () -> Unit = {},
     onCleanupClick: (() -> Unit)? = null,
     onHideNonPhotos: (Boolean) -> Unit = {},
@@ -249,6 +319,9 @@ internal fun TimelineSettingsContent(
                         supportingContent = { Text(subtitle) },
                     )
                 }
+                state.myLibrary?.takeIf { it.aiEnabled }?.let { library ->
+                    MyLibraryAi(library, state.myLibraryBusy, onEnableMyLibrary, onDisableMyLibrary)
+                }
                 HorizontalDivider(Modifier.padding(vertical = 8.dp))
                 Text(
                     "Search tags",
@@ -306,4 +379,28 @@ internal fun TimelineSettingsContent(
             }
         }
     }
+}
+
+/** "Photo AI for my photos" (T-104): the user's own library analyzed and tagged in their Immich. */
+@Composable
+private fun MyLibraryAi(library: MyLibraryStatus, busy: Boolean, onEnable: () -> Unit, onDisable: () -> Unit) {
+    val progress = library.images?.takeIf { it > 0 }?.let { "${library.analyzed} of $it photos analyzed" }
+        ?: "${library.analyzed} photos analyzed"
+    val supporting = when {
+        library.enabled -> listOfNotNull(progress, library.lastError?.let { "Last problem: $it" }).joinToString("\n")
+        library.viaServer -> "On through the Picfort server's own key · $progress"
+        else -> "Tag your own photos in your Immich (Best, Nature, Documents…) and get the Best strip"
+    }
+    ListItem(
+        headlineContent = { Text("Photo AI for my photos") },
+        supportingContent = { Text(supporting) },
+        trailingContent = {
+            when {
+                busy -> CircularProgressIndicator(Modifier.size(24.dp), strokeWidth = 2.dp)
+                library.enabled -> TextButton(onClick = onDisable) { Text("Turn off") }
+                library.viaServer -> Unit
+                else -> Button(onClick = onEnable) { Text("Turn on") }
+            }
+        },
+    )
 }

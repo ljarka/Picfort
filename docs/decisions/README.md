@@ -24,3 +24,4 @@ Each file in this directory documents one major technical decision.
 | [0016](0016-schema-migrations.md) | Data survives schema changes: a migration for every bump (server SQLite and Room state) |
 | [0017](0017-school-journal-removable-module.md) | School journal in one removable module, own server and key, no `:core` changes |
 | [0018](0018-wall-reaction-notifications.md) | Wall reaction notifications: the author's phone asks every 15 min, no push service |
+| [0020](0020-member-immich-keys-for-photo-ai.md) | Family members' own narrow Immich API keys, added from the app, so the photo AI tags every library |

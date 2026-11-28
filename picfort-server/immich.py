@@ -30,8 +30,16 @@ def is_likely_non_photo(asset: dict) -> bool:
 class ImmichClient:
     def __init__(self, base_url: str, api_key: str, timeout: float = 30.0):
         self.base_url = base_url.rstrip("/")
+        self.api_key = api_key
         self.headers = {"x-api-key": api_key}
         self.timeout = timeout
+
+    def me(self, timeout: float = 5.0) -> dict:
+        """The key's owner {"id", "name"} (needs user.read; T-104)."""
+        r = requests.get(f"{self.base_url}/api/users/me", headers=self.headers, timeout=timeout)
+        r.raise_for_status()
+        u = r.json()
+        return {"id": u.get("id", ""), "name": u.get("name") or u.get("email") or ""}
 
     def _post(self, path: str, body: dict):
         r = requests.post(f"{self.base_url}/api{path}", json=body, headers=self.headers, timeout=self.timeout)

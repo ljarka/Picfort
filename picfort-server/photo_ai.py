@@ -205,6 +205,9 @@ def tags_for_insight(insight: dict) -> list[str]:
     return tags
 
 
+# The library analyzed with the server's own IMMICH_API_KEY; members' libraries use their user id (T-104).
+SERVER_LIBRARY = "server"
+
 # An asset whose analysis failed this many times is skipped for good (no poison pill, T-093).
 MAX_ATTEMPTS = 3
 # Pages of 100 the worker reads per batch while looking for unanalyzed photos (T-093).
@@ -251,7 +254,7 @@ def in_active_hours(window: tuple[int, int] | None, now: datetime) -> bool:
 
 
 class PhotoAiStore(SqliteStore):
-    SCHEMA_VERSION = 4
+    SCHEMA_VERSION = 5
     NAME = "photo_ai"
     MIGRATIONS = {
         1: ["ALTER TABLE photo_insights ADD COLUMN is_sensitive INTEGER NOT NULL DEFAULT 0"],
@@ -280,6 +283,18 @@ class PhotoAiStore(SqliteStore):
             )""",
             "CREATE INDEX idx_album_suggestions_status ON album_suggestions(status, end_date DESC)",
         ],
+        4: [
+            "ALTER TABLE photo_insights ADD COLUMN owner_id TEXT NOT NULL DEFAULT ''",
+            "CREATE INDEX idx_photo_insights_owner ON photo_insights(owner_id)",
+            """CREATE TABLE library_keys (
+                user_id    TEXT PRIMARY KEY,
+                user_name  TEXT NOT NULL DEFAULT '',
+                api_key    TEXT NOT NULL,
+                key_id     TEXT NOT NULL DEFAULT '',
+                created_at TEXT NOT NULL,
+                last_error TEXT NOT NULL DEFAULT ''
+            )""",
+        ],
     }
     SCHEMA = """
     CREATE TABLE photo_insights (
@@ -296,9 +311,21 @@ class PhotoAiStore(SqliteStore):
         cleanup_reason    TEXT NOT NULL DEFAULT '',
         dismissed         INTEGER NOT NULL DEFAULT 0,
         tags_applied      TEXT NOT NULL DEFAULT '[]',
-        analyzed_at       TEXT NOT NULL
+        analyzed_at       TEXT NOT NULL,
+        owner_id          TEXT NOT NULL DEFAULT ''
     );
     CREATE INDEX idx_photo_insights_cleanup ON photo_insights(cleanup_candidate, dismissed, quality);
+    CREATE INDEX idx_photo_insights_owner ON photo_insights(owner_id);
+    -- Family members' own Immich API keys, so their libraries are analyzed and tagged too (T-104).
+    -- Write-only through the API: never returned.
+    CREATE TABLE library_keys (
+        user_id    TEXT PRIMARY KEY,
+        user_name  TEXT NOT NULL DEFAULT '',
+        api_key    TEXT NOT NULL,
+        key_id     TEXT NOT NULL DEFAULT '',
+        created_at TEXT NOT NULL,
+        last_error TEXT NOT NULL DEFAULT ''
+    );
     -- Assets whose analysis failed (bad preview, invalid model JSON); skipped after MAX_ATTEMPTS.
     CREATE TABLE photo_failures (
         asset_id   TEXT PRIMARY KEY,
@@ -325,7 +352,8 @@ class PhotoAiStore(SqliteStore):
     CREATE INDEX idx_album_suggestions_status ON album_suggestions(status, end_date DESC);
     """
 
-    def save(self, asset_id: str, model: str, insight: dict, tags_applied: list[str] | None = None):
+    def save(self, asset_id: str, model: str, insight: dict, tags_applied: list[str] | None = None,
+             owner_id: str = ""):
         now = self.clock()
         issues = [i for i in (insight.get("issues") or []) if i in ISSUES]
         category = insight.get("category", "photo")
@@ -340,8 +368,8 @@ class PhotoAiStore(SqliteStore):
                 """
                 INSERT INTO photo_insights (
                     asset_id, model, scene, category, is_nature, is_sensitive, quality, issues,
-                    frame_worthy, cleanup_candidate, cleanup_reason, dismissed, tags_applied, analyzed_at
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, ?, ?)
+                    frame_worthy, cleanup_candidate, cleanup_reason, dismissed, tags_applied, analyzed_at, owner_id
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, ?, ?, ?)
                 ON CONFLICT(asset_id) DO UPDATE SET
                     model = excluded.model,
                     scene = excluded.scene,
@@ -354,7 +382,8 @@ class PhotoAiStore(SqliteStore):
                     cleanup_candidate = excluded.cleanup_candidate,
                     cleanup_reason = excluded.cleanup_reason,
                     tags_applied = excluded.tags_applied,
-                    analyzed_at = excluded.analyzed_at
+                    analyzed_at = excluded.analyzed_at,
+                    owner_id = CASE WHEN excluded.owner_id != '' THEN excluded.owner_id ELSE owner_id END
                 """,
                 (
                     asset_id,
@@ -370,6 +399,7 @@ class PhotoAiStore(SqliteStore):
                     str(insight.get("cleanup_reason") or "")[:120] if cleanup else "",
                     json.dumps(list(tags_applied or ())),
                     now,
+                    owner_id or "",
                 ),
             )
             conn.execute("DELETE FROM photo_failures WHERE asset_id = ?", (asset_id,))
@@ -404,22 +434,122 @@ class PhotoAiStore(SqliteStore):
             row = conn.execute("SELECT attempts FROM photo_failures WHERE asset_id = ?", (asset_id,)).fetchone()
         return row["attempts"]
 
-    def scan_page(self) -> int:
+    @staticmethod
+    def _scan_key(library: str) -> str:
+        return "scan_page" if library == SERVER_LIBRARY else f"scan_page:{library}"
+
+    def scan_page(self, library: str = "server") -> int:
         """Library page (newest first, 100 per page) the worker's deep scan resumes from."""
         with closing(self.connect()) as conn:
-            row = conn.execute("SELECT value FROM worker_state WHERE key = 'scan_page'").fetchone()
+            row = conn.execute("SELECT value FROM worker_state WHERE key = ?", (self._scan_key(library),)).fetchone()
         try:
             return max(1, int(row["value"])) if row else 1
         except ValueError:
             return 1
 
-    def set_scan_page(self, page: int):
+    def set_scan_page(self, page: int, library: str = "server"):
         with closing(self.connect()) as conn, conn:
             conn.execute(
-                "INSERT INTO worker_state (key, value) VALUES ('scan_page', ?) "
+                "INSERT INTO worker_state (key, value) VALUES (?, ?) "
                 "ON CONFLICT(key) DO UPDATE SET value = excluded.value",
-                (str(page),),
+                (self._scan_key(library), str(page)),
             )
+
+    # --- Family members' libraries (T-104) ------------------------------------------------
+
+    def set_library_key(self, user_id: str, user_name: str, api_key: str, key_id: str = ""):
+        with closing(self.connect()) as conn, conn:
+            conn.execute(
+                """
+                INSERT INTO library_keys (user_id, user_name, api_key, key_id, created_at) VALUES (?, ?, ?, ?, ?)
+                ON CONFLICT(user_id) DO UPDATE SET user_name = excluded.user_name, api_key = excluded.api_key,
+                    key_id = excluded.key_id, created_at = excluded.created_at, last_error = ''
+                """,
+                (user_id, user_name, api_key, key_id, self.clock()),
+            )
+
+    def delete_library_key(self, user_id: str) -> str | None:
+        """Forgets a member's key; returns its Immich key id ('' if unknown) or None if there was none."""
+        with closing(self.connect()) as conn, conn:
+            row = conn.execute("SELECT key_id FROM library_keys WHERE user_id = ?", (user_id,)).fetchone()
+            if row is None:
+                return None
+            conn.execute("DELETE FROM library_keys WHERE user_id = ?", (user_id,))
+        return row["key_id"]
+
+    def library_keys(self) -> list[dict]:
+        """Every member library: user_id, user_name, api_key, key_id, last_error. Server-side use only."""
+        with closing(self.connect()) as conn:
+            rows = conn.execute(
+                "SELECT user_id, user_name, api_key, key_id, last_error FROM library_keys ORDER BY created_at"
+            ).fetchall()
+        return [dict(r) for r in rows]
+
+    def set_library_error(self, user_id: str, error: str):
+        with closing(self.connect()) as conn, conn:
+            conn.execute("UPDATE library_keys SET last_error = ? WHERE user_id = ?", (error[:300], user_id))
+
+    def fill_owners(self, owners: dict[str, str]):
+        """Records who owns already-analyzed assets (rows from before T-104 have no owner)."""
+        pairs = [(owner, aid) for aid, owner in owners.items() if owner]
+        if not pairs:
+            return
+        with closing(self.connect()) as conn, conn:
+            conn.executemany("UPDATE photo_insights SET owner_id = ? WHERE asset_id = ? AND owner_id = ''", pairs)
+
+    def owned_counts(self) -> dict[str, int]:
+        with closing(self.connect()) as conn:
+            rows = conn.execute("SELECT owner_id, COUNT(*) AS n FROM photo_insights GROUP BY owner_id").fetchall()
+        return {r["owner_id"]: r["n"] for r in rows}
+
+    def untagged_for_owner(self, owner_id: str, limit: int = 60) -> list[dict]:
+        """Analyzed assets of [owner_id] with no tags in Immich yet although they should have some:
+        a partner's photos analyzed through someone else's key, tagged once their own key arrives."""
+        with closing(self.connect()) as conn:
+            rows = conn.execute(
+                """
+                SELECT asset_id, category, quality, issues, is_nature, is_sensitive, frame_worthy
+                FROM photo_insights
+                WHERE owner_id = ? AND tags_applied = '[]' AND (
+                    quality <= 2 OR issues != '[]' OR category != 'photo' OR is_nature = 1
+                    OR is_sensitive = 1 OR (frame_worthy = 1 AND quality >= ?))
+                LIMIT ?
+                """,
+                (owner_id, BEST_MIN_QUALITY, limit),
+            ).fetchall()
+        return [
+            {
+                "asset_id": r["asset_id"],
+                "category": r["category"],
+                "quality": r["quality"],
+                "issues": json.loads(r["issues"] or "[]"),
+                "is_nature": bool(r["is_nature"]),
+                "is_sensitive": bool(r["is_sensitive"]),
+                "frame_worthy": bool(r["frame_worthy"]),
+            }
+            for r in rows
+        ]
+
+    def owners_of(self, asset_ids: list[str]) -> dict[str, str]:
+        if not asset_ids:
+            return {}
+        placeholders = ",".join("?" for _ in asset_ids)
+        with closing(self.connect()) as conn:
+            rows = conn.execute(
+                f"SELECT asset_id, owner_id FROM photo_insights WHERE asset_id IN ({placeholders})", asset_ids
+            ).fetchall()
+        return {r["asset_id"]: r["owner_id"] for r in rows}
+
+    def labels_for_owners(self, owners: set[str]) -> list[tuple[str, str, bool]]:
+        """Like [labels], only for assets of [owners] (plus rows whose owner is not known yet)."""
+        wanted = set(owners) | {""}
+        placeholders = ",".join("?" for _ in wanted)
+        with closing(self.connect()) as conn:
+            rows = conn.execute(
+                f"SELECT asset_id, category, is_sensitive FROM photo_insights WHERE owner_id IN ({placeholders})",
+                list(wanted),
+            ).fetchall()
+        return [(r["asset_id"], r["category"], bool(r["is_sensitive"])) for r in rows]
 
     def list_cleanup(self, kind: str = "all", limit: int = 100) -> list[dict]:
         limit = max(1, min(500, int(limit)))
@@ -861,20 +991,73 @@ class PhotoAiConfig:
         )
 
 
+@dataclass
+class Library:
+    """One Immich library the worker analyzes (T-104): the server's key, or a member's own key.
+
+    `user_id` is None for the server library: it analyzes everything its key sees (its owner and
+    partners in their timeline). A member library only picks assets that member owns.
+    """
+
+    key: str
+    immich: object
+    tagger: "ImmichTagger"
+    user_id: str | None = None
+    name: str = ""
+
+
 class PhotoAiWorker:
     """Periodically analyzes unanalyzed Immich images via Ollama into PhotoAiStore."""
 
     def __init__(self, config: PhotoAiConfig, store: PhotoAiStore, immich, analyzer: OllamaAnalyzer,
-                 tagger: ImmichTagger, now=datetime.now):
+                 tagger: ImmichTagger, now=datetime.now, client_factory=None):
         self.config = config
         self.store = store
         self.immich = immich
         self.analyzer = analyzer
         self.tagger = tagger
         self.now = now
+        # api_key -> Immich client for a member's library (T-104); None: members are not analyzed.
+        self.client_factory = client_factory
         self.running = False
         self.last_error: str | None = None
         self._stop = threading.Event()
+        self._turn = 0
+        self._member_clients: dict[str, tuple[object, ImmichTagger]] = {}
+
+    def libraries(self) -> list[Library]:
+        """The server library first, then every member who added a key in the app (T-104)."""
+        libs = [Library(SERVER_LIBRARY, self.immich, self.tagger)]
+        if self.client_factory is None:
+            return libs
+        for row in self.store.library_keys():
+            cached = self._member_clients.get(row["user_id"])
+            if cached is None or cached[0] is None or getattr(cached[0], "api_key", None) != row["api_key"]:
+                client = self.client_factory(row["api_key"])
+                cached = (client, ImmichTagger(client, enabled=self.config.tag_immich))
+                self._member_clients[row["user_id"]] = cached
+            libs.append(Library(row["user_id"], cached[0], cached[1], row["user_id"], row["user_name"]))
+        return libs
+
+    def server_user_id(self) -> str | None:
+        """Whose library the server's own key is (cached; None if the key can't say: no user.read)."""
+        if not hasattr(self, "_server_user"):
+            try:
+                self._server_user = self.immich.me().get("id") or None
+            except Exception as e:
+                log.info("Can't tell whose library IMMICH_API_KEY is (%s); add user.read to see it", e)
+                self._server_user = None
+        return self._server_user
+
+    def tagger_for_asset(self, asset_id: str) -> ImmichTagger:
+        return self._tagger_for(self.store.owners_of([asset_id]).get(asset_id, ""), self.libraries())
+
+    def _tagger_for(self, owner_id: str, libs: list[Library]) -> ImmichTagger:
+        """Only an asset's owner may tag it in Immich: their own key's tagger, else the server's."""
+        for lib in libs:
+            if lib.user_id and lib.user_id == owner_id:
+                return lib.tagger
+        return self.tagger
 
     def run_batch(self) -> int:
         """Analyze up to config.batch_size new images. Returns count analyzed.
@@ -890,13 +1073,19 @@ class PhotoAiWorker:
         self.running = True
         analyzed = 0
         errors: list[str] = []
+        libs = self.libraries()
+        # One library per batch, in turn, so a second member doesn't wait for the first library (T-104).
+        lib = libs[self._turn % len(libs)]
+        self._turn += 1
         try:
-            todo = self._pick_unanalyzed(self.config.batch_size)
-            for asset_id in todo:
+            if lib.user_id:
+                self._tag_backlog(lib)
+            todo = self._pick_unanalyzed(self.config.batch_size, lib)
+            for asset_id, owner_id in todo:
                 if self._stop.is_set():
                     break
                 try:
-                    preview = self.immich.preview_bytes(asset_id)
+                    preview = lib.immich.preview_bytes(asset_id)
                     insight = self.analyzer.analyze(preview)
                     tags = tags_for_insight(insight)
                 except (requests.ConnectionError, requests.Timeout):
@@ -907,20 +1096,35 @@ class PhotoAiWorker:
                                 asset_id, attempts, MAX_ATTEMPTS, e)
                     errors.append(f"{asset_id}: {e}")
                     continue
-                applied = self.tagger.apply(asset_id, tags)
-                self.store.save(asset_id, self.config.ollama_model, insight, applied)
+                applied = self._tagger_for(owner_id, libs).apply(asset_id, tags)
+                self.store.save(asset_id, self.config.ollama_model, insight, applied, owner_id=owner_id)
                 analyzed += 1
+            if lib.user_id:
+                self.store.set_library_error(lib.user_id, errors[-1] if errors else "")
             today = self.now().date().isoformat()
             if self.store.last_album_scan_date() != today:
                 self.refresh_album_suggestions()
                 self.store.set_last_album_scan_date(today)
             self.last_error = errors[-1] if errors else None
         except Exception as e:
-            log.warning("Photo AI batch failed: %s", e)
+            log.warning("Photo AI batch failed (%s library): %s", lib.name or lib.key, e)
             self.last_error = str(e)
+            if lib.user_id:
+                self.store.set_library_error(lib.user_id, str(e))
         finally:
             self.running = False
         return analyzed
+
+    def _tag_backlog(self, lib: Library, limit: int = 60) -> int:
+        """Tags a member's photos analyzed before their key arrived (through a partner's key)."""
+        done = 0
+        for row in self.store.untagged_for_owner(lib.user_id, limit):
+            tags = tags_for_insight(row)
+            applied = lib.tagger.apply(row["asset_id"], tags) if tags else []
+            if applied:
+                self.store.set_tags_applied(row["asset_id"], applied)
+                done += 1
+        return done
 
     def refresh_album_suggestions(self, max_pages: int = 5) -> int:
         """Cluster unassigned Immich photos by location/date and name new clusters via Ollama (T-098)."""
@@ -954,24 +1158,33 @@ class PhotoAiWorker:
             added += 1
         return added
 
-    def _pick_unanalyzed(self, limit: int) -> list[str]:
-        """Newest page first (fresh uploads), then a deep scan resumed from the stored page, so
-        libraries larger than MAX_SCAN_PAGES pages are covered over several batches (T-093)."""
-        chosen: list[str] = []
+    def _pick_unanalyzed(self, limit: int, lib: Library | None = None) -> list[tuple[str, str]]:
+        """(asset_id, owner_id) to analyze. Newest page first (fresh uploads), then a deep scan
+        resumed from the stored page, so libraries larger than MAX_SCAN_PAGES pages are covered
+        over several batches (T-093). A member library only takes that member's assets (T-104)."""
+        lib = lib or Library(SERVER_LIBRARY, self.immich, self.tagger)
+        chosen: list[tuple[str, str]] = []
+        chosen_ids: set[str] = set()
 
         def take(page: int) -> bool:
-            items, has_next = self.immich.recent_images(page=page, size=100)
-            ids = [a["id"] for a in items if "id" in a]
+            items, has_next = lib.immich.recent_images(page=page, size=100)
+            owners = {a["id"]: a.get("ownerId") or "" for a in items if "id" in a}
+            if lib.user_id:
+                owners = {aid: o for aid, o in owners.items() if o == lib.user_id}
+            ids = list(owners)
             seen = self.store.existing_ids(ids)
+            # Rows analyzed before T-104 learn their owner, so the right key can tag them.
+            self.store.fill_owners({aid: owners[aid] for aid in seen if owners[aid]})
             for aid in ids:
                 if len(chosen) >= limit:
                     break
-                if aid not in seen and aid not in chosen:
-                    chosen.append(aid)
+                if aid not in seen and aid not in chosen_ids:
+                    chosen.append((aid, owners[aid]))
+                    chosen_ids.add(aid)
             return has_next and bool(items)
 
         has_next = take(1)
-        page = max(2, self.store.scan_page())
+        page = max(2, self.store.scan_page(lib.key))
         scanned = 1
         while has_next and len(chosen) < limit and scanned < MAX_SCAN_PAGES:
             has_next = take(page)
@@ -980,14 +1193,16 @@ class PhotoAiWorker:
                 break  # resume on this page: it may hold more unanalyzed photos
             page += 1
         # At the end of the library the next deep scan starts over from page 2.
-        self.store.set_scan_page(page if has_next else 2)
+        self.store.set_scan_page(page if has_next else 2, lib.key)
         return chosen
 
     def reconcile_best_tags(self) -> int:
         """Takes "Best" off photos tagged under an older, looser rule (T-103). Returns how many."""
         fixed = 0
+        libs = self.libraries()
+        owners = self.store.owners_of([aid for aid, _ in self.store.stale_best_tags()])
         for asset_id, applied in self.store.stale_best_tags():
-            if self.tagger.remove_tag(asset_id, FRAME_WORTHY_TAG):
+            if self._tagger_for(owners.get(asset_id, ""), libs).remove_tag(asset_id, FRAME_WORTHY_TAG):
                 self.store.set_tags_applied(asset_id, [t for t in applied if t != FRAME_WORTHY_TAG])
                 fixed += 1
         if fixed:

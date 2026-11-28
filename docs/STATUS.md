@@ -229,6 +229,7 @@ Small things the family asked for while using the app.
 | [T-101](tasks/T-101-device-check-and-fast-scroll.md) | Maestro check of Best/tags/search; fast scroll fixes (tab bar, dead zone, haptics) | `done` |
 | [T-102](tasks/T-102-memories-hide-sensitive.md) | Memories never show photos the AI marked sensitive (`/photo-insights/labels`, Room `ai_labels`) | `done` |
 | [T-103](tasks/T-103-stricter-best.md) | Stricter "Best": quality 5, selective prompt, old Best tags removed | `done` |
+| [T-104](tasks/T-104-member-libraries-photo-ai.md) | Photo AI for every family member: own Immich key from the app, libraries in turn (ADR 0020) | `in-progress` |
 
 ---
 
@@ -275,3 +276,4 @@ Another family installs Picfort in under an hour, without help ([roadmap](../spe
 | [0017](decisions/0017-school-journal-removable-module.md) | School journal in one removable module, own server and key, no `:core` changes |
 | [0018](decisions/0018-wall-reaction-notifications.md) | Wall reaction notifications: the author's phone asks every 15 min, no push service |
 | [0019](decisions/0019-ollama-photo-insights.md) | Optional server-side Ollama photo insights, `ai/*` Immich tags & Clean up screen |
+| [0020](decisions/0020-member-immich-keys-for-photo-ai.md) | Family members' own Immich API keys for the photo AI, added from the app |

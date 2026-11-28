@@ -92,6 +92,17 @@ data class MetadataSearchRequest(
     val tagIds: List<String>? = null,
 )
 
+/** A new Immich API key (T-104): only what the Picfort server's photo AI needs. */
+@Serializable
+data class ApiKeyCreateRequest(val name: String, val permissions: List<String>)
+
+@Serializable
+data class ApiKeyInfo(val id: String)
+
+/** `secret` is shown once: the app hands it straight to the Picfort server. */
+@Serializable
+data class ApiKeyCreated(val secret: String, val apiKey: ApiKeyInfo)
+
 /** Document/receipt OCR search (T-088). No defaults: the app's Json skips default values. */
 @Serializable
 data class OcrSearchRequest(val ocr: String, val type: String, val size: Int)
@@ -168,6 +179,14 @@ interface CollectionsService {
         @Query("isUpcoming") isUpcoming: Boolean = false,
         @Query("isTrashed") isTrashed: Boolean = false,
     ): List<MemoryDto>
+
+    /** Creates an API key for the logged-in user (T-104). */
+    @POST("/api/api-keys")
+    suspend fun createApiKey(@Body body: ApiKeyCreateRequest): ApiKeyCreated
+
+    /** Deletes one of the user's API keys (T-104). */
+    @DELETE("/api/api-keys/{id}")
+    suspend fun deleteApiKey(@Path("id") id: String): Response<Unit>
 
     /** Deletes a tag from Immich (its photos stay). 204 No Content (T-092). */
     @DELETE("/api/tags/{id}")

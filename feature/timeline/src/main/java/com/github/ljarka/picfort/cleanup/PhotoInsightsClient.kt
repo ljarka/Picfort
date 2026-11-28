@@ -44,6 +44,25 @@ private data class LabelsResponse(val items: List<kotlinx.serialization.json.Jso
 
 data class AiLabel(val assetId: String, val category: String, val sensitive: Boolean)
 
+/** Whether the photo AI covers the logged-in user's own library (T-104). */
+@Serializable
+data class MyLibraryStatus(
+    @SerialName("ai_enabled") val aiEnabled: Boolean = false,
+    val enabled: Boolean = false,
+    /** The server's own IMMICH_API_KEY is this user's: covered without a key of their own. */
+    @SerialName("via_server") val viaServer: Boolean = false,
+    @SerialName("key_id") val keyId: String = "",
+    val analyzed: Int = 0,
+    val images: Int? = null,
+    @SerialName("last_error") val lastError: String? = null,
+)
+
+@Serializable
+private data class MyLibraryKey(@SerialName("api_key") val apiKey: String, @SerialName("key_id") val keyId: String)
+
+@Serializable
+private data class RemovedKey(@SerialName("key_id") val keyId: String = "")
+
 @Serializable
 private data class CleanupResponse(val items: List<CleanupCandidateDto> = emptyList())
 
@@ -81,6 +100,40 @@ class PhotoInsightsClient @Inject constructor(private val server: PicfortServerC
             }
             json.decodeFromString<PhotoInsightsStatus>(reply.body)
         }.getOrNull()
+    }
+
+    private fun myLibraryUrl() = server.base().newBuilder()
+        .addPathSegment("photo-insights")
+        .addPathSegment("my-library")
+        .build()
+
+    /** The logged-in user's library on the photo AI (T-104); null when the server can't say. */
+    suspend fun myLibrary(): MyLibraryStatus? {
+        if (!server.isConfigured) return null
+        return runCatching {
+            val reply = server.execute(Request.Builder().url(myLibraryUrl()).get().build()) {
+                PicfortServerException.Other("Photo insights not available on this server")
+            }
+            json.decodeFromString<MyLibraryStatus>(reply.body)
+        }.getOrNull()
+    }
+
+    /** Hands the user's new Immich key to the server; throws with the server's reason when refused. */
+    suspend fun addMyLibrary(apiKey: String, keyId: String): MyLibraryStatus {
+        val body = json.encodeToString(MyLibraryKey.serializer(), MyLibraryKey(apiKey, keyId))
+            .toRequestBody("application/json".toMediaType())
+        val reply = server.execute(Request.Builder().url(myLibraryUrl()).put(body).build()) {
+            PicfortServerException.Other("The Picfort server refused the key")
+        }
+        return json.decodeFromString<MyLibraryStatus>(reply.body)
+    }
+
+    /** Forgets the user's key on the server; returns its Immich key id ("" if unknown). */
+    suspend fun removeMyLibrary(): String {
+        val reply = server.execute(Request.Builder().url(myLibraryUrl()).delete().build()) {
+            PicfortServerException.Other("No key stored for you")
+        }
+        return json.decodeFromString<RemovedKey>(reply.body).keyId
     }
 
     /** Every asset the server's photo AI analyzed (T-102, T-099); throws when unavailable. */

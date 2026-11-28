@@ -217,6 +217,24 @@ def register_dashboard(app: Flask, *, controller, slideshow, settings_json, immi
             body["stats_error"] = str(e)
         images = (library or {}).get("images")
         body["coverage"] = round(body.get("analyzed", 0) / images, 4) if images else None
+        # Whose libraries are analyzed (T-104): names and counts only, never keys.
+        try:
+            counts = photo_ai.owned_counts()
+            members = photo_ai.library_keys()
+            member_ids = {m["user_id"] for m in members}
+            libraries = [{
+                "name": "Server key (IMMICH_API_KEY)",
+                "analyzed": sum(n for owner, n in counts.items() if owner not in member_ids),
+                "last_error": photo_ai_worker.last_error if photo_ai_worker else None,
+            }]
+            libraries += [
+                {"name": m["user_name"] or "Member", "analyzed": counts.get(m["user_id"], 0),
+                 "last_error": m["last_error"] or None}
+                for m in members
+            ]
+            body["libraries"] = libraries
+        except Exception as e:
+            body["libraries_error"] = str(e)
         return body
 
     @app.route(DASHBOARD_PAGE_PATH + "/data")

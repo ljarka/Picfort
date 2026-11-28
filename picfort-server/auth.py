@@ -79,3 +79,29 @@ class Authenticator:
                     self._cache.clear()
             self._cache[key] = (user, now + self.ttl)
         return user
+
+
+def immich_partners(base_url: str, timeout: float = 10.0, ttl: float = 600.0, clock=time.monotonic):
+    """Ids of users who share their library with the token's owner (Immich partners), cached for
+    [ttl] seconds per token (T-104: photo AI labels a member may see)."""
+    url = base_url.rstrip("/") + "/api/partners"
+    cache: dict[str, tuple[float, set[str]]] = {}
+    lock = threading.Lock()
+
+    def lookup(authorization: str) -> set[str]:
+        token = authorization.removeprefix("Bearer ").strip()
+        if not token:
+            return set()
+        with lock:
+            hit = cache.get(token)
+            if hit and clock() - hit[0] < ttl:
+                return hit[1]
+        r = requests.get(url, params={"direction": "shared-with"},
+                         headers={"Authorization": f"Bearer {token}"}, timeout=timeout)
+        r.raise_for_status()
+        ids = {p["id"] for p in r.json() if isinstance(p, dict) and p.get("id")}
+        with lock:
+            cache[token] = (clock(), ids)
+        return ids
+
+    return lookup
