@@ -216,6 +216,7 @@ Small things the family asked for while using the app.
 | [T-088](tasks/T-088-hide-screenshots-documents.md) | Hide screenshots & documents on Photos timeline and frame slideshow (EXIF + Immich OCR) | `done` |
 | [T-089](tasks/T-089-ollama-photo-insights-cleanup.md) | Ollama photo insights, Immich `ai/*` tagging & Clean up screen (ADR 0019) | `done` |
 | [T-090](tasks/T-090-search-tags-and-best-frame-mode.md) | Immich tag chips in Search & "Best photos only" frame mode | `done` |
+| [T-091](tasks/T-091-wall-frame-photo.md) | Family Wall: show the current `/frame/photo` card (tapping opens Frame) | `done` |
 
 ---
 
