@@ -361,5 +361,44 @@ class AiLabelsBeatGuessesTest(unittest.TestCase):
         self.assertEqual({"items": [["p", "photo", 1]], "count": 1}, body)
 
 
+class StricterBestTest(unittest.TestCase):
+    """T-103: "Best" needs quality 5; photos tagged under the looser rule lose the tag."""
+
+    def setUp(self):
+        self.tmp = tempfile.TemporaryDirectory()
+        self.store = PhotoAiStore(os.path.join(self.tmp.name, "photo_ai.db"))
+
+    def tearDown(self):
+        self.tmp.cleanup()
+
+    def test_quality_four_is_no_longer_best(self):
+        self.assertNotIn("ai/best/frame-worthy",
+                         tags_for_insight({"category": "photo", "quality": 4, "frame_worthy": True}))
+        self.assertIn("ai/best/frame-worthy",
+                      tags_for_insight({"category": "photo", "quality": 5, "frame_worthy": True}))
+        self.store.save("q4", "m", {"category": "photo", "quality": 4, "frame_worthy": True})
+        self.store.save("q5", "m", {"category": "photo", "quality": 5, "frame_worthy": True})
+        self.assertEqual(["q5"], self.store.frame_worthy_ids())
+        self.assertEqual(1, self.store.dashboard_stats()["frame_worthy"])
+
+    def test_reconcile_untags_old_best_once(self):
+        immich = FakeImmichForAi()
+        tagger = ImmichTagger(immich)
+        self.store.save("old", "m", {"category": "photo", "quality": 4, "frame_worthy": True},
+                        ["ai/type/nature", "ai/best/frame-worthy"])
+        self.store.save("keep", "m", {"category": "photo", "quality": 5, "frame_worthy": True},
+                        ["ai/best/frame-worthy"])
+        worker = PhotoAiWorker(PhotoAiConfig(ollama_url="http://x", ollama_model="m"), self.store, immich,
+                               analyzer=None, tagger=tagger)
+        self.assertEqual(1, worker.reconcile_best_tags())
+        self.assertEqual([("tid1:ai/best/frame-worthy", "old")], immich.untagged)
+        self.assertEqual([], self.store.stale_best_tags())
+        self.assertEqual(0, worker.reconcile_best_tags())  # nothing left to fix
+
+    def test_prompt_asks_for_selectivity(self):
+        from photo_ai import PHOTO_AI_PROMPT
+        self.assertIn("1 in 10", PHOTO_AI_PROMPT)
+
+
 if __name__ == "__main__":
     unittest.main()

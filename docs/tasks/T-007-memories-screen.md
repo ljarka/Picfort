@@ -1,6 +1,6 @@
 # T-007 — Memories screen ("On This Day")
 
-**Status:** ready  
+**Status:** closed (superseded by [T-096](T-096-memories-screen.md), 2026-11-28: Immich's own memories, opened from the Wall's frame card)  
 **Component:** Android app  
 **Depends on:** —
 

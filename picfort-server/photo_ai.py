@@ -135,6 +135,9 @@ TYPE_TAG_MAP = {
 NATURE_TAG = "ai/type/nature"
 SENSITIVE_TAG = "ai/privacy/sensitive"
 FRAME_WORTHY_TAG = "ai/best/frame-worthy"
+# "Best" (frame-worthy) needs the top quality score: at >= 4 the model marked ~60% of photos
+# (owner review 2026-11-28, T-103).
+BEST_MIN_QUALITY = 5
 ALL_AI_TAGS = list(CLEANUP_TAGS) + list(TYPE_TAG_MAP.values()) + [NATURE_TAG, SENSITIVE_TAG, FRAME_WORTHY_TAG]
 
 # `scene` is FIRST so the vision model describes the image before committing to category/quality.
@@ -168,7 +171,8 @@ PHOTO_AI_PROMPT = (
     "home address, medical records, passwords) or nudity / intimate private moments that should stay private. "
     "5) quality: 1=unusable, 2=poor/blurry, 3=ordinary, 4=good, 5=great sharp photo. "
     "6) issues: technical flaws present (empty array if none). "
-    "7) frame_worthy: true only for pleasant, sharp, non-sensitive photos suitable for a shared wall picture frame. "
+    "7) frame_worthy: true only for exceptional photos worth hanging on the family's wall: sharp, well composed, "
+    "with a strong moment, face or view. Be selective: most good photos are NOT frame-worthy, about 1 in 10 is. "
     "8) cleanup_candidate: true for blurry, accidental, unusable shots, screenshots, receipts or temporary documents "
     "(never mark kids_art as cleanup_candidate). "
     "9) cleanup_reason: empty string if cleanup_candidate is false, else short reason (<=6 words)."
@@ -196,7 +200,7 @@ def tags_for_insight(insight: dict) -> list[str]:
         tags.append(NATURE_TAG)
     if is_sensitive:
         tags.append(SENSITIVE_TAG)
-    if insight.get("frame_worthy") and not is_sensitive and category == "photo" and quality >= 4:
+    if insight.get("frame_worthy") and not is_sensitive and category == "photo" and quality >= BEST_MIN_QUALITY:
         tags.append(FRAME_WORTHY_TAG)
     return tags
 
@@ -502,11 +506,12 @@ class PhotoAiStore(SqliteStore):
                        SUM(CASE WHEN cleanup_candidate = 1 AND dismissed = 0 THEN 1 ELSE 0 END) AS cleanup,
                        SUM(CASE WHEN dismissed = 1 THEN 1 ELSE 0 END) AS kept,
                        SUM(CASE WHEN frame_worthy = 1 AND is_sensitive = 0 AND category = 'photo'
-                                 AND quality >= 4 AND dismissed = 0 THEN 1 ELSE 0 END) AS frame_worthy,
+                                 AND quality >= ? AND dismissed = 0 THEN 1 ELSE 0 END) AS frame_worthy,
                        SUM(is_sensitive) AS sensitive,
                        MAX(analyzed_at) AS last_analyzed_at
                 FROM photo_insights
-                """
+                """,
+                (BEST_MIN_QUALITY,),
             ).fetchone()
             categories = {
                 r["category"]: r["n"]
@@ -549,6 +554,23 @@ class PhotoAiStore(SqliteStore):
             ).fetchall()
         return {r["asset_id"] for r in rows}
 
+    def stale_best_tags(self) -> list[tuple[str, list[str]]]:
+        """(asset_id, tags_applied) of assets tagged "Best" in Immich that no longer qualify (T-103)."""
+        with closing(self.connect()) as conn:
+            rows = conn.execute(
+                """
+                SELECT asset_id, tags_applied FROM photo_insights
+                WHERE tags_applied LIKE ?
+                  AND NOT (frame_worthy = 1 AND is_sensitive = 0 AND category = 'photo' AND quality >= ?)
+                """,
+                (f'%"{FRAME_WORTHY_TAG}"%', BEST_MIN_QUALITY),
+            ).fetchall()
+        return [(r["asset_id"], json.loads(r["tags_applied"] or "[]")) for r in rows]
+
+    def set_tags_applied(self, asset_id: str, tags: list[str]):
+        with closing(self.connect()) as conn, conn:
+            conn.execute("UPDATE photo_insights SET tags_applied = ? WHERE asset_id = ?", (json.dumps(tags), asset_id))
+
     def sensitive_ids(self) -> set[str]:
         """Assets with private data or intimate moments: never shown on the frame, in any mode."""
         with closing(self.connect()) as conn:
@@ -561,8 +583,9 @@ class PhotoAiStore(SqliteStore):
             rows = conn.execute(
                 """
                 SELECT asset_id FROM photo_insights
-                WHERE frame_worthy = 1 AND is_sensitive = 0 AND category = 'photo' AND quality >= 4 AND dismissed = 0
-                """
+                WHERE frame_worthy = 1 AND is_sensitive = 0 AND category = 'photo' AND quality >= ? AND dismissed = 0
+                """,
+                (BEST_MIN_QUALITY,),
             ).fetchall()
         return [r["asset_id"] for r in rows]
 
@@ -786,6 +809,20 @@ class ImmichTagger:
             log.warning("Immich tagging failed for %s: %s", asset_id, e)
             return []
 
+    def remove_tag(self, asset_id: str, name: str) -> bool:
+        """Takes one `ai/*` tag off an asset in Immich; True when done (or the tag doesn't exist)."""
+
+        def untag(tag_map: dict[str, str]):
+            if name in tag_map:
+                self.immich.untag_asset(tag_map[name], asset_id)
+            return True
+
+        try:
+            return bool(self._call_with_fresh_ids(untag))
+        except requests.RequestException as e:
+            log.warning("Immich untag %s failed for %s: %s", name, asset_id, e)
+            return False
+
     def remove_cleanup_tags(self, asset_id: str, applied: list[str] | None = None) -> None:
         targets = [t for t in (applied or CLEANUP_TAGS) if t in CLEANUP_TAGS]
         for name in targets:
@@ -946,6 +983,17 @@ class PhotoAiWorker:
         self.store.set_scan_page(page if has_next else 2)
         return chosen
 
+    def reconcile_best_tags(self) -> int:
+        """Takes "Best" off photos tagged under an older, looser rule (T-103). Returns how many."""
+        fixed = 0
+        for asset_id, applied in self.store.stale_best_tags():
+            if self.tagger.remove_tag(asset_id, FRAME_WORTHY_TAG):
+                self.store.set_tags_applied(asset_id, [t for t in applied if t != FRAME_WORTHY_TAG])
+                fixed += 1
+        if fixed:
+            log.info("Photo AI: took ai/best/frame-worthy off %s photos that no longer qualify", fixed)
+        return fixed
+
     def start(self):
         if not self.config.enabled:
             return
@@ -956,6 +1004,10 @@ class PhotoAiWorker:
         )
 
         def loop():
+            try:
+                self.reconcile_best_tags()
+            except Exception as e:
+                log.warning("Photo AI best-tag cleanup failed: %s", e)
             while not self._stop.is_set():
                 self.run_batch()
                 self._stop.wait(timeout=self.config.interval_minutes * 60)

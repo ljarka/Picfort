@@ -38,7 +38,7 @@ Surface more of what Immich already knows.
 
 | Task | Description | Status |
 |------|-------------|--------|
-| [T-007](tasks/T-007-memories-screen.md) | Memories screen ("On This Day") | `ready` |
+| [T-007](tasks/T-007-memories-screen.md) | Memories screen ("On This Day") — superseded by T-096 | `closed` |
 | [T-008](tasks/T-008-people-screen.md) | People screen (browse by face) | `ready` |
 | [T-009](tasks/T-009-map-view.md) | Map view (photos by location) | `ready` |
 | [T-015](tasks/T-015-timeline-sync-stream.md) | Timeline from Immich's sync stream (local copy, offline) | `done` |
@@ -228,6 +228,7 @@ Small things the family asked for while using the app.
 | [T-100](tasks/T-100-tag-opens-search.md) | Tapping a tag in Details opens Search filtered by it | `done` |
 | [T-101](tasks/T-101-device-check-and-fast-scroll.md) | Maestro check of Best/tags/search; fast scroll fixes (tab bar, dead zone, haptics) | `done` |
 | [T-102](tasks/T-102-memories-hide-sensitive.md) | Memories never show photos the AI marked sensitive (`/photo-insights/labels`, Room `ai_labels`) | `done` |
+| [T-103](tasks/T-103-stricter-best.md) | Stricter "Best": quality 5, selective prompt, old Best tags removed | `in-progress` |
 
 ---
 

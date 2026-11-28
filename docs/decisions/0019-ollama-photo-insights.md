@@ -27,3 +27,5 @@ Immich provides face detection, CLIP semantic search, and OCR, but does not asse
   unreachable Ollama/Immich only stops the batch. The worker covers the whole library through a
   stored scan page (`worker_state`).
 - Deleted `ai/*` tags are re-created by the server the next time it tags a photo.
+- "Best" (`ai/best/frame-worthy`) needs quality 5 and the prompt asks for about 1 in 10 photos;
+  photos tagged under the older rule lose the tag when the worker starts (T-103).
