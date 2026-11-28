@@ -6,6 +6,8 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.navigation.toRoute
 import com.github.ljarka.picfort.UrlProvider
+import com.github.ljarka.picfort.cleanup.AlbumSuggestionDto
+import com.github.ljarka.picfort.cleanup.PhotoInsightsClient
 import com.github.ljarka.picfort.core.database.AssetType
 import com.github.ljarka.picfort.core.model.FamilyMemberProvider
 import com.github.ljarka.picfort.core.network.CleartextNotAllowedException
@@ -58,9 +60,19 @@ class AlbumsViewModel @Inject constructor(
     private val repository: CollectionsRepository,
     private val urlProvider: UrlProvider,
     private val family: FamilyMemberProvider,
+    private val photoInsights: PhotoInsightsClient,
 ) : ViewModel() {
     private val _albums = MutableStateFlow<LoadState<List<AlbumDto>>>(LoadState.Loading)
     val albums: StateFlow<LoadState<List<AlbumDto>>> = _albums.asStateFlow()
+
+    private val _suggestions = MutableStateFlow<List<AlbumSuggestionDto>>(emptyList())
+    val suggestions: StateFlow<List<AlbumSuggestionDto>> = _suggestions.asStateFlow()
+
+    private val _busySuggestion = MutableStateFlow<String?>(null)
+    val busySuggestion: StateFlow<String?> = _busySuggestion.asStateFlow()
+
+    private val _message = MutableStateFlow<String?>(null)
+    val message: StateFlow<String?> = _message.asStateFlow()
 
     init {
         reload()
@@ -78,10 +90,55 @@ class AlbumsViewModel @Inject constructor(
     fun reload() {
         _albums.value = LoadState.Loading
         viewModelScope.launch { _albums.value = load { repository.albums() } }
+        viewModelScope.launch { _suggestions.value = photoInsights.albumSuggestions() }
+    }
+
+    fun createSuggestedAlbum(suggestion: AlbumSuggestionDto, title: String) {
+        val clean = title.trim()
+        if (clean.isEmpty() || _busySuggestion.value != null) return
+        _busySuggestion.value = suggestion.clusterKey
+        viewModelScope.launch {
+            try {
+                repository.createAlbum(clean, suggestion.assetIds)
+                runCatching { photoInsights.markAlbumSuggestionCreated(suggestion.clusterKey) }
+                _suggestions.update { it.filterNot { s -> s.clusterKey == suggestion.clusterKey } }
+                _message.value = "Created \"$clean\""
+                _albums.value = load { repository.albums() }
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                _message.value = describeError(e)
+            } finally {
+                _busySuggestion.value = null
+            }
+        }
+    }
+
+    fun dismissSuggestion(clusterKey: String) {
+        if (_busySuggestion.value != null) return
+        _busySuggestion.value = clusterKey
+        viewModelScope.launch {
+            try {
+                photoInsights.dismissAlbumSuggestion(clusterKey)
+                _suggestions.update { it.filterNot { s -> s.clusterKey == clusterKey } }
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                _message.value = describeError(e)
+            } finally {
+                _busySuggestion.value = null
+            }
+        }
+    }
+
+    fun messageShown() {
+        _message.value = null
     }
 
     fun thumbnail(album: AlbumDto): String? =
         album.albumThumbnailAssetId?.let { urlProvider.getThumbnail(it, AssetType.REMOTE) }
+
+    fun assetThumbnail(assetId: String): String = urlProvider.getThumbnail(assetId, AssetType.REMOTE)
 }
 
 @HiltViewModel

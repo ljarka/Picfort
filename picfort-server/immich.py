@@ -86,6 +86,12 @@ class ImmichClient:
         assets = self._post("/search/metadata", body).get("assets", {})
         return assets.get("items", []), bool(assets.get("nextPage"))
 
+    def unassigned_images(self, page: int = 1, size: int = 100) -> tuple[list[dict], bool]:
+        """Newest images not in any album, with EXIF location metadata for album suggestions (T-098)."""
+        body = {"type": "IMAGE", "isNotInAlbum": True, "withExif": True, "page": page, "size": size, "order": "desc"}
+        assets = self._post("/search/metadata", body).get("assets", {})
+        return assets.get("items", []), bool(assets.get("nextPage"))
+
     def preview_bytes(self, asset_id: str) -> bytes:
         """Preview JPEG bytes for an asset (smaller than original, ideal for Vision LLM, T-089)."""
         r = requests.get(

@@ -41,6 +41,20 @@ data class CleanupCandidateDto(
 @Serializable
 private data class CleanupResponse(val items: List<CleanupCandidateDto> = emptyList())
 
+@Serializable
+data class AlbumSuggestionDto(
+    @SerialName("cluster_key") val clusterKey: String,
+    val title: String,
+    val subtitle: String = "",
+    @SerialName("cover_asset_id") val coverAssetId: String,
+    @SerialName("asset_ids") val assetIds: List<String> = emptyList(),
+    @SerialName("start_date") val startDate: String = "",
+    @SerialName("end_date") val endDate: String = "",
+)
+
+@Serializable
+private data class AlbumSuggestionsResponse(val items: List<AlbumSuggestionDto> = emptyList())
+
 /**
  * Reads AI photo insights stored on the Picfort server (ADR 0019, T-089).
  * The app never talks to Ollama directly: it only displays and acts on stored candidates.
@@ -95,6 +109,38 @@ class PhotoInsightsClient @Inject constructor(private val server: PicfortServerC
             .build()
         server.execute(Request.Builder().url(url).delete().build()) {
             PicfortServerException.Other("Photo insight not found")
+        }
+    }
+
+    /** Pending album suggestions grouped by location/date on the Picfort server (T-098). */
+    suspend fun albumSuggestions(): List<AlbumSuggestionDto> {
+        if (!server.isConfigured) return emptyList()
+        return runCatching {
+            val url = server.base().newBuilder()
+                .addPathSegment("photo-insights")
+                .addPathSegment("album-suggestions")
+                .build()
+            val reply = server.execute(Request.Builder().url(url).get().build()) {
+                PicfortServerException.Other("Album suggestions not available")
+            }
+            json.decodeFromString<AlbumSuggestionsResponse>(reply.body).items
+        }.getOrDefault(emptyList())
+    }
+
+    suspend fun dismissAlbumSuggestion(clusterKey: String) = postAlbumSuggestionAction(clusterKey, "dismiss")
+
+    suspend fun markAlbumSuggestionCreated(clusterKey: String) = postAlbumSuggestionAction(clusterKey, "created")
+
+    private suspend fun postAlbumSuggestionAction(clusterKey: String, action: String) {
+        val url = server.base().newBuilder()
+            .addPathSegment("photo-insights")
+            .addPathSegment("album-suggestions")
+            .addPathSegment(clusterKey)
+            .addPathSegment(action)
+            .build()
+        val body = "{}".toRequestBody("application/json".toMediaType())
+        server.execute(Request.Builder().url(url).post(body).build()) {
+            PicfortServerException.Other("Album suggestion not found")
         }
     }
 }

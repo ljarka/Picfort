@@ -94,7 +94,7 @@ class DashboardTest(unittest.TestCase):
         self.assertEqual([23, 7], ai["active_hours"])
         self.assertEqual({"events", "photo_ai"}, set(d["stores"]))
         self.assertEqual(3, d["stores"]["photo_ai"]["tables"]["photo_insights"])
-        self.assertEqual(3, d["stores"]["photo_ai"]["schema_version"])
+        self.assertEqual(4, d["stores"]["photo_ai"]["schema_version"])
         self.assertEqual(["events.db.v1.bak"], [b["file"] for b in d["backups"]])
         self.assertIn({"level": "warning", "text": "Photo AI: Ollama timeout"}, d["problems"])
 

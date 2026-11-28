@@ -963,6 +963,22 @@ def register_photo_insights(app: Flask, store: PhotoAiStore, worker: PhotoAiWork
         store.delete(asset_id)
         return "", 204
 
+    @app.route("/photo-insights/album-suggestions", methods=["GET"])
+    def photo_insights_album_suggestions():
+        return jsonify(items=store.list_album_suggestions())
+
+    @app.route("/photo-insights/album-suggestions/<path:cluster_key>/dismiss", methods=["POST"])
+    def photo_insights_dismiss_album(cluster_key):
+        if not store.set_album_suggestion_status(cluster_key, "dismissed"):
+            return error("Album suggestion not found", 404)
+        return jsonify(status="dismissed", cluster_key=cluster_key)
+
+    @app.route("/photo-insights/album-suggestions/<path:cluster_key>/created", methods=["POST"])
+    def photo_insights_created_album(cluster_key):
+        if not store.set_album_suggestion_status(cluster_key, "created"):
+            return error("Album suggestion not found", 404)
+        return jsonify(status="created", cluster_key=cluster_key)
+
 
 log = logging.getLogger("server")
 

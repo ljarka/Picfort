@@ -18,7 +18,7 @@ Immich photo timeline, gallery, full-screen viewer, collections, and media sync 
 | `ui/image/ImageDetailsScreen.kt` | Full-screen photo/video viewer, shared element transition |
 | `ui/image/AssetDetailsSheet.kt`, `assets/AssetDetails.kt` | "Details" sheet: tag chips on top (`assetTagLabels`, T-097), then date, file, camera, place, people |
 | `ui/image/ImageDetailsViewModel.kt` | Viewer ViewModel: zoom, EXIF metadata, pushing photo to frame via `FrameSender` |
-| `collections/CollectionsScreens.kt` | Albums list, album view, search screen (text + Immich people, T-057; All/Photos/Videos `MediaFilter`, T-071; Immich tag chips, T-090) |
+| `collections/CollectionsScreens.kt` | Albums list (with Suggested albums row, T-098), album view, search screen (text + Immich people, T-057; All/Photos/Videos `MediaFilter`, T-071; Immich tag chips, T-090) |
 | `collections/CollectionsRepository.kt` | Album contents via `timeline/bucket?albumId`; durations text or ms (`parseSearchDuration`, T-061); `deleteAlbum` (T-070) |
 | `collections/CollectionsService.kt` | Immich albums/search API; `AlbumDto.ownerId` (albumUsers role "owner"), `canDelete(myId)`: ⋮ → "Delete album" for the owner only (photos stay) |
 | `collections/SearchPeople.kt` | `peopleRow` (first 12 in Immich's order stay put; picks from "All people" appended and scrolled to, T-060), `filterPeople` (case/accents), `PeoplePickerContent` ("All people" sheet) |

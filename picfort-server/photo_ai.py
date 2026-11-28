@@ -8,13 +8,110 @@ import threading
 import time
 from contextlib import closing
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import date, datetime
 
 import requests
 
 from store import SqliteStore, utc_now
 
 log = logging.getLogger("photo_ai")
+
+ALBUM_NAME_SCHEMA = {
+    "type": "object",
+    "properties": {
+        "title": {"type": "string"},
+        "worth_album": {"type": "boolean"},
+    },
+    "required": ["title", "worth_album"],
+}
+
+ALBUM_MIN_PHOTOS = 12
+ALBUM_MAX_GAP_DAYS = 3
+
+
+def _parse_iso_day(value: str | None) -> date | None:
+    if not value or len(value) < 10:
+        return None
+    try:
+        return date.fromisoformat(value[:10])
+    except ValueError:
+        return None
+
+
+def _format_date_range(start: date, end: date) -> str:
+    if start == end:
+        return start.strftime("%d %b %Y").lstrip("0")
+    if start.year == end.year and start.month == end.month:
+        return f"{start.day}–{end.day} {end.strftime('%b %Y')}"
+    if start.year == end.year:
+        return f"{start.day} {start.strftime('%b')} – {end.day} {end.strftime('%b %Y')}"
+    return f"{start.strftime('%d %b %Y').lstrip('0')} – {end.strftime('%d %b %Y').lstrip('0')}"
+
+
+def cluster_album_candidates(
+    items: list[dict],
+    min_photos: int = ALBUM_MIN_PHOTOS,
+    max_gap_days: int = ALBUM_MAX_GAP_DAYS,
+) -> list[dict]:
+    """Group unassigned camera photos by location + date proximity into album candidates (T-098)."""
+    parsed = []
+    for a in items:
+        aid = a.get("id")
+        if not aid:
+            continue
+        name = (a.get("originalFileName") or "").lower()
+        if "screenshot" in name:
+            continue
+        exif = a.get("exifInfo") or {}
+        if not (exif.get("make") or exif.get("model")):
+            continue
+        day = _parse_iso_day(a.get("localDateTime") or a.get("fileCreatedAt"))
+        if day is None:
+            continue
+        city = (exif.get("city") or "").strip()
+        country = (exif.get("country") or "").strip()
+        parsed.append((day, aid, city, country))
+
+    parsed.sort(key=lambda x: (x[0], x[1]))
+    clusters: list[dict] = []
+    cur: dict | None = None
+
+    def flush():
+        if cur and len(cur["asset_ids"]) >= min_photos:
+            start, end = cur["start"], cur["end"]
+            city, country = cur["city"], cur["country"]
+            slug = (city or "day").lower().replace(" ", "-")
+            key = f"{start.isoformat()}..{end.isoformat()}|{slug}"
+            date_label = _format_date_range(start, end)
+            fallback_title = f"{city} — {start.strftime('%b %Y')}" if city else f"Photos · {date_label}"
+            clusters.append({
+                "cluster_key": key,
+                "fallback_title": fallback_title,
+                "subtitle": f"{len(cur['asset_ids'])} photos · {date_label}",
+                "asset_ids": list(cur["asset_ids"]),
+                "start_date": start.isoformat(),
+                "end_date": end.isoformat(),
+                "city": city,
+                "country": country,
+            })
+
+    for day, aid, city, country in parsed:
+        same_cluster = False
+        if cur is not None:
+            gap = (day - cur["end"]).days
+            if city and cur["city"] and city.lower() == cur["city"].lower() and gap <= max_gap_days:
+                same_cluster = True
+            elif not city and not cur["city"] and gap == 0:
+                same_cluster = True
+        if same_cluster:
+            cur["end"] = day
+            cur["asset_ids"].append(aid)
+        else:
+            flush()
+            cur = {"start": day, "end": day, "city": city, "country": country, "asset_ids": [aid]}
+    flush()
+    clusters.sort(key=lambda c: c["end_date"], reverse=True)
+    return clusters
 
 CATEGORIES = ("photo", "screenshot", "document", "receipt", "meme", "accidental", "kids_art")
 ISSUES = ("blurry", "dark", "overexposed", "closed_eyes", "cut_off", "cluttered", "accidental")
@@ -147,7 +244,7 @@ def in_active_hours(window: tuple[int, int] | None, now: datetime) -> bool:
 
 
 class PhotoAiStore(SqliteStore):
-    SCHEMA_VERSION = 3
+    SCHEMA_VERSION = 4
     NAME = "photo_ai"
     MIGRATIONS = {
         1: ["ALTER TABLE photo_insights ADD COLUMN is_sensitive INTEGER NOT NULL DEFAULT 0"],
@@ -159,6 +256,22 @@ class PhotoAiStore(SqliteStore):
                 failed_at  TEXT NOT NULL
             )""",
             "CREATE TABLE worker_state (key TEXT PRIMARY KEY, value TEXT NOT NULL)",
+        ],
+        3: [
+            """CREATE TABLE album_suggestions (
+                cluster_key    TEXT PRIMARY KEY,
+                title          TEXT NOT NULL,
+                subtitle       TEXT NOT NULL DEFAULT '',
+                cover_asset_id TEXT NOT NULL,
+                asset_ids      TEXT NOT NULL,
+                start_date     TEXT NOT NULL,
+                end_date       TEXT NOT NULL,
+                city           TEXT NOT NULL DEFAULT '',
+                country        TEXT NOT NULL DEFAULT '',
+                status         TEXT NOT NULL DEFAULT 'pending',
+                created_at     TEXT NOT NULL
+            )""",
+            "CREATE INDEX idx_album_suggestions_status ON album_suggestions(status, end_date DESC)",
         ],
     }
     SCHEMA = """
@@ -188,6 +301,21 @@ class PhotoAiStore(SqliteStore):
     );
     -- Worker bookkeeping, e.g. the library page the deep scan resumes from.
     CREATE TABLE worker_state (key TEXT PRIMARY KEY, value TEXT NOT NULL);
+    -- Suggested albums built from unassigned location/date clusters (T-098).
+    CREATE TABLE album_suggestions (
+        cluster_key    TEXT PRIMARY KEY,
+        title          TEXT NOT NULL,
+        subtitle       TEXT NOT NULL DEFAULT '',
+        cover_asset_id TEXT NOT NULL,
+        asset_ids      TEXT NOT NULL,
+        start_date     TEXT NOT NULL,
+        end_date       TEXT NOT NULL,
+        city           TEXT NOT NULL DEFAULT '',
+        country        TEXT NOT NULL DEFAULT '',
+        status         TEXT NOT NULL DEFAULT 'pending',
+        created_at     TEXT NOT NULL
+    );
+    CREATE INDEX idx_album_suggestions_status ON album_suggestions(status, end_date DESC);
     """
 
     def save(self, asset_id: str, model: str, insight: dict, tags_applied: list[str] | None = None):
@@ -421,6 +549,108 @@ class PhotoAiStore(SqliteStore):
             ).fetchall()
         return [r["asset_id"] for r in rows]
 
+    def known_album_keys(self) -> set[str]:
+        with closing(self.connect()) as conn:
+            rows = conn.execute("SELECT cluster_key FROM album_suggestions").fetchall()
+        return {r["cluster_key"] for r in rows}
+
+    def save_album_suggestion(self, cluster: dict, title: str, cover_asset_id: str):
+        with closing(self.connect()) as conn, conn:
+            conn.execute(
+                """
+                INSERT OR IGNORE INTO album_suggestions (
+                    cluster_key, title, subtitle, cover_asset_id, asset_ids,
+                    start_date, end_date, city, country, status, created_at
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending', ?)
+                """,
+                (
+                    cluster["cluster_key"],
+                    title.strip()[:80] or cluster["fallback_title"],
+                    cluster["subtitle"],
+                    cover_asset_id,
+                    json.dumps(cluster["asset_ids"]),
+                    cluster["start_date"],
+                    cluster["end_date"],
+                    cluster.get("city", ""),
+                    cluster.get("country", ""),
+                    self.clock(),
+                ),
+            )
+
+    def list_album_suggestions(self, limit: int = 20) -> list[dict]:
+        limit = max(1, min(100, int(limit)))
+        with closing(self.connect()) as conn:
+            rows = conn.execute(
+                """
+                SELECT cluster_key, title, subtitle, cover_asset_id, asset_ids, start_date, end_date
+                FROM album_suggestions
+                WHERE status = 'pending'
+                ORDER BY end_date DESC
+                LIMIT ?
+                """,
+                (limit,),
+            ).fetchall()
+        return [
+            {
+                "cluster_key": r["cluster_key"],
+                "title": r["title"],
+                "subtitle": r["subtitle"],
+                "cover_asset_id": r["cover_asset_id"],
+                "asset_ids": json.loads(r["asset_ids"] or "[]"),
+                "start_date": r["start_date"],
+                "end_date": r["end_date"],
+            }
+            for r in rows
+        ]
+
+    def set_album_suggestion_status(self, cluster_key: str, status: str) -> bool:
+        with closing(self.connect()) as conn, conn:
+            cur = conn.execute(
+                "UPDATE album_suggestions SET status = ? WHERE cluster_key = ?",
+                (status, cluster_key),
+            )
+            return cur.rowcount > 0
+
+    def scenes_for(self, asset_ids: list[str], limit: int = 10) -> list[str]:
+        if not asset_ids:
+            return []
+        placeholders = ",".join("?" for _ in asset_ids)
+        with closing(self.connect()) as conn:
+            rows = conn.execute(
+                f"SELECT scene FROM photo_insights WHERE asset_id IN ({placeholders}) AND scene != '' LIMIT ?",
+                [*asset_ids, limit],
+            ).fetchall()
+        return [r["scene"] for r in rows]
+
+    def best_cover(self, asset_ids: list[str]) -> str | None:
+        if not asset_ids:
+            return None
+        placeholders = ",".join("?" for _ in asset_ids)
+        with closing(self.connect()) as conn:
+            row = conn.execute(
+                f"""
+                SELECT asset_id FROM photo_insights
+                WHERE asset_id IN ({placeholders}) AND is_sensitive = 0 AND category = 'photo'
+                ORDER BY frame_worthy DESC, quality DESC
+                LIMIT 1
+                """,
+                asset_ids,
+            ).fetchone()
+        return row["asset_id"] if row else asset_ids[len(asset_ids) // 2]
+
+    def last_album_scan_date(self) -> str | None:
+        with closing(self.connect()) as conn:
+            row = conn.execute("SELECT value FROM worker_state WHERE key = 'album_scan_date'").fetchone()
+        return row["value"] if row else None
+
+    def set_last_album_scan_date(self, day: str):
+        with closing(self.connect()) as conn, conn:
+            conn.execute(
+                "INSERT INTO worker_state (key, value) VALUES ('album_scan_date', ?) "
+                "ON CONFLICT(key) DO UPDATE SET value = excluded.value",
+                (day,),
+            )
+
 
 class OllamaAnalyzer:
     """Calls local Ollama /api/chat with a vision model and strict JSON schema."""
@@ -446,6 +676,32 @@ class OllamaAnalyzer:
         r.raise_for_status()
         content = r.json()["message"]["content"]
         return json.loads(content)
+
+    def name_album(self, cluster: dict, scenes: list[str]) -> tuple[str, bool]:
+        """Suggest a short, natural album title for a photo cluster (text-only, T-098)."""
+        location = ", ".join(p for p in (cluster.get("city"), cluster.get("country")) if p) or "unknown location"
+        scenes_text = "; ".join(scenes[:8]) if scenes else "no scene captions yet"
+        prompt = (
+            "Suggest a short, warm photo album title (2-5 words) for this cluster of family photos. "
+            f"Location: {location}. Dates: {cluster['start_date']} to {cluster['end_date']}. "
+            f"Photo count: {len(cluster['asset_ids'])}. Sample scenes: {scenes_text}. "
+            "Set worth_album=true for trips, outings, holidays, birthdays or events; "
+            "set worth_album=false only if it clearly looks like random mundane clutter."
+        )
+        r = requests.post(
+            f"{self.base_url}/api/chat",
+            json={
+                "model": self.model,
+                "stream": False,
+                "think": False,
+                "format": ALBUM_NAME_SCHEMA,
+                "messages": [{"role": "user", "content": prompt}],
+            },
+            timeout=60.0,
+        )
+        r.raise_for_status()
+        parsed = json.loads(r.json()["message"]["content"])
+        return str(parsed.get("title") or "").strip(), bool(parsed.get("worth_album", True))
 
 
 class ImmichTagger:
@@ -600,6 +856,10 @@ class PhotoAiWorker:
                 applied = self.tagger.apply(asset_id, tags)
                 self.store.save(asset_id, self.config.ollama_model, insight, applied)
                 analyzed += 1
+            today = self.now().date().isoformat()
+            if self.store.last_album_scan_date() != today:
+                self.refresh_album_suggestions()
+                self.store.set_last_album_scan_date(today)
             self.last_error = errors[-1] if errors else None
         except Exception as e:
             log.warning("Photo AI batch failed: %s", e)
@@ -607,6 +867,38 @@ class PhotoAiWorker:
         finally:
             self.running = False
         return analyzed
+
+    def refresh_album_suggestions(self, max_pages: int = 5) -> int:
+        """Cluster unassigned Immich photos by location/date and name new clusters via Ollama (T-098)."""
+        if not hasattr(self.immich, "unassigned_images"):
+            return 0
+        items: list[dict] = []
+        for page in range(1, max_pages + 1):
+            batch, has_next = self.immich.unassigned_images(page=page, size=100)
+            items.extend(batch)
+            if not has_next or not batch:
+                break
+        clusters = cluster_album_candidates(items)
+        known = self.store.known_album_keys()
+        added = 0
+        for cluster in clusters:
+            if cluster["cluster_key"] in known:
+                continue
+            scenes = self.store.scenes_for(cluster["asset_ids"])
+            title, worth = cluster["fallback_title"], True
+            if hasattr(self.analyzer, "name_album"):
+                try:
+                    suggested, worth = self.analyzer.name_album(cluster, scenes)
+                    if suggested:
+                        title = suggested
+                except Exception as e:
+                    log.warning("Album naming failed for %s: %s", cluster["cluster_key"], e)
+            if not worth:
+                continue
+            cover = self.store.best_cover(cluster["asset_ids"]) or cluster["asset_ids"][0]
+            self.store.save_album_suggestion(cluster, title, cover)
+            added += 1
+        return added
 
     def _pick_unanalyzed(self, limit: int) -> list[str]:
         """Newest page first (fresh uploads), then a deep scan resumed from the stored page, so

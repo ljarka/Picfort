@@ -8,12 +8,17 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.RowScope
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.GridItemSpan
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.lazy.grid.rememberLazyGridState
@@ -29,10 +34,13 @@ import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -43,6 +51,8 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SegmentedButton
 import androidx.compose.material3.SegmentedButtonDefaults
 import androidx.compose.material3.SingleChoiceSegmentedButtonRow
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
@@ -70,6 +80,7 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil3.compose.AsyncImage
+import com.github.ljarka.picfort.cleanup.AlbumSuggestionDto
 import com.github.ljarka.picfort.core.model.FamilyMember
 import com.github.ljarka.picfort.core.ui.avatar.MemberCarousel
 
@@ -128,28 +139,126 @@ internal fun Message(text: String, modifier: Modifier, onRetry: (() -> Unit)? = 
 fun AlbumsScreen(onBack: () -> Unit, onAlbumClick: (id: String, name: String, canDelete: Boolean) -> Unit) {
     val viewModel: AlbumsViewModel = hiltViewModel()
     val albums by viewModel.albums.collectAsStateWithLifecycle()
-    AlbumsContent(albums, viewModel::thumbnail, onBack, viewModel::reload) { album ->
+    val suggestions by viewModel.suggestions.collectAsStateWithLifecycle()
+    val busySuggestion by viewModel.busySuggestion.collectAsStateWithLifecycle()
+    val message by viewModel.message.collectAsStateWithLifecycle()
+    AlbumsContent(
+        albums = albums,
+        thumbnail = viewModel::thumbnail,
+        onBack = onBack,
+        onRetry = viewModel::reload,
+        suggestions = suggestions,
+        suggestionThumbnail = viewModel::assetThumbnail,
+        busySuggestionKey = busySuggestion,
+        message = message,
+        onCreateSuggested = viewModel::createSuggestedAlbum,
+        onDismissSuggested = viewModel::dismissSuggestion,
+        onMessageShown = viewModel::messageShown,
+    ) { album ->
         onAlbumClick(album.id, album.albumName, viewModel.canDelete(album))
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AlbumsContent(
     albums: LoadState<List<AlbumDto>>,
     thumbnail: (AlbumDto) -> String?,
     onBack: () -> Unit = {},
     onRetry: () -> Unit = {},
+    suggestions: List<AlbumSuggestionDto> = emptyList(),
+    suggestionThumbnail: (String) -> String? = { null },
+    busySuggestionKey: String? = null,
+    message: String? = null,
+    onCreateSuggested: (AlbumSuggestionDto, String) -> Unit = { _, _ -> },
+    onDismissSuggested: (String) -> Unit = {},
+    onMessageShown: () -> Unit = {},
     onAlbumClick: (AlbumDto) -> Unit = {},
 ) {
-    BackScaffold("Albums", onBack) { modifier ->
-        LoadStateContent(albums, onRetry, modifier, { it.isEmpty() }, "No albums yet") { list ->
+    val snackbar = remember { SnackbarHostState() }
+    LaunchedEffect(message) {
+        message?.let {
+            snackbar.showSnackbar(it)
+            onMessageShown()
+        }
+    }
+    var creating by remember { mutableStateOf<AlbumSuggestionDto?>(null) }
+    creating?.let { suggestion ->
+        var title by remember(suggestion.clusterKey) { mutableStateOf(suggestion.title) }
+        AlertDialog(
+            onDismissRequest = { creating = null },
+            title = { Text("Create album") },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text(suggestion.subtitle, style = MaterialTheme.typography.bodySmall)
+                    OutlinedTextField(
+                        value = title,
+                        onValueChange = { title = it },
+                        singleLine = true,
+                        label = { Text("Album name") },
+                    )
+                }
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        creating = null
+                        onCreateSuggested(suggestion, title)
+                    },
+                    enabled = title.isNotBlank(),
+                ) { Text("Create") }
+            },
+            dismissButton = { TextButton(onClick = { creating = null }) { Text("Cancel") } },
+        )
+    }
+
+    Scaffold(
+        snackbarHost = { SnackbarHost(snackbar) },
+        topBar = {
+            TopAppBar(
+                title = { Text("Albums", maxLines = 1, overflow = TextOverflow.Ellipsis) },
+                navigationIcon = {
+                    IconButton(onClick = onBack) {
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                    }
+                },
+            )
+        },
+    ) { padding ->
+        val modifier = Modifier.padding(padding)
+        LoadStateContent(albums, onRetry, modifier, {
+            it.isEmpty() && suggestions.isEmpty()
+        }, "No albums yet") { list ->
             LazyVerticalGrid(
                 columns = GridCells.Adaptive(160.dp),
                 modifier = modifier.fillMaxSize(),
-                contentPadding = androidx.compose.foundation.layout.PaddingValues(12.dp),
+                contentPadding = PaddingValues(12.dp),
                 horizontalArrangement = Arrangement.spacedBy(12.dp),
                 verticalArrangement = Arrangement.spacedBy(16.dp),
             ) {
+                if (suggestions.isNotEmpty()) {
+                    item(key = "suggested-header", span = { GridItemSpan(maxLineSpan) }) {
+                        Text(
+                            "Suggested albums",
+                            style = MaterialTheme.typography.titleSmall,
+                            color = MaterialTheme.colorScheme.primary,
+                        )
+                    }
+                    item(key = "suggested-row", span = { GridItemSpan(maxLineSpan) }) {
+                        LazyRow(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                            items(suggestions.size, key = { suggestions[it].clusterKey }) { idx ->
+                                val s = suggestions[idx]
+                                SuggestedAlbumCard(
+                                    suggestion = s,
+                                    coverUrl = suggestionThumbnail(s.coverAssetId),
+                                    busy = busySuggestionKey != null,
+                                    onCreate = { creating = s },
+                                    onDismiss = { onDismissSuggested(s.clusterKey) },
+                                )
+                            }
+                        }
+                    }
+                }
                 items(list, key = { it.id }) { album ->
                     Column(Modifier.clickable { onAlbumClick(album) }) {
                         Box(
@@ -175,6 +284,53 @@ fun AlbumsContent(
                             style = MaterialTheme.typography.bodySmall,
                         )
                     }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun SuggestedAlbumCard(
+    suggestion: AlbumSuggestionDto,
+    coverUrl: String?,
+    busy: Boolean,
+    onCreate: () -> Unit,
+    onDismiss: () -> Unit,
+) {
+    Card(
+        modifier = Modifier.width(240.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow),
+    ) {
+        Column {
+            Box(
+                Modifier
+                    .fillMaxWidth()
+                    .height(124.dp)
+                    .background(Color.LightGray.copy(alpha = 0.3f)),
+            ) {
+                coverUrl?.let {
+                    AsyncImage(it, null, Modifier.fillMaxSize(), contentScale = ContentScale.Crop)
+                }
+            }
+            Column(Modifier.padding(12.dp)) {
+                Text(
+                    suggestion.title,
+                    style = MaterialTheme.typography.titleSmall,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+                Text(
+                    suggestion.subtitle,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+                Spacer(Modifier.height(8.dp))
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    FilledTonalButton(onClick = onCreate, enabled = !busy) { Text("Create") }
+                    TextButton(onClick = onDismiss, enabled = !busy) { Text("Dismiss") }
                 }
             }
         }
