@@ -101,18 +101,39 @@ def tags_for_insight(insight: dict) -> list[str]:
     return tags
 
 
+# An asset whose analysis failed this many times is skipped for good (no poison pill, T-093).
+MAX_ATTEMPTS = 3
+# Pages of 100 the worker reads per batch while looking for unanalyzed photos (T-093).
+MAX_SCAN_PAGES = 20
+
+
 def parse_active_hours(spec: str) -> tuple[int, int] | None:
-    """Parse '23-7' into (23, 7), or None if empty."""
+    """Parse '23-7' into (23, 7); None (always active) if empty or invalid."""
     spec = (spec or "").strip()
     if not spec:
         return None
     parts = spec.split("-", 1)
-    if len(parts) != 2:
+    try:
+        start, end = int(parts[0]), int(parts[1])
+    except (IndexError, ValueError):
+        log.warning("Ignoring invalid OLLAMA_ACTIVE_HOURS=%r (expected e.g. 23-7)", spec)
         return None
-    start, end = int(parts[0]), int(parts[1])
     if not (0 <= start <= 23 and 0 <= end <= 23):
+        log.warning("Ignoring invalid OLLAMA_ACTIVE_HOURS=%r (hours must be 0-23)", spec)
         return None
     return start, end
+
+
+def _env_int(name: str, default: int) -> int:
+    """Positive int from the environment; a bad value logs and falls back instead of crashing startup."""
+    raw = os.environ.get(name, "").strip()
+    if not raw:
+        return default
+    try:
+        return max(1, int(raw))
+    except ValueError:
+        log.warning("Ignoring invalid %s=%r, using %s", name, raw, default)
+        return default
 
 
 def in_active_hours(window: tuple[int, int] | None, now: datetime) -> bool:
@@ -126,10 +147,19 @@ def in_active_hours(window: tuple[int, int] | None, now: datetime) -> bool:
 
 
 class PhotoAiStore(SqliteStore):
-    SCHEMA_VERSION = 2
+    SCHEMA_VERSION = 3
     NAME = "photo_ai"
     MIGRATIONS = {
         1: ["ALTER TABLE photo_insights ADD COLUMN is_sensitive INTEGER NOT NULL DEFAULT 0"],
+        2: [
+            """CREATE TABLE photo_failures (
+                asset_id   TEXT PRIMARY KEY,
+                attempts   INTEGER NOT NULL DEFAULT 0,
+                last_error TEXT NOT NULL DEFAULT '',
+                failed_at  TEXT NOT NULL
+            )""",
+            "CREATE TABLE worker_state (key TEXT PRIMARY KEY, value TEXT NOT NULL)",
+        ],
     }
     SCHEMA = """
     CREATE TABLE photo_insights (
@@ -149,6 +179,15 @@ class PhotoAiStore(SqliteStore):
         analyzed_at       TEXT NOT NULL
     );
     CREATE INDEX idx_photo_insights_cleanup ON photo_insights(cleanup_candidate, dismissed, quality);
+    -- Assets whose analysis failed (bad preview, invalid model JSON); skipped after MAX_ATTEMPTS.
+    CREATE TABLE photo_failures (
+        asset_id   TEXT PRIMARY KEY,
+        attempts   INTEGER NOT NULL DEFAULT 0,
+        last_error TEXT NOT NULL DEFAULT '',
+        failed_at  TEXT NOT NULL
+    );
+    -- Worker bookkeeping, e.g. the library page the deep scan resumes from.
+    CREATE TABLE worker_state (key TEXT PRIMARY KEY, value TEXT NOT NULL);
     """
 
     def save(self, asset_id: str, model: str, insight: dict, tags_applied: list[str] | None = None):
@@ -198,17 +237,54 @@ class PhotoAiStore(SqliteStore):
                     now,
                 ),
             )
+            conn.execute("DELETE FROM photo_failures WHERE asset_id = ?", (asset_id,))
 
     def existing_ids(self, asset_ids: list[str]) -> set[str]:
+        """Ids the worker should not pick: analyzed, or failed MAX_ATTEMPTS times."""
         if not asset_ids:
             return set()
         placeholders = ",".join("?" for _ in asset_ids)
         with closing(self.connect()) as conn:
             rows = conn.execute(
-                f"SELECT asset_id FROM photo_insights WHERE asset_id IN ({placeholders})",
-                asset_ids,
+                f"""
+                SELECT asset_id FROM photo_insights WHERE asset_id IN ({placeholders})
+                UNION
+                SELECT asset_id FROM photo_failures WHERE asset_id IN ({placeholders}) AND attempts >= ?
+                """,
+                [*asset_ids, *asset_ids, MAX_ATTEMPTS],
             ).fetchall()
         return {r["asset_id"] for r in rows}
+
+    def record_failure(self, asset_id: str, error: str) -> int:
+        """Counts a failed analysis of one asset; returns its attempts so far."""
+        with closing(self.connect()) as conn, conn:
+            conn.execute(
+                """
+                INSERT INTO photo_failures (asset_id, attempts, last_error, failed_at) VALUES (?, 1, ?, ?)
+                ON CONFLICT(asset_id) DO UPDATE SET
+                    attempts = attempts + 1, last_error = excluded.last_error, failed_at = excluded.failed_at
+                """,
+                (asset_id, error[:500], self.clock()),
+            )
+            row = conn.execute("SELECT attempts FROM photo_failures WHERE asset_id = ?", (asset_id,)).fetchone()
+        return row["attempts"]
+
+    def scan_page(self) -> int:
+        """Library page (newest first, 100 per page) the worker's deep scan resumes from."""
+        with closing(self.connect()) as conn:
+            row = conn.execute("SELECT value FROM worker_state WHERE key = 'scan_page'").fetchone()
+        try:
+            return max(1, int(row["value"])) if row else 1
+        except ValueError:
+            return 1
+
+    def set_scan_page(self, page: int):
+        with closing(self.connect()) as conn, conn:
+            conn.execute(
+                "INSERT INTO worker_state (key, value) VALUES ('scan_page', ?) "
+                "ON CONFLICT(key) DO UPDATE SET value = excluded.value",
+                (str(page),),
+            )
 
     def list_cleanup(self, kind: str = "all", limit: int = 100) -> list[dict]:
         limit = max(1, min(500, int(limit)))
@@ -271,14 +347,25 @@ class PhotoAiStore(SqliteStore):
         return {"analyzed_count": row["analyzed"] or 0, "cleanup_count": row["cleanup"] or 0}
 
     def slideshow_excluded_ids(self) -> set[str]:
-        """Asset ids the frame slideshow should skip when filter_photos is enabled."""
+        """Asset ids the frame slideshow skips when filter_photos is on.
+
+        Non-photos (screenshots, documents...) stay out even when kept; a photo the family kept
+        ("Keep" in Clean up) comes back despite a low score.
+        """
         with closing(self.connect()) as conn:
             rows = conn.execute(
                 """
                 SELECT asset_id FROM photo_insights
-                WHERE category != 'photo' OR cleanup_candidate = 1 OR quality <= 2 OR is_sensitive = 1
+                WHERE category != 'photo' OR is_sensitive = 1
+                   OR (dismissed = 0 AND (cleanup_candidate = 1 OR quality <= 2))
                 """
             ).fetchall()
+        return {r["asset_id"] for r in rows}
+
+    def sensitive_ids(self) -> set[str]:
+        """Assets with private data or intimate moments: never shown on the frame, in any mode."""
+        with closing(self.connect()) as conn:
+            rows = conn.execute("SELECT asset_id FROM photo_insights WHERE is_sensitive = 1").fetchall()
         return {r["asset_id"] for r in rows}
 
     def frame_worthy_ids(self) -> list[str]:
@@ -350,30 +437,49 @@ class ImmichTagger:
             log.warning("Immich tag setup failed: %s", e)
             return None
 
+    def _call_with_fresh_ids(self, action):
+        """Runs `action(tag_map)`; if Immich rejects a cached tag id (someone deleted the tag,
+        e.g. in Settings -> Timeline), re-creates the tags once and retries (T-093)."""
+        tag_map = self._ensure_tags()
+        if not tag_map:
+            return None
+        try:
+            return action(tag_map)
+        except requests.HTTPError as e:
+            if e.response is None or e.response.status_code not in (400, 404):
+                raise
+            log.info("Immich rejected a cached ai/* tag id (%s): re-creating tags", e.response.status_code)
+            self._tag_ids = None
+            tag_map = self._ensure_tags()
+            if not tag_map:
+                return None
+            return action(tag_map)
+
     def apply(self, asset_id: str, tag_names: list[str]) -> list[str]:
         if not tag_names:
             return []
-        tag_map = self._ensure_tags()
-        if not tag_map:
-            return []
-        ids = [tag_map[name] for name in tag_names if name in tag_map]
-        if not ids:
-            return []
+
+        def tag(tag_map: dict[str, str]) -> list[str]:
+            known = [name for name in tag_names if name in tag_map]
+            if known:
+                self.immich.tag_assets([tag_map[name] for name in known], [asset_id])
+            return known
+
         try:
-            self.immich.tag_assets(ids, [asset_id])
-            return [name for name in tag_names if name in tag_map]
+            return self._call_with_fresh_ids(tag) or []
         except requests.RequestException as e:
             log.warning("Immich tagging failed for %s: %s", asset_id, e)
             return []
 
     def remove_cleanup_tags(self, asset_id: str, applied: list[str] | None = None) -> None:
-        tag_map = self._ensure_tags()
-        if not tag_map:
-            return
-        targets = [t for t in (applied or CLEANUP_TAGS) if t in CLEANUP_TAGS and t in tag_map]
+        targets = [t for t in (applied or CLEANUP_TAGS) if t in CLEANUP_TAGS]
         for name in targets:
+            def untag(tag_map: dict[str, str], name=name):
+                if name in tag_map:
+                    self.immich.untag_asset(tag_map[name], asset_id)
+
             try:
-                self.immich.untag_asset(tag_map[name], asset_id)
+                self._call_with_fresh_ids(untag)
             except requests.RequestException as e:
                 log.warning("Immich untag %s failed for %s: %s", name, asset_id, e)
 
@@ -396,8 +502,8 @@ class PhotoAiConfig:
         return PhotoAiConfig(
             ollama_url=os.environ.get("OLLAMA_URL", "").strip(),
             ollama_model=os.environ.get("OLLAMA_MODEL", "").strip(),
-            batch_size=max(1, int(os.environ.get("OLLAMA_BATCH_SIZE", "10"))),
-            interval_minutes=max(1, int(os.environ.get("OLLAMA_INTERVAL_MINUTES", "30"))),
+            batch_size=_env_int("OLLAMA_BATCH_SIZE", 10),
+            interval_minutes=_env_int("OLLAMA_INTERVAL_MINUTES", 30),
             active_hours=parse_active_hours(os.environ.get("OLLAMA_ACTIVE_HOURS", "")),
             tag_immich=os.environ.get("OLLAMA_TAG_IMMICH", "true").strip().lower() not in ("0", "false", "no"),
         )
@@ -419,25 +525,40 @@ class PhotoAiWorker:
         self._stop = threading.Event()
 
     def run_batch(self) -> int:
-        """Analyze up to config.batch_size new images. Returns count analyzed."""
+        """Analyze up to config.batch_size new images. Returns count analyzed.
+
+        A failure tied to one photo (preview missing, invalid model JSON) is recorded and the
+        batch moves on; after MAX_ATTEMPTS the photo is skipped. Ollama or Immich being
+        unreachable stops the batch without blaming the photo (T-093).
+        """
         if not self.config.enabled:
             return 0
         if not in_active_hours(self.config.active_hours, self.now()):
             return 0
         self.running = True
         analyzed = 0
+        errors: list[str] = []
         try:
             todo = self._pick_unanalyzed(self.config.batch_size)
             for asset_id in todo:
                 if self._stop.is_set():
                     break
-                preview = self.immich.preview_bytes(asset_id)
-                insight = self.analyzer.analyze(preview)
-                tags = tags_for_insight(insight)
+                try:
+                    preview = self.immich.preview_bytes(asset_id)
+                    insight = self.analyzer.analyze(preview)
+                    tags = tags_for_insight(insight)
+                except (requests.ConnectionError, requests.Timeout):
+                    raise  # the service is down, not this photo's fault
+                except Exception as e:
+                    attempts = self.store.record_failure(asset_id, str(e))
+                    log.warning("Photo AI analysis of %s failed (attempt %s/%s): %s",
+                                asset_id, attempts, MAX_ATTEMPTS, e)
+                    errors.append(f"{asset_id}: {e}")
+                    continue
                 applied = self.tagger.apply(asset_id, tags)
                 self.store.save(asset_id, self.config.ollama_model, insight, applied)
                 analyzed += 1
-            self.last_error = None
+            self.last_error = errors[-1] if errors else None
         except Exception as e:
             log.warning("Photo AI batch failed: %s", e)
             self.last_error = str(e)
@@ -446,22 +567,32 @@ class PhotoAiWorker:
         return analyzed
 
     def _pick_unanalyzed(self, limit: int) -> list[str]:
+        """Newest page first (fresh uploads), then a deep scan resumed from the stored page, so
+        libraries larger than MAX_SCAN_PAGES pages are covered over several batches (T-093)."""
         chosen: list[str] = []
-        page = 1
-        while len(chosen) < limit and page <= 20:
+
+        def take(page: int) -> bool:
             items, has_next = self.immich.recent_images(page=page, size=100)
-            if not items:
-                break
             ids = [a["id"] for a in items if "id" in a]
             seen = self.store.existing_ids(ids)
             for aid in ids:
-                if aid not in seen:
+                if len(chosen) >= limit:
+                    break
+                if aid not in seen and aid not in chosen:
                     chosen.append(aid)
-                    if len(chosen) >= limit:
-                        break
-            if not has_next:
-                break
+            return has_next and bool(items)
+
+        has_next = take(1)
+        page = max(2, self.store.scan_page())
+        scanned = 1
+        while has_next and len(chosen) < limit and scanned < MAX_SCAN_PAGES:
+            has_next = take(page)
+            scanned += 1
+            if len(chosen) >= limit:
+                break  # resume on this page: it may hold more unanalyzed photos
             page += 1
+        # At the end of the library the next deep scan starts over from page 2.
+        self.store.set_scan_page(page if has_next else 2)
         return chosen
 
     def start(self):

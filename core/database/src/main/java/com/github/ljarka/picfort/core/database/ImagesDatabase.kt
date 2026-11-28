@@ -4,8 +4,9 @@ import androidx.room.Database
 import androidx.room.RoomDatabase
 
 /**
- * A cache: a schema change wipes it (no migrations). That includes the backup state, so the
- * first backup after an update re-hashes the phone's files; nothing is uploaded twice.
+ * A cache: a schema change without a step in [IMAGES_DATABASE_MIGRATIONS] wipes it. That
+ * includes the backup state, so the first backup after such an update re-hashes the phone's
+ * files; nothing is uploaded twice.
  */
 @Database(
     entities = [

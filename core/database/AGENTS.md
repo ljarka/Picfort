@@ -3,7 +3,7 @@
 Room database, entities and DAOs for local caching and offline storage.
 
 ## Scope & Table Classification (ADR 0016)
-`ImagesDatabase` (version 24) keeps `fallbackToDestructiveMigration(dropAllTables = true)` because **every table in it is a cache** that can be rebuilt without data loss:
+`ImagesDatabase` (version 24) keeps `fallbackToDestructiveMigration(dropAllTables = true)` because **every table in it is a cache** that can be rebuilt without data loss. Cheap additive steps live in `ImagesDatabaseMigrations.kt` (`MIGRATION_23_24`, SQL copied from Room's generated `createAllTables`) so such updates skip the full re-sync:
 
 | Table | Entity | Kind | Rebuilt from |
 |---|---|---|---|

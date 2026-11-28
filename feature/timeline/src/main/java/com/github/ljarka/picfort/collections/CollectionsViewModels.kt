@@ -195,9 +195,9 @@ class SearchViewModel @Inject constructor(
     private var job: Job? = null
 
     val source: String get() = _state.value.let {
-        "search:${it.query}:${it.selectedPeople.sorted().joinToString(
-            ",",
-        )}:${it.selectedTags.sorted().joinToString(",")}:${it.media}"
+        val people = it.selectedPeople.sorted().joinToString(",")
+        val tags = it.selectedTags.sorted().joinToString(",")
+        "search:${it.query}:$people:$tags:${it.media}"
     }
 
     init {

@@ -19,3 +19,11 @@ Immich provides face detection, CLIP semantic search, and OCR, but does not asse
 - Zero impact on installs without Ollama.
 - Picture frame slideshow (`slideshow.py`) automatically benefits from `photo_ai.db` by skipping low-quality/non-photo assets.
 - Library cleanup done in Picfort cleans the real Immich library via Immich trash.
+
+## Amendment (2026-11-28, T-093)
+
+- Photos marked `is_sensitive` never go to the frame, in any mode and whatever `filter_photos` is.
+- One photo's failed analysis is counted in `photo_failures` and skipped after 3 attempts; an
+  unreachable Ollama/Immich only stops the batch. The worker covers the whole library through a
+  stored scan page (`worker_state`).
+- Deleted `ai/*` tags are re-created by the server the next time it tags a photo.

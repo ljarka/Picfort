@@ -171,7 +171,16 @@ internal fun TimelineSettingsContent(
         AlertDialog(
             onDismissRequest = { confirmDelete = null },
             title = { Text("Delete tag \"$label\"?") },
-            text = { Text("The tag is removed from Immich; your photos stay.") },
+            text = {
+                Text(
+                    if (label.startsWith("ai/")) {
+                        "The tag is removed from all photos in Immich; your photos stay. " +
+                            "The Picfort server creates it again for photos it analyses from now on."
+                    } else {
+                        "The tag is removed from Immich; your photos stay."
+                    },
+                )
+            },
             confirmButton = {
                 TextButton(onClick = {
                     confirmDelete = null

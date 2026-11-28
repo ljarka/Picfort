@@ -56,8 +56,6 @@ class TimelineRepository @Inject constructor(
     /** When true, screenshots, non-camera images and OCR-detected documents are hidden (T-088). */
     val hideNonPhotos: StateFlow<Boolean> = _hideNonPhotos.asStateFlow()
 
-    fun toggleHideNonPhotos() = setHideNonPhotos(!_hideNonPhotos.value)
-
     fun setHideNonPhotos(enabled: Boolean) {
         _hideNonPhotos.value = enabled
         prefs.edit().putBoolean(KEY_HIDE_NON_PHOTOS, enabled).apply()

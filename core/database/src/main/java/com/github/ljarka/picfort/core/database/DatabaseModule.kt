@@ -19,7 +19,8 @@ class DatabaseModule {
         context = context,
         klass = ImagesDatabase::class.java,
         name = "images",
-    ).fallbackToDestructiveMigration(dropAllTables = true)
+    ).addMigrations(*IMAGES_DATABASE_MIGRATIONS)
+        .fallbackToDestructiveMigration(dropAllTables = true)
         .build()
 
     @Provides

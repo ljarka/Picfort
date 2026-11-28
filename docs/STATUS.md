@@ -218,6 +218,7 @@ Small things the family asked for while using the app.
 | [T-090](tasks/T-090-search-tags-and-best-frame-mode.md) | Immich tag chips in Search & "Best photos only" frame mode | `done` |
 | [T-091](tasks/T-091-wall-frame-photo.md) | Family Wall: show the current `/frame/photo` card (tapping opens Frame) | `done` |
 | [T-092](tasks/T-092-timeline-settings-and-tags.md) | Settings -> Timeline: hide screenshots/documents & delete Immich tags | `done` |
+| [T-093](tasks/T-093-photo-ai-review-fixes.md) | Review fixes: photo AI worker robustness, sensitive photos off the frame, `ai/*` tags | `in-progress` |
 
 ---
 

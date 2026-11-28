@@ -101,14 +101,17 @@ class CleanupViewModel @Inject constructor(
             try {
                 assetActions.deleteRemote(assetIds)
                 assetIds.forEach { id -> runCatching { insights.deleteRecord(id) } }
-                val label = if (assetIds.size ==
-                    1
-                ) {
-                    "Moved to Immich trash"
-                } else {
-                    "Moved ${assetIds.size} to Immich trash"
-                }
-                removeItems(assetIds.toSet(), label)
+                val count = assetIds.size
+                removeItems(
+                    assetIds.toSet(),
+                    if (count ==
+                        1
+                    ) {
+                        "Moved to Immich trash"
+                    } else {
+                        "Moved $count to Immich trash"
+                    },
+                )
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {

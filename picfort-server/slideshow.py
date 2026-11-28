@@ -32,8 +32,9 @@ class SlideshowSettings:
     # Quiet hours (local time, 0-23): no changes from quiet_start until quiet_end. None = off.
     quiet_start: int | None = None
     quiet_end: int | None = None
-    # Skip screenshots and OCR-detected documents in random/memories modes (T-088).
-    filter_photos: bool = True
+    # Skip screenshots and OCR-detected documents in random/memories modes (T-088). Off by
+    # default: "no camera EXIF" also matches photos received through messengers (T-093).
+    filter_photos: bool = False
     # Prefer AI-picked frame-worthy photos in random/memories modes when available (T-090).
     best_only: bool = False
 
@@ -45,7 +46,7 @@ class SlideshowSettings:
             interval_minutes=int(d.get("interval_minutes", 60)),
             quiet_start=d.get("quiet_start"),
             quiet_end=d.get("quiet_end"),
-            filter_photos=bool(d.get("filter_photos", True)),
+            filter_photos=bool(d.get("filter_photos", False)),
             best_only=bool(d.get("best_only", False)),
         )
         s.validate()
@@ -135,7 +136,8 @@ class Picker:
                 best = self._best_ids()
                 if best:
                     best_set = set(best)
-                    candidates = [c for c in candidates if c in best_set] or best
+                    # No frame-worthy photo from this day: keep the day's photos, not random "best" ones.
+                    candidates = [c for c in candidates if c in best_set] or candidates
             if not candidates:
                 candidates = self._filter_docs(
                     self.immich.random_images(filter_photos=s.filter_photos), s, today
@@ -148,6 +150,7 @@ class Picker:
                 )
         else:
             return None
+        candidates = self._without_sensitive(candidates)
         if not candidates:
             return None
         fresh = [c for c in candidates if c not in self.history]
@@ -163,6 +166,18 @@ class Picker:
         except Exception as e:
             log.warning("Photo AI frame-worthy lookup failed: %s", e)
             return []
+
+    def _without_sensitive(self, candidates: list[str]) -> list[str]:
+        """Sensitive photos (ID cards, intimate moments) never reach the shared frame, whatever
+        the mode or filter_photos (T-093)."""
+        if self.photo_ai is None or not candidates:
+            return candidates
+        try:
+            sensitive = self.photo_ai.sensitive_ids()
+        except Exception as e:
+            log.warning("Photo AI sensitive lookup failed: %s", e)
+            return candidates
+        return [c for c in candidates if c not in sensitive]
 
     def _filter_docs(self, candidates: list[str], s: SlideshowSettings, today: date) -> list[str]:
         if not s.filter_photos or not candidates:
