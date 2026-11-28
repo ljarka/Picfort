@@ -213,6 +213,7 @@ Small things the family asked for while using the app.
 |------|-------------|--------|
 | [T-083](tasks/T-083-wishlist-photo-from-phone.md) | Wishlist: take a photo or choose one from the phone | `done` |
 | [T-084](tasks/T-084-wall-reactions.md) | Family Wall: reactions (❤️ 👍 …) and a notification for the first one | `done` |
+| [T-088](tasks/T-088-hide-screenshots-documents.md) | Hide screenshots & documents on Photos timeline and frame slideshow (EXIF + Immich OCR) | `done` |
 
 ---
 
