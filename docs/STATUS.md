@@ -231,8 +231,8 @@ Small things the family asked for while using the app.
 | [T-103](tasks/T-103-stricter-best.md) | Stricter "Best": quality 5, selective prompt, old Best tags removed | `done` |
 | [T-104](tasks/T-104-member-libraries-photo-ai.md) | Photo AI for every family member: own Immich key from the app, libraries in turn (ADR 0020) | `done` |
 | [T-105](tasks/T-105-wall-frame-photo-stale.md) | Wall frame card showed an old photo after a server restart (versions now unique) | `done` |
-| [T-106](tasks/T-106-wall-frame-backdrop.md) | Family Wall background: the frame's photo, blurred (like album art in a music player) | `in-progress` |
-| [T-107](tasks/T-107-timeline-best-backdrop.md) | Timeline background: the month's first Best photo, blurred (`PhotoBackdrop` in `:core:ui`) | `in-progress` |
+| [T-106](tasks/T-106-wall-frame-backdrop.md) | Family Wall background: the frame's photo, blurred (like album art in a music player) | `done` |
+| [T-107](tasks/T-107-timeline-best-backdrop.md) | Timeline background: the month's first Best photo, blurred (`PhotoBackdrop` in `:core:ui`) | `done` |
 
 ---
 

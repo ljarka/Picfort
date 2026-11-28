@@ -1,6 +1,6 @@
 # T-106 — Family Wall tinted by the frame's photo (blurred backdrop)
 
-**Status:** in-progress  
+**Status:** done (`9df5a79`)  
 **Component:** Android (`:feature:wall`)  
 **Depends on:** T-091 (frame card), T-105 (unique frame versions)
 

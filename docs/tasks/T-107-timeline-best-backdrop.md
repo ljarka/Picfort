@@ -1,6 +1,6 @@
 # T-107 — Timeline tinted by the month's first Best photo
 
-**Status:** in-progress  
+**Status:** done (`6ceb820`)  
 **Component:** Android (`:feature:timeline`, `:core:ui`)  
 **Depends on:** T-094 (Best strip), T-106 (Wall backdrop)
 
