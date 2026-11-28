@@ -129,6 +129,9 @@ class CollectionsRepository @Inject constructor(
         )
     }
 
+    /** Immich memories showing now (T-096). */
+    suspend fun memories(): List<com.github.ljarka.picfort.memories.MemoryDto> = service.get().memories()
+
     /** Immich tags formatted for Search chips (curated `ai/` tags first, then user tags, T-090). */
     suspend fun tags(): List<SearchTag> = formatSearchTags(service.get().tags())
 

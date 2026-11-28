@@ -115,6 +115,7 @@ fun FamilyWallScreen(
     onOpenEvent: (Long) -> Unit = {},
     onOpenEvents: () -> Unit = {},
     onOpenFrame: (() -> Unit)? = null,
+    onOpenMemories: (() -> Unit)? = null,
     onSetUpServer: () -> Unit = onSettingsClick,
     /** Extra top bar icons from `:app`, before Settings; this screen doesn't know what they are. */
     topBarActions: @Composable RowScope.() -> Unit = {},
@@ -135,6 +136,7 @@ fun FamilyWallScreen(
         onOpenEvent = onOpenEvent,
         onOpenEvents = onOpenEvents,
         onOpenFrame = onOpenFrame,
+        onOpenMemories = onOpenMemories,
         onPost = viewModel::post,
         onDelete = viewModel::delete,
         onTogglePin = viewModel::togglePin,
@@ -157,6 +159,7 @@ fun FamilyWallContent(
     onOpenEvent: (Long) -> Unit = {},
     onOpenEvents: () -> Unit = {},
     onOpenFrame: (() -> Unit)? = null,
+    onOpenMemories: (() -> Unit)? = null,
     onPost: (String, Uri?) -> Unit = { _, _ -> },
     onDelete: (WallPost) -> Unit = {},
     onTogglePin: (WallPost) -> Unit = {},
@@ -294,6 +297,7 @@ fun FamilyWallContent(
                             onOpenEvent = onOpenEvent,
                             onOpenEvents = onOpenEvents,
                             onOpenFrame = onOpenFrame,
+                            onOpenMemories = onOpenMemories,
                             onMessageClick = { openMessageId = it.id },
                             onPhotoClick = { openPhotoId = it.id },
                             onDelete = { confirmDelete = it },
@@ -313,6 +317,7 @@ private fun WallGrid(
     onOpenEvent: (Long) -> Unit,
     onOpenEvents: () -> Unit,
     onOpenFrame: (() -> Unit)?,
+    onOpenMemories: (() -> Unit)?,
     onMessageClick: (WallPost) -> Unit,
     onPhotoClick: (WallPost) -> Unit,
     onDelete: (WallPost) -> Unit,
@@ -345,6 +350,7 @@ private fun WallGrid(
                 FramePhotoCard(
                     photoUrl = framePhotoUrl,
                     onClick = onOpenFrame,
+                    onMemories = onOpenMemories,
                     modifier = Modifier.padding(bottom = 12.dp),
                 )
             }
@@ -400,9 +406,17 @@ private fun WallGrid(
     }
 }
 
-/** Full-colour photo currently shown on `/frame` (T-091); tapping opens the Frame screen. */
+/**
+ * Full-colour photo currently shown on `/frame` (T-091); tapping opens the Frame screen. The
+ * "Memories" button in the top-right corner opens Immich memories (T-096).
+ */
 @Composable
-private fun FramePhotoCard(photoUrl: String, onClick: (() -> Unit)?, modifier: Modifier = Modifier) {
+private fun FramePhotoCard(
+    photoUrl: String,
+    onClick: (() -> Unit)?,
+    onMemories: (() -> Unit)?,
+    modifier: Modifier = Modifier,
+) {
     val shape = RoundedCornerShape(16.dp)
     Box(
         modifier = modifier
@@ -433,6 +447,21 @@ private fun FramePhotoCard(photoUrl: String, onClick: (() -> Unit)?, modifier: M
                 .align(Alignment.BottomStart)
                 .padding(horizontal = 12.dp, vertical = 10.dp),
         )
+        if (onMemories != null) {
+            Surface(
+                onClick = onMemories,
+                shape = RoundedCornerShape(50),
+                color = Color.Black.copy(alpha = 0.5f),
+                contentColor = Color.White,
+                modifier = Modifier.align(Alignment.TopEnd).padding(10.dp),
+            ) {
+                Text(
+                    "Memories",
+                    style = MaterialTheme.typography.labelLarge,
+                    modifier = Modifier.padding(horizontal = 14.dp, vertical = 8.dp),
+                )
+            }
+        }
     }
 }
 

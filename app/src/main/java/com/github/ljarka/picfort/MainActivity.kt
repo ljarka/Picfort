@@ -42,6 +42,7 @@ import com.github.ljarka.picfort.collections.SearchScreen
 import com.github.ljarka.picfort.core.database.AssetType
 import com.github.ljarka.picfort.core.ui.theme.AccentTheme
 import com.github.ljarka.picfort.core.ui.theme.PicfortTheme
+import com.github.ljarka.picfort.memories.MemoriesScreen
 import com.github.ljarka.picfort.network.SessionManager
 import com.github.ljarka.picfort.ui.events.EventDetailScreen
 import com.github.ljarka.picfort.ui.events.EventFormScreen
@@ -241,6 +242,7 @@ class MainActivity : ComponentActivity() {
                                                         }
                                                     },
                                                     onOpenFrame = { navController.navigate(Screen.Frame) },
+                                                    onOpenMemories = { navController.navigate(Screen.Memories) },
                                                     topBarActions = {
                                                         SchoolJournalTopBarAction {
                                                             navController.navigate(Screen.SchoolJournal())
@@ -475,6 +477,16 @@ class MainActivity : ComponentActivity() {
                                     }
                                     composable<Screen.FamilySettings> {
                                         FamilySettingsScreen(onBack = { navController.popBackStack() })
+                                    }
+                                    composable<Screen.Memories> {
+                                        MemoriesScreen(
+                                            onBack = { navController.popBackStack() },
+                                            onAssetClick = { asset, index, source ->
+                                                navController.navigate(
+                                                    ImageDetailsRoute(asset.id, AssetType.REMOTE, index, source),
+                                                )
+                                            },
+                                        )
                                     }
                                     composable<Screen.Frame> {
                                         FrameScreen(onBack = { navController.popBackStack() })

@@ -33,6 +33,10 @@ sealed interface Screen {
     @Serializable
     object Search : Screen
 
+    /** Immich memories, opened from the frame card on the Family Wall (T-096). */
+    @Serializable
+    object Memories : Screen
+
     /** AI-suggested photo cleanup screen (ADR 0019, T-089). */
     @Serializable
     object Cleanup : Screen

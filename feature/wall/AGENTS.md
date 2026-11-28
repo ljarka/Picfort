@@ -6,7 +6,7 @@ Family wall vertical slice: posts stream, today panel (events/trips/birthdays), 
 
 | File | Purpose |
 |---|---|
-| `ui/wall/FamilyWallScreen.kt` | UI: `FamilyWallScreen`, `FamilyWallContent`, `FramePhotoCard` (`/frame/photo`, T-091), post cards (reaction line), message dialog & photo viewer (reaction bar), compose sheet |
+| `ui/wall/FamilyWallScreen.kt` | UI: `FamilyWallScreen`, `FamilyWallContent`, `FramePhotoCard` (`/frame/photo`, T-091; "Memories" button top-right, T-096), post cards (reaction line), message dialog & photo viewer (reaction bar), compose sheet |
 | `ui/wall/WallReactions.kt` | `ReactionBar` (six emojis, counts, mine highlighted, who reacted), `ReactionSummary` (T-084) |
 | `ui/wall/WallReactionNotifications.kt` | `WallReactionNotifyWorker` (15 min) + `WallReactionNotifyScheduler`, cursor per Immich user, "Tata reacted ❤️" (ADR 0018) |
 | `ui/wall/TodayPanel.kt` | Today overview panel at the top of the wall (events, ongoing trips, next big event) |
@@ -14,11 +14,12 @@ Family wall vertical slice: posts stream, today panel (events/trips/birthdays), 
 | `ui/wall/WallRepository.kt` | Repository: server fetch & polling, optimistic updates |
 | `ui/wall/WallAssistantImpl.kt` | `WallAssistantProvider` for Gemini AppFunctions (T-074) |
 | `ui/wall/WallApi.kt` | Server HTTP client: `/wall`, `/wall/{id}` (delete, pin), `/wall/{id}/reactions` (PUT/DELETE), `/wall/first-reactions`; `WALL_REACTIONS` |
-| `test/…/WallScreenshotTest.kt` | Paparazzi snapshots: wall feed (with reactions), reaction bar, dark mode, filtered, today panels |
+| `test/…/WallScreenshotTest.kt` | Paparazzi snapshots: wall feed (with reactions), frame card with "Memories", reaction bar, dark mode, filtered, today panels |
 
 ## Public Contract / Navigation Entry Points
 
-- `FamilyWallScreen(onSettingsClick, onEditMember, onOpenFamily, onOpenEvent, onOpenEvents, onSetUpServer, topBarActions)`;
+- `FamilyWallScreen(onSettingsClick, onEditMember, onOpenFamily, onOpenEvent, onOpenEvents, onOpenFrame, onOpenMemories, onSetUpServer, topBarActions)`;
+  `onOpenMemories` (T-096): the "Memories" button on the frame card, routed by `:app` to `MemoriesScreen`;
   `topBarActions`: icons from `:app` before Settings (the school journal's, ADR 0017), unknown here;
   `onOpenFamily` is the "+" circle at the end of the avatar row (opens Family settings).
 - `WallReactionNotifyScheduler.start()`: called once from `PicfortApplication.onCreate`.

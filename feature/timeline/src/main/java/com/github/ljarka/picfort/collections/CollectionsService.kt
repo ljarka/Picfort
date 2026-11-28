@@ -1,5 +1,6 @@
 package com.github.ljarka.picfort.collections
 
+import com.github.ljarka.picfort.memories.MemoryDto
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.JsonElement
 import retrofit2.Response
@@ -160,6 +161,13 @@ interface CollectionsService {
 
     @GET("/api/tags")
     suspend fun tags(): List<TagDto>
+
+    /** Immich memories ("On this day", birthdays) that are showing now, not trashed (T-096). */
+    @GET("/api/memories")
+    suspend fun memories(
+        @Query("isUpcoming") isUpcoming: Boolean = false,
+        @Query("isTrashed") isTrashed: Boolean = false,
+    ): List<MemoryDto>
 
     /** Deletes a tag from Immich (its photos stay). 204 No Content (T-092). */
     @DELETE("/api/tags/{id}")

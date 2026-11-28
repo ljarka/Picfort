@@ -405,4 +405,46 @@ class TimelineScreenshotTest {
     fun timeline_syncing() {
         snapshot(TimelineState(LoadingState.REFRESHING, TimelineLayout.EMPTY), syncLines = 1500)
     }
+
+    // --- T-096: Memories ----------------------------------------------------------------------
+
+    private fun memoryUi(id: String, title: String, subtitle: String, count: Int, saved: Boolean = false) =
+        com.github.ljarka.picfort.memories.MemoryUi(
+            id = id,
+            title = title,
+            subtitle = subtitle,
+            date = java.time.LocalDate.parse("2026-11-28"),
+            assets = photos.drop(count).take(count),
+            isSaved = saved,
+            isBirthday = false,
+        )
+
+    @Test
+    fun memories() = snap {
+        com.github.ljarka.picfort.memories.MemoriesContent(
+            state = com.github.ljarka.picfort.memories.MemoriesUi(
+                sections = listOf(
+                    com.github.ljarka.picfort.memories.MemorySection(
+                        "Today",
+                        listOf(
+                            memoryUi("m1", "1 year ago", "November 28, 2025 · 8 photos", 8),
+                            memoryUi("m2", "4 years ago", "November 28, 2022 · 5 photos", 5, saved = true),
+                        ),
+                    ),
+                ),
+                loading = false,
+            ),
+            thumbnail = { id, _ -> id },
+            preview = { id, _ -> id },
+        )
+    }
+
+    @Test
+    fun memories_empty() = snap {
+        com.github.ljarka.picfort.memories.MemoriesContent(
+            state = com.github.ljarka.picfort.memories.MemoriesUi(loading = false),
+            thumbnail = { id, _ -> id },
+            preview = { id, _ -> id },
+        )
+    }
 }

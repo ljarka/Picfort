@@ -67,6 +67,8 @@ class PeopleFilterTest {
                 SearchResponse()
             override suspend fun tags(): List<com.github.ljarka.picfort.collections.TagDto> = emptyList()
             override suspend fun deleteTag(tagId: String) = retrofit2.Response.success(Unit)
+            override suspend fun memories(isUpcoming: Boolean, isTrashed: Boolean) =
+                emptyList<com.github.ljarka.picfort.memories.MemoryDto>()
         }
         val repository = CollectionsRepository({ service }, { error("unused") })
         val page = repository.personAssets("person-ola", page = 1)

@@ -26,6 +26,8 @@ class SearchPeopleTest {
         override suspend fun ocrSearch(body: OcrSearchRequest) = SearchResponse()
         override suspend fun tags(): List<TagDto> = emptyList()
         override suspend fun deleteTag(tagId: String) = retrofit2.Response.success(Unit)
+        override suspend fun memories(isUpcoming: Boolean, isTrashed: Boolean) =
+            emptyList<com.github.ljarka.picfort.memories.MemoryDto>()
         override suspend fun people(page: Int, size: Int, withHidden: Boolean) = when (page) {
             1 -> PeopleResponse(
                 listOf(PersonDto("p1", "Ola"), PersonDto("x", ""), PersonDto("h", "Hidden", isHidden = true)),

@@ -33,6 +33,8 @@ class DeleteAlbumTest {
         override suspend fun ocrSearch(body: OcrSearchRequest) = SearchResponse()
         override suspend fun tags(): List<TagDto> = emptyList()
         override suspend fun deleteTag(tagId: String) = Response.success(204, Unit)
+        override suspend fun memories(isUpcoming: Boolean, isTrashed: Boolean) =
+            emptyList<com.github.ljarka.picfort.memories.MemoryDto>()
     }
     private val repository = CollectionsRepository({ service }, { error("unused") })
 

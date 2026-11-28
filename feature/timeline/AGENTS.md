@@ -26,6 +26,7 @@ Immich photo timeline, gallery, full-screen viewer, collections, and media sync 
 | `local/MediaPermission.kt` | Media permissions + `ACCESS_MEDIA_LOCATION` (`hasOriginalAccess`, backup reads originals, T-067) |
 | `ui/people/PeopleFilterViewModel.kt`, `PersonPhotosContent.kt` | Family carousel on Photos, photos of one person via `search/metadata` (T-052) |
 | `ui/timeline/DayPhotosRepository.kt` | `DayPhotosProvider` (bound in `TimelineBindingsModule`): photos of given days from the local copy; registers the viewer list under `source` (T-055) |
+| `memories/MemoriesModel.kt`, `MemoriesViewModel.kt`, `MemoriesScreen.kt` | Immich memories (`GET /api/memories`): sections Today/Saved/Earlier (`memorySections`), cover + thumbnails, viewer list `memory:<id>` (T-096) |
 | `cleanup/PhotoInsightsClient.kt`, `CleanupViewModel.kt`, `CleanupScreen.kt` | AI photo cleanup screen & `"Clean up (N)"` chip on Timeline backed by `/photo-insights/*` (ADR 0019, T-089) |
 | `contract/ImmichV3ContractTest.kt` | Real Immich 3.3 responses (`test/resources/immich-v3/`) read with the app's DTOs; refresh on a new major (T-062) |
 | `ui/timeline/TimelineScreenshotTest.kt` | Paparazzi snapshots: timeline layouts, empty state, album, search, details, family carousel |
@@ -40,6 +41,7 @@ Immich photo timeline, gallery, full-screen viewer, collections, and media sync 
 - `AlbumsScreen` gives `onAlbumClick(id, name, canDelete)`; `AlbumRoute(id, name, canDelete)`
 - `AlbumScreen(onBack, onAssetClick)`: closes itself after a delete; the albums list drops it (`deletedAlbums`)
 - `SearchScreen(onBack, onAssetClick)`
+- `MemoriesScreen(onBack, onAssetClick)` (T-096), opened from the Wall via `:app`
 
 ## Dependencies & Boundaries
 

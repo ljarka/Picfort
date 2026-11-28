@@ -115,6 +115,23 @@ class WallScreenshotTest {
         )
     }
 
+    /** The frame's current photo on top, with the "Memories" button (T-091, T-096). */
+    @Test
+    fun wall_frame_photo() = snap {
+        FamilyWallContent(
+            FamilyWallUiState(
+                members = members,
+                posts = wallPosts,
+                myId = "mama",
+                isLoading = false,
+                framePhotoUrl = "frame-photo",
+            ),
+            now = NOW,
+            onOpenFrame = {},
+            onOpenMemories = {},
+        )
+    }
+
     /** The reactions under an opened post (T-084): mine highlighted, counts, who reacted. */
     @Test
     fun wall_reaction_bar() = snap {
