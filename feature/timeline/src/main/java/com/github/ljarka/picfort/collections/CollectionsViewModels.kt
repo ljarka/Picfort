@@ -246,7 +246,14 @@ fun SearchUi.nothingFound(): String {
 class SearchViewModel @Inject constructor(
     private val repository: CollectionsRepository,
     private val urlProvider: UrlProvider,
+    savedStateHandle: androidx.lifecycle.SavedStateHandle,
 ) : ViewModel() {
+    /** Opened from a tag in a photo's Details (T-100): `Screen.Search(tagId, tagLabel)` in `:app`. */
+    private val startTag: SearchTag? = savedStateHandle.get<String>("tagId")?.takeIf { it.isNotBlank() }?.let { id ->
+        val label = savedStateHandle.get<String>("tagLabel").orEmpty().ifBlank { "Tag" }
+        SearchTag(id, label, label)
+    }
+
     private val _state = MutableStateFlow(SearchUi())
     val state: StateFlow<SearchUi> = _state.asStateFlow()
     private var job: Job? = null
@@ -277,8 +284,14 @@ class SearchViewModel @Inject constructor(
             } catch (e: Exception) {
                 emptyList()
             }
-            _state.update { it.copy(tags = tags) }
+            // A tag Search doesn't list as a chip (e.g. "Blurry") still shows, so it can be dropped.
+            val all = if (startTag != null && tags.none { it.id == startTag.id }) listOf(startTag) + tags else tags
+            _state.update { it.copy(tags = all) }
         }
+    }
+
+    init {
+        startTag?.let { toggleTag(it.id, "") }
     }
 
     fun search(query: String) {

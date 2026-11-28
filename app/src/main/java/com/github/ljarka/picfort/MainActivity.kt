@@ -335,7 +335,7 @@ class MainActivity : ComponentActivity() {
                                                         }
                                                     },
                                                     onSettingsClick = openSettings,
-                                                    onSearchClick = { navController.navigate(Screen.Search) },
+                                                    onSearchClick = { navController.navigate(Screen.Search()) },
                                                     onAlbumsClick = { navController.navigate(Screen.Albums) },
                                                     scrollToTop = photosScrollToTop,
                                                     onPersonAssetClick = { asset, index, source ->
@@ -511,6 +511,9 @@ class MainActivity : ComponentActivity() {
                                             imageIndex = requireNotNull(imageIndex),
                                             frameSettingsDialog = { onDismiss ->
                                                 FrameSettingsDialog(onDismiss = onDismiss)
+                                            },
+                                            onTagClick = { tagId, label ->
+                                                navController.navigate(Screen.Search(tagId = tagId, tagLabel = label))
                                             },
                                         )
                                     }

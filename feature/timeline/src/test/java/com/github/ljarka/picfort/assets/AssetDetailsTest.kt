@@ -69,11 +69,26 @@ class AssetDetailsTest {
                 AssetTagInfo("nature", "ai/type/nature"),
             ),
         ).toDetails(utc)
-        assertEquals(listOf("Best", "Nature", "Blurry", "Birthday", "Trips/Zoo"), details.tags)
+        assertEquals(listOf("Best", "Nature", "Blurry", "Birthday", "Trips/Zoo"), details.tags.map { it.label })
     }
 
     @Test
     fun `no tags, no chips`() {
-        assertEquals(emptyList<String>(), AssetInfo(id = "x").toDetails(utc).tags)
+        assertEquals(emptyList<Any>(), AssetInfo(id = "x").toDetails(utc).tags)
+    }
+
+    @Test
+    fun `detail tags carry their Immich id for Search`() {
+        val details = AssetInfo(
+            id = "x",
+            tags = listOf(AssetTagInfo("nature", "ai/type/nature", id = "t1"), AssetTagInfo("Zoo", "Zoo", id = "t2")),
+        ).toDetails(utc)
+        assertEquals(
+            listOf(
+                com.github.ljarka.picfort.collections.DetailTag("t1", "Nature"),
+                com.github.ljarka.picfort.collections.DetailTag("t2", "Zoo"),
+            ),
+            details.tags,
+        )
     }
 }

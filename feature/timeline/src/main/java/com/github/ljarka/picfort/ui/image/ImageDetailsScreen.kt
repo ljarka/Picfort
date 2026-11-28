@@ -67,6 +67,8 @@ fun ImageDetailsScreen(
     assetType: AssetType,
     imageIndex: Int,
     frameSettingsDialog: @Composable (onDismiss: () -> Unit) -> Unit = {},
+    /** A tag in Details tapped (T-100): `:app` opens Search filtered by it. */
+    onTagClick: ((tagId: String, label: String) -> Unit)? = null,
 ) {
     var coroutineScope = rememberCoroutineScope()
     var offset by remember { mutableStateOf(Offset.Zero) }
@@ -118,7 +120,16 @@ fun ImageDetailsScreen(
     var showDetails by remember { mutableStateOf(false) }
     if (showDetails) {
         val details by viewModel.details.collectAsState()
-        AssetDetailsSheet(state = details, onDismiss = { showDetails = false })
+        AssetDetailsSheet(
+            state = details,
+            onDismiss = { showDetails = false },
+            onTagClick = onTagClick?.let { open ->
+                { tag ->
+                    showDetails = false
+                    open(tag.id, tag.label)
+                }
+            },
+        )
     }
 
     Scaffold(

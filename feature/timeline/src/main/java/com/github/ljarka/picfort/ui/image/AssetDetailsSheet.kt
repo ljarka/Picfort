@@ -30,6 +30,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.core.net.toUri
 import com.github.ljarka.picfort.assets.AssetDetails
+import com.github.ljarka.picfort.collections.DetailTag
 import java.util.Locale
 
 sealed interface DetailsState {
@@ -40,14 +41,14 @@ sealed interface DetailsState {
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun AssetDetailsSheet(state: DetailsState, onDismiss: () -> Unit) {
+fun AssetDetailsSheet(state: DetailsState, onDismiss: () -> Unit, onTagClick: ((DetailTag) -> Unit)? = null) {
     ModalBottomSheet(onDismissRequest = onDismiss) {
-        AssetDetailsList(state)
+        AssetDetailsList(state, onTagClick)
     }
 }
 
 @Composable
-fun AssetDetailsList(state: DetailsState) {
+fun AssetDetailsList(state: DetailsState, onTagClick: ((DetailTag) -> Unit)? = null) {
     val context = LocalContext.current
     // Let the sheet's own colour show through, instead of banded list items.
     val transparent = ListItemDefaults.colors(containerColor = Color.Transparent)
@@ -80,12 +81,18 @@ fun AssetDetailsList(state: DetailsState) {
                         ) {
                             state.details.tags.forEach { tag ->
                                 Surface(
+                                    // Tapping a tag searches by it (T-100).
+                                    modifier = if (onTagClick != null && tag.id.isNotEmpty()) {
+                                        Modifier.clickable { onTagClick(tag) }
+                                    } else {
+                                        Modifier
+                                    },
                                     shape = RoundedCornerShape(8.dp),
                                     color = MaterialTheme.colorScheme.secondaryContainer,
                                     contentColor = MaterialTheme.colorScheme.onSecondaryContainer,
                                 ) {
                                     Text(
-                                        tag,
+                                        tag.label,
                                         style = MaterialTheme.typography.labelLarge,
                                         modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
                                     )

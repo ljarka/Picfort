@@ -30,8 +30,9 @@ sealed interface Screen {
     @Serializable
     object Albums : Screen
 
+    /** [tagId]/[tagLabel]: opened from a tag in a photo's Details, filtered by it (T-100). */
     @Serializable
-    object Search : Screen
+    data class Search(val tagId: String? = null, val tagLabel: String? = null) : Screen
 
     /** Immich memories, opened from the frame card on the Family Wall (T-096). */
     @Serializable

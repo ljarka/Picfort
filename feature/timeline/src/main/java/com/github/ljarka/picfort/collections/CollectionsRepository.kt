@@ -211,20 +211,34 @@ private val CLEANUP_TAG_LABELS = mapOf(
     "ai/cleanup/closed-eyes" to "Closed eyes",
 )
 
+/** A tag on a photo's details (T-097): tapping it searches by [id] (T-100). */
+data class DetailTag(val id: String, val label: String)
+
+/** Friendly label of one tag value: Picfort's `ai/` names, else the value itself (T-097). */
+fun tagLabel(value: String): String {
+    val v = value.trim()
+    val lower = v.lowercase()
+    if (!lower.startsWith("ai/")) return v
+    return CURATED_AI_TAG_LABELS[lower] ?: CLEANUP_TAG_LABELS[lower]
+        ?: v.substringAfterLast('/').replace('-', ' ').replaceFirstChar { it.uppercase() }
+}
+
 /**
- * A photo's tags as short labels for its details (T-097): Picfort's `ai/` tags by their friendly
- * names first, in the Search order, then the rest by name (the full value for nested user tags).
+ * A photo's tags for its details (T-097): Picfort's `ai/` tags by their friendly names first, in
+ * the Search order, then the rest by name (the full value for nested user tags); no duplicates.
+ * [tags] are (id, value) pairs.
  */
-fun assetTagLabels(values: List<String>): List<String> {
+fun detailTags(tags: List<Pair<String, String>>): List<DetailTag> {
     val curatedOrder = CURATED_AI_TAG_LABELS.keys.toList()
-    val distinct = values.map { it.trim() }.filter { it.isNotEmpty() }.distinctBy { it.lowercase() }
-    val (ai, user) = distinct.partition { it.lowercase().startsWith("ai/") }
-    val aiLabels = ai.sortedBy { v -> curatedOrder.indexOf(v.lowercase()).let { if (it < 0) Int.MAX_VALUE else it } }
-        .map { v ->
-            CURATED_AI_TAG_LABELS[v.lowercase()] ?: CLEANUP_TAG_LABELS[v.lowercase()]
-                ?: v.substringAfterLast('/').replace('-', ' ').replaceFirstChar { it.uppercase() }
-        }
-    return aiLabels.distinct() + user.sortedBy { it.lowercase() }
+    val distinct = tags.map { (id, v) -> id to v.trim() }.filter { it.second.isNotEmpty() }
+        .distinctBy { it.second.lowercase() }
+    val (ai, user) = distinct.partition { it.second.lowercase().startsWith("ai/") }
+    val aiSorted = ai.sortedBy { (_, v) ->
+        curatedOrder.indexOf(v.lowercase()).let { if (it < 0) Int.MAX_VALUE else it }
+    }
+    return (aiSorted + user.sortedBy { it.second.lowercase() })
+        .map { (id, v) -> DetailTag(id, tagLabel(v)) }
+        .distinctBy { it.label }
 }
 
 /** Orders curated `ai/` tags first (skipping cleanup tags), followed by user tags. */

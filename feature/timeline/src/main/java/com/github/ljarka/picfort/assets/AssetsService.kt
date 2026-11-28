@@ -20,7 +20,7 @@ data class AssetInfo(
 )
 
 @Serializable
-data class AssetTagInfo(val name: String = "", val value: String = "")
+data class AssetTagInfo(val name: String = "", val value: String = "", val id: String = "")
 
 /** Numbers are Double because older servers send e.g. 4000.0 for integers. */
 @Serializable
