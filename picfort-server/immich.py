@@ -38,8 +38,12 @@ class ImmichClient:
         r.raise_for_status()
         return r.json()
 
-    def random_images(self, size: int = 50, album_id: str | None = None, filter_photos: bool = False) -> list[str]:
-        """Random photo ids, optionally from one album and filtered to camera photos."""
+    def random_images(self, size: int = 50, album_id: str | None = None, filter_photos: bool = False,
+                      keep: set[str] | frozenset = frozenset()) -> list[str]:
+        """Random photo ids, optionally from one album and filtered to camera photos.
+
+        `keep`: ids the photo AI saw as real photos; they pass the filter's guesses (T-099).
+        """
         body: dict = {"size": size, "type": "IMAGE"}
         if album_id:
             body["albumIds"] = [album_id]
@@ -48,10 +52,11 @@ class ImmichClient:
             body["withPeople"] = True
         items = self._post("/search/random", body)
         if filter_photos:
-            items = [a for a in items if not is_likely_non_photo(a)]
+            items = [a for a in items if a.get("id") in keep or not is_likely_non_photo(a)]
         return [a["id"] for a in items]
 
-    def images_taken_between(self, after: str, before: str, size: int = 100, filter_photos: bool = False) -> list[str]:
+    def images_taken_between(self, after: str, before: str, size: int = 100, filter_photos: bool = False,
+                             keep: set[str] | frozenset = frozenset()) -> list[str]:
         """Photo ids taken in [after, before) (ISO timestamps)."""
         body: dict = {"type": "IMAGE", "takenAfter": after, "takenBefore": before, "size": size}
         if filter_photos:
@@ -59,7 +64,7 @@ class ImmichClient:
             body["withPeople"] = True
         items = self._post("/search/metadata", body).get("assets", {}).get("items", [])
         if filter_photos:
-            items = [a for a in items if not is_likely_non_photo(a)]
+            items = [a for a in items if a.get("id") in keep or not is_likely_non_photo(a)]
         return [a["id"] for a in items]
 
     def document_ids(self, terms: tuple[str, ...] = DOCUMENT_OCR_TERMS, size: int = 1000) -> set[str]:

@@ -1,9 +1,11 @@
 package com.github.ljarka.picfort.ui.timeline
 
 import androidx.room.withTransaction
+import com.github.ljarka.picfort.cleanup.PhotoInsightsClient
 import com.github.ljarka.picfort.collections.CollectionsService
 import com.github.ljarka.picfort.collections.MetadataSearchRequest
 import com.github.ljarka.picfort.collections.OcrSearchRequest
+import com.github.ljarka.picfort.core.database.AiLabelEntity
 import com.github.ljarka.picfort.core.database.ImagesDatabase
 import com.github.ljarka.picfort.core.database.RemoteAssetEntity
 import com.github.ljarka.picfort.core.database.RemoteBestEntity
@@ -39,6 +41,7 @@ class SyncTimelineSource @Inject constructor(
     private val engine: SyncEngine,
     private val database: ImagesDatabase,
     private val collections: Provider<CollectionsService>,
+    private val photoInsights: Provider<PhotoInsightsClient>,
     private val serverUrlStore: ServerUrlStore,
     private val accessTokenStore: AccessTokenStore,
 ) {
@@ -64,6 +67,7 @@ class SyncTimelineSource @Inject constructor(
         if (result.wasReset || lastOcrRefreshAt == 0L || now - lastOcrRefreshAt >= OCR_REFRESH_INTERVAL_MS) {
             refreshDocumentsQuietly(now)
             refreshBestQuietly()
+            refreshAiLabelsQuietly()
         }
         return result.wasReset || result.lines > 1 // a stream with no changes is just SyncCompleteV1
     }
@@ -125,6 +129,31 @@ class SyncTimelineSource @Inject constructor(
             // Optional signal: keep whatever was cached previously.
         }
     }
+
+    /**
+     * Refreshes the photo AI's labels from the Picfort server (T-098, T-099). No server, or one
+     * without photo insights: keeps the previous cache (then the guesses decide).
+     */
+    private suspend fun refreshAiLabelsQuietly() {
+        val client = photoInsights.get()
+        if (!client.isConfigured) return
+        try {
+            val labels = client.labels()
+            database.withTransaction {
+                dao.clearAiLabels()
+                labels.chunked(1000).forEach { chunk ->
+                    dao.upsertAiLabels(chunk.map { AiLabelEntity(it.assetId, it.category, it.sensitive) })
+                }
+            }
+        } catch (e: CancellationException) {
+            throw e
+        } catch (_: Exception) {
+            // Optional signal: keep whatever was cached previously.
+        }
+    }
+
+    /** The photo AI's labels, split for the filters (T-098, T-099). */
+    fun aiLabels(): Flow<AiLabels> = dao.aiLabelsFlow().map(::aiLabelsOf)
 
     /** Immich asset ids tagged [BEST_TAG_VALUE] (T-094). */
     fun bestAssetIds(): Flow<Set<String>> = dao.bestAssetIdsFlow().map { it.toSet() }

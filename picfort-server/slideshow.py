@@ -139,15 +139,11 @@ class Picker:
                     # No frame-worthy photo from this day: keep the day's photos, not random "best" ones.
                     candidates = [c for c in candidates if c in best_set] or candidates
             if not candidates:
-                candidates = self._filter_docs(
-                    self.immich.random_images(filter_photos=s.filter_photos), s, today
-                )
+                candidates = self._filter_docs(self._random(s), s, today)
         elif s.mode == "random":
             candidates = self._best_ids() if s.best_only else []
             if not candidates:
-                candidates = self._filter_docs(
-                    self.immich.random_images(filter_photos=s.filter_photos), s, today
-                )
+                candidates = self._filter_docs(self._random(s), s, today)
         else:
             return None
         candidates = self._without_sensitive(candidates)
@@ -157,6 +153,21 @@ class Picker:
         choice = random.choice(fresh or candidates)
         self.history.append(choice)
         return choice
+
+    def _random(self, s: SlideshowSettings) -> list[str]:
+        if not s.filter_photos:
+            return self.immich.random_images(filter_photos=False)
+        return self.immich.random_images(filter_photos=True, keep=self._ai_photos())
+
+    def _ai_photos(self) -> set[str]:
+        """Ids the photo AI saw as real photos: the AI's answer beats the EXIF/OCR guesses (T-099)."""
+        if self.photo_ai is None:
+            return set()
+        try:
+            return self.photo_ai.analyzed_photo_ids()
+        except Exception as e:
+            log.warning("Photo AI photo lookup failed: %s", e)
+            return set()
 
     def _best_ids(self) -> list[str]:
         if self.photo_ai is None:
@@ -182,7 +193,8 @@ class Picker:
     def _filter_docs(self, candidates: list[str], s: SlideshowSettings, today: date) -> list[str]:
         if not s.filter_photos or not candidates:
             return candidates
-        excluded = set(self._document_ids(today))
+        # An OCR hit (a sign, a T-shirt) the AI saw as a real photo stays (T-099).
+        excluded = set(self._document_ids(today)) - self._ai_photos()
         if self.photo_ai is not None:
             try:
                 excluded.update(self.photo_ai.slideshow_excluded_ids())
@@ -205,8 +217,9 @@ class Picker:
         cached_day, cached_filter, ids = self._memories
         if cached_day != today or cached_filter != filter_photos:
             ids = []
+            keep = self._ai_photos() if filter_photos else set()
             for after, before in on_this_day_ranges(today):
-                ids += self.immich.images_taken_between(after, before, filter_photos=filter_photos)
+                ids += self.immich.images_taken_between(after, before, filter_photos=filter_photos, keep=keep)
             self._memories = (today, filter_photos, ids)
         return ids
 

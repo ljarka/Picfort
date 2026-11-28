@@ -31,7 +31,12 @@ private const val KEY_SHOW_BEST = "show_best_of_month"
 
 private class Merged(val index: TimelineIndex, val onServer: Set<Long>)
 
-private data class NonPhotoFilter(val nonCameraIds: Set<String>, val documentIds: Set<String>, val enabled: Boolean)
+private data class NonPhotoFilter(
+    val nonCameraIds: Set<String>,
+    val documentIds: Set<String>,
+    val ai: AiLabels,
+    val enabled: Boolean,
+)
 
 /** The phone's media and what Picfort's backup knows of it: Immich ids and SHA-1s (hex). */
 private class LocalSnapshot(
@@ -80,7 +85,13 @@ class TimelineRepository @Inject constructor(
     private val merged: StateFlow<Merged?> = combine(
         remote.assets(),
         local.filterNotNull(),
-        combine(remote.nonCameraAssetIds(), remote.documentAssetIds(), _hideNonPhotos, ::NonPhotoFilter),
+        combine(
+            remote.nonCameraAssetIds(),
+            remote.documentAssetIds(),
+            remote.aiLabels(),
+            _hideNonPhotos,
+            ::NonPhotoFilter,
+        ),
         combine(remote.bestAssetIds(), _showBest) { ids, show -> if (show) ids else emptySet() },
     ) { assets, snapshot, filter, bestIds ->
         val zone = ZoneId.systemDefault()
@@ -94,6 +105,7 @@ class TimelineRepository @Inject constructor(
                 hideNonPhotos = filter.enabled,
                 nonCameraIds = filter.nonCameraIds,
                 documentIds = filter.documentIds,
+                ai = filter.ai,
                 bestIds = bestIds,
             ),
             onServer = onServer,

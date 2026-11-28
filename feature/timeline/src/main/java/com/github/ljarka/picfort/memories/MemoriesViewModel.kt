@@ -6,6 +6,7 @@ import androidx.lifecycle.viewModelScope
 import com.github.ljarka.picfort.UrlProvider
 import com.github.ljarka.picfort.collections.CollectionsRepository
 import com.github.ljarka.picfort.core.database.AssetType
+import com.github.ljarka.picfort.ui.timeline.SyncTimelineSource
 import dagger.hilt.android.lifecycle.HiltViewModel
 import java.time.LocalDate
 import java.util.Locale
@@ -14,6 +15,7 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
@@ -30,6 +32,7 @@ data class MemoriesUi(
 class MemoriesViewModel @Inject constructor(
     private val collections: CollectionsRepository,
     private val urlProvider: UrlProvider,
+    private val timeline: SyncTimelineSource,
 ) : ViewModel() {
     private val _state = MutableStateFlow(MemoriesUi())
     val state: StateFlow<MemoriesUi> = _state.asStateFlow()
@@ -47,7 +50,10 @@ class MemoriesViewModel @Inject constructor(
         _state.update { it.copy(loading = true, error = null) }
         viewModelScope.launch {
             try {
-                val sections = memorySections(collections.memories(), LocalDate.now(), Locale.getDefault())
+                // Opened from the shared Family Wall: photos the AI marked private never show (T-098).
+                val sensitive = timeline.aiLabels().first().sensitive
+                val memories = withoutSensitive(collections.memories(), sensitive)
+                val sections = memorySections(memories, LocalDate.now(), Locale.getDefault())
                 // The viewer pages through one memory's photos.
                 sections.flatMap { it.memories }.forEach { collections.putList(it.source, it.assets) }
                 _state.update { MemoriesUi(sections = sections, loading = false) }

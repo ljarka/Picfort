@@ -87,6 +87,7 @@ class RoomSyncStore @Inject constructor(private val database: ImagesDatabase) : 
             dao.clearExifs()
             dao.clearDocuments()
             dao.clearBest()
+            dao.clearAiLabels()
             dao.clearStacks()
             dao.clearPartners()
             dao.clearSyncState()

@@ -63,6 +63,13 @@ data class RemoteAssetExifEntity(@PrimaryKey val assetId: String, val hasCameraE
 @Entity(tableName = "remote_documents")
 data class RemoteDocumentEntity(@PrimaryKey val assetId: String)
 
+/**
+ * What the Picfort server's photo AI saw in an Immich asset (T-098, T-099): its [category]
+ * ("photo", "screenshot", "document", …) and whether it holds private data ([sensitive]).
+ */
+@Entity(tableName = "ai_labels")
+data class AiLabelEntity(@PrimaryKey val assetId: String, val category: String, val sensitive: Boolean)
+
 /** Immich asset ids tagged `ai/best/frame-worthy` by the Picfort server (T-094). */
 @Entity(tableName = "remote_best")
 data class RemoteBestEntity(@PrimaryKey val assetId: String)

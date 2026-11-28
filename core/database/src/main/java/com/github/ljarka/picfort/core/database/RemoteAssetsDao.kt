@@ -108,6 +108,16 @@ interface RemoteAssetsDao {
     @Query("DELETE FROM remote_best")
     suspend fun clearBest()
 
+    @Upsert
+    suspend fun upsertAiLabels(labels: List<AiLabelEntity>)
+
+    @Query("DELETE FROM ai_labels")
+    suspend fun clearAiLabels()
+
+    /** The photo AI's labels (T-098, T-099). */
+    @Query("SELECT * FROM ai_labels")
+    fun aiLabelsFlow(): Flow<List<AiLabelEntity>>
+
     /** Asset ids tagged `ai/best/frame-worthy` (T-094). */
     @Query("SELECT assetId FROM remote_best")
     fun bestAssetIdsFlow(): Flow<List<String>>

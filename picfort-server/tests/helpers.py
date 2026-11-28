@@ -14,18 +14,18 @@ class FakeImmich:
         self.calls = []
         self.health = "ok"
 
-    def random_images(self, size=50, album_id=None, filter_photos=False):
+    def random_images(self, size=50, album_id=None, filter_photos=False, keep=frozenset()):
         self.calls.append(("random", album_id, filter_photos))
         items = list(self.album.get(album_id, []) if album_id else self.library)
         if filter_photos:
-            items = [i for i in items if i not in self.non_photos]
+            items = [i for i in items if i in keep or i not in self.non_photos]
         return items[:size]
 
-    def images_taken_between(self, after, before, size=100, filter_photos=False):
+    def images_taken_between(self, after, before, size=100, filter_photos=False, keep=frozenset()):
         self.calls.append(("between", after[:10], filter_photos))
         items = list(self.by_day.get(after[:10], []))
         if filter_photos:
-            items = [i for i in items if i not in self.non_photos]
+            items = [i for i in items if i in keep or i not in self.non_photos]
         return items
 
     def document_ids(self):

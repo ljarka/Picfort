@@ -83,4 +83,14 @@ class MemorySectionsTest {
         assertEquals(2023, parsed.single().data.year)
         assertEquals("3 years ago", memorySections(parsed, today, Locale.ENGLISH).single().memories.single().title)
     }
+
+    @Test
+    fun `sensitive photos are left out and a memory with nothing else disappears`() {
+        val memories = listOf(memory("a", "2026-11-28", 2024, photos = 3), memory("b", "2026-11-28", 2023, photos = 1))
+        val filtered = withoutSensitive(memories, setOf("a-1", "b-0"))
+        val sections = memorySections(filtered, today, Locale.ENGLISH)
+        assertEquals(listOf("a"), sections.single().memories.map { it.id })
+        assertEquals(listOf("a-0", "a-2"), sections.single().memories.single().assets.map { it.id })
+        assertTrue(sections.single().memories.single().subtitle.endsWith("2 photos"))
+    }
 }

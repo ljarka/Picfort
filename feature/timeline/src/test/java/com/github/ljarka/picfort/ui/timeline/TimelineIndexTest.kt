@@ -160,4 +160,32 @@ class TimelineIndexTest {
         assertEquals(BEST_MIN, bestCount(hide = false))
         assertEquals(0, bestCount(hide = true))
     }
+
+    @Test
+    fun `the photo AI's answer beats the EXIF and OCR guesses, unanalyzed photos keep the guesses`() {
+        val whatsapp = remote("whatsapp", "2026-10-20T12:00:00Z") // no camera EXIF, AI: photo
+        val sign = remote("sign", "2026-10-19T12:00:00Z") // OCR hit, AI: photo
+        val shot = remote("shot", "2026-10-18T12:00:00Z") // camera EXIF, AI: screenshot
+        val guessed = remote("guessed", "2026-10-17T12:00:00Z") // no EXIF, not analyzed
+        val ai = aiLabelsOf(
+            listOf(
+                com.github.ljarka.picfort.core.database.AiLabelEntity("whatsapp", "photo", false),
+                com.github.ljarka.picfort.core.database.AiLabelEntity("sign", "photo", false),
+                com.github.ljarka.picfort.core.database.AiLabelEntity("shot", "screenshot", true),
+            ),
+        )
+        val index = buildTimelineIndex(
+            remote = listOf(whatsapp, sign, shot, guessed),
+            local = emptyList(),
+            onServerLocalIds = emptySet(),
+            zone = warsaw,
+            hideNonPhotos = true,
+            nonCameraIds = setOf("whatsapp", "guessed"),
+            documentIds = setOf("sign"),
+            ai = ai,
+        )
+        assertEquals(listOf("whatsapp", "sign"), index.months.single().assets.map { it.id })
+        assertEquals(setOf("shot"), ai.sensitive)
+        assertEquals(setOf("shot"), ai.nonPhotos)
+    }
 }

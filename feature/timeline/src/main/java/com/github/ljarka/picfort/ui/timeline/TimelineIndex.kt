@@ -69,14 +69,38 @@ class TimelineIndex(val months: List<TimelineMonth>) {
     }
 }
 
+/** What the photo AI saw (T-098, T-099). [analyzed] has every labelled id; the others are subsets. */
+data class AiLabels(
+    val analyzed: Set<String> = emptySet(),
+    val nonPhotos: Set<String> = emptySet(),
+    val sensitive: Set<String> = emptySet(),
+)
+
+/** AI categories the "hide screenshots & documents" filter hides; the server keeps the same list. */
+val AI_NON_PHOTO_CATEGORIES = setOf("screenshot", "document", "receipt", "meme")
+
+fun aiLabelsOf(labels: List<com.github.ljarka.picfort.core.database.AiLabelEntity>) = AiLabels(
+    analyzed = labels.mapTo(HashSet()) { it.assetId },
+    nonPhotos = labels.filter { it.category in AI_NON_PHOTO_CATEGORIES }.mapTo(HashSet()) { it.assetId },
+    sensitive = labels.filter { it.sensitive }.mapTo(HashSet()) { it.assetId },
+)
+
 private val NON_PHOTO_BUCKETS = setOf("screenshots", "whatsapp images", "download", "downloads")
 
 /**
  * True for Immich photos that look like screenshots, saved images without camera EXIF, or
  * OCR-detected documents (T-088). Videos are never hidden.
  */
-internal fun isHiddenNonPhoto(asset: RemoteAssetEntity, nonCameraIds: Set<String>, documentIds: Set<String>): Boolean {
+internal fun isHiddenNonPhoto(
+    asset: RemoteAssetEntity,
+    nonCameraIds: Set<String>,
+    documentIds: Set<String>,
+    ai: AiLabels = AiLabels(),
+): Boolean {
     if (asset.isVideo) return false
+    // The photo AI's answer beats the guesses below (T-099): a WhatsApp photo without camera EXIF
+    // or a street sign caught by OCR stays; a screenshot the AI recognized goes.
+    if (asset.id in ai.analyzed) return asset.id in ai.nonPhotos
     if (asset.id in documentIds || asset.id in nonCameraIds) return true
     return asset.originalFileName?.contains("screenshot", ignoreCase = true) == true
 }
@@ -101,10 +125,11 @@ fun buildTimelineIndex(
     nonCameraIds: Set<String> = emptySet(),
     documentIds: Set<String> = emptySet(),
     bestIds: Set<String> = emptySet(),
+    ai: AiLabels = AiLabels(),
 ): TimelineIndex {
     val assets = ArrayList<TimelineAsset>(remote.size + local.size)
     remote.forEach { a ->
-        if (hideNonPhotos && isHiddenNonPhoto(a, nonCameraIds, documentIds)) return@forEach
+        if (hideNonPhotos && isHiddenNonPhoto(a, nonCameraIds, documentIds, ai)) return@forEach
         val taken = a.localDateTime ?: return@forEach
         assets += TimelineAsset(
             id = a.id,

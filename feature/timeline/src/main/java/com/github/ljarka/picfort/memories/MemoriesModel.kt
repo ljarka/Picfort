@@ -59,6 +59,13 @@ private fun yearsAgo(years: Int): String = when {
     else -> "$years years ago"
 }
 
+/** Memories without the [sensitive] photos (T-098); a memory left with no photos is dropped later. */
+fun withoutSensitive(memories: List<MemoryDto>, sensitive: Set<String>): List<MemoryDto> = if (sensitive.isEmpty()) {
+    memories
+} else {
+    memories.map { m -> m.copy(assets = m.assets.filterNot { it.id in sensitive }) }
+}
+
 /**
  * Immich memories into the screen's sections, newest day first: "Today" (the most recent year
  * first), then "Saved", then "Earlier". Memories without photos are left out. [locale] formats

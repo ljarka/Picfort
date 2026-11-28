@@ -223,6 +223,10 @@ Small things the family asked for while using the app.
 | [T-095](tasks/T-095-server-dashboard.md) | Server dashboard: `/dashboard` page (health, version, photo AI coverage, stores, recent problems) | `done` |
 | [T-096](tasks/T-096-memories-screen.md) | Memories screen from Immich, opened by a "Memories" button on the Wall's frame card | `done` |
 | [T-097](tasks/T-097-photo-details-tags.md) | Photo details: Immich tags as chips on top | `done` |
+| [T-098](tasks/T-098-memories-hide-sensitive.md) | Memories never show photos the AI marked sensitive (`/photo-insights/labels`, Room `ai_labels`) | `in-progress` |
+| [T-099](tasks/T-099-ai-labels-beat-guesses.md) | "Hide screenshots & documents": the AI's category beats the EXIF/OCR guesses (timeline, frame) | `in-progress` |
+| [T-100](tasks/T-100-tag-opens-search.md) | Tapping a tag in Details opens Search filtered by it | `in-progress` |
+| [T-101](tasks/T-101-device-check-and-fast-scroll.md) | Maestro check of Best/tags/search; fast scroll fixes (tab bar, dead zone, haptics) | `in-progress` |
 | [T-098](tasks/T-098-suggested-albums.md) | Suggested albums from location/date clusters & Ollama naming on Albums screen | `done` |
 
 ---

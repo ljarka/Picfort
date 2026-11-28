@@ -27,4 +27,14 @@ internal val MIGRATION_24_25 = object : Migration(24, 25) {
     }
 }
 
-internal val IMAGES_DATABASE_MIGRATIONS = arrayOf(MIGRATION_23_24, MIGRATION_24_25)
+internal val MIGRATION_25_26 = object : Migration(25, 26) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        // T-098/T-099: the photo AI's labels, filled by the next refresh.
+        db.execSQL(
+            "CREATE TABLE IF NOT EXISTS `ai_labels` (`assetId` TEXT NOT NULL, `category` TEXT NOT NULL, " +
+                "`sensitive` INTEGER NOT NULL, PRIMARY KEY(`assetId`))",
+        )
+    }
+}
+
+internal val IMAGES_DATABASE_MIGRATIONS = arrayOf(MIGRATION_23_24, MIGRATION_24_25, MIGRATION_25_26)

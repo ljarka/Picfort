@@ -38,6 +38,12 @@ data class CleanupCandidateDto(
     @SerialName("analyzed_at") val analyzedAt: String = "",
 )
 
+/** One analyzed asset from `/photo-insights/labels`: `[id, category, sensitive 0/1]` (T-098). */
+@Serializable
+private data class LabelsResponse(val items: List<kotlinx.serialization.json.JsonArray> = emptyList())
+
+data class AiLabel(val assetId: String, val category: String, val sensitive: Boolean)
+
 @Serializable
 private data class CleanupResponse(val items: List<CleanupCandidateDto> = emptyList())
 
@@ -75,6 +81,23 @@ class PhotoInsightsClient @Inject constructor(private val server: PicfortServerC
             }
             json.decodeFromString<PhotoInsightsStatus>(reply.body)
         }.getOrNull()
+    }
+
+    /** Every asset the server's photo AI analyzed (T-098, T-099); throws when unavailable. */
+    suspend fun labels(): List<AiLabel> {
+        val url = server.base().newBuilder()
+            .addPathSegment("photo-insights")
+            .addPathSegment("labels")
+            .build()
+        val reply = server.execute(Request.Builder().url(url).get().build()) {
+            PicfortServerException.Other("Photo insights not available on this server")
+        }
+        return json.decodeFromString<LabelsResponse>(reply.body).items.mapNotNull { row ->
+            val id = (row.getOrNull(0) as? kotlinx.serialization.json.JsonPrimitive)?.content ?: return@mapNotNull null
+            val category = (row.getOrNull(1) as? kotlinx.serialization.json.JsonPrimitive)?.content ?: "photo"
+            val sensitive = (row.getOrNull(2) as? kotlinx.serialization.json.JsonPrimitive)?.content == "1"
+            AiLabel(id, category, sensitive)
+        }
     }
 
     suspend fun cleanup(filter: CleanupFilter = CleanupFilter.All, limit: Int = 100): List<CleanupCandidateDto> {

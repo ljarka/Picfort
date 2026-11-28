@@ -304,5 +304,62 @@ class PhotoAiWorkerAndStoreTest(unittest.TestCase):
         self.assertEqual("today", picker.next(s, date(2026, 11, 28)))
 
 
+class AiLabelsBeatGuessesTest(unittest.TestCase):
+    """T-099: the AI's category wins over the no-EXIF and OCR guesses; unanalyzed photos keep the guesses."""
+
+    def setUp(self):
+        self.tmp = tempfile.TemporaryDirectory()
+        self.store = PhotoAiStore(os.path.join(self.tmp.name, "photo_ai.db"))
+
+    def tearDown(self):
+        self.tmp.cleanup()
+
+    def test_labels_and_analyzed_photos(self):
+        self.store.save("p", "m", {"category": "photo"})
+        self.store.save("k", "m", {"category": "kids_art"})
+        self.store.save("s", "m", {"category": "screenshot", "is_sensitive": True})
+        self.assertEqual({("p", "photo", False), ("k", "kids_art", False), ("s", "screenshot", True)},
+                         set(self.store.labels()))
+        self.assertEqual({"p", "k"}, self.store.analyzed_photo_ids())
+
+    def test_frame_keeps_ai_photos_the_guesses_would_drop(self):
+        from datetime import date
+        from helpers import FakeImmich
+        from slideshow import Picker, SlideshowSettings
+
+        # whatsapp: no camera EXIF, but the AI saw a photo; sign: OCR hit, AI saw a photo;
+        # shot: no EXIF and not analyzed -> still hidden; doc: OCR hit, not analyzed -> still hidden.
+        self.store.save("whatsapp", "m", {"category": "photo"})
+        self.store.save("sign", "m", {"category": "photo"})
+        immich = FakeImmich(library=["whatsapp", "sign", "shot", "doc"], non_photos={"whatsapp", "shot"},
+                            documents={"sign", "doc"},
+                            by_day={"2025-11-28": ["whatsapp", "sign", "shot", "doc"]})
+        picker = Picker(immich, photo_ai=self.store)
+        today = date(2026, 11, 28)
+        for mode in ("random", "memories"):
+            s = SlideshowSettings(mode=mode, filter_photos=True)
+            self.assertEqual({"whatsapp", "sign"}, {picker.next(s, today) for _ in range(30)}, mode)
+
+    def test_labels_endpoint(self):
+        import frame
+        from app import FrameController, create_app
+        from auth import Authenticator, User
+        from helpers import FakeImmich
+        from slideshow import Picker, SettingsStore, Slideshow
+
+        cfg = frame.Config(immich_url="http://immich", immich_api_key="k",
+                           preview_path=os.path.join(self.tmp.name, "p.png"))
+        controller = FrameController(cfg, min_interval=0, display=lambda _: None, prepare=lambda a: a)
+        slideshow = Slideshow(SettingsStore(os.path.join(self.tmp.name, "s.json")), Picker(FakeImmich()),
+                              controller.try_show)
+        auth = Authenticator(lambda token: User("u1", "Mama") if token == "t" else None)
+        client = create_app(controller, slideshow, FakeImmich(), auth=auth, photo_ai=self.store).test_client()
+        self.assertEqual(401, client.get("/photo-insights/labels").status_code)  # family feature: Immich token
+        client.environ_base["HTTP_AUTHORIZATION"] = "Bearer t"
+        self.store.save("p", "m", {"category": "photo", "is_sensitive": True})
+        body = client.get("/photo-insights/labels").get_json()
+        self.assertEqual({"items": [["p", "photo", 1]], "count": 1}, body)
+
+
 if __name__ == "__main__":
     unittest.main()

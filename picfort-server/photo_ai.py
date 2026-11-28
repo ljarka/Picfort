@@ -114,6 +114,9 @@ def cluster_album_candidates(
     return clusters
 
 CATEGORIES = ("photo", "screenshot", "document", "receipt", "meme", "accidental", "kids_art")
+# Categories that are camera photos for the "hide screenshots & documents" filters (T-099);
+# the others (screenshot, document, receipt, meme) are what those filters hide.
+AI_PHOTO_CATEGORIES = ("photo", "accidental", "kids_art")
 ISSUES = ("blurry", "dark", "overexposed", "closed_eyes", "cut_off", "cluttered", "accidental")
 
 CLEANUP_TAGS = (
@@ -531,6 +534,20 @@ class PhotoAiStore(SqliteStore):
             "failed_retrying": failures["retrying"] or 0,
             "scan_page": self.scan_page(),
         }
+
+    def labels(self) -> list[tuple[str, str, bool]]:
+        """(asset_id, category, is_sensitive) for every analyzed asset (T-098, T-099)."""
+        with closing(self.connect()) as conn:
+            rows = conn.execute("SELECT asset_id, category, is_sensitive FROM photo_insights").fetchall()
+        return [(r["asset_id"], r["category"], bool(r["is_sensitive"])) for r in rows]
+
+    def analyzed_photo_ids(self) -> set[str]:
+        """Assets the AI saw as real photos: they pass the frame's screenshot/document guesses (T-099)."""
+        with closing(self.connect()) as conn:
+            rows = conn.execute(
+                "SELECT asset_id FROM photo_insights WHERE category IN (?, ?, ?)", AI_PHOTO_CATEGORIES
+            ).fetchall()
+        return {r["asset_id"] for r in rows}
 
     def sensitive_ids(self) -> set[str]:
         """Assets with private data or intimate moments: never shown on the frame, in any mode."""
