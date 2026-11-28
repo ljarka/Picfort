@@ -118,6 +118,7 @@ class Picker:
     """Chooses the next photo, avoiding recent repeats."""
 
     immich: object
+    photo_ai: object = None
     history: deque = field(default_factory=lambda: deque(maxlen=100))
     _memories: tuple = (None, None, [])  # (date, filter_photos, ids) cache for the day
     _documents: tuple = (None, frozenset())  # (date, ids) OCR document cache for the day
@@ -147,8 +148,13 @@ class Picker:
     def _filter_docs(self, candidates: list[str], s: SlideshowSettings, today: date) -> list[str]:
         if not s.filter_photos or not candidates:
             return candidates
-        docs = self._document_ids(today)
-        return [c for c in candidates if c not in docs] if docs else candidates
+        excluded = set(self._document_ids(today))
+        if self.photo_ai is not None:
+            try:
+                excluded.update(self.photo_ai.slideshow_excluded_ids())
+            except Exception as e:
+                log.warning("Photo AI exclusion lookup failed: %s", e)
+        return [c for c in candidates if c not in excluded] if excluded else candidates
 
     def _document_ids(self, today: date) -> frozenset[str]:
         cached_day, ids = self._documents

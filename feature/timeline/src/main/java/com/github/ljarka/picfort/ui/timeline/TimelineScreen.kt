@@ -15,6 +15,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -35,13 +36,17 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.AssistChip
+import androidx.compose.material3.AssistChipDefaults
 import androidx.compose.material3.BottomSheetScaffold
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
@@ -133,12 +138,15 @@ fun TimelineScreen(
     onOpenFamily: (() -> Unit)? = null,
     /** Opened on a day (a birthday's year, T-056): scrolled there once, when the timeline is laid out. */
     scrollToDate: LocalDate? = null,
+    /** Opens the AI Clean up screen when the server has cleanup candidates (T-089); null without server. */
+    onCleanupClick: (() -> Unit)? = null,
 ) {
     Box(modifier = modifier.fillMaxSize()) {
         val viewModel: TimelineViewModel = hiltViewModel()
         val state by viewModel.state.collectAsStateWithLifecycle()
         val syncLines by viewModel.syncLines.collectAsStateWithLifecycle()
         val hideNonPhotos by viewModel.hideNonPhotos.collectAsStateWithLifecycle()
+        val cleanupCount by viewModel.cleanupCount.collectAsStateWithLifecycle()
         // Back from the background (another app, the Immich web UI…): sync again.
         LifecycleEventEffect(Lifecycle.Event.ON_START) { viewModel.onForeground() }
         val listState = rememberLazyListState()
@@ -180,8 +188,9 @@ fun TimelineScreen(
                 Row(
                     Modifier
                         .fillMaxWidth()
+                        .horizontalScroll(rememberScrollState())
                         .padding(horizontal = 12.dp, vertical = 4.dp),
-                    horizontalArrangement = Arrangement.Start,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
                 ) {
                     FilterChip(
                         selected = hideNonPhotos,
@@ -199,6 +208,19 @@ fun TimelineScreen(
                             null
                         },
                     )
+                    if (cleanupCount > 0 && onCleanupClick != null) {
+                        AssistChip(
+                            onClick = onCleanupClick,
+                            label = { Text("Clean up ($cleanupCount)") },
+                            leadingIcon = {
+                                Icon(
+                                    imageVector = Icons.Default.Delete,
+                                    contentDescription = null,
+                                    modifier = Modifier.size(AssistChipDefaults.IconSize),
+                                )
+                            },
+                        )
+                    }
                 }
             }
         }

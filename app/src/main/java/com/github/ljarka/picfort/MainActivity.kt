@@ -34,6 +34,7 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.navigation
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.toRoute
+import com.github.ljarka.picfort.cleanup.CleanupScreen
 import com.github.ljarka.picfort.collections.AlbumScreen
 import com.github.ljarka.picfort.collections.AlbumsScreen
 import com.github.ljarka.picfort.collections.GridAsset
@@ -357,6 +358,11 @@ class MainActivity : ComponentActivity() {
                                                     scrollToDate = entry.toRoute<Screen.Timeline>().date?.let(
                                                         LocalDate::parse,
                                                     ),
+                                                    onCleanupClick = if (picfortServer.configured) {
+                                                        { navController.navigate(Screen.Cleanup) }
+                                                    } else {
+                                                        null
+                                                    },
                                                 )
                                             }
                                         }
@@ -367,6 +373,12 @@ class MainActivity : ComponentActivity() {
                                         ) -> Unit = { asset, index, source ->
                                             navController.navigate(
                                                 ImageDetailsRoute(asset.id, AssetType.REMOTE, index, source),
+                                            )
+                                        }
+                                        composable<Screen.Cleanup> {
+                                            CleanupScreen(
+                                                onBack = { navController.popBackStack() },
+                                                onAssetClick = openFromCollection,
                                             )
                                         }
                                         composable<Screen.Albums> {

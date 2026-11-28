@@ -29,6 +29,10 @@ sealed interface Screen {
     @Serializable
     object Search : Screen
 
+    /** AI-suggested photo cleanup screen (ADR 0019, T-089). */
+    @Serializable
+    object Cleanup : Screen
+
     @Serializable
     object FamilyWall : Screen
 

@@ -91,6 +91,7 @@ from auth import Authenticator, AuthError, AuthUnavailable, immich_lookup
 from events import DEFAULT_LIMIT as EVENTS_DEFAULT_LIMIT, EventStore
 from family import FamilyStore
 from immich import IMMICH_CHECK_LOG, IMMICH_OK, ImmichClient
+from photo_ai import ImmichTagger, OllamaAnalyzer, PhotoAiConfig, PhotoAiStore, PhotoAiWorker
 from shopping import ShoppingStore
 from school import SchoolStore
 from slideshow import INTERVALS, MODES, Picker, SettingsStore, Slideshow, SlideshowSettings
@@ -267,6 +268,8 @@ def create_app(controller: FrameController, slideshow: Slideshow, immich: Immich
                wall: WallStore = None, auth: Authenticator = None, api_key: str = "",
                shopping: ShoppingStore = None, family: FamilyStore = None,
                events: EventStore = None, school: SchoolStore = None,
+               photo_ai: PhotoAiStore = None, photo_ai_worker: PhotoAiWorker = None,
+               photo_ai_tagger: ImmichTagger = None,
                frame_fetch=None, clock=time.monotonic) -> Flask:
     app = Flask(__name__)
     if api_key:
@@ -385,6 +388,8 @@ def create_app(controller: FrameController, slideshow: Slideshow, immich: Immich
         register_events(app, events)
     if school is not None:
         register_school(app, school)
+    if photo_ai is not None:
+        register_photo_insights(app, photo_ai, photo_ai_worker, photo_ai_tagger)
     if family is not None and events is not None:
         family.events = events
         events.family = family
@@ -448,7 +453,10 @@ def require_api_key(app: Flask, api_key: str, open_paths=frozenset(), clock=time
 
 # Family features: every call carries the caller's Immich token (ADR 0006, 0008). The frame
 # endpoints stay open on the home network (ADR 0004).
-AUTH_PREFIXES = ("/wall", "/lists", "/receipts", "/spending", "/wishlist", "/events", "/school", "/family")
+AUTH_PREFIXES = (
+    "/wall", "/lists", "/receipts", "/spending", "/wishlist",
+    "/events", "/school", "/family", "/photo-insights",
+)
 
 
 def needs_token(path: str) -> bool:
@@ -898,6 +906,49 @@ def register_wall(app: Flask, wall: WallStore):
         return _send_private_photo(wall.photo_path(filename), filename)
 
 
+def register_photo_insights(app: Flask, store: PhotoAiStore, worker: PhotoAiWorker = None,
+                            tagger: ImmichTagger = None):
+    @app.route("/photo-insights/status", methods=["GET"])
+    def photo_insights_status():
+        stats = store.stats()
+        return jsonify({
+            "enabled": bool(worker and worker.config.enabled),
+            "model": worker.config.ollama_model if worker else "",
+            "running": bool(worker and worker.running),
+            "last_error": worker.last_error if worker else None,
+            **stats,
+        })
+
+    @app.route("/photo-insights/cleanup", methods=["GET"])
+    def photo_insights_cleanup():
+        kind = request.args.get("filter", "all")
+        if kind not in ("all", "low_quality", "documents"):
+            return error("filter must be all, low_quality or documents", 400)
+        try:
+            limit = int(request.args.get("limit", "100"))
+        except ValueError:
+            return error("limit must be an integer", 400)
+        return jsonify(items=store.list_cleanup(kind=kind, limit=limit))
+
+    @app.route("/photo-insights/<asset_id>/dismiss", methods=["POST"])
+    def photo_insights_dismiss(asset_id):
+        if not UUID_RE.match(asset_id):
+            return error("asset_id must be a UUID", 400)
+        dismissed = store.dismiss(asset_id)
+        if not dismissed:
+            return error("Photo insight not found", 404)
+        if tagger is not None:
+            tagger.remove_cleanup_tags(asset_id, dismissed.get("tags_applied"))
+        return jsonify(status="dismissed", asset_id=asset_id)
+
+    @app.route("/photo-insights/<asset_id>", methods=["DELETE"])
+    def photo_insights_delete(asset_id):
+        if not UUID_RE.match(asset_id):
+            return error("asset_id must be a UUID", 400)
+        store.delete(asset_id)
+        return "", 204
+
+
 log = logging.getLogger("server")
 
 if __name__ == "__main__":
@@ -909,10 +960,21 @@ if __name__ == "__main__":
     immich_client = ImmichClient(config.immich_url, config.immich_api_key)
     immich_state = immich_client.check()
     (log.info if immich_state == IMMICH_OK else log.error)(IMMICH_CHECK_LOG[immich_state], config.immich_url)
+    photo_ai_config = PhotoAiConfig.from_env()
+    photo_ai_store = PhotoAiStore(os.environ.get("PHOTO_AI_DB_PATH", "photo_ai.db"))
+    photo_ai_tagger = ImmichTagger(immich_client, enabled=photo_ai_config.tag_immich)
+    photo_ai_worker = PhotoAiWorker(
+        photo_ai_config,
+        photo_ai_store,
+        immich_client,
+        OllamaAnalyzer(photo_ai_config.ollama_url, photo_ai_config.ollama_model),
+        photo_ai_tagger,
+    )
+    photo_ai_worker.start()
     frame_controller = FrameController(config, float(os.environ.get("FRAME_MIN_INTERVAL", "30")))
     show_slideshow = Slideshow(
         SettingsStore(os.environ.get("FRAME_STATE_PATH", "slideshow.json")),
-        Picker(immich_client),
+        Picker(immich_client, photo_ai=photo_ai_store),
         show=frame_controller.try_show,
     )
     show_slideshow.start()
@@ -934,7 +996,8 @@ if __name__ == "__main__":
     if not api_key:
         log.info("PICFORT_API_KEY is not set: anyone who can reach this server can use it.")
     app = create_app(frame_controller, show_slideshow, immich_client, family_wall, wall_auth, api_key,
-                     shopping_store, family_store, event_store, school_store)
+                     shopping_store, family_store, event_store, school_store,
+                     photo_ai_store, photo_ai_worker, photo_ai_tagger)
     port = int(os.environ.get("PORT", "5000"))
     log.info("Listening on port %s", port)
     # waitress, not Flask's development server: made for long-running use, and it handles

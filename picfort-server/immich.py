@@ -80,6 +80,51 @@ class ImmichClient:
         r.raise_for_status()
         return [{"id": a["id"], "name": a.get("albumName", "")} for a in r.json()]
 
+    def recent_images(self, page: int = 1, size: int = 100) -> tuple[list[dict], bool]:
+        """Newest images from Immich metadata search, with whether another page exists (T-089)."""
+        body = {"type": "IMAGE", "page": page, "size": size, "order": "desc"}
+        assets = self._post("/search/metadata", body).get("assets", {})
+        return assets.get("items", []), bool(assets.get("nextPage"))
+
+    def preview_bytes(self, asset_id: str) -> bytes:
+        """Preview JPEG bytes for an asset (smaller than original, ideal for Vision LLM, T-089)."""
+        r = requests.get(
+            f"{self.base_url}/api/assets/{asset_id}/thumbnail",
+            params={"size": "preview"},
+            headers=self.headers,
+            timeout=self.timeout,
+        )
+        r.raise_for_status()
+        return r.content
+
+    def upsert_tags(self, names: list[str]) -> dict[str, str]:
+        """Create/fetch hierarchical tags in Immich; returns {tag_value: tag_id} (T-089)."""
+        r = requests.put(f"{self.base_url}/api/tags", json={"tags": names}, headers=self.headers, timeout=self.timeout)
+        r.raise_for_status()
+        return {t["value"]: t["id"] for t in r.json() if "value" in t and "id" in t}
+
+    def tag_assets(self, tag_ids: list[str], asset_ids: list[str]) -> None:
+        """Assign tags to assets in Immich (requires tag.asset permission, T-089)."""
+        if not tag_ids or not asset_ids:
+            return
+        r = requests.put(
+            f"{self.base_url}/api/tags/assets",
+            json={"tagIds": tag_ids, "assetIds": asset_ids},
+            headers=self.headers,
+            timeout=self.timeout,
+        )
+        r.raise_for_status()
+
+    def untag_asset(self, tag_id: str, asset_id: str) -> None:
+        """Remove a tag from an asset in Immich (T-089)."""
+        r = requests.delete(
+            f"{self.base_url}/api/tags/{tag_id}/assets",
+            json={"ids": [asset_id]},
+            headers=self.headers,
+            timeout=self.timeout,
+        )
+        r.raise_for_status()
+
     def check(self, timeout: float = 3.0) -> str:
         """Whether IMMICH_URL is Immich and accepts IMMICH_API_KEY; one of the IMMICH_* values."""
         try:
