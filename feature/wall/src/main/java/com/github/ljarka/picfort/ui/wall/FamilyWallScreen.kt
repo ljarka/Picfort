@@ -114,6 +114,7 @@ fun FamilyWallScreen(
     onOpenFamily: () -> Unit = {},
     onOpenEvent: (Long) -> Unit = {},
     onOpenEvents: () -> Unit = {},
+    onOpenFrame: (() -> Unit)? = null,
     onSetUpServer: () -> Unit = onSettingsClick,
     /** Extra top bar icons from `:app`, before Settings; this screen doesn't know what they are. */
     topBarActions: @Composable RowScope.() -> Unit = {},
@@ -133,6 +134,7 @@ fun FamilyWallScreen(
         onOpenFamily = onOpenFamily,
         onOpenEvent = onOpenEvent,
         onOpenEvents = onOpenEvents,
+        onOpenFrame = onOpenFrame,
         onPost = viewModel::post,
         onDelete = viewModel::delete,
         onTogglePin = viewModel::togglePin,
@@ -154,6 +156,7 @@ fun FamilyWallContent(
     onOpenFamily: () -> Unit = {},
     onOpenEvent: (Long) -> Unit = {},
     onOpenEvents: () -> Unit = {},
+    onOpenFrame: (() -> Unit)? = null,
     onPost: (String, Uri?) -> Unit = { _, _ -> },
     onDelete: (WallPost) -> Unit = {},
     onTogglePin: (WallPost) -> Unit = {},
@@ -290,6 +293,7 @@ fun FamilyWallContent(
                             now = now,
                             onOpenEvent = onOpenEvent,
                             onOpenEvents = onOpenEvents,
+                            onOpenFrame = onOpenFrame,
                             onMessageClick = { openMessageId = it.id },
                             onPhotoClick = { openPhotoId = it.id },
                             onDelete = { confirmDelete = it },
@@ -308,6 +312,7 @@ private fun WallGrid(
     now: Long,
     onOpenEvent: (Long) -> Unit,
     onOpenEvents: () -> Unit,
+    onOpenFrame: (() -> Unit)?,
     onMessageClick: (WallPost) -> Unit,
     onPhotoClick: (WallPost) -> Unit,
     onDelete: (WallPost) -> Unit,
@@ -331,6 +336,16 @@ private fun WallGrid(
                     onMoreClick = onOpenEvents,
                     modifier = Modifier.padding(bottom = 12.dp),
                     memberNames = remember(state.members) { state.members.associate { it.id to it.name } },
+                )
+            }
+        }
+        val framePhotoUrl = state.framePhotoUrl
+        if (framePhotoUrl != null && state.selectedMemberId == null) {
+            item(key = "frame-photo", span = StaggeredGridItemSpan.FullLine) {
+                FramePhotoCard(
+                    photoUrl = framePhotoUrl,
+                    onClick = onOpenFrame,
+                    modifier = Modifier.padding(bottom = 12.dp),
                 )
             }
         }
@@ -382,6 +397,42 @@ private fun WallGrid(
                 onTogglePin = { onTogglePin(post) },
             )
         }
+    }
+}
+
+/** Full-colour photo currently shown on `/frame` (T-091); tapping opens the Frame screen. */
+@Composable
+private fun FramePhotoCard(photoUrl: String, onClick: (() -> Unit)?, modifier: Modifier = Modifier) {
+    val shape = RoundedCornerShape(16.dp)
+    Box(
+        modifier = modifier
+            .fillMaxWidth()
+            .height(HERO_HEIGHT)
+            .clip(shape)
+            .background(MaterialTheme.colorScheme.surfaceContainerLow)
+            .then(if (onClick != null) Modifier.clickable(onClick = onClick) else Modifier),
+    ) {
+        AsyncImage(
+            model = photoUrl,
+            contentDescription = "On the frame",
+            contentScale = ContentScale.Crop,
+            modifier = Modifier.fillMaxSize(),
+        )
+        Box(
+            Modifier
+                .align(Alignment.BottomCenter)
+                .fillMaxWidth()
+                .height(64.dp)
+                .background(Brush.verticalGradient(listOf(Color.Transparent, Color.Black.copy(alpha = 0.55f)))),
+        )
+        Text(
+            text = "On the frame",
+            style = MaterialTheme.typography.labelMedium,
+            color = Color.White,
+            modifier = Modifier
+                .align(Alignment.BottomStart)
+                .padding(horizontal = 12.dp, vertical = 10.dp),
+        )
     }
 }
 

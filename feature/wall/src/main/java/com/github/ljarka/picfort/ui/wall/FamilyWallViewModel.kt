@@ -40,6 +40,8 @@ data class FamilyWallUiState(
     val message: String? = null,
     /** Today panel (T-027); null when there is no server address. */
     val panel: TodayPanelState? = null,
+    /** Current full-colour photo shown on `/frame` (T-091); null when none or unavailable. */
+    val framePhotoUrl: String? = null,
 ) {
     private val visible: List<WallPost>
         get() = posts.filter { it.authorId !in hiddenAuthorIds }
@@ -113,14 +115,22 @@ class FamilyWallViewModel @Inject constructor(
     private suspend fun refresh() {
         if (!repository.isConfigured) {
             _state.update {
-                it.copy(configured = false, isLoading = false, posts = emptyList(), loadError = null, panel = null)
+                it.copy(
+                    configured = false,
+                    isLoading = false,
+                    posts = emptyList(),
+                    loadError = null,
+                    panel = null,
+                    framePhotoUrl = null,
+                )
             }
             return
         }
         _state.update { it.copy(configured = true, isLoading = it.posts.isEmpty()) }
         updatePanel()
-        // Independent of the posts: a slow or failing /events must not delay or break the wall.
+        // Independent of the posts: a slow or failing /events or /frame/state must not delay the wall.
         viewModelScope.launch { refreshEvents() }
+        viewModelScope.launch { refreshFramePhoto() }
         // Not awaited: on a fresh database (an update that wiped it) the family refresh first syncs
         // the Immich users through the whole timeline, which can take minutes; names and avatars
         // arrive through family.allMembers whenever it's done.
@@ -152,6 +162,11 @@ class FamilyWallViewModel @Inject constructor(
         } catch (_: Exception) {
         }
         updatePanel()
+    }
+
+    private suspend fun refreshFramePhoto() {
+        val url = repository.framePhotoUrl()
+        _state.update { it.copy(framePhotoUrl = url) }
     }
 
     fun select(memberId: String?) {

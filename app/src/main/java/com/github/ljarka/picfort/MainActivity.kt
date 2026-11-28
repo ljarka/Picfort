@@ -239,6 +239,7 @@ class MainActivity : ComponentActivity() {
                                                             restoreState = true
                                                         }
                                                     },
+                                                    onOpenFrame = { navController.navigate(Screen.Frame) },
                                                     topBarActions = {
                                                         SchoolJournalTopBarAction {
                                                             navController.navigate(Screen.SchoolJournal())

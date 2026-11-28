@@ -56,6 +56,9 @@ data class FirstReactionDto(
 @Serializable
 private data class FirstReactionsDto(val items: List<FirstReactionDto> = emptyList())
 
+@Serializable
+private data class FrameStateDto(val version: Int = 0, val shown: Boolean = false)
+
 /** The quick reactions, in the order the server and the app show them (T-084). */
 val WALL_REACTIONS =
     listOf("\u2764\uFE0F", "\uD83D\uDC4D", "\uD83D\uDE02", "\uD83D\uDE2E", "\uD83D\uDE22", "\uD83C\uDF89")
@@ -202,6 +205,28 @@ class WallApi @Inject constructor(
             PicfortServerException.Outdated("wall reactions")
         }.body
         return json.decodeFromString<FirstReactionsDto>(text).items
+    }
+
+    /**
+     * Full-colour URL of what the frame currently shows (`/frame/photo`, T-091), versioned so
+     * Coil reloads whenever the frame switches photo. Null when the browser frame is off or empty.
+     */
+    suspend fun framePhotoUrl(): String? {
+        val base = base()
+        val stateUrl = base.newBuilder().addPathSegment("frame").addPathSegment("state").build()
+        val text = server.execute(Request.Builder().url(stateUrl).build()) {
+            PicfortServerException.Other("Browser frame unavailable")
+        }.body
+        val state = json.decodeFromString<FrameStateDto>(text)
+        if (!state.shown) return null
+        return base.newBuilder()
+            .addPathSegment("frame")
+            .addPathSegment("photo")
+            .addQueryParameter("w", "1080")
+            .addQueryParameter("h", "720")
+            .addQueryParameter("v", state.version.toString())
+            .build()
+            .toString()
     }
 
     private fun base(address: String = settings.frameUrl) = server.base(address)

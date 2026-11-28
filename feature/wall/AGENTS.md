@@ -6,7 +6,7 @@ Family wall vertical slice: posts stream, today panel (events/trips/birthdays), 
 
 | File | Purpose |
 |---|---|
-| `ui/wall/FamilyWallScreen.kt` | UI: `FamilyWallScreen`, `FamilyWallContent`, post cards (reaction line), message dialog & photo viewer (reaction bar), compose sheet |
+| `ui/wall/FamilyWallScreen.kt` | UI: `FamilyWallScreen`, `FamilyWallContent`, `FramePhotoCard` (`/frame/photo`, T-091), post cards (reaction line), message dialog & photo viewer (reaction bar), compose sheet |
 | `ui/wall/WallReactions.kt` | `ReactionBar` (six emojis, counts, mine highlighted, who reacted), `ReactionSummary` (T-084) |
 | `ui/wall/WallReactionNotifications.kt` | `WallReactionNotifyWorker` (15 min) + `WallReactionNotifyScheduler`, cursor per Immich user, "Tata reacted ❤️" (ADR 0018) |
 | `ui/wall/TodayPanel.kt` | Today overview panel at the top of the wall (events, ongoing trips, next big event) |

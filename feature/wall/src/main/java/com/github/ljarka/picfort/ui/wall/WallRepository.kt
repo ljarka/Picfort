@@ -27,6 +27,9 @@ class WallRepository @Inject constructor(
 
     suspend fun posts(): List<WallPost> = api.posts()
 
+    /** Full-colour photo currently shown on the frame (`/frame/photo`), or null (T-091). */
+    suspend fun framePhotoUrl(): String? = runCatching { api.framePhotoUrl() }.getOrNull()
+
     /** [photo] is compressed before upload (longest edge 1920 px, JPEG 85%). */
     suspend fun create(text: String?, photo: Uri?): WallPost =
         api.create(text?.trim()?.takeIf { it.isNotEmpty() }, photo?.let { compress(it) })
