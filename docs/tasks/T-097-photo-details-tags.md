@@ -1,6 +1,6 @@
 # T-097 — Photo details: Immich tags on top
 
-**Status:** in-progress  
+**Status:** done (`719dfe1`)  
 **Component:** Android (`:feature:timeline`)  
 **Depends on:** T-090 (tag labels), T-089 (`ai/*` tags)
 
