@@ -199,10 +199,22 @@
       ["Failed", `${num(a.failed_skipped)} skipped` + (a.failed_retrying ? ` · ${num(a.failed_retrying)} retrying` : "")],
       ["Immich tags", a.tag_immich ? "on" : "off"],
       a.last_error && ["Last error", esc(a.last_error)],
-    ]) + (a.libraries && a.libraries.length > 1 ? `<p class="muted" style="margin:10px 0 2px">Libraries</p>` + rows(
-      a.libraries.map((l) => [l.name, num(l.analyzed) + " analyzed" + (l.last_error ? ` · <span style="color:var(--err)">${esc(l.last_error)}</span>` : "")]),
-    ) : "") + (a.coverage != null ? `<div class="bar"><div style="width:${Math.min(100, a.coverage * 100).toFixed(1)}%"></div></div>` : "") +
+    ]) + librariesTable(a.libraries) + (a.coverage != null ? `<div class="bar"><div style="width:${Math.min(100, a.coverage * 100).toFixed(1)}%"></div></div>` : "") +
       (cats ? `<div class="chips">${cats}</div>` : ""));
+  }
+
+  // T-104: whose libraries the photo AI covers. Each member's coverage is of their own library.
+  function librariesTable(libs) {
+    if (!libs || !libs.length) return "";
+    const pct = (c) => c == null ? "–" : (c * 100).toFixed(c < 0.1 ? 1 : 0) + "%";
+    const rowsHtml = libs.map((l) => `<tr><td>${dot(l.last_error ? "warn" : "ok")} ${esc(l.name)}` +
+      `<div class="muted">${esc(l.via)}</div></td>` +
+      `<td class="num">${num(l.analyzed)}${l.partners ? `<div class="muted">+${num(l.partners)} partners'</div>` : ""}</td>` +
+      `<td class="num">${l.images != null ? num(l.images) : "–"}</td><td class="num">${pct(l.coverage)}</td>` +
+      `<td>${l.last_error ? `<span style="color:var(--err)">${esc(l.last_error)}</span>` : `<span class="muted">ok</span>`}</td></tr>`).join("");
+    return `<p class="muted" style="margin:12px 0 4px">Libraries (each member turns it on in the app)</p>` +
+      `<div class="table-wrap"><table><tr><th>Whose</th><th class="num">Analyzed</th><th class="num">Photos</th>` +
+      `<th class="num">Done</th><th>Status</th></tr>${rowsHtml}</table></div>`;
   }
 
   function storesCard(stores, backups) {

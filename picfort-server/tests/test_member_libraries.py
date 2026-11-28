@@ -168,5 +168,26 @@ class MemberLibrariesTest(unittest.TestCase):
         self.assertEqual(["Mom"], [k["user_name"] for k in store.library_keys()])
 
 
+    def test_dashboard_lists_each_library_with_its_own_coverage(self):
+        self.store.set_library_key(MOM, "Mom", "mom-key")
+        self.store.save("d1", "m", {"category": "photo"}, owner_id=DAD)
+        self.store.save("m1", "m", {"category": "photo"}, owner_id=MOM)
+        self.store.save("x1", "m", {"category": "photo"}, owner_id="someone-else")  # a partner without a key
+        cfg = frame.Config(immich_url="http://immich", immich_api_key="k",
+                           preview_path=os.path.join(self.tmp.name, "p.png"))
+        controller = FrameController(cfg, min_interval=0, display=lambda _: None, prepare=lambda a: a)
+        slideshow = Slideshow(SettingsStore(os.path.join(self.tmp.name, "s.json")), Picker(FakeImmich()),
+                              controller.try_show)
+        self.server.check = lambda: "ok"
+        self.server.server_version = lambda: "v3"
+        app = create_app(controller, slideshow, self.server, photo_ai=self.store, photo_ai_worker=self.worker,
+                         data_dir=self.tmp.name)
+        libs = app.test_client().get("/dashboard/data").get_json()["photo_ai"]["libraries"]
+        self.assertEqual(["11111111-1111-1111-1111-111111111111", "Mom"], [lib["name"] for lib in libs])
+        self.assertEqual((1, 1), (libs[0]["analyzed"], libs[0]["partners"]))
+        self.assertEqual((1, 2, 0.5), (libs[1]["analyzed"], libs[1]["images"], libs[1]["coverage"]))
+        self.assertNotIn("mom-key", str(libs))
+
+
 if __name__ == "__main__":
     unittest.main()

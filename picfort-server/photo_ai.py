@@ -1039,15 +1039,21 @@ class PhotoAiWorker:
             libs.append(Library(row["user_id"], cached[0], cached[1], row["user_id"], row["user_name"]))
         return libs
 
-    def server_user_id(self) -> str | None:
-        """Whose library the server's own key is (cached; None if the key can't say: no user.read)."""
+    def server_user(self) -> dict | None:
+        """Whose library the server's own key is, {"id", "name"} (cached; None if the key can't say:
+        it lacks user.read)."""
         if not hasattr(self, "_server_user"):
             try:
-                self._server_user = self.immich.me().get("id") or None
+                me = self.immich.me()
+                self._server_user = me if me.get("id") else None
             except Exception as e:
                 log.info("Can't tell whose library IMMICH_API_KEY is (%s); add user.read to see it", e)
                 self._server_user = None
         return self._server_user
+
+    def server_user_id(self) -> str | None:
+        user = self.server_user()
+        return user["id"] if user else None
 
     def tagger_for_asset(self, asset_id: str) -> ImmichTagger:
         return self._tagger_for(self.store.owners_of([asset_id]).get(asset_id, ""), self.libraries())

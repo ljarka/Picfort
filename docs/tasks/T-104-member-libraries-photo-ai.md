@@ -19,7 +19,9 @@ own Immich, so the Best strip, tag chips and Search tags work for them too.
   `_tag_backlog` tags a member's photos analyzed earlier through a partner's key; rows from before
   learn their owner while scanning (`fill_owners`). Per-library scan cursors. `/photo-insights/labels`
   filtered to the caller and their Immich partners (`immich_partners`, cached 10 min). Dashboard
-  lists libraries (names, counts, last errors).
+  shows a "Libraries" table, always: whose (the server key's owner by name when it has
+  `user.read`), via which key, photos analyzed, the owner's library size and coverage, partners'
+  photos analyzed through the server key, last problem. Names and counts only, never keys.
 - **App:** `CollectionsService.createApiKey/deleteApiKey`; `PhotoInsightsClient.myLibrary/
   addMyLibrary/removeMyLibrary`; `TimelineSettingsViewModel.enableMyLibrary` (creates the key,
   hands it over, deletes it again if the server refuses) and `disableMyLibrary`. States: off

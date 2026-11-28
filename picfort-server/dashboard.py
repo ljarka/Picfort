@@ -63,6 +63,7 @@ class _Cached:
 
     def __init__(self, fn, ttl: float, clock=time.monotonic):
         self.fn, self.ttl, self.clock = fn, ttl, clock
+        self.key = None  # what the cached value was computed for (e.g. a member's API key)
         self.lock = threading.Lock()
         self.value, self.at = None, None
 
@@ -219,23 +220,69 @@ def register_dashboard(app: Flask, *, controller, slideshow, settings_json, immi
         body["coverage"] = round(body.get("analyzed", 0) / images, 4) if images else None
         # Whose libraries are analyzed (T-104): names and counts only, never keys.
         try:
-            counts = photo_ai.owned_counts()
-            members = photo_ai.library_keys()
-            member_ids = {m["user_id"] for m in members}
-            libraries = [{
-                "name": "Server key (IMMICH_API_KEY)",
-                "analyzed": sum(n for owner, n in counts.items() if owner not in member_ids),
-                "last_error": photo_ai_worker.last_error if photo_ai_worker else None,
-            }]
-            libraries += [
-                {"name": m["user_name"] or "Member", "analyzed": counts.get(m["user_id"], 0),
-                 "last_error": m["last_error"] or None}
-                for m in members
-            ]
-            body["libraries"] = libraries
+            body["libraries"] = libraries_section(library)
         except Exception as e:
             body["libraries_error"] = str(e)
         return body
+
+    member_stats: dict[str, _Cached] = {}
+
+    def member_images(row: dict) -> int | None:
+        """A member's own library size, through their own key (cached like Immich's)."""
+        factory = getattr(photo_ai_worker, "client_factory", None)
+        if factory is None:
+            return None
+        cached = member_stats.get(row["user_id"])
+        if cached is None or cached.key != row["api_key"]:
+            cached = _Cached(lambda key=row["api_key"]: factory(key).asset_statistics(), SLOW_TTL, clock)
+            cached.key = row["api_key"]
+            member_stats[row["user_id"]] = cached
+        stats = cached()
+        return stats.get("images") if stats else None
+
+    def libraries_section(server_library: dict | None) -> list[dict]:
+        """One row per analyzed library: whose, how far (own photos / own library), last problem.
+
+        The server's key also sees partners' photos (shared into its owner's timeline); those
+        analyzed through it without their own key show as `partners`.
+        """
+        counts = photo_ai.owned_counts()
+        members = photo_ai.library_keys()
+        member_ids = {m["user_id"] for m in members}
+        server_user = photo_ai_worker.server_user() if photo_ai_worker is not None else None
+        server_id = server_user["id"] if server_user else None
+
+        def coverage(analyzed: int, images: int | None):
+            return round(min(1.0, analyzed / images), 4) if images else None
+
+        own = counts.get(server_id, 0) if server_id else 0
+        # Without user.read the server can't tell its owner: everything not a member's counts as its own.
+        partners = sum(n for o, n in counts.items() if o not in member_ids and o != server_id)
+        if not server_id:
+            own, partners = partners, 0
+        images = (server_library or {}).get("images")
+        rows = [{
+            "name": server_user["name"] if server_user else "Server key (IMMICH_API_KEY)",
+            "via": "server key",
+            "analyzed": own,
+            "partners": partners,
+            "images": images,
+            "coverage": coverage(own, images),
+            "last_error": photo_ai_worker.last_error if photo_ai_worker else None,
+        }]
+        for m in members:
+            n = counts.get(m["user_id"], 0)
+            imgs = member_images(m)
+            rows.append({
+                "name": m["user_name"] or "Member",
+                "via": "own key (app)",
+                "analyzed": n,
+                "partners": 0,
+                "images": imgs,
+                "coverage": coverage(n, imgs),
+                "last_error": m["last_error"] or None,
+            })
+        return rows
 
     @app.route(DASHBOARD_PAGE_PATH + "/data")
     def dashboard_data():
