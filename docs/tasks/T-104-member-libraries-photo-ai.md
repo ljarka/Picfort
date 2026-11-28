@@ -1,6 +1,6 @@
 # T-104 — Photo AI for every family member's own library
 
-**Status:** in-progress  
+**Status:** done (`db4c029`)  
 **Component:** Server (`photo_ai.py`, `app.py`, `auth.py`, `immich.py`, `dashboard`), Android (`:feature:timeline`)  
 **Depends on:** T-089, T-094, T-102; decision: [ADR 0020](../decisions/0020-member-immich-keys-for-photo-ai.md)
 
