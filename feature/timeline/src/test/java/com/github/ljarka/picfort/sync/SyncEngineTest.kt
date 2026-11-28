@@ -265,4 +265,20 @@ class SyncEngineTest {
             api.acks.single(),
         )
     }
+
+    @Test
+    fun `asset exif lines record whether camera make or model is present`() = runBlocking {
+        val recorder = Recorder()
+        val withCamera =
+            """{"type":"AssetExifV1","data":{"assetId":"a1","make":"Google","model":"Pixel 9"},"ack":"AssetExifV1|a1"}"""
+        val screenshot =
+            """{"type":"PartnerAssetExifV1","data":{"assetId":"a2","make":null,"model":null},"ack":"PartnerAssetExifV1|a2"}"""
+        val api = FakeApi(recorder, lines(withCamera, screenshot, COMPLETE))
+        val store = FakeStore(recorder)
+
+        SyncEngine(api, store, json).sync(OWNER)
+
+        val exifs = store.applied.flatten().filterIsInstance<SyncChange.UpsertAssetExif>().map { it.exif }
+        assertEquals(listOf("a1" to true, "a2" to false), exifs.map { it.assetId to it.hasCameraExif })
+    }
 }

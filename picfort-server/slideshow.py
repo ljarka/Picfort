@@ -32,6 +32,8 @@ class SlideshowSettings:
     # Quiet hours (local time, 0-23): no changes from quiet_start until quiet_end. None = off.
     quiet_start: int | None = None
     quiet_end: int | None = None
+    # Skip screenshots and OCR-detected documents in random/memories modes (T-088).
+    filter_photos: bool = True
 
     @staticmethod
     def from_dict(d: dict) -> "SlideshowSettings":
@@ -41,6 +43,7 @@ class SlideshowSettings:
             interval_minutes=int(d.get("interval_minutes", 60)),
             quiet_start=d.get("quiet_start"),
             quiet_end=d.get("quiet_end"),
+            filter_photos=bool(d.get("filter_photos", True)),
         )
         s.validate()
         return s
@@ -116,15 +119,22 @@ class Picker:
 
     immich: object
     history: deque = field(default_factory=lambda: deque(maxlen=100))
-    _memories: tuple = (None, [])  # (date, ids) cache for the day
+    _memories: tuple = (None, None, [])  # (date, filter_photos, ids) cache for the day
+    _documents: tuple = (None, frozenset())  # (date, ids) OCR document cache for the day
 
     def next(self, s: SlideshowSettings, today: date) -> str | None:
         if s.mode == "album":
             candidates = self.immich.random_images(album_id=s.album_id)
         elif s.mode == "memories":
-            candidates = self._on_this_day(today) or self.immich.random_images()
+            candidates = self._filter_docs(self._on_this_day(today, s.filter_photos), s, today)
+            if not candidates:
+                candidates = self._filter_docs(
+                    self.immich.random_images(filter_photos=s.filter_photos), s, today
+                )
         elif s.mode == "random":
-            candidates = self.immich.random_images()
+            candidates = self._filter_docs(
+                self.immich.random_images(filter_photos=s.filter_photos), s, today
+            )
         else:
             return None
         if not candidates:
@@ -134,13 +144,30 @@ class Picker:
         self.history.append(choice)
         return choice
 
-    def _on_this_day(self, today: date) -> list[str]:
-        cached_day, ids = self._memories
+    def _filter_docs(self, candidates: list[str], s: SlideshowSettings, today: date) -> list[str]:
+        if not s.filter_photos or not candidates:
+            return candidates
+        docs = self._document_ids(today)
+        return [c for c in candidates if c not in docs] if docs else candidates
+
+    def _document_ids(self, today: date) -> frozenset[str]:
+        cached_day, ids = self._documents
         if cached_day != today:
+            try:
+                ids = frozenset(self.immich.document_ids())
+            except Exception as e:
+                log.warning("Document OCR lookup failed: %s", e)
+                ids = frozenset()
+            self._documents = (today, ids)
+        return ids
+
+    def _on_this_day(self, today: date, filter_photos: bool) -> list[str]:
+        cached_day, cached_filter, ids = self._memories
+        if cached_day != today or cached_filter != filter_photos:
             ids = []
             for after, before in on_this_day_ranges(today):
-                ids += self.immich.images_taken_between(after, before)
-            self._memories = (today, ids)
+                ids += self.immich.images_taken_between(after, before, filter_photos=filter_photos)
+            self._memories = (today, filter_photos, ids)
         return ids
 
 

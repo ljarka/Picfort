@@ -25,6 +25,7 @@ data class ImageData(
     val height: Int?,
     val isVideo: Boolean = false,
     val durationMs: Long? = null,
+    val bucketName: String? = null,
 )
 
 private val FILES_URI: Uri get() = MediaStore.Files.getContentUri("external")
@@ -60,6 +61,7 @@ class LocalImagesProvider {
         val orientationColumn = cursor.getColumnIndex(ORIENTATION)
         val typeColumn = cursor.getColumnIndex(MediaStore.Files.FileColumns.MEDIA_TYPE)
         val durationColumn = cursor.getColumnIndex(MediaStore.MediaColumns.DURATION)
+        val bucketColumn = cursor.getColumnIndex(BUCKET_DISPLAY_NAME)
         val items = ArrayList<ImageData>(cursor.count)
         while (cursor.moveToNext()) {
             val id = cursor.getLong(idColumn)
@@ -83,6 +85,7 @@ class LocalImagesProvider {
                 } else {
                     null
                 },
+                bucketName = if (bucketColumn != -1) cursor.getString(bucketColumn) else null,
             )
         }
         return items
@@ -93,6 +96,9 @@ class LocalImagesProvider {
 @Suppress("DEPRECATION")
 private const val ORIENTATION = MediaStore.Images.ImageColumns.ORIENTATION
 
+@Suppress("DEPRECATION")
+private const val BUCKET_DISPLAY_NAME = MediaStore.Images.ImageColumns.BUCKET_DISPLAY_NAME
+
 private val PROJECTION: Array<String> = buildList {
     add(MediaStore.MediaColumns._ID)
     add(MediaStore.MediaColumns.DISPLAY_NAME)
@@ -101,5 +107,6 @@ private val PROJECTION: Array<String> = buildList {
     add(MediaStore.MediaColumns.HEIGHT)
     add(ORIENTATION)
     add(MediaStore.Files.FileColumns.MEDIA_TYPE)
+    add(BUCKET_DISPLAY_NAME)
     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) add(MediaStore.MediaColumns.DURATION)
 }.toTypedArray()

@@ -17,12 +17,16 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import retrofit2.HttpException
+
+private const val TIMELINE_PREFS = "timeline_prefs"
+private const val KEY_HIDE_NON_PHOTOS = "hide_non_photos"
 
 private class Merged(val index: TimelineIndex, val onServer: Set<Long>)
 
@@ -46,13 +50,42 @@ class TimelineRepository @Inject constructor(
     private val urlProvider: UrlProvider,
     private val backupDao: BackupDao,
 ) {
+    private val prefs = context.getSharedPreferences(TIMELINE_PREFS, Context.MODE_PRIVATE)
+    private val _hideNonPhotos = MutableStateFlow(prefs.getBoolean(KEY_HIDE_NON_PHOTOS, false))
+
+    /** When true, screenshots, non-camera images and OCR-detected documents are hidden (T-088). */
+    val hideNonPhotos: StateFlow<Boolean> = _hideNonPhotos.asStateFlow()
+
+    fun toggleHideNonPhotos() {
+        val next = !_hideNonPhotos.value
+        _hideNonPhotos.value = next
+        prefs.edit().putBoolean(KEY_HIDE_NON_PHOTOS, next).apply()
+    }
+
     /** Null until the phone's media has been read once. */
     private val local = MutableStateFlow<LocalSnapshot?>(null)
 
-    private val merged: StateFlow<Merged?> = combine(remote.assets(), local.filterNotNull()) { assets, snapshot ->
+    private val merged: StateFlow<Merged?> = combine(
+        remote.assets(),
+        local.filterNotNull(),
+        remote.nonCameraAssetIds(),
+        remote.documentAssetIds(),
+        _hideNonPhotos,
+    ) { assets, snapshot, nonCameraIds, documentIds, hideNonPhotos ->
         val zone = ZoneId.systemDefault()
         val onServer = localIdsOnServer(assets, snapshot.media, snapshot.backupLinks, snapshot.checksums, zone)
-        Merged(buildTimelineIndex(assets, snapshot.media, onServer, zone), onServer)
+        Merged(
+            index = buildTimelineIndex(
+                remote = assets,
+                local = snapshot.media,
+                onServerLocalIds = onServer,
+                zone = zone,
+                hideNonPhotos = hideNonPhotos,
+                nonCameraIds = nonCameraIds,
+                documentIds = documentIds,
+            ),
+            onServer = onServer,
+        )
     }.flowOn(Dispatchers.Default)
         .stateIn(coroutineScope, SharingStarted.Eagerly, null)
 

@@ -46,6 +46,25 @@ class TimelineIndex(val months: List<TimelineMonth>) {
     }
 }
 
+private val NON_PHOTO_BUCKETS = setOf("screenshots", "whatsapp images", "download", "downloads")
+
+/**
+ * True for Immich photos that look like screenshots, saved images without camera EXIF, or
+ * OCR-detected documents (T-088). Videos are never hidden.
+ */
+internal fun isHiddenNonPhoto(asset: RemoteAssetEntity, nonCameraIds: Set<String>, documentIds: Set<String>): Boolean {
+    if (asset.isVideo) return false
+    if (asset.id in documentIds || asset.id in nonCameraIds) return true
+    return asset.originalFileName?.contains("screenshot", ignoreCase = true) == true
+}
+
+/** True for phone-only photos in screenshot/saved folders (T-088). Videos are never hidden. */
+internal fun isHiddenLocalNonPhoto(media: ImageData): Boolean {
+    if (media.isVideo) return false
+    if (media.fileName.contains("screenshot", ignoreCase = true)) return true
+    return media.bucketName?.lowercase() in NON_PHOTO_BUCKETS
+}
+
 /**
  * Merges the synced Immich assets with the phone's media. Phone media already on the server
  * ([onServerLocalIds], see [localIdsOnServer]) is left out, so it shows once, as the Immich copy.
@@ -55,9 +74,13 @@ fun buildTimelineIndex(
     local: List<ImageData>,
     onServerLocalIds: Set<Long>,
     zone: ZoneId,
+    hideNonPhotos: Boolean = false,
+    nonCameraIds: Set<String> = emptySet(),
+    documentIds: Set<String> = emptySet(),
 ): TimelineIndex {
     val assets = ArrayList<TimelineAsset>(remote.size + local.size)
     remote.forEach { a ->
+        if (hideNonPhotos && isHiddenNonPhoto(a, nonCameraIds, documentIds)) return@forEach
         val taken = a.localDateTime ?: return@forEach
         assets += TimelineAsset(
             id = a.id,
@@ -72,6 +95,7 @@ fun buildTimelineIndex(
     }
     local.forEach { m ->
         if (m.id in onServerLocalIds) return@forEach
+        if (hideNonPhotos && isHiddenLocalNonPhoto(m)) return@forEach
         assets += TimelineAsset(
             id = m.id.toString(),
             type = AssetType.LOCAL,

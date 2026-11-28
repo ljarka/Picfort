@@ -85,6 +85,10 @@ data class MetadataSearchRequest(
     val type: String? = null,
 )
 
+/** Document/receipt OCR search (T-088). No defaults: the app's Json skips default values. */
+@Serializable
+data class OcrSearchRequest(val ocr: String, val type: String, val size: Int)
+
 /** Search filter: everything, only photos or only videos (Immich asset type, T-071). */
 enum class MediaFilter(val label: String, val immichType: String?) {
     All("All", null),
@@ -144,4 +148,7 @@ interface CollectionsService {
 
     @POST("/api/search/metadata")
     suspend fun metadataSearch(@Body body: MetadataSearchRequest): SearchResponse
+
+    @POST("/api/search/metadata")
+    suspend fun ocrSearch(@Body body: OcrSearchRequest): SearchResponse
 }

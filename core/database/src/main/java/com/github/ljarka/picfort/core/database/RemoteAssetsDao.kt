@@ -78,4 +78,27 @@ interface RemoteAssetsDao {
 
     @Query("SELECT COUNT(*) FROM remote_assets")
     suspend fun countAll(): Int
+
+    @Upsert
+    suspend fun upsertExifs(exifs: List<RemoteAssetExifEntity>)
+
+    @Query("DELETE FROM remote_asset_exif WHERE assetId IN (:ids)")
+    suspend fun deleteExifs(ids: List<String>)
+
+    @Query("DELETE FROM remote_asset_exif")
+    suspend fun clearExifs()
+
+    /** Asset ids whose synced EXIF has neither camera make nor model (T-088). */
+    @Query("SELECT assetId FROM remote_asset_exif WHERE hasCameraExif = 0")
+    fun nonCameraAssetIdsFlow(): Flow<List<String>>
+
+    @Upsert
+    suspend fun upsertDocuments(docs: List<RemoteDocumentEntity>)
+
+    @Query("DELETE FROM remote_documents")
+    suspend fun clearDocuments()
+
+    /** Asset ids matched by document/receipt OCR queries (T-088). */
+    @Query("SELECT assetId FROM remote_documents")
+    fun documentAssetIdsFlow(): Flow<List<String>>
 }

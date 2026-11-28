@@ -54,3 +54,11 @@ data class SyncStateEntity(
     /** The synced account's Immich user id, from `AuthUserV2`. */
     val userId: String,
 )
+
+/** Whether an Immich asset has camera make/model in EXIF, from `AssetExifV1` (T-088). */
+@Entity(tableName = "remote_asset_exif")
+data class RemoteAssetExifEntity(@PrimaryKey val assetId: String, val hasCameraExif: Boolean)
+
+/** Immich asset ids matched by document/receipt OCR terms (T-088). */
+@Entity(tableName = "remote_documents")
+data class RemoteDocumentEntity(@PrimaryKey val assetId: String)

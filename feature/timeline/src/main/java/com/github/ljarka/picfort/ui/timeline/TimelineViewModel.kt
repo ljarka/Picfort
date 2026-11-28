@@ -66,6 +66,11 @@ class TimelineViewModel @Inject constructor(
     /** Lines applied by a running sync, for progress on a still-empty timeline; null when idle. */
     val syncLines: StateFlow<Int?> = syncEngine.linesApplied
 
+    /** Whether screenshots and OCR-detected documents are hidden on the timeline (T-088). */
+    val hideNonPhotos: StateFlow<Boolean> = timelineRepository.hideNonPhotos
+
+    fun toggleHideNonPhotos() = timelineRepository.toggleHideNonPhotos()
+
     /** Shown on an empty timeline. Read once: logging out leaves this screen. */
     val account = TimelineAccount(accessTokenStore.userEmail, serverUrlStore.serverUrl)
 

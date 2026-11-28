@@ -30,6 +30,7 @@ class DeleteAlbumTest {
         override suspend fun smartSearch(body: SmartSearchRequest) = SearchResponse()
         override suspend fun people(page: Int, size: Int, withHidden: Boolean) = PeopleResponse()
         override suspend fun metadataSearch(body: MetadataSearchRequest) = SearchResponse()
+        override suspend fun ocrSearch(body: OcrSearchRequest) = SearchResponse()
     }
     private val repository = CollectionsRepository({ service }, { error("unused") })
 

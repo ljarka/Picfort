@@ -1,6 +1,7 @@
 package com.github.ljarka.picfort.sync
 
 import com.github.ljarka.picfort.core.database.RemoteAssetEntity
+import com.github.ljarka.picfort.core.database.RemoteAssetExifEntity
 import com.github.ljarka.picfort.core.database.RemoteStackEntity
 import com.github.ljarka.picfort.core.database.UserEntity
 import java.time.Instant
@@ -19,6 +20,8 @@ val TIMELINE_SYNC_TYPES = listOf(
     "PartnersV1",
     "AssetsV2",
     "PartnerAssetsV2",
+    "AssetExifsV1",
+    "PartnerAssetExifsV1",
     "StacksV1",
     "PartnerStacksV1",
 )
@@ -54,6 +57,9 @@ internal data class SyncAssetDto(
 internal data class SyncAssetDeleteDto(val assetId: String)
 
 @Serializable
+internal data class SyncAssetExifDto(val assetId: String, val make: String? = null, val model: String? = null)
+
+@Serializable
 internal data class SyncStackDto(val id: String, val primaryAssetId: String, val ownerId: String)
 
 @Serializable
@@ -87,6 +93,7 @@ internal data class SyncUserDeleteDto(val userId: String)
 sealed interface SyncChange {
     data class UpsertAsset(val asset: RemoteAssetEntity) : SyncChange
     data class DeleteAsset(val id: String) : SyncChange
+    data class UpsertAssetExif(val exif: RemoteAssetExifEntity) : SyncChange
     data class UpsertStack(val stack: RemoteStackEntity) : SyncChange
     data class DeleteStack(val id: String) : SyncChange
     data class UpsertPartner(val sharedById: String, val inTimeline: Boolean) : SyncChange
@@ -109,6 +116,12 @@ fun SyncLine.toChange(json: Json): SyncChange = when (type) {
 
     "AssetDeleteV1", "PartnerAssetDeleteV1" ->
         SyncChange.DeleteAsset(json.decodeFromJsonElement<SyncAssetDeleteDto>(data).assetId)
+
+    "AssetExifV1", "PartnerAssetExifV1", "PartnerAssetExifBackfillV1" ->
+        json.decodeFromJsonElement<SyncAssetExifDto>(data).let {
+            val hasCamera = !it.make.isNullOrBlank() || !it.model.isNullOrBlank()
+            SyncChange.UpsertAssetExif(RemoteAssetExifEntity(it.assetId, hasCamera))
+        }
 
     "StackV1", "PartnerStackV1", "PartnerStackBackfillV1" ->
         json.decodeFromJsonElement<SyncStackDto>(data).let {

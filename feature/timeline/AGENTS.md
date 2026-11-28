@@ -6,14 +6,14 @@ Immich photo timeline, gallery, full-screen viewer, collections, and media sync 
 
 | File | Purpose |
 |---|---|
-| `ui/timeline/TimelineScreen.kt` | UI: `TimelineScreen`, `TimeLineContent`, month groupings, fast scroll; selection sheet padded above the floating tab bar |
+| `ui/timeline/TimelineScreen.kt` | UI: `TimelineScreen`, `TimeLineContent`, month groupings, fast scroll, "Hide screenshots & documents" chip (T-088); selection sheet padded above the floating tab bar |
 | `ui/timeline/TimelineGridRows.kt` | Extracted timeline grid row/tile rendering helpers used by `TimelineScreen` |
 | `ui/timeline/TimelineViewModel.kt` | ViewModel: layout engine, viewports, selection mode, asset actions |
 | `core/ui/src/main/java/com/github/ljarka/picfort/core/ui/layout/JustifiedLayout.kt` | Shared justified row computation (`justify`) used by timeline layout |
 | `ui/timeline/layout/TimelineRows.kt` | Row measurement and tile placement |
 | `ui/timeline/TimelineRepository.kt` | Merged index; `phoneOnServer` + `loadPhoneMediaIfNeeded()` for the backup count in Settings (T-063) |
 | `ui/timeline/LocalDuplicates.kt` | `localIdsOnServer`: phone media already in Immich (backup link, SHA-1, or file name + time taken ± zone offset) is hidden, shown once as the Immich copy |
-| `ui/timeline/SyncTimelineSource.kt` | Local copy of Immich assets kept fresh via sync stream |
+| `ui/timeline/SyncTimelineSource.kt` | Local copy of Immich assets + EXIF (`AssetExifV1`) + daily OCR document ids (T-088) |
 | `ui/image/ImageDetailsScreen.kt` | Full-screen photo/video viewer, shared element transition |
 | `ui/image/ImageDetailsViewModel.kt` | Viewer ViewModel: zoom, EXIF metadata, pushing photo to frame via `FrameSender` |
 | `collections/CollectionsScreens.kt` | Albums list, album view, search screen (text + Immich people, T-057; All/Photos/Videos `MediaFilter`, alone lists all of a type, T-071) |

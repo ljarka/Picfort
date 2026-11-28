@@ -91,4 +91,39 @@ class TimelineIndexTest {
         assertNull(index[index.size])
         assertNull(index[-1])
     }
+
+    @Test
+    fun `hiding non-photos skips screenshots, non-camera images and documents but keeps photos and videos`() {
+        val camPhoto = remote("cam", "2026-10-20T12:00:00Z")
+        val noExifPhoto = remote("no-exif", "2026-10-19T12:00:00Z")
+        val receiptPhoto = remote("receipt", "2026-10-18T12:00:00Z")
+        val screenshotPhoto = remote("shot", "2026-10-17T12:00:00Z").copy(originalFileName = "Screenshot_2026.png")
+        val videoNoExif = remote("vid", "2026-10-16T12:00:00Z").copy(isVideo = true)
+        val localCam = local(1, "2026-10-15T10:00:00Z").copy(bucketName = "Camera")
+        val localShot = local(2, "2026-10-14T10:00:00Z").copy(bucketName = "Screenshots")
+        val localWhatsapp = local(3, "2026-10-13T10:00:00Z").copy(bucketName = "WhatsApp Images")
+        val localVideo = local(4, "2026-10-12T10:00:00Z").copy(isVideo = true, bucketName = "Screenshots")
+
+        val filtered = buildTimelineIndex(
+            remote = listOf(camPhoto, noExifPhoto, receiptPhoto, screenshotPhoto, videoNoExif),
+            local = listOf(localCam, localShot, localWhatsapp, localVideo),
+            onServerLocalIds = emptySet(),
+            zone = warsaw,
+            hideNonPhotos = true,
+            nonCameraIds = setOf("no-exif", "vid"),
+            documentIds = setOf("receipt"),
+        )
+        assertEquals(listOf("cam", "vid", "1", "4"), filtered.months.single().assets.map { it.id })
+
+        val unfiltered = buildTimelineIndex(
+            remote = listOf(camPhoto, noExifPhoto, receiptPhoto, screenshotPhoto, videoNoExif),
+            local = listOf(localCam, localShot, localWhatsapp, localVideo),
+            onServerLocalIds = emptySet(),
+            zone = warsaw,
+            hideNonPhotos = false,
+            nonCameraIds = setOf("no-exif", "vid"),
+            documentIds = setOf("receipt"),
+        )
+        assertEquals(9, unfiltered.size)
+    }
 }

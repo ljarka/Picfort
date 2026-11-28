@@ -43,7 +43,12 @@ class RoomSyncStore @Inject constructor(private val database: ImagesDatabase) : 
             is SyncChange.UpsertAsset -> dao.upsertAssets(run.map { (it as SyncChange.UpsertAsset).asset })
 
             is SyncChange.DeleteAsset -> run.map { (it as SyncChange.DeleteAsset).id }
-                .chunked(500).forEach { dao.deleteAssets(it) }
+                .chunked(500).forEach {
+                    dao.deleteAssets(it)
+                    dao.deleteExifs(it)
+                }
+
+            is SyncChange.UpsertAssetExif -> dao.upsertExifs(run.map { (it as SyncChange.UpsertAssetExif).exif })
 
             is SyncChange.UpsertStack -> dao.upsertStacks(run.map { (it as SyncChange.UpsertStack).stack })
 
@@ -79,6 +84,8 @@ class RoomSyncStore @Inject constructor(private val database: ImagesDatabase) : 
     override suspend fun clear() {
         database.withTransaction {
             dao.clearAssets()
+            dao.clearExifs()
+            dao.clearDocuments()
             dao.clearStacks()
             dao.clearPartners()
             dao.clearSyncState()

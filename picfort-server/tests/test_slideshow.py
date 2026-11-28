@@ -5,6 +5,7 @@ from datetime import date, datetime
 
 from helpers import Clock, FakeImmich
 
+from immich import is_likely_non_photo
 from slideshow import (Picker, SettingsStore, Slideshow, SlideshowSettings, in_quiet_hours,
                        on_this_day_ranges)
 
@@ -70,6 +71,39 @@ class PickerTest(unittest.TestCase):
         picker.next(s, date(2025, 7, 14))
         self.assertEqual(calls, len(immich.calls))  # cached for the day
         self.assertEqual("r", picker.next(s, date(2025, 7, 15)))  # nothing that day -> random
+
+    def test_filters_non_photos_and_documents_in_random_and_memories(self):
+        immich = FakeImmich(
+            library=["photo", "shot", "receipt"],
+            non_photos={"shot"},
+            documents={"receipt"},
+            album={"a": ["shot", "receipt"]},
+        )
+        picker = Picker(immich)
+        today = date(2025, 7, 14)
+        # Random with filter_photos=True skips both screenshot and OCR document.
+        self.assertEqual("photo", picker.next(SlideshowSettings(mode="random", filter_photos=True), today))
+        # Document ids are cached per day.
+        doc_calls = [c for c in immich.calls if c[0] == "documents"]
+        picker.next(SlideshowSettings(mode="random", filter_photos=True), today)
+        self.assertEqual(len(doc_calls), len([c for c in immich.calls if c[0] == "documents"]))
+        # Turning filter_photos off allows all items again.
+        seen = {picker.next(SlideshowSettings(mode="random", filter_photos=False), today) for _ in range(10)}
+        self.assertTrue({"shot", "receipt"}.issubset(seen))
+        # Album mode never filters, even when filter_photos=True.
+        self.assertIn(
+            picker.next(SlideshowSettings(mode="album", album_id="a", filter_photos=True), today),
+            {"shot", "receipt"},
+        )
+
+
+class NonPhotoHeuristicTest(unittest.TestCase):
+    def test_camera_exif_and_faces_pass_screenshots_rejected(self):
+        self.assertFalse(is_likely_non_photo({"exifInfo": {"make": "Google", "model": "Pixel 9"}}))
+        self.assertFalse(is_likely_non_photo({"people": [{"id": "p1"}], "exifInfo": {}}))
+        self.assertTrue(is_likely_non_photo({"originalFileName": "Screenshot_2026.png", "exifInfo": {"make": "Google"}}))
+        self.assertTrue(is_likely_non_photo({"originalFileName": "IMG_1234.png", "exifInfo": {}}))
+        self.assertTrue(is_likely_non_photo({}))
 
 
 class SlideshowTest(unittest.TestCase):

@@ -1,12 +1,30 @@
 """Small Immich API client used by the slideshow."""
 
+import logging
+
 import requests
+
+log = logging.getLogger("immich")
 
 # What `ImmichClient.check` finds (T-086), reported in /status as "immich" and logged at start.
 IMMICH_OK = "ok"
 IMMICH_UNREACHABLE = "unreachable"  # nothing answers at IMMICH_URL
 IMMICH_NOT_IMMICH = "not_immich"  # something answers, but not Immich
 IMMICH_KEY_REJECTED = "key_rejected"  # Immich refuses IMMICH_API_KEY, or it lacks album.read
+
+# OCR keywords used to identify receipts and documents in Immich (T-088).
+DOCUMENT_OCR_TERMS = ("PARAGON", "NIP", "FAKTURA", "SUMA PLN", "VAT", "UMOWA", "PESEL")
+
+
+def is_likely_non_photo(asset: dict) -> bool:
+    """True for screenshots and saved images without camera EXIF (unless faces are recognized)."""
+    if asset.get("people"):
+        return False
+    name = (asset.get("originalFileName") or "").lower()
+    if "screenshot" in name:
+        return True
+    exif = asset.get("exifInfo") or {}
+    return not (exif.get("make") or exif.get("model"))
 
 
 class ImmichClient:
@@ -20,17 +38,42 @@ class ImmichClient:
         r.raise_for_status()
         return r.json()
 
-    def random_images(self, size: int = 50, album_id: str | None = None) -> list[str]:
-        """Random photo ids, optionally from one album."""
-        body = {"size": size, "type": "IMAGE"}
+    def random_images(self, size: int = 50, album_id: str | None = None, filter_photos: bool = False) -> list[str]:
+        """Random photo ids, optionally from one album and filtered to camera photos."""
+        body: dict = {"size": size, "type": "IMAGE"}
         if album_id:
             body["albumIds"] = [album_id]
-        return [a["id"] for a in self._post("/search/random", body)]
+        if filter_photos:
+            body["withExif"] = True
+            body["withPeople"] = True
+        items = self._post("/search/random", body)
+        if filter_photos:
+            items = [a for a in items if not is_likely_non_photo(a)]
+        return [a["id"] for a in items]
 
-    def images_taken_between(self, after: str, before: str, size: int = 100) -> list[str]:
+    def images_taken_between(self, after: str, before: str, size: int = 100, filter_photos: bool = False) -> list[str]:
         """Photo ids taken in [after, before) (ISO timestamps)."""
-        body = {"type": "IMAGE", "takenAfter": after, "takenBefore": before, "size": size}
-        return [a["id"] for a in self._post("/search/metadata", body).get("assets", {}).get("items", [])]
+        body: dict = {"type": "IMAGE", "takenAfter": after, "takenBefore": before, "size": size}
+        if filter_photos:
+            body["withExif"] = True
+            body["withPeople"] = True
+        items = self._post("/search/metadata", body).get("assets", {}).get("items", [])
+        if filter_photos:
+            items = [a for a in items if not is_likely_non_photo(a)]
+        return [a["id"] for a in items]
+
+    def document_ids(self, terms: tuple[str, ...] = DOCUMENT_OCR_TERMS, size: int = 1000) -> set[str]:
+        """Photo ids matching document/receipt OCR terms via Immich metadata search (T-088)."""
+        ids: set[str] = set()
+        for term in terms:
+            try:
+                body = {"ocr": term, "type": "IMAGE", "size": size}
+                items = self._post("/search/metadata", body).get("assets", {}).get("items", [])
+                ids.update(a["id"] for a in items if "id" in a)
+            except requests.RequestException as e:
+                log.warning("OCR document search for %r failed: %s", term, e)
+                break
+        return ids
 
     def albums(self) -> list[dict]:
         r = requests.get(f"{self.base_url}/api/albums", headers=self.headers, timeout=self.timeout)

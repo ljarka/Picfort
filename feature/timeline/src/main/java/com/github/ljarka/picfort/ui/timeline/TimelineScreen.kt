@@ -38,11 +38,14 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.BottomSheetScaffold
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FilterChip
+import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.SheetValue
@@ -135,6 +138,7 @@ fun TimelineScreen(
         val viewModel: TimelineViewModel = hiltViewModel()
         val state by viewModel.state.collectAsStateWithLifecycle()
         val syncLines by viewModel.syncLines.collectAsStateWithLifecycle()
+        val hideNonPhotos by viewModel.hideNonPhotos.collectAsStateWithLifecycle()
         // Back from the background (another app, the Immich web UI…): sync again.
         LifecycleEventEffect(Lifecycle.Event.ON_START) { viewModel.onForeground() }
         val listState = rememberLazyListState()
@@ -168,10 +172,35 @@ fun TimelineScreen(
                 if (result == SnackbarResult.ActionPerformed) onEditMember?.invoke(member.id)
             }
         }
-        val header: (@Composable () -> Unit)? = if (people.members.isEmpty()) {
-            null
-        } else {
-            { PeopleFilterRow(people, peopleViewModel::select, onEditMember, onOpenFamily) }
+        val header: @Composable () -> Unit = {
+            Column(Modifier.fillMaxWidth()) {
+                if (people.members.isNotEmpty()) {
+                    PeopleFilterRow(people, peopleViewModel::select, onEditMember, onOpenFamily)
+                }
+                Row(
+                    Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 12.dp, vertical = 4.dp),
+                    horizontalArrangement = Arrangement.Start,
+                ) {
+                    FilterChip(
+                        selected = hideNonPhotos,
+                        onClick = viewModel::toggleHideNonPhotos,
+                        label = { Text("Hide screenshots & documents") },
+                        leadingIcon = if (hideNonPhotos) {
+                            {
+                                Icon(
+                                    imageVector = Icons.Default.Check,
+                                    contentDescription = null,
+                                    modifier = Modifier.size(FilterChipDefaults.IconSize),
+                                )
+                            }
+                        } else {
+                            null
+                        },
+                    )
+                }
+            }
         }
         // Saved, so coming back to this tab later doesn't jump again.
         var scrolledToDate by rememberSaveable { mutableStateOf(false) }
@@ -180,7 +209,7 @@ fun TimelineScreen(
             if (scrollToDate == null || scrolledToDate || timelineLayout == null) return@LaunchedEffect
             val row = timelineLayout.rowIndexOf(scrollToDate) ?: return@LaunchedEffect
             peopleViewModel.clear()
-            listState.requestScrollToItem(row + if (header != null) 1 else 0)
+            listState.requestScrollToItem(row + 1)
             scrolledToDate = true
         }
 
@@ -337,8 +366,8 @@ fun TimelineScreen(
             FastScrollComponent(
                 months = months,
                 listState = listState,
-                firstRowIndex = if (header != null) 1 else 0,
-                extraTop = if (header != null) CAROUSEL_HEIGHT else 0.dp,
+                firstRowIndex = 1,
+                extraTop = if (people.members.isNotEmpty()) CAROUSEL_HEIGHT + FILTER_ROW_HEIGHT else FILTER_ROW_HEIGHT,
             )
         }
     }
@@ -346,6 +375,9 @@ fun TimelineScreen(
 
 /** The family carousel above the timeline (T-052): the month pill starts below it. */
 private val CAROUSEL_HEIGHT = 104.dp
+
+/** Height of the "Hide screenshots & documents" filter chip row (T-088). */
+private val FILTER_ROW_HEIGHT = 48.dp
 
 /** Gap between tiles and rows, and the list's side margin. */
 private val SPACING = 4.dp

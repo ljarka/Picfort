@@ -235,6 +235,7 @@ def settings_json(slideshow: Slideshow):
         "interval_minutes": s.interval_minutes,
         "quiet_start": s.quiet_start,
         "quiet_end": s.quiet_end,
+        "filter_photos": s.filter_photos,
         "next_change_at": slideshow.next_change_at(),
         "last_error": slideshow.last_error,
         "modes": list(MODES),

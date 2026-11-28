@@ -1,18 +1,27 @@
 package com.github.ljarka.picfort.ui.timeline
 
+import androidx.room.withTransaction
+import com.github.ljarka.picfort.collections.CollectionsService
+import com.github.ljarka.picfort.collections.OcrSearchRequest
 import com.github.ljarka.picfort.core.database.ImagesDatabase
 import com.github.ljarka.picfort.core.database.RemoteAssetEntity
+import com.github.ljarka.picfort.core.database.RemoteDocumentEntity
 import com.github.ljarka.picfort.core.network.AccessTokenStore
 import com.github.ljarka.picfort.core.network.ServerUrlStore
 import com.github.ljarka.picfort.sync.SyncEngine
 import java.security.MessageDigest
 import javax.inject.Inject
+import javax.inject.Provider
 import javax.inject.Singleton
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.map
+
+private val DOCUMENT_OCR_TERMS = listOf("PARAGON", "NIP", "FAKTURA", "SUMA PLN", "VAT", "UMOWA", "PESEL")
+private const val OCR_REFRESH_INTERVAL_MS = 24L * 60 * 60 * 1000
 
 /**
  * The timeline's Immich assets: a local copy kept up to date by the sync stream (ADR 0005).
@@ -21,11 +30,13 @@ import kotlinx.coroutines.flow.map
 @Singleton
 class SyncTimelineSource @Inject constructor(
     private val engine: SyncEngine,
-    database: ImagesDatabase,
+    private val database: ImagesDatabase,
+    private val collections: Provider<CollectionsService>,
     private val serverUrlStore: ServerUrlStore,
     private val accessTokenStore: AccessTokenStore,
 ) {
     private val dao = database.remoteAssetsDao()
+    private var lastOcrRefreshAt = 0L
 
     /**
      * Server and login session. Checkpoints live on the server per session; the token is
@@ -42,7 +53,32 @@ class SyncTimelineSource @Inject constructor(
      */
     suspend fun refresh(): Boolean {
         val result = engine.sync(owner())
+        val now = System.currentTimeMillis()
+        if (result.wasReset || lastOcrRefreshAt == 0L || now - lastOcrRefreshAt >= OCR_REFRESH_INTERVAL_MS) {
+            refreshDocumentsQuietly(now)
+        }
         return result.wasReset || result.lines > 1 // a stream with no changes is just SyncCompleteV1
+    }
+
+    /** Refreshes OCR document ids (T-088); failures (e.g. older Immich without OCR) are ignored. */
+    private suspend fun refreshDocumentsQuietly(now: Long) {
+        try {
+            val ids = LinkedHashSet<String>()
+            val service = collections.get()
+            for (term in DOCUMENT_OCR_TERMS) {
+                val page = service.ocrSearch(OcrSearchRequest(ocr = term, type = "IMAGE", size = 1000))
+                page.assets.items.forEach { ids += it.id }
+            }
+            database.withTransaction {
+                dao.clearDocuments()
+                if (ids.isNotEmpty()) dao.upsertDocuments(ids.map(::RemoteDocumentEntity))
+            }
+            lastOcrRefreshAt = now
+        } catch (e: CancellationException) {
+            throw e
+        } catch (_: Exception) {
+            // Optional signal: keep whatever was cached previously.
+        }
     }
 
     /** The timeline's Immich assets, newest first; follows every change to the copy. */
@@ -50,4 +86,10 @@ class SyncTimelineSource @Inject constructor(
     fun assets(): Flow<List<RemoteAssetEntity>> =
         dao.syncStateFlow().map { it?.userId.orEmpty() }.distinctUntilChanged()
             .flatMapLatest { userId -> dao.timelineAll(userId) }
+
+    /** Immich asset ids whose synced EXIF has no camera make/model (T-088). */
+    fun nonCameraAssetIds(): Flow<Set<String>> = dao.nonCameraAssetIdsFlow().map { it.toSet() }
+
+    /** Immich asset ids matched by document/receipt OCR terms (T-088). */
+    fun documentAssetIds(): Flow<Set<String>> = dao.documentAssetIdsFlow().map { it.toSet() }
 }

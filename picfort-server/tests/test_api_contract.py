@@ -125,6 +125,7 @@ class ApiContractTest(unittest.TestCase):
                 "interval_minutes",
                 "quiet_start",
                 "quiet_end",
+                "filter_photos",
                 "next_change_at",
                 "last_error",
                 "modes",

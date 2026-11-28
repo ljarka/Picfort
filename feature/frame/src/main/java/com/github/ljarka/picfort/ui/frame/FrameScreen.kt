@@ -81,6 +81,7 @@ fun FrameScreen(onBack: () -> Unit) {
         onAlbum = viewModel::setAlbum,
         onInterval = viewModel::setInterval,
         onQuietHours = viewModel::setQuietHours,
+        onFilterPhotos = viewModel::setFilterPhotos,
         onMessageShown = viewModel::messageShown,
     )
 }
@@ -99,6 +100,7 @@ fun FrameContent(
     onAlbum: (String) -> Unit = {},
     onInterval: (Int) -> Unit = {},
     onQuietHours: (Int?, Int?) -> Unit = { _, _ -> },
+    onFilterPhotos: (Boolean) -> Unit = {},
     onMessageShown: () -> Unit = {},
 ) {
     val snackbar = remember { SnackbarHostState() }
@@ -141,7 +143,7 @@ fun FrameContent(
 
                 state.error != null -> Centered(state.error, "Retry", onRefresh)
 
-                else -> Dashboard(state, onNext, onMode, onAlbum, onInterval, onQuietHours)
+                else -> Dashboard(state, onNext, onMode, onAlbum, onInterval, onQuietHours, onFilterPhotos)
             }
         }
     }
@@ -168,6 +170,7 @@ private fun Dashboard(
     onAlbum: (String) -> Unit,
     onInterval: (Int) -> Unit,
     onQuietHours: (Int?, Int?) -> Unit,
+    onFilterPhotos: (Boolean) -> Unit,
 ) {
     val slideshow = state.slideshow
     // The panel as it hangs on the wall: a white mat around the picture.
@@ -302,6 +305,23 @@ private fun Dashboard(
                 HourPicker("From", quietStart) { onQuietHours(it, quietEnd) }
                 HourPicker("to", quietEnd) { onQuietHours(quietStart, it) }
             }
+        }
+        if (slideshow.mode == "random" || slideshow.mode == "memories") {
+            ListItem(
+                headlineContent = { Text("Hide screenshots & documents") },
+                supportingContent = {
+                    Text(
+                        if (slideshow.filterPhotos) {
+                            "Skip screenshots, saved images and receipts"
+                        } else {
+                            "Show every photo from Immich"
+                        },
+                    )
+                },
+                trailingContent = {
+                    Switch(checked = slideshow.filterPhotos, onCheckedChange = onFilterPhotos)
+                },
+            )
         }
     }
     BrowserFrame(state)

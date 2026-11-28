@@ -23,6 +23,7 @@ class SearchPeopleTest {
             metadata += body
             return SearchResponse(SearchAssetsPage(listOf(SearchAssetDto("m1")), nextPage = "2"))
         }
+        override suspend fun ocrSearch(body: OcrSearchRequest) = SearchResponse()
         override suspend fun people(page: Int, size: Int, withHidden: Boolean) = when (page) {
             1 -> PeopleResponse(
                 listOf(PersonDto("p1", "Ola"), PersonDto("x", ""), PersonDto("h", "Hidden", isHidden = true)),
