@@ -5,6 +5,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.unit.dp
 import app.cash.paparazzi.DeviceConfig
 import app.cash.paparazzi.Paparazzi
+import coil3.asImage
 import com.android.resources.NightMode
 import com.github.ljarka.picfort.core.model.FamilyEvent
 import com.github.ljarka.picfort.core.model.FamilyMember
@@ -131,6 +132,59 @@ class WallScreenshotTest {
             onOpenMemories = {},
         )
     }
+
+    /** A warm sunset-like "photo" for the frame card and its blurred backdrop (T-106). */
+    @OptIn(coil3.annotation.ExperimentalCoilApi::class)
+    @Composable
+    private fun WithSunsetPhoto(content: @Composable () -> Unit) {
+        val bitmap = android.graphics.Bitmap.createBitmap(120, 80, android.graphics.Bitmap.Config.ARGB_8888)
+        android.graphics.Canvas(bitmap).apply {
+            drawPaint(
+                android.graphics.Paint().apply {
+                    shader = android.graphics.LinearGradient(
+                        0f,
+                        0f,
+                        0f,
+                        80f,
+                        intArrayOf(0xFF3B4CCA.toInt(), 0xFFE86A5C.toInt(), 0xFFF6C177.toInt()),
+                        null,
+                        android.graphics.Shader.TileMode.CLAMP,
+                    )
+                },
+            )
+            drawCircle(84f, 46f, 12f, android.graphics.Paint().apply { color = 0xFFFFF1C9.toInt() })
+        }
+        val handler = coil3.compose.AsyncImagePreviewHandler { bitmap.asImage() }
+        androidx.compose.runtime.CompositionLocalProvider(
+            androidx.compose.ui.platform.LocalInspectionMode provides true,
+            coil3.compose.LocalAsyncImagePreviewHandler provides handler,
+            content = content,
+        )
+    }
+
+    private fun backdrop(dark: Boolean) = snap(dark) {
+        WithSunsetPhoto {
+            FamilyWallContent(
+                FamilyWallUiState(
+                    members = members,
+                    posts = wallPosts,
+                    myId = "mama",
+                    isLoading = false,
+                    framePhotoUrl = "frame-photo",
+                    frameBackdropUrl = "frame-backdrop",
+                ),
+                now = NOW,
+                onOpenFrame = {},
+                onOpenMemories = {},
+            )
+        }
+    }
+
+    @Test
+    fun wall_frame_backdrop() = backdrop(dark = false)
+
+    @Test
+    fun wall_frame_backdrop_dark() = backdrop(dark = true)
 
     /** The reactions under an opened post (T-084): mine highlighted, counts, who reacted. */
     @Test

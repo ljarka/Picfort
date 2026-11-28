@@ -5,6 +5,8 @@ import android.text.format.DateUtils
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.animation.Crossfade
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -56,6 +58,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
@@ -67,6 +70,8 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.BlurredEdgeTreatment
+import androidx.compose.ui.draw.blur
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
@@ -93,6 +98,7 @@ import com.github.ljarka.picfort.core.model.FamilyMember
 import com.github.ljarka.picfort.core.ui.R
 import com.github.ljarka.picfort.core.ui.avatar.MemberAvatar
 import com.github.ljarka.picfort.core.ui.avatar.MemberCarousel
+import com.github.ljarka.picfort.core.ui.component.PhotoBackdrop
 import com.github.ljarka.picfort.core.ui.component.ServerRequiredContent
 import com.github.ljarka.picfort.core.ui.component.SettingsAction
 import com.github.ljarka.picfort.core.ui.component.aboveFloatingTabBar
@@ -241,68 +247,88 @@ fun FamilyWallContent(
         )
     }
 
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = { Text("Family Wall") },
-                actions = {
-                    topBarActions()
-                    SettingsAction(onSettingsClick)
-                },
-            )
-        },
-        floatingActionButton = {
-            if (state.configured) {
-                FloatingActionButton(
-                    onClick = { composing = true },
-                    modifier = Modifier.aboveFloatingTabBar(),
-                ) {
-                    Icon(Icons.Default.Add, contentDescription = "New post")
-                }
-            }
-        },
-        snackbarHost = { SnackbarHost(snackbar) },
-    ) { padding ->
-        Column(
-            Modifier
-                .fillMaxSize()
-                .padding(padding),
-        ) {
-            when {
-                !state.configured -> ServerRequiredContent(
-                    "Connect your Picfort server to use the Family Wall.",
-                    onSetUpServer,
+    Box(Modifier.fillMaxSize()) {
+        // The frame's photo, blurred, tints the whole Wall like album art in a music player (T-106).
+        PhotoBackdrop(state.frameBackdropUrl)
+        Scaffold(
+            containerColor = if (state.frameBackdropUrl !=
+                null
+            ) {
+                Color.Transparent
+            } else {
+                MaterialTheme.colorScheme.background
+            },
+            topBar = {
+                TopAppBar(
+                    title = { Text("Family Wall") },
+                    actions = {
+                        topBarActions()
+                        SettingsAction(onSettingsClick)
+                    },
+                    colors = TopAppBarDefaults.topAppBarColors(
+                        containerColor = if (state.frameBackdropUrl !=
+                            null
+                        ) {
+                            Color.Transparent
+                        } else {
+                            MaterialTheme.colorScheme.surface
+                        },
+                    ),
                 )
-
-                state.isLoading && state.posts.isEmpty() -> Box(Modifier.fillMaxSize(), Alignment.Center) {
-                    CircularProgressIndicator()
-                }
-
-                state.loadError != null && state.posts.isEmpty() -> Centered(state.loadError, "Retry", onRefresh)
-
-                else -> {
-                    if (state.members.isNotEmpty()) {
-                        MemberCarousel(
-                            state.members,
-                            state.selectedMemberId,
-                            onSelect,
-                            onEditMember = onEditMember,
-                            onOpenFamily = onOpenFamily,
-                        )
+            },
+            floatingActionButton = {
+                if (state.configured) {
+                    FloatingActionButton(
+                        onClick = { composing = true },
+                        modifier = Modifier.aboveFloatingTabBar(),
+                    ) {
+                        Icon(Icons.Default.Add, contentDescription = "New post")
                     }
-                    PullToRefreshBox(isRefreshing = false, onRefresh = onRefresh, modifier = Modifier.weight(1f)) {
-                        WallGrid(
-                            state = state,
-                            now = now,
-                            onOpenEvent = onOpenEvent,
-                            onOpenEvents = onOpenEvents,
-                            onOpenFrame = onOpenFrame,
-                            onOpenMemories = onOpenMemories,
-                            onMessageClick = { openMessageId = it.id },
-                            onPhotoClick = { openPhotoId = it.id },
-                            onDelete = { confirmDelete = it },
-                            onTogglePin = onTogglePin,
-                        )
+                }
+            },
+            snackbarHost = { SnackbarHost(snackbar) },
+        ) { padding ->
+            Column(
+                Modifier
+                    .fillMaxSize()
+                    .padding(padding),
+            ) {
+                when {
+                    !state.configured -> ServerRequiredContent(
+                        "Connect your Picfort server to use the Family Wall.",
+                        onSetUpServer,
+                    )
+
+                    state.isLoading && state.posts.isEmpty() -> Box(Modifier.fillMaxSize(), Alignment.Center) {
+                        CircularProgressIndicator()
+                    }
+
+                    state.loadError != null && state.posts.isEmpty() -> Centered(state.loadError, "Retry", onRefresh)
+
+                    else -> {
+                        if (state.members.isNotEmpty()) {
+                            MemberCarousel(
+                                state.members,
+                                state.selectedMemberId,
+                                onSelect,
+                                onEditMember = onEditMember,
+                                onOpenFamily = onOpenFamily,
+                            )
+                        }
+                        PullToRefreshBox(isRefreshing = false, onRefresh = onRefresh, modifier = Modifier.weight(1f)) {
+                            WallGrid(
+                                state = state,
+                                now = now,
+                                onOpenEvent = onOpenEvent,
+                                onOpenEvents = onOpenEvents,
+                                onOpenFrame = onOpenFrame,
+                                onOpenMemories = onOpenMemories,
+                                onMessageClick = { openMessageId = it.id },
+                                onPhotoClick = { openPhotoId = it.id },
+                                onDelete = { confirmDelete = it },
+                                onTogglePin = onTogglePin,
+                            )
+                        }
                     }
                 }
             }

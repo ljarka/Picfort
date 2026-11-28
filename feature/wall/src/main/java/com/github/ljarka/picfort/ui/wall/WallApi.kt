@@ -56,6 +56,12 @@ data class FirstReactionDto(
 @Serializable
 private data class FirstReactionsDto(val items: List<FirstReactionDto> = emptyList())
 
+/** What the frame shows (T-091): [url] for the card, [backdropUrl] a tiny copy for the Wall's background (T-106). */
+data class FramePhoto(val url: String, val backdropUrl: String)
+
+/** The server rounds sizes up to 128 px: plenty for a blurred background. */
+private const val BACKDROP_SIDE = 128
+
 @Serializable
 private data class FrameStateDto(val version: Int = 0, val shown: Boolean = false)
 
@@ -211,7 +217,7 @@ class WallApi @Inject constructor(
      * Full-colour URL of what the frame currently shows (`/frame/photo`, T-091), versioned so
      * Coil reloads whenever the frame switches photo. Null when the browser frame is off or empty.
      */
-    suspend fun framePhotoUrl(): String? {
+    suspend fun framePhoto(): FramePhoto? {
         val base = base()
         val stateUrl = base.newBuilder().addPathSegment("frame").addPathSegment("state").build()
         val text = server.execute(Request.Builder().url(stateUrl).build()) {
@@ -219,14 +225,16 @@ class WallApi @Inject constructor(
         }.body
         val state = json.decodeFromString<FrameStateDto>(text)
         if (!state.shown) return null
-        return base.newBuilder()
+        fun sized(w: Int, h: Int) = base.newBuilder()
             .addPathSegment("frame")
             .addPathSegment("photo")
-            .addQueryParameter("w", "1080")
-            .addQueryParameter("h", "720")
+            .addQueryParameter("w", w.toString())
+            .addQueryParameter("h", h.toString())
             .addQueryParameter("v", state.version.toString())
             .build()
             .toString()
+        // The backdrop is drawn blurred over the whole Wall: a tiny copy is enough (T-106).
+        return FramePhoto(url = sized(1080, 720), backdropUrl = sized(BACKDROP_SIDE, BACKDROP_SIDE))
     }
 
     private fun base(address: String = settings.frameUrl) = server.base(address)

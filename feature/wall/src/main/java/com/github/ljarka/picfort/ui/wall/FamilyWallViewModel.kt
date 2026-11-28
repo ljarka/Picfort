@@ -42,6 +42,8 @@ data class FamilyWallUiState(
     val panel: TodayPanelState? = null,
     /** Current full-colour photo shown on `/frame` (T-091); null when none or unavailable. */
     val framePhotoUrl: String? = null,
+    /** A tiny copy of the frame's photo, drawn blurred behind the whole Wall (T-106). */
+    val frameBackdropUrl: String? = null,
 ) {
     private val visible: List<WallPost>
         get() = posts.filter { it.authorId !in hiddenAuthorIds }
@@ -122,6 +124,7 @@ class FamilyWallViewModel @Inject constructor(
                     loadError = null,
                     panel = null,
                     framePhotoUrl = null,
+                    frameBackdropUrl = null,
                 )
             }
             return
@@ -165,8 +168,8 @@ class FamilyWallViewModel @Inject constructor(
     }
 
     private suspend fun refreshFramePhoto() {
-        val url = repository.framePhotoUrl()
-        _state.update { it.copy(framePhotoUrl = url) }
+        val photo = repository.framePhoto()
+        _state.update { it.copy(framePhotoUrl = photo?.url, frameBackdropUrl = photo?.backdropUrl) }
     }
 
     fun select(memberId: String?) {
