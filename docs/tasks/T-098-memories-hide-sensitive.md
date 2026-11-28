@@ -1,6 +1,6 @@
 # T-098 — Memories never show photos the AI marked sensitive
 
-**Status:** in-progress  
+**Status:** done (`f2eea60`)  
 **Component:** Server (`/photo-insights/labels`), Android (`:feature:timeline`, `:core:database`)  
 **Depends on:** T-093 (sensitive never on the frame), T-096 (Memories)
 

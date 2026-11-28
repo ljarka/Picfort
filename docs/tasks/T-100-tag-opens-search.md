@@ -1,6 +1,6 @@
 # T-100 — Tapping a tag in Details opens Search filtered by it
 
-**Status:** in-progress  
+**Status:** done (`5502d21`)  
 **Component:** Android (`:feature:timeline`, `:app`)  
 **Depends on:** T-090 (tag chips in Search), T-097 (tags in Details)
 

@@ -1,6 +1,6 @@
 # T-101 — Device check of today's photo features; fast scroll fixes
 
-**Status:** in-progress  
+**Status:** done (`3055119`)  
 **Component:** Android (`:feature:timeline`), Maestro  
 **Depends on:** T-094, T-097, T-100
 

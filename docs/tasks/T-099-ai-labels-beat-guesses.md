@@ -1,6 +1,6 @@
 # T-099 — "Hide screenshots & documents": the photo AI's answer beats the guesses
 
-**Status:** in-progress  
+**Status:** done (`f2eea60`)  
 **Component:** Server (`slideshow.py`, `immich.py`, `photo_ai.py`), Android (`:feature:timeline`)  
 **Depends on:** T-088 (guesses), T-089 (photo AI), T-098 (labels in the app)
 
