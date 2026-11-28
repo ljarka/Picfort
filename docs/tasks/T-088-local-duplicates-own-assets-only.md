@@ -1,9 +1,15 @@
 # T-088 — Bug: phone-copy deduplication matches partners' assets (clean-up shows photos you don't own)
 
 **Status:** ready  
-**Priority:** HIGH — regression introduced by T-059; affects every family with shared Immich libraries  
+**Priority:** MEDIUM — theoretical regression from T-059; **needs device verification before implementing**
 **Component:** Android app (`:feature:timeline`)  
 **Depends on:** T-059 (the commit that introduced the bug: `ac7187c`)
+
+> **⚠ Verification required:** This issue was identified by static code analysis, not reproduced
+> on a device. Before implementing the fix, verify that the symptom actually occurs: on a family
+> setup with two accounts sharing Immich libraries, check whether a phone photo whose name + time
+> (or checksum) matches *only* a partner's Immich asset disappears from the timeline. If it does
+> not reproduce, close this task with a note explaining why the matching is acceptable as-is.
 
 ## Problem
 
