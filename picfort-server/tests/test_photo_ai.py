@@ -80,6 +80,15 @@ class TagMappingTest(unittest.TestCase):
             ["ai/type/receipt"],
             tags_for_insight({"category": "receipt", "quality": 4}),
         )
+        # Sensitive photos get ai/privacy/sensitive and NEVER ai/best/frame-worthy.
+        self.assertEqual(
+            ["ai/type/document", "ai/privacy/sensitive"],
+            tags_for_insight({"category": "document", "quality": 5, "is_sensitive": True, "frame_worthy": True}),
+        )
+        self.assertEqual(
+            ["ai/privacy/sensitive"],
+            tags_for_insight({"category": "photo", "quality": 5, "is_sensitive": True, "frame_worthy": True}),
+        )
 
 
 class ActiveHoursTest(unittest.TestCase):
@@ -157,7 +166,9 @@ class PhotoAiWorkerAndStoreTest(unittest.TestCase):
         self.store.save("good1", "m", {"category": "photo", "quality": 5, "frame_worthy": True})
         self.store.save("meh", "m", {"category": "photo", "quality": 3, "frame_worthy": True})
         self.store.save("doc", "m", {"category": "document", "quality": 5, "frame_worthy": True})
+        self.store.save("priv", "m", {"category": "photo", "quality": 5, "frame_worthy": True, "is_sensitive": True})
         self.assertEqual(["good1"], self.store.frame_worthy_ids())
+        self.assertIn("priv", self.store.slideshow_excluded_ids())
 
         picker = Picker(FakeImmich(library=["other1", "other2"]), photo_ai=self.store)
         s = SlideshowSettings(mode="random", best_only=True)

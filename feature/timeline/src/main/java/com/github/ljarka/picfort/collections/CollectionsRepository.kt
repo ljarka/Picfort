@@ -188,6 +188,7 @@ private val CURATED_AI_TAG_LABELS = linkedMapOf(
     "ai/type/document" to "Documents",
     "ai/type/screenshot" to "Screenshots",
     "ai/type/meme" to "Memes",
+    "ai/privacy/sensitive" to "Sensitive",
 )
 
 /** Orders curated `ai/` tags first (skipping cleanup tags), followed by user tags. */

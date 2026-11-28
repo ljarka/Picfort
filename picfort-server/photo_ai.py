@@ -33,8 +33,9 @@ TYPE_TAG_MAP = {
     "kids_art": "ai/type/kids-art",
 }
 NATURE_TAG = "ai/type/nature"
+SENSITIVE_TAG = "ai/privacy/sensitive"
 FRAME_WORTHY_TAG = "ai/best/frame-worthy"
-ALL_AI_TAGS = list(CLEANUP_TAGS) + list(TYPE_TAG_MAP.values()) + [NATURE_TAG, FRAME_WORTHY_TAG]
+ALL_AI_TAGS = list(CLEANUP_TAGS) + list(TYPE_TAG_MAP.values()) + [NATURE_TAG, SENSITIVE_TAG, FRAME_WORTHY_TAG]
 
 # `scene` is FIRST so the vision model describes the image before committing to category/quality.
 PHOTO_AI_SCHEMA = {
@@ -43,6 +44,7 @@ PHOTO_AI_SCHEMA = {
         "scene": {"type": "string"},
         "category": {"type": "string", "enum": list(CATEGORIES)},
         "is_nature": {"type": "boolean"},
+        "is_sensitive": {"type": "boolean"},
         "quality": {"type": "integer", "minimum": 1, "maximum": 5},
         "issues": {"type": "array", "items": {"type": "string", "enum": list(ISSUES)}},
         "frame_worthy": {"type": "boolean"},
@@ -50,7 +52,7 @@ PHOTO_AI_SCHEMA = {
         "cleanup_reason": {"type": "string"},
     },
     "required": [
-        "scene", "category", "is_nature", "quality", "issues",
+        "scene", "category", "is_nature", "is_sensitive", "quality", "issues",
         "frame_worthy", "cleanup_candidate", "cleanup_reason",
     ],
 }
@@ -62,12 +64,14 @@ PHOTO_AI_PROMPT = (
     "'document' for pages/notes/signs, 'receipt' for store receipts/invoices, 'meme' for graphics/memes, "
     "'kids_art' for children's drawings/crafts, 'accidental' ONLY for unintentional pocket/floor/completely blurred shots. "
     "3) is_nature: true for landscapes, mountains, forests, sea, sky, sunsets, flowers or wildlife. "
-    "4) quality: 1=unusable, 2=poor/blurry, 3=ordinary, 4=good, 5=great sharp photo. "
-    "5) issues: technical flaws present (empty array if none). "
-    "6) frame_worthy: true only for pleasant, sharp photos suitable for a wall picture frame. "
-    "7) cleanup_candidate: true for blurry, accidental, unusable shots, screenshots, receipts or temporary documents "
+    "4) is_sensitive: true if the image shows sensitive personal data (ID card, passport, PESEL, bank/card numbers, "
+    "home address, medical records, passwords) or nudity / intimate private moments that should stay private. "
+    "5) quality: 1=unusable, 2=poor/blurry, 3=ordinary, 4=good, 5=great sharp photo. "
+    "6) issues: technical flaws present (empty array if none). "
+    "7) frame_worthy: true only for pleasant, sharp, non-sensitive photos suitable for a shared wall picture frame. "
+    "8) cleanup_candidate: true for blurry, accidental, unusable shots, screenshots, receipts or temporary documents "
     "(never mark kids_art as cleanup_candidate). "
-    "8) cleanup_reason: empty string if cleanup_candidate is false, else short reason (<=6 words)."
+    "9) cleanup_reason: empty string if cleanup_candidate is false, else short reason (<=6 words)."
 )
 
 
@@ -77,6 +81,7 @@ def tags_for_insight(insight: dict) -> list[str]:
     category = insight.get("category", "photo")
     quality = int(insight.get("quality", 3))
     issues = set(insight.get("issues") or ())
+    is_sensitive = bool(insight.get("is_sensitive"))
     if quality <= 2:
         tags.append("ai/cleanup/low-quality")
     if "blurry" in issues:
@@ -89,7 +94,9 @@ def tags_for_insight(insight: dict) -> list[str]:
         tags.append(TYPE_TAG_MAP[category])
     if insight.get("is_nature"):
         tags.append(NATURE_TAG)
-    if insight.get("frame_worthy") and category == "photo" and quality >= 4:
+    if is_sensitive:
+        tags.append(SENSITIVE_TAG)
+    if insight.get("frame_worthy") and not is_sensitive and category == "photo" and quality >= 4:
         tags.append(FRAME_WORTHY_TAG)
     return tags
 
@@ -119,8 +126,11 @@ def in_active_hours(window: tuple[int, int] | None, now: datetime) -> bool:
 
 
 class PhotoAiStore(SqliteStore):
-    SCHEMA_VERSION = 1
+    SCHEMA_VERSION = 2
     NAME = "photo_ai"
+    MIGRATIONS = {
+        1: ["ALTER TABLE photo_insights ADD COLUMN is_sensitive INTEGER NOT NULL DEFAULT 0"],
+    }
     SCHEMA = """
     CREATE TABLE photo_insights (
         asset_id          TEXT PRIMARY KEY,
@@ -128,6 +138,7 @@ class PhotoAiStore(SqliteStore):
         scene             TEXT NOT NULL DEFAULT '',
         category          TEXT NOT NULL DEFAULT 'photo',
         is_nature         INTEGER NOT NULL DEFAULT 0,
+        is_sensitive      INTEGER NOT NULL DEFAULT 0,
         quality           INTEGER NOT NULL DEFAULT 3,
         issues            TEXT NOT NULL DEFAULT '[]',
         frame_worthy      INTEGER NOT NULL DEFAULT 0,
@@ -147,19 +158,22 @@ class PhotoAiStore(SqliteStore):
         if category not in CATEGORIES:
             category = "photo"
         quality = max(1, min(5, int(insight.get("quality", 3))))
+        is_sensitive = bool(insight.get("is_sensitive"))
         cleanup = bool(insight.get("cleanup_candidate")) and category != "kids_art"
+        frame_worthy = bool(insight.get("frame_worthy")) and not is_sensitive
         with closing(self.connect()) as conn, conn:
             conn.execute(
                 """
                 INSERT INTO photo_insights (
-                    asset_id, model, scene, category, is_nature, quality, issues,
+                    asset_id, model, scene, category, is_nature, is_sensitive, quality, issues,
                     frame_worthy, cleanup_candidate, cleanup_reason, dismissed, tags_applied, analyzed_at
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, ?, ?)
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, ?, ?)
                 ON CONFLICT(asset_id) DO UPDATE SET
                     model = excluded.model,
                     scene = excluded.scene,
                     category = excluded.category,
                     is_nature = excluded.is_nature,
+                    is_sensitive = excluded.is_sensitive,
                     quality = excluded.quality,
                     issues = excluded.issues,
                     frame_worthy = excluded.frame_worthy,
@@ -174,9 +188,10 @@ class PhotoAiStore(SqliteStore):
                     str(insight.get("scene") or "")[:200],
                     category,
                     1 if insight.get("is_nature") else 0,
+                    1 if is_sensitive else 0,
                     quality,
                     json.dumps(issues),
-                    1 if insight.get("frame_worthy") else 0,
+                    1 if frame_worthy else 0,
                     1 if cleanup else 0,
                     str(insight.get("cleanup_reason") or "")[:120] if cleanup else "",
                     json.dumps(list(tags_applied or ())),
@@ -259,17 +274,20 @@ class PhotoAiStore(SqliteStore):
         """Asset ids the frame slideshow should skip when filter_photos is enabled."""
         with closing(self.connect()) as conn:
             rows = conn.execute(
-                "SELECT asset_id FROM photo_insights WHERE category != 'photo' OR cleanup_candidate = 1 OR quality <= 2"
+                """
+                SELECT asset_id FROM photo_insights
+                WHERE category != 'photo' OR cleanup_candidate = 1 OR quality <= 2 OR is_sensitive = 1
+                """
             ).fetchall()
         return {r["asset_id"] for r in rows}
 
     def frame_worthy_ids(self) -> list[str]:
-        """AI-picked sharp, pleasant photos suitable for a wall frame (T-090)."""
+        """AI-picked sharp, pleasant, non-sensitive photos suitable for a wall frame (T-090)."""
         with closing(self.connect()) as conn:
             rows = conn.execute(
                 """
                 SELECT asset_id FROM photo_insights
-                WHERE frame_worthy = 1 AND category = 'photo' AND quality >= 4 AND dismissed = 0
+                WHERE frame_worthy = 1 AND is_sensitive = 0 AND category = 'photo' AND quality >= 4 AND dismissed = 0
                 """
             ).fetchall()
         return [r["asset_id"] for r in rows]

@@ -15,10 +15,11 @@ class SearchTagsTest {
             TagDto("5", "kids-art", "ai/type/kids-art"),
             TagDto("6", "Animals", "Animals"),
             TagDto("7", "ai", "ai"),
+            TagDto("8", "sensitive", "ai/privacy/sensitive"),
         )
         val formatted = formatSearchTags(raw)
         assertEquals(
-            listOf("Best", "Nature", "Kids' art", "Animals", "Vacation"),
+            listOf("Best", "Nature", "Kids' art", "Sensitive", "Animals", "Vacation"),
             formatted.map { it.label },
         )
     }
