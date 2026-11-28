@@ -1,6 +1,6 @@
 # T-096 — Memories screen (Immich memories) opened from the frame card on the Family Wall
 
-**Status:** in-progress  
+**Status:** done (`6edba0f`)  
 **Component:** Android (`:feature:timeline`, `:feature:wall`, `:app`)  
 **Depends on:** T-091 (frame card on the Wall)
 
