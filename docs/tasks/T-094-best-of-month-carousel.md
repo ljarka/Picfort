@@ -27,9 +27,11 @@ month's photos tagged `ai/best/frame-worthy` by the Picfort server (ADR 0019). I
 4. **Layout:** `layoutTimeline` adds a `BestRow(month, tiles, height)` right after the
    `MonthHeaderRow` when `best` is not empty. `rowIndexOf` and the fast scroller still land on the
    month header (a `BestRow` above the first tiles counts like the header).
-5. **UI:** `BestRow` is a `LazyRow` of square-ish thumbnails (~112 dp high, 8 dp spacing, rounded
-   corners, small "Best" label). Tapping a tile opens the full-screen viewer at that photo's
-   timeline position (`Tile.index`), like a normal tile.
+5. **UI:** `BestRow` is a `LazyRow`, 8 dp spacing, rounded corners, no label. All tiles share one
+   height (half the width; at most 40% of the height in landscape) and keep their photo's shape:
+   portrait narrow, landscape wide (ratio kept within 0.5..1.8, no tile wider than 85% of the
+   width so the next one peeks in). Owner feedback 2026-11-28; the first version had ~112 dp
+   squares with a "Best" label.
 6. **Setting:** Settings -> Timeline "Show best of the month" switch, default on, stored in
    `timeline_prefs` like `hide_non_photos`.
 

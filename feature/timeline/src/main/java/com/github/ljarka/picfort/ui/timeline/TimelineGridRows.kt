@@ -110,7 +110,7 @@ internal fun TimelineList(
 
                 is BestRow -> BestOfMonthStrip(
                     row = row,
-                    size = with(density) { row.size.toDp() },
+                    height = with(density) { row.height.toDp() },
                     onClick = { tile -> if (!isInEditMode) onImageClick(tile.asset.id, tile.asset.type, tile.index) },
                 )
 
@@ -158,14 +158,9 @@ internal fun TimelineList(
  * No shared-element transition: the same photo is also a grid tile, and one key can't be in two places.
  */
 @Composable
-private fun BestOfMonthStrip(row: BestRow, size: Dp, onClick: (Tile) -> Unit) {
+private fun BestOfMonthStrip(row: BestRow, height: Dp, onClick: (Tile) -> Unit) {
+    val density = LocalDensity.current
     Column(Modifier.fillMaxWidth().padding(bottom = 8.dp)) {
-        Text(
-            text = "Best",
-            style = MaterialTheme.typography.labelLarge,
-            color = MaterialTheme.colorScheme.primary,
-            modifier = Modifier.padding(start = 4.dp, bottom = 6.dp),
-        )
         LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             items(row.tiles, key = { it.asset.id }) { tile ->
                 AsyncImage(
@@ -173,8 +168,8 @@ private fun BestOfMonthStrip(row: BestRow, size: Dp, onClick: (Tile) -> Unit) {
                     contentDescription = null,
                     contentScale = ContentScale.Crop,
                     modifier = Modifier
-                        .size(size)
-                        .clip(RoundedCornerShape(12.dp))
+                        .size(with(density) { tile.width.toDp() }, height)
+                        .clip(RoundedCornerShape(16.dp))
                         .background(PLACEHOLDER_COLOR)
                         .clickable { onClick(tile) },
                 )

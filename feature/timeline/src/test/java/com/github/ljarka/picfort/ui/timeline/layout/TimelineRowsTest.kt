@@ -108,6 +108,26 @@ class TimelineRowsTest {
     }
 
     @Test
+    fun `best tiles keep the photo's shape, extremes are cropped`() {
+        val ratios = listOf(3f / 4, 4f / 3, 3f, 0.3f)
+        val month = TimelineMonth(
+            1L,
+            0,
+            ratios.mapIndexed { i, r -> TimelineAsset("a$i", AssetType.REMOTE, 1L, r) },
+            best = ratios.indices.toList(),
+        )
+        val best = layoutTimeline(
+            TimelineIndex(listOf(month)),
+            Viewport(1080f, 2000f, spacing = 8f),
+            titleOf = { "" },
+            urlOf = { it.id },
+        ).rows.filterIsInstance<BestRow>().single()
+        val h = best.height
+        // Panorama: cropped to 1.8, then capped at 85% of the width so the next photo peeks in.
+        assertEquals(listOf(h * 3f / 4, h * 4f / 3, 1080f * 0.85f, h * 0.5f), best.tiles.map { it.width })
+    }
+
+    @Test
     fun `a best strip sits under its month header and the day jump still lands on the header`() {
         val nov = (days.rows.first() as MonthHeaderRow).month
         val withBest = layoutTimeline(
@@ -128,7 +148,8 @@ class TimelineRowsTest {
         assertTrue(withBest.rows[0] is MonthHeaderRow)
         val best = withBest.rows[1] as BestRow
         assertEquals(listOf(0, 2), best.tiles.map { it.index })
-        assertTrue(best.tiles.all { it.width == best.size })
+        assertEquals(1080f * 0.5f, best.height, 0.5f)
+        assertTrue(best.tiles.all { it.width == best.height }) // square photos stay square
         assertEquals(0, withBest.rowIndexOf(LocalDate.parse("2025-11-20")))
         assertEquals(withBest.rows.size, withBest.rows.map { it.key }.toSet().size)
     }

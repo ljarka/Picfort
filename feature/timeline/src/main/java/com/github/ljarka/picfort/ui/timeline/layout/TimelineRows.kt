@@ -23,15 +23,23 @@ data class TilesRow(val month: Long, val row: Int, val tiles: List<Tile>, val he
 }
 
 /**
- * "Best of the month" strip right under a month's header (T-094): square tiles of [size] px,
- * scrolled sideways. Tile widths equal [size].
+ * "Best of the month" strip right under a month's header (T-094), scrolled sideways: every tile
+ * is [height] px high and as wide as its photo's shape (portrait narrow, landscape wide).
  */
-data class BestRow(val month: Long, val tiles: List<Tile>, val size: Float) : TimelineRow {
+data class BestRow(val month: Long, val tiles: List<Tile>, val height: Float) : TimelineRow {
     override val key: String get() = "m${month}_best"
 }
 
-/** Best tiles are this fraction of a grid row's target height. */
-private const val BEST_SIZE_FACTOR = 0.7f
+/** The strip is half the width high (capped at 40% of the height in landscape). */
+private const val BEST_HEIGHT_OF_WIDTH = 0.5f
+private const val BEST_MAX_HEIGHT_FACTOR = 0.4f
+
+/** Shapes kept between a tall phone photo and a wide one; panoramas are cropped to this. */
+private const val BEST_MIN_RATIO = 0.5f
+private const val BEST_MAX_RATIO = 1.8f
+
+/** No tile wider than this share of the width, so the next one always peeks in. */
+private const val BEST_MAX_WIDTH_FACTOR = 0.85f
 
 /** A month's title and the position of its header in [TimelineLayout.rows] (for the fast scroller). */
 data class MonthMarker(val month: Long, val title: String, val rowIndex: Int)
@@ -89,12 +97,18 @@ fun layoutTimeline(
         months += MonthMarker(month.key, title, rows.size)
         rows += MonthHeaderRow(month.key, title)
         if (month.best.isNotEmpty()) {
-            val size = target * BEST_SIZE_FACTOR
+            val height = minOf(viewport.width * BEST_HEIGHT_OF_WIDTH, viewport.height * BEST_MAX_HEIGHT_FACTOR)
             val tiles = month.best.map { k ->
                 val asset = month.assets[k]
-                Tile(asset, month.start + k, urlOf(asset), size)
+                val ratio = (asset.ratio ?: 1f).coerceIn(BEST_MIN_RATIO, BEST_MAX_RATIO)
+                Tile(
+                    asset,
+                    month.start + k,
+                    urlOf(asset),
+                    minOf(height * ratio, viewport.width * BEST_MAX_WIDTH_FACTOR),
+                )
             }
-            rows += BestRow(month.key, tiles, size)
+            rows += BestRow(month.key, tiles, height)
         }
         justify(month.assets.map { it.ratio }, viewport.width, target, viewport.spacing)
             .forEachIndexed { r, row ->
