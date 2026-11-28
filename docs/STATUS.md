@@ -247,6 +247,18 @@ Another family installs Picfort in under an hour, without help ([roadmap](../spe
 
 ---
 
+### Phase 12 — Hardening, performance & review fixes
+Follow-up items from the 2026-11-28 review of T-088..T-107 and earlier server/Android code.
+
+| Task | Description | Status |
+|------|-------------|--------|
+| [T-108](tasks/T-108-hardening-privacy-and-review-fixes.md) | Hardening & P0 fixes: `owner_id` isolation in `/photo-insights/*` & frame, wishlist SSRF, `SecurePreferencesStore` Keystore recovery, cache bounds, `PhotoBackdrop` & `server_user()` fixes | `ready` |
+| [T-109](tasks/T-109-server-and-timeline-performance.md) | Performance & reliability (P1): SQLite WAL + safe backups, `requests.Session`, `PhotoAiWorker` locks & chunking, decoupled `SyncTimelineSource` refresh + ETag, backdrop debounce | `ready` |
+| [T-110](tasks/T-110-monolith-cleanup-and-di.md) | Split oversized files (`photo_ai.py`, `app.py`, `MainActivity.kt`, large screens) & minor DI/naming cleanup | `draft` |
+| [T-111](tasks/T-111-coroutines-runtest-migration.md) | Migrate coroutine unit tests from `runBlocking` to `runTest` | `draft` |
+
+---
+
 ## Task statuses
 
 - `draft` — idea captured, not yet designed
