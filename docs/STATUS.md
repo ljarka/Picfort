@@ -230,7 +230,7 @@ Small things the family asked for while using the app.
 | [T-102](tasks/T-102-memories-hide-sensitive.md) | Memories never show photos the AI marked sensitive (`/photo-insights/labels`, Room `ai_labels`) | `done` |
 | [T-103](tasks/T-103-stricter-best.md) | Stricter "Best": quality 5, selective prompt, old Best tags removed | `done` |
 | [T-104](tasks/T-104-member-libraries-photo-ai.md) | Photo AI for every family member: own Immich key from the app, libraries in turn (ADR 0020) | `done` |
-| [T-105](tasks/T-105-wall-frame-photo-stale.md) | Wall frame card showed an old photo after a server restart (versions now unique) | `in-progress` |
+| [T-105](tasks/T-105-wall-frame-photo-stale.md) | Wall frame card showed an old photo after a server restart (versions now unique) | `done` |
 
 ---
 

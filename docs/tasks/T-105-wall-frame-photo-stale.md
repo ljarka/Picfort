@@ -1,6 +1,6 @@
 # T-105 — The Wall's frame card showed an old photo after a server restart
 
-**Status:** in-progress  
+**Status:** done (`da831c8`)  
 **Component:** Server (`app.py`, `FrameController`)  
 **Depends on:** T-072 (browser frame), T-091 (frame card on the Wall)
 
