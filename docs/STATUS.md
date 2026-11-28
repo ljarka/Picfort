@@ -228,7 +228,7 @@ Small things the family asked for while using the app.
 | [T-100](tasks/T-100-tag-opens-search.md) | Tapping a tag in Details opens Search filtered by it | `done` |
 | [T-101](tasks/T-101-device-check-and-fast-scroll.md) | Maestro check of Best/tags/search; fast scroll fixes (tab bar, dead zone, haptics) | `done` |
 | [T-102](tasks/T-102-memories-hide-sensitive.md) | Memories never show photos the AI marked sensitive (`/photo-insights/labels`, Room `ai_labels`) | `done` |
-| [T-103](tasks/T-103-stricter-best.md) | Stricter "Best": quality 5, selective prompt, old Best tags removed | `in-progress` |
+| [T-103](tasks/T-103-stricter-best.md) | Stricter "Best": quality 5, selective prompt, old Best tags removed | `done` |
 
 ---
 

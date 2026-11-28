@@ -1,6 +1,6 @@
 # T-103 — Stricter "Best": quality 5 and a selective prompt
 
-**Status:** in-progress  
+**Status:** done (`925e625`)  
 **Component:** Server (`photo_ai.py`)  
 **Depends on:** T-089, T-090, T-094
 
