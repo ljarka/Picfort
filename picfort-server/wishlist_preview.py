@@ -2,8 +2,10 @@
 
 from decimal import Decimal, InvalidOperation
 from html.parser import HTMLParser
+import ipaddress
 import json
 import re
+import socket
 import urllib.error
 import urllib.parse
 import urllib.request
@@ -13,6 +15,7 @@ from store import StoreError
 MAX_URL_LENGTH = 2048
 MAX_PREVIEW_BYTES = 1024 * 1024
 PREVIEW_TIMEOUT_SECONDS = 4
+MAX_REDIRECTS = 3
 MAX_PRICE_MINOR = 100_000_000
 MOBILE_USER_AGENT = (
     "Mozilla/5.0 (Linux; Android 14; Pixel 8) "
@@ -27,8 +30,37 @@ def validate_http_url(url) -> str:
     if len(url) > MAX_URL_LENGTH:
         raise StoreError(f"url must be at most {MAX_URL_LENGTH} characters")
     parsed = urllib.parse.urlparse(url)
-    if parsed.scheme not in ("http", "https") or not parsed.netloc:
+    if parsed.scheme not in ("http", "https") or not parsed.netloc or not parsed.hostname:
         raise StoreError("url must be a valid http:// or https:// URL")
+    return url
+
+
+def _is_public_ip(raw_ip: str) -> bool:
+    ip = ipaddress.ip_address(raw_ip.split("%", 1)[0])
+    if isinstance(ip, ipaddress.IPv6Address) and ip.ipv4_mapped is not None:
+        ip = ip.ipv4_mapped
+    return ip.is_global
+
+
+def validate_public_url(url: str, resolve=socket.getaddrinfo) -> str:
+    """Reject non-public destinations (loopback, private LAN, link-local, Docker hosts) to prevent SSRF (T-108)."""
+    url = validate_http_url(url)
+    parsed = urllib.parse.urlparse(url)
+    host = parsed.hostname or ""
+    port = parsed.port or (443 if parsed.scheme == "https" else 80)
+    try:
+        infos = resolve(host, port, type=socket.SOCK_STREAM)
+    except OSError as e:
+        raise StoreError(f"Could not resolve host: {e}", status=400)
+    if not infos:
+        raise StoreError("Could not resolve host", status=400)
+    for info in infos:
+        addr = info[4][0]
+        try:
+            if not _is_public_ip(addr):
+                raise StoreError("URL points to a non-public address", status=400)
+        except ValueError:
+            raise StoreError("URL points to an invalid address", status=400)
     return url
 
 
@@ -189,8 +221,25 @@ def parse_link_preview(html_text: str, base_url: str) -> dict:
     }
 
 
-def fetch_link_preview(url: str) -> dict:
-    url = validate_http_url(url)
+class _SafeRedirectHandler(urllib.request.HTTPRedirectHandler):
+    """Re-validates every redirect hop against SSRF rules and caps redirect depth (T-108)."""
+
+    def __init__(self, resolve=socket.getaddrinfo, max_redirects: int = MAX_REDIRECTS):
+        self._resolve = resolve
+        self._max_redirects = max_redirects
+        self._redirects = 0
+
+    def redirect_request(self, req, fp, code, msg, headers, newurl):
+        self._redirects += 1
+        if self._redirects > self._max_redirects:
+            raise StoreError(f"Too many redirects (max {self._max_redirects})", status=502)
+        target = urllib.parse.urljoin(req.full_url, newurl)
+        validate_public_url(target, resolve=self._resolve)
+        return super().redirect_request(req, fp, code, msg, headers, target)
+
+
+def fetch_link_preview(url: str, resolve=socket.getaddrinfo, opener=None) -> dict:
+    url = validate_public_url(url, resolve=resolve)
     req = urllib.request.Request(
         url,
         headers={
@@ -199,11 +248,15 @@ def fetch_link_preview(url: str) -> dict:
             "Accept-Language": "pl-PL,pl;q=0.9,en-US;q=0.8,en;q=0.7",
         },
     )
+    if opener is None:
+        opener = urllib.request.build_opener(_SafeRedirectHandler(resolve=resolve))
     try:
-        with urllib.request.urlopen(req, timeout=PREVIEW_TIMEOUT_SECONDS) as resp:
+        with opener.open(req, timeout=PREVIEW_TIMEOUT_SECONDS) as resp:
             raw = resp.read(MAX_PREVIEW_BYTES)
             charset = resp.headers.get_content_charset() or "utf-8"
             final_url = resp.geturl() or url
+    except StoreError:
+        raise
     except (urllib.error.URLError, TimeoutError, ValueError) as e:
         raise StoreError(f"Could not fetch link preview: {e}", status=502)
 

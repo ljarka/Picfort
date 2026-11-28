@@ -8,7 +8,7 @@ Design tokens, Theme, MemberAvatar, and reusable Compose components.
 - Reusable UI elements: `MemberAvatar`, `initials()`, `avatarColor(name, fallbackIndex)` (Immich color names tuned to the aperture; members with no picked color — null or Immich default "primary" — get 5 distinct blades in id order, see `mergeFamilyUsers`) (`com.github.ljarka.picfort.core.ui.avatar`).
 - `MemberCarousel` (avatar row, one selected, long-press "Edit", `dimmedIds` faded, optional last "+" circle via `onOpenFamily`, no caption, "Family settings" for TalkBack, T-068): Wall and Photos (T-052). Search (T-057): `selectedIds` (several), `onEditMember = null` (no menu), `state` (scrolls to a person picked under "All people", T-060).
 - Floating tab bar size: `FloatingTabBar` (height, margins, `Clearance`) used by `:app`'s `TabBar`; tab roots lift their FAB with `Modifier.aboveFloatingTabBar()` (`com.github.ljarka.picfort.core.ui.component`).
-- Photo-tinted background: `PhotoBackdrop(url)` (blurred photo under a theme veil, crossfade), used by the Wall (frame photo, T-106) and the timeline (month's first Best photo, T-107).
+- Photo-tinted background: `PhotoBackdrop(url)` (64 px decode for Android < 12, blurred photo + theme veil inside `Crossfade`, T-106/T-107/T-108), used by the Wall (frame photo) and the timeline (month's first Best photo) under `Scaffold(containerColor = Color.Transparent, contentColor = MaterialTheme.colorScheme.onBackground)`.
 - Justified photo rows: `justify(ratios, width, targetHeight, spacing)` (`core.ui.layout`), pure; used by the
   timeline and by birthday photos in Events.
 - App logo: `R.drawable.icon` (flat house + aperture, same as the launcher icon); shown only on the init/login screen.

@@ -4,7 +4,7 @@ OkHttp, credential storage, Picfort server client and network error mapping.
 
 ## Scope
 - Server client: `PicfortServerClient`, `PicfortServerException` (`com.github.ljarka.picfort.core.network`).
-- Credentials & settings: `SecurePreferencesStore` (DataStore + Keystore), `AccessTokenStore`, `FrameSettingsStore`,
+- Credentials & settings: `SecurePreferencesStore` (DataStore + Keystore, auto-recovers from lost/invalidated Keystore keys, non-blocking async writes; tested in `SecurePreferencesStoreTest`, T-108), `AccessTokenStore`, `FrameSettingsStore`,
   `normalizeFrameUrl()`; `defaultSchemeFor()` (no scheme typed: http:// on the local network, else https://;
   Immich and Picfort addresses, T-058).
 - Qualifier: `@PicfortHttpClient`.

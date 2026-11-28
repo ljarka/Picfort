@@ -134,6 +134,23 @@ class ApiKeyTest(unittest.TestCase):
     def test_no_key_configured(self):
         self.assertEqual(200, self.make_client("").get("/status").status_code)
 
+    def test_cf_connecting_ip_ignored_from_untrusted_public_peer(self):
+        client = self.make_client("s3cret")
+        # Public remote_addr sending spoofed CF-Connecting-IP gets rate-limited by remote_addr, not spoofed header.
+        for i in range(10):
+            r = client.get(
+                "/status",
+                headers={"X-Picfort-Key": "wrong", "CF-Connecting-IP": f"198.51.100.{i}"},
+                environ_base={"REMOTE_ADDR": "93.184.216.34"},
+            )
+            self.assertEqual(401, r.status_code)
+        r_blocked = client.get(
+            "/status",
+            headers={"X-Picfort-Key": "s3cret", "CF-Connecting-IP": "198.51.100.99"},
+            environ_base={"REMOTE_ADDR": "93.184.216.34"},
+        )
+        self.assertEqual(429, r_blocked.status_code)
+
 
 if __name__ == "__main__":
     unittest.main()

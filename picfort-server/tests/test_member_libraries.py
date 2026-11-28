@@ -157,6 +157,8 @@ class MemberLibrariesTest(unittest.TestCase):
         conn.executescript("""
             DROP TABLE library_keys; DROP INDEX idx_photo_insights_owner;
             ALTER TABLE photo_insights DROP COLUMN owner_id;
+            DROP INDEX idx_album_suggestions_owner;
+            ALTER TABLE album_suggestions DROP COLUMN owner_id;
             INSERT INTO photo_insights (asset_id, model, analyzed_at) VALUES ('a', 'm', '2026-11-28T00:00:00Z');
             PRAGMA user_version = 4;
         """)
@@ -205,6 +207,143 @@ class MemberLibrariesTest(unittest.TestCase):
         self.assertEqual(3, self.worker.fill_unknown_owners())
         self.assertEqual({DAD: 1, MOM: 1, "-": 1}, self.store.owned_counts())  # "gone" is not asked again
         self.assertEqual(0, self.worker.fill_unknown_owners())
+
+    def test_cleanup_status_dismiss_delete_are_isolated_per_owner(self):
+        dad_asset = "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa"
+        mom_asset = "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb"
+        self.store.save(
+            dad_asset, "m",
+            {"category": "photo", "quality": 1, "cleanup_candidate": True, "cleanup_reason": "blurry"},
+            ["ai/cleanup/low-quality"], owner_id=DAD,
+        )
+        self.store.save(
+            mom_asset, "m",
+            {"category": "screenshot", "quality": 3, "cleanup_candidate": True, "cleanup_reason": "screenshot"},
+            ["ai/type/screenshot"], owner_id=MOM,
+        )
+        dad_client = self.client("dad-token")
+        mom_client = self.client("mom-token")
+
+        # Even though Mom shares with Dad (partner), cleanup & status are strictly own photos only.
+        self.assertEqual([dad_asset], [i["asset_id"] for i in dad_client.get("/photo-insights/cleanup").get_json()["items"]])
+        self.assertEqual([mom_asset], [i["asset_id"] for i in mom_client.get("/photo-insights/cleanup").get_json()["items"]])
+        self.assertEqual(1, dad_client.get("/photo-insights/status").get_json()["cleanup_count"])
+        self.assertEqual(1, mom_client.get("/photo-insights/status").get_json()["cleanup_count"])
+
+        # Cross-owner dismiss and delete are rejected with 403.
+        self.assertEqual(403, dad_client.post(f"/photo-insights/{mom_asset}/dismiss").status_code)
+        self.assertEqual(403, mom_client.post(f"/photo-insights/{dad_asset}/dismiss").status_code)
+        self.assertEqual(403, dad_client.delete(f"/photo-insights/{mom_asset}").status_code)
+        self.assertEqual(403, mom_client.delete(f"/photo-insights/{dad_asset}").status_code)
+
+        # Owners can dismiss and delete their own items.
+        self.assertEqual(200, mom_client.post(f"/photo-insights/{mom_asset}/dismiss").status_code)
+        self.assertEqual([], mom_client.get("/photo-insights/cleanup").get_json()["items"])
+        self.assertEqual(204, dad_client.delete(f"/photo-insights/{dad_asset}").status_code)
+        self.assertEqual([], dad_client.get("/photo-insights/cleanup").get_json()["items"])
+
+    def test_album_suggestions_are_isolated_per_owner(self):
+        dad_cluster = {
+            "cluster_key": "2026-02-14..2026-02-16|zakopane",
+            "fallback_title": "Zakopane",
+            "subtitle": "12 photos",
+            "asset_ids": ["d1", "d2"],
+            "start_date": "2026-02-14",
+            "end_date": "2026-02-16",
+        }
+        mom_cluster = {
+            "cluster_key": "2026-03-01..2026-03-02|gdansk",
+            "fallback_title": "Gdansk",
+            "subtitle": "15 photos",
+            "asset_ids": ["m1", "m2"],
+            "start_date": "2026-03-01",
+            "end_date": "2026-03-02",
+        }
+        self.store.save_album_suggestion(dad_cluster, "Dad trip", "d1", owner_id=DAD)
+        self.store.save_album_suggestion(mom_cluster, "Mom trip", "m1", owner_id=MOM)
+
+        dad_client = self.client("dad-token")
+        mom_client = self.client("mom-token")
+        self.assertEqual(["Dad trip"], [s["title"] for s in dad_client.get("/photo-insights/album-suggestions").get_json()["items"]])
+        self.assertEqual(["Mom trip"], [s["title"] for s in mom_client.get("/photo-insights/album-suggestions").get_json()["items"]])
+
+        # Cross-owner dismiss / created is rejected with 403.
+        self.assertEqual(403, dad_client.post(f"/photo-insights/album-suggestions/{mom_cluster['cluster_key']}/dismiss").status_code)
+        self.assertEqual(403, mom_client.post(f"/photo-insights/album-suggestions/{dad_cluster['cluster_key']}/created").status_code)
+
+        # Own dismiss / created succeeds.
+        self.assertEqual(200, dad_client.post(f"/photo-insights/album-suggestions/{dad_cluster['cluster_key']}/created").status_code)
+        self.assertEqual(200, mom_client.post(f"/photo-insights/album-suggestions/{mom_cluster['cluster_key']}/dismiss").status_code)
+        self.assertEqual([], dad_client.get("/photo-insights/album-suggestions").get_json()["items"])
+        self.assertEqual([], mom_client.get("/photo-insights/album-suggestions").get_json()["items"])
+
+    def test_frame_worthy_ids_and_picker_exclude_private_member_libraries(self):
+        from datetime import date
+        from slideshow import SlideshowSettings
+
+        PRIVATE_MEMBER = "33333333-3333-3333-3333-333333333333"
+        self.store.save("dad-best", "m", {"category": "photo", "quality": 5, "frame_worthy": True}, owner_id=DAD)
+        self.store.save("mom-partner-best", "m", {"category": "photo", "quality": 5, "frame_worthy": True}, owner_id=MOM)
+        self.store.save("private-best", "m", {"category": "photo", "quality": 5, "frame_worthy": True}, owner_id=PRIVATE_MEMBER)
+
+        self.assertEqual({"dad-best", "mom-partner-best"}, set(self.store.frame_worthy_ids(owners={DAD, MOM})))
+
+        immich = FakeImmich(library=["fallback"])
+        immich.me = lambda: {"id": DAD, "name": "Dad"}
+        immich.partners = lambda: {MOM}
+        picker = Picker(immich, photo_ai=self.store)
+        chosen = {picker.next(SlideshowSettings(mode="random", best_only=True), date(2026, 11, 28)) for _ in range(20)}
+        self.assertEqual({"dad-best", "mom-partner-best"}, chosen)
+
+    def test_remove_my_library_evicts_cached_clients(self):
+        c = self.client("mom-token")
+        self.assertEqual(200, c.put("/photo-insights/my-library", json={"api_key": "mom-key", "key_id": "k-1"}).status_code)
+        self.worker.libraries()
+        self.assertIn(MOM, self.worker._member_clients)
+        self.assertEqual(200, c.delete("/photo-insights/my-library").status_code)
+        self.assertNotIn(MOM, self.worker._member_clients)
+
+    def test_server_user_retries_after_transient_error_and_caches_403(self):
+        from photo_ai import SERVER_USER_RETRY_TTL
+        from helpers import Clock
+
+        clock = Clock()
+        calls = []
+
+        class FlakyImmich:
+            def __init__(self, responses):
+                self._responses = list(responses)
+
+            def me(self):
+                calls.append(1)
+                r = self._responses.pop(0)
+                if isinstance(r, Exception):
+                    raise r
+                return r
+
+        # Transient ConnectionError -> returns None, throttled during TTL, then succeeds after TTL.
+        flaky = FlakyImmich([requests.ConnectionError("timeout"), {"id": DAD, "name": "Dad"}])
+        worker = PhotoAiWorker(PhotoAiConfig(), self.store, flaky, None, None, clock=clock)
+        self.assertIsNone(worker.server_user())
+        self.assertEqual(1, len(calls))
+        # Within TTL: doesn't hammer Immich.
+        self.assertIsNone(worker.server_user())
+        self.assertEqual(1, len(calls))
+        # After TTL: retries and resolves permanently.
+        clock.advance(SERVER_USER_RETRY_TTL + 1)
+        self.assertEqual({"id": DAD, "name": "Dad"}, worker.server_user())
+        self.assertEqual(2, len(calls))
+        self.assertEqual({"id": DAD, "name": "Dad"}, worker.server_user())
+        self.assertEqual(2, len(calls))
+
+        # 403 (missing user.read) -> cached permanently without retrying.
+        calls.clear()
+        forbidden = FlakyImmich([http_error(403), {"id": DAD, "name": "Dad"}])
+        worker2 = PhotoAiWorker(PhotoAiConfig(), self.store, forbidden, None, None, clock=clock)
+        self.assertIsNone(worker2.server_user())
+        clock.advance(SERVER_USER_RETRY_TTL * 10)
+        self.assertIsNone(worker2.server_user())
+        self.assertEqual(1, len(calls))
 
 
 if __name__ == "__main__":

@@ -47,6 +47,17 @@ class ImmichClient:
         u = r.json()
         return {"id": u.get("id", ""), "name": u.get("name") or u.get("email") or ""}
 
+    def partners(self, timeout: float = 10.0) -> set[str]:
+        """Ids of users who share their library with this key's owner (T-108)."""
+        r = requests.get(
+            f"{self.base_url}/api/partners",
+            params={"direction": "shared-with"},
+            headers=self.headers,
+            timeout=timeout,
+        )
+        r.raise_for_status()
+        return {p["id"] for p in r.json() if isinstance(p, dict) and p.get("id")}
+
     def _post(self, path: str, body: dict):
         r = requests.post(f"{self.base_url}/api{path}", json=body, headers=self.headers, timeout=self.timeout)
         r.raise_for_status()

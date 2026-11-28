@@ -226,17 +226,24 @@ def register_dashboard(app: Flask, *, controller, slideshow, settings_json, immi
         return body
 
     member_stats: dict[str, _Cached] = {}
+    member_stats_lock = threading.Lock()
+
+    def evict_member(user_id: str):
+        """Drop a removed member's cached stats client (holding their API key) from RAM (T-108)."""
+        with member_stats_lock:
+            member_stats.pop(user_id, None)
 
     def member_images(row: dict) -> int | None:
         """A member's own library size, through their own key (cached like Immich's)."""
         factory = getattr(photo_ai_worker, "client_factory", None)
         if factory is None:
             return None
-        cached = member_stats.get(row["user_id"])
-        if cached is None or cached.key != row["api_key"]:
-            cached = _Cached(lambda key=row["api_key"]: factory(key).asset_statistics(), SLOW_TTL, clock)
-            cached.key = row["api_key"]
-            member_stats[row["user_id"]] = cached
+        with member_stats_lock:
+            cached = member_stats.get(row["user_id"])
+            if cached is None or cached.key != row["api_key"]:
+                cached = _Cached(lambda key=row["api_key"]: factory(key).asset_statistics(), SLOW_TTL, clock)
+                cached.key = row["api_key"]
+                member_stats[row["user_id"]] = cached
         stats = cached()
         return stats.get("images") if stats else None
 
@@ -249,6 +256,10 @@ def register_dashboard(app: Flask, *, controller, slideshow, settings_json, immi
         counts = photo_ai.owned_counts()
         members = photo_ai.library_keys()
         member_ids = {m["user_id"] for m in members}
+        with member_stats_lock:
+            for uid in list(member_stats):
+                if uid not in member_ids:
+                    member_stats.pop(uid, None)
         server_user = photo_ai_worker.server_user() if photo_ai_worker is not None else None
         server_id = server_user["id"] if server_user else None
 
@@ -300,3 +311,5 @@ def register_dashboard(app: Flask, *, controller, slideshow, settings_json, immi
         }
         data["problems"] = problems_of(data)
         return no_store(jsonify(data))
+
+    return evict_member

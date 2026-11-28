@@ -72,6 +72,7 @@ School timetables (see school.py, T-028), same token auth; anyone can edit or de
 """
 
 import hmac
+import ipaddress
 import json
 import logging
 import math
@@ -394,8 +395,9 @@ def create_app(controller: FrameController, slideshow: Slideshow, immich: Immich
         register_events(app, events)
     if school is not None:
         register_school(app, school)
+    on_member_removed = []
     if photo_ai is not None:
-        register_photo_insights(app, photo_ai, photo_ai_worker, photo_ai_tagger, partner_lookup)
+        register_photo_insights(app, photo_ai, photo_ai_worker, photo_ai_tagger, partner_lookup, on_member_removed)
     if family is not None and events is not None:
         family.events = events
         events.family = family
@@ -407,11 +409,13 @@ def create_app(controller: FrameController, slideshow: Slideshow, immich: Immich
         )
         if store is not None
     }
-    register_dashboard(
+    evict_dashboard_member = register_dashboard(
         app, controller=controller, slideshow=slideshow, settings_json=settings_json, immich=immich,
         immich_health=immich_health, stores=stores, photo_ai=photo_ai, photo_ai_worker=photo_ai_worker,
         browser_frame=bool(api_key), data_dir=data_dir, clock=clock,
     )
+    if callable(evict_dashboard_member):
+        on_member_removed.append(evict_dashboard_member)
     return app
 
 
@@ -422,11 +426,30 @@ API_KEY_HEADER = "X-Picfort-Key"
 # gets 429 (even with the right key) until the window passes (T-072: the server is on the internet).
 MAX_WRONG_KEYS = 10
 WRONG_KEY_WINDOW = 15 * 60
+MAX_WRONG_KEY_IPS = 1024
+
+
+def _is_trusted_proxy(addr: str | None) -> bool:
+    """Trust CF-Connecting-IP only when the direct peer is loopback, private LAN, or explicitly opted in (T-108)."""
+    if not addr:
+        return False
+    if os.environ.get("PICFORT_TRUST_PROXY", "").strip().lower() in ("1", "true", "yes"):
+        return True
+    try:
+        ip = ipaddress.ip_address(addr.split("%", 1)[0])
+    except ValueError:
+        return False
+    return ip.is_loopback or ip.is_private
 
 
 def client_address() -> str:
     # Behind the Cloudflare tunnel every request comes from cloudflared; Cloudflare names the caller.
-    return request.headers.get("CF-Connecting-IP") or request.remote_addr or "?"
+    remote = request.remote_addr or ""
+    if _is_trusted_proxy(remote):
+        cf_ip = (request.headers.get("CF-Connecting-IP") or "").strip()
+        if cf_ip:
+            return cf_ip
+    return remote or "?"
 
 
 def require_api_key(app: Flask, api_key: str, open_paths=frozenset(), clock=time.monotonic):
@@ -455,6 +478,17 @@ def require_api_key(app: Flask, api_key: str, open_paths=frozenset(), clock=time
             return None
         if given:
             with wrong_lock:
+                if address not in wrong and len(wrong) >= MAX_WRONG_KEY_IPS:
+                    # Prune expired entries first; if still full, drop the oldest entry.
+                    for ip_key in list(wrong):
+                        fresh = [t for t in wrong[ip_key] if now - t < WRONG_KEY_WINDOW]
+                        if fresh:
+                            wrong[ip_key] = fresh
+                        else:
+                            wrong.pop(ip_key, None)
+                    if len(wrong) >= MAX_WRONG_KEY_IPS:
+                        oldest = min(wrong, key=lambda k: wrong[k][-1])
+                        wrong.pop(oldest, None)
                 wrong.setdefault(address, []).append(now)
             log.warning("Wrong Picfort key from %s", address)
         resp, status = error("Missing or wrong Picfort server API key", 401)
@@ -926,7 +960,7 @@ def register_wall(app: Flask, wall: WallStore):
 
 
 def register_photo_insights(app: Flask, store: PhotoAiStore, worker: PhotoAiWorker = None,
-                            tagger: ImmichTagger = None, partner_lookup=None):
+                            tagger: ImmichTagger = None, partner_lookup=None, on_member_removed=None):
     """`partner_lookup(token)`: ids of users who share their library with the caller (Immich
     partners); None: labels are limited to the caller's own photos (T-104)."""
 
@@ -997,11 +1031,16 @@ def register_photo_insights(app: Flask, store: PhotoAiStore, worker: PhotoAiWork
         key_id = store.delete_library_key(g.user.id)
         if key_id is None:
             return error("No key stored for you", 404)
+        if worker is not None:
+            worker.evict_member(g.user.id)
+        for cb in (on_member_removed or ()):
+            cb(g.user.id)
         log.info("Photo AI: %s removed their library", g.user.name)
         return jsonify(key_id=key_id)
+
     @app.route("/photo-insights/status", methods=["GET"])
     def photo_insights_status():
-        stats = store.stats()
+        stats = store.stats(owner_id=g.user.id)
         return jsonify({
             "enabled": bool(worker and worker.config.enabled),
             "model": worker.config.ollama_model if worker else "",
@@ -1027,12 +1066,17 @@ def register_photo_insights(app: Flask, store: PhotoAiStore, worker: PhotoAiWork
             limit = int(request.args.get("limit", "100"))
         except ValueError:
             return error("limit must be an integer", 400)
-        return jsonify(items=store.list_cleanup(kind=kind, limit=limit))
+        return jsonify(items=store.list_cleanup(kind=kind, limit=limit, owner_id=g.user.id))
 
     @app.route("/photo-insights/<asset_id>/dismiss", methods=["POST"])
     def photo_insights_dismiss(asset_id):
         if not UUID_RE.match(asset_id):
             return error("asset_id must be a UUID", 400)
+        owner = store.owner_of(asset_id)
+        if owner is None:
+            return error("Photo insight not found", 404)
+        if owner != g.user.id:
+            return error("Only the photo owner can dismiss this item", 403)
         dismissed = store.dismiss(asset_id)
         if not dismissed:
             return error("Photo insight not found", 404)
@@ -1046,23 +1090,34 @@ def register_photo_insights(app: Flask, store: PhotoAiStore, worker: PhotoAiWork
     def photo_insights_delete(asset_id):
         if not UUID_RE.match(asset_id):
             return error("asset_id must be a UUID", 400)
+        owner = store.owner_of(asset_id)
+        if owner is not None and owner != g.user.id:
+            return error("Only the photo owner can delete this item", 403)
         store.delete(asset_id)
         return "", 204
 
     @app.route("/photo-insights/album-suggestions", methods=["GET"])
     def photo_insights_album_suggestions():
-        return jsonify(items=store.list_album_suggestions())
+        return jsonify(items=store.list_album_suggestions(owner_id=g.user.id))
 
     @app.route("/photo-insights/album-suggestions/<path:cluster_key>/dismiss", methods=["POST"])
     def photo_insights_dismiss_album(cluster_key):
-        if not store.set_album_suggestion_status(cluster_key, "dismissed"):
+        owner = store.album_suggestion_owner(cluster_key)
+        if owner is None:
             return error("Album suggestion not found", 404)
+        if owner != g.user.id:
+            return error("Only the owner can dismiss this album suggestion", 403)
+        store.set_album_suggestion_status(cluster_key, "dismissed", owner_id=g.user.id)
         return jsonify(status="dismissed", cluster_key=cluster_key)
 
     @app.route("/photo-insights/album-suggestions/<path:cluster_key>/created", methods=["POST"])
     def photo_insights_created_album(cluster_key):
-        if not store.set_album_suggestion_status(cluster_key, "created"):
+        owner = store.album_suggestion_owner(cluster_key)
+        if owner is None:
             return error("Album suggestion not found", 404)
+        if owner != g.user.id:
+            return error("Only the owner can update this album suggestion", 403)
+        store.set_album_suggestion_status(cluster_key, "created", owner_id=g.user.id)
         return jsonify(status="created", cluster_key=cluster_key)
 
 

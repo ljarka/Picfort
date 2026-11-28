@@ -264,7 +264,8 @@ fun TimelineScreen(
         PhotoBackdrop(backdropUrl)
         val scrollBehavior = enterAlwaysScrollBehavior()
         BottomSheetScaffold(
-            containerColor = if (backdropUrl != null) Color.Transparent else MaterialTheme.colorScheme.surface,
+            containerColor = Color.Transparent,
+            contentColor = MaterialTheme.colorScheme.onBackground,
             sheetPeekHeight = 0.dp,
             // Messages sit above the floating tab bar, not under it.
             snackbarHost = { SnackbarHost(it, Modifier.aboveFloatingTabBar()) },

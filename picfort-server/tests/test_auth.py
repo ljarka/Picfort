@@ -4,7 +4,7 @@ from unittest import mock
 import helpers  # noqa: F401  (puts the server on sys.path)
 import requests
 
-from auth import AuthUnavailable, User, immich_lookup
+from auth import AuthUnavailable, MAX_CACHED, User, immich_lookup, immich_partners
 
 
 def response(status, body=None):
@@ -41,6 +41,22 @@ class ImmichLookupTest(unittest.TestCase):
         self.assertRaises(AuthUnavailable, self.lookup, "tok")
         get.side_effect = requests.ConnectionError("down")
         self.assertRaises(AuthUnavailable, self.lookup, "tok")
+
+
+class ImmichPartnersCacheTest(unittest.TestCase):
+    @mock.patch("auth.requests.get")
+    def test_hashes_tokens_and_bounds_cache_size(self, get):
+        get.return_value = response(200, [{"id": "p1"}])
+        now = [0.0]
+        lookup = immich_partners("https://immich.example/", ttl=60.0, clock=lambda: now[0])
+        self.assertEqual({"p1"}, lookup("Bearer secret-token-1"))
+        self.assertNotIn("secret-token-1", lookup._cache)
+        self.assertEqual(1, len(lookup._cache))
+
+        # Fill beyond MAX_CACHED and ensure cache stays bounded.
+        for i in range(MAX_CACHED + 5):
+            lookup(f"Bearer tok-{i}")
+        self.assertLessEqual(len(lookup._cache), MAX_CACHED)
 
 
 if __name__ == "__main__":

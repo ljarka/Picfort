@@ -17,6 +17,7 @@ from auth import Authenticator
 from events import EventStore
 from family import FamilyStore
 from helpers import FakeImmich
+from photo_ai import PhotoAiStore
 from school import SchoolStore
 from shopping import ShoppingStore
 from slideshow import Picker, SettingsStore, Slideshow
@@ -41,12 +42,33 @@ class MigrationTests(unittest.TestCase):
         shutil.rmtree(self.dir, ignore_errors=True)
 
     def test_every_store_has_migrations_for_all_previous_versions(self):
-        stores = [WallStore, ShoppingStore, FamilyStore, EventStore, SchoolStore]
+        stores = [WallStore, ShoppingStore, FamilyStore, EventStore, SchoolStore, PhotoAiStore]
         for store_cls in stores:
             with self.subTest(store=store_cls.__name__):
                 self.assertTrue(issubclass(store_cls, SqliteStore))
                 for v in range(1, store_cls.SCHEMA_VERSION):
                     self.assertIn(v, store_cls.MIGRATIONS, f"{store_cls.__name__} missing migration for v{v}")
+
+    def test_photo_ai_v5_migrates_album_suggestions_with_owner_id(self):
+        db = os.path.join(self.dir, "photo_ai.db")
+        PhotoAiStore(db)
+        with closing(sqlite3.connect(db)) as conn:
+            conn.executescript(
+                """
+                DROP INDEX idx_album_suggestions_owner;
+                ALTER TABLE album_suggestions DROP COLUMN owner_id;
+                INSERT INTO album_suggestions (
+                    cluster_key, title, subtitle, cover_asset_id, asset_ids,
+                    start_date, end_date, city, country, status, created_at
+                ) VALUES ('k1', 'Trip', '12 photos', 'a1', '["a1"]', '2026-01-01', '2026-01-02', '', '', 'pending', '2026-01-02T00:00:00Z');
+                PRAGMA user_version = 5;
+                """
+            )
+        store = PhotoAiStore(db)
+        self.assertIsNone(store.migration_error)
+        self.assertTrue(os.path.exists(db + ".v5.bak"))
+        self.assertEqual(1, len(store.list_album_suggestions()))
+        self.assertEqual("", store.album_suggestion_owner("k1"))
 
     def test_family_v1_migrates_with_rows_intact(self):
         db = os.path.join(self.dir, "family.db")

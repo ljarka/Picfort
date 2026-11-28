@@ -126,6 +126,7 @@ class Picker:
     history: deque = field(default_factory=lambda: deque(maxlen=100))
     _memories: tuple = (None, None, [])  # (date, filter_photos, ids) cache for the day
     _documents: tuple = (None, frozenset())  # (date, ids) OCR document cache for the day
+    _owners: tuple = (None, None)  # (date, set[str] | None) accessible owners cache for the day
 
     def next(self, s: SlideshowSettings, today: date) -> str | None:
         if s.mode == "album":
@@ -133,7 +134,7 @@ class Picker:
         elif s.mode == "memories":
             candidates = self._filter_docs(self._on_this_day(today, s.filter_photos), s, today)
             if s.best_only:
-                best = self._best_ids()
+                best = self._best_ids(today)
                 if best:
                     best_set = set(best)
                     # No frame-worthy photo from this day: keep the day's photos, not random "best" ones.
@@ -141,7 +142,7 @@ class Picker:
             if not candidates:
                 candidates = self._filter_docs(self._random(s), s, today)
         elif s.mode == "random":
-            candidates = self._best_ids() if s.best_only else []
+            candidates = self._best_ids(today) if s.best_only else []
             if not candidates:
                 candidates = self._filter_docs(self._random(s), s, today)
         else:
@@ -169,10 +170,39 @@ class Picker:
             log.warning("Photo AI photo lookup failed: %s", e)
             return set()
 
-    def _best_ids(self) -> list[str]:
+    def _accessible_owners(self, today: date) -> set[str] | None:
+        """Server key owner + their Immich partners, cached per day (T-108)."""
+        cached_day, owners = self._owners
+        if cached_day == today:
+            return owners
+        if not hasattr(self.immich, "me"):
+            self._owners = (today, None)
+            return None
+        try:
+            me = self.immich.me()
+            owner_id = me.get("id") if isinstance(me, dict) else None
+        except Exception as e:
+            log.warning("Frame owner lookup failed: %s", e)
+            return None
+        if not owner_id:
+            self._owners = (today, None)
+            return None
+        result = {owner_id}
+        if hasattr(self.immich, "partners"):
+            try:
+                result |= set(self.immich.partners())
+            except Exception as e:
+                log.warning("Frame partners lookup failed: %s", e)
+        self._owners = (today, result)
+        return result
+
+    def _best_ids(self, today: date) -> list[str]:
         if self.photo_ai is None:
             return []
         try:
+            owners = self._accessible_owners(today)
+            if owners is not None:
+                return list(self.photo_ai.frame_worthy_ids(owners=owners))
             return list(self.photo_ai.frame_worthy_ids())
         except Exception as e:
             log.warning("Photo AI frame-worthy lookup failed: %s", e)

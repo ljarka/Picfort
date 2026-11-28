@@ -16,7 +16,8 @@ from shopping import ShoppingStore
 from slideshow import Picker, SettingsStore, Slideshow
 from test_wall import Clock, FakeImmichAuth, MAMA, TATA
 from wall import WallStore
-from wishlist_preview import parse_link_preview
+from store import StoreError
+from wishlist_preview import _SafeRedirectHandler, fetch_link_preview, parse_link_preview, validate_public_url
 
 
 SAMPLE_HTML = """<!doctype html>
@@ -65,6 +66,80 @@ class WishlistPreviewTest(unittest.TestCase):
         self.assertEqual("https://cdn.allegro.pl/klocki.jpg", preview["image_url"])
         self.assertEqual(14990, preview["price_minor"])
         self.assertEqual("allegro.pl", preview["shop_name"])
+
+
+class WishlistSsrfTest(unittest.TestCase):
+    """T-108: block private, loopback, link-local and redirect SSRF targets."""
+
+    @staticmethod
+    def _fake_resolve(mapping):
+        import socket
+
+        def resolve(host, port, type=0):
+            ips = mapping.get(host)
+            if ips is None:
+                raise socket.gaierror("unknown host")
+            return [(socket.AF_INET6 if ":" in ip else socket.AF_INET, socket.SOCK_STREAM, 0, "", (ip, port)) for ip in ips]
+
+        return resolve
+
+    def test_blocks_loopback_private_link_local_and_ipv6_loopback(self):
+        resolver = self._fake_resolve({
+            "localhost": ["127.0.0.1"],
+            "lan.local": ["192.168.1.10"],
+            "docker-svc": ["172.17.0.2"],
+            "corp.internal": ["10.0.0.5"],
+            "metadata.google.internal": ["169.254.169.254"],
+            "v6loop.local": ["::1"],
+            "mapped.local": ["::ffff:127.0.0.1"],
+            "mixed.example": ["93.184.216.34", "10.0.0.1"],
+            "public.example": ["93.184.216.34"],
+        })
+        for blocked in (
+            "http://localhost/admin",
+            "http://lan.local/secret",
+            "http://docker-svc:5000/status",
+            "http://corp.internal/",
+            "http://metadata.google.internal/latest/meta-data/",
+            "http://v6loop.local/",
+            "http://mapped.local/",
+            "http://mixed.example/",
+            "http://unresolvable.invalid/",
+        ):
+            with self.subTest(url=blocked):
+                with self.assertRaises(StoreError) as ctx:
+                    validate_public_url(blocked, resolve=resolver)
+                self.assertEqual(400, ctx.exception.status)
+
+        self.assertEqual("https://public.example/item", validate_public_url("https://public.example/item", resolve=resolver))
+
+    def test_blocks_redirect_to_private_ip_and_excessive_redirects(self):
+        import urllib.request
+
+        resolver = self._fake_resolve({
+            "shop.example": ["93.184.216.34"],
+            "internal.lan": ["192.168.1.1"],
+        })
+        handler = _SafeRedirectHandler(resolve=resolver, max_redirects=3)
+        req = urllib.request.Request("https://shop.example/start")
+        with self.assertRaises(StoreError) as ctx:
+            handler.redirect_request(req, None, 302, "Found", {}, "http://internal.lan/secret")
+        self.assertEqual(400, ctx.exception.status)
+
+        # >3 redirects to public hosts are rejected with 502.
+        handler2 = _SafeRedirectHandler(resolve=resolver, max_redirects=3)
+        for i in range(3):
+            next_req = handler2.redirect_request(req, None, 302, "Found", {}, f"https://shop.example/hop{i}")
+            self.assertIsNotNone(next_req)
+        with self.assertRaises(StoreError) as ctx2:
+            handler2.redirect_request(req, None, 302, "Found", {}, "https://shop.example/hop3")
+        self.assertEqual(502, ctx2.exception.status)
+
+    def test_fetch_link_preview_blocks_ssrf_before_network(self):
+        resolver = self._fake_resolve({"localhost": ["127.0.0.1"]})
+        with self.assertRaises(StoreError) as ctx:
+            fetch_link_preview("http://localhost:5000/status", resolve=resolver)
+        self.assertEqual(400, ctx.exception.status)
 
 
 class WishlistApiTest(unittest.TestCase):

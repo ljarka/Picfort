@@ -256,7 +256,7 @@ def in_active_hours(window: tuple[int, int] | None, now: datetime) -> bool:
 
 
 class PhotoAiStore(SqliteStore):
-    SCHEMA_VERSION = 5
+    SCHEMA_VERSION = 6
     NAME = "photo_ai"
     MIGRATIONS = {
         1: ["ALTER TABLE photo_insights ADD COLUMN is_sensitive INTEGER NOT NULL DEFAULT 0"],
@@ -296,6 +296,10 @@ class PhotoAiStore(SqliteStore):
                 created_at TEXT NOT NULL,
                 last_error TEXT NOT NULL DEFAULT ''
             )""",
+        ],
+        5: [
+            "ALTER TABLE album_suggestions ADD COLUMN owner_id TEXT NOT NULL DEFAULT ''",
+            "CREATE INDEX idx_album_suggestions_owner ON album_suggestions(owner_id, status, end_date DESC)",
         ],
     }
     SCHEMA = """
@@ -349,9 +353,11 @@ class PhotoAiStore(SqliteStore):
         city           TEXT NOT NULL DEFAULT '',
         country        TEXT NOT NULL DEFAULT '',
         status         TEXT NOT NULL DEFAULT 'pending',
-        created_at     TEXT NOT NULL
+        created_at     TEXT NOT NULL,
+        owner_id       TEXT NOT NULL DEFAULT ''
     );
     CREATE INDEX idx_album_suggestions_status ON album_suggestions(status, end_date DESC);
+    CREATE INDEX idx_album_suggestions_owner ON album_suggestions(owner_id, status, end_date DESC);
     """
 
     def save(self, asset_id: str, model: str, insight: dict, tags_applied: list[str] | None = None,
@@ -558,13 +564,24 @@ class PhotoAiStore(SqliteStore):
             ).fetchall()
         return [(r["asset_id"], r["category"], bool(r["is_sensitive"])) for r in rows]
 
-    def list_cleanup(self, kind: str = "all", limit: int = 100) -> list[dict]:
+    def owner_of(self, asset_id: str) -> str | None:
+        """Owner id of one analyzed asset, or None if the asset is not in the store."""
+        with closing(self.connect()) as conn:
+            row = conn.execute("SELECT owner_id FROM photo_insights WHERE asset_id = ?", (asset_id,)).fetchone()
+        return row["owner_id"] if row is not None else None
+
+    def list_cleanup(self, kind: str = "all", limit: int = 100, owner_id: str | None = None) -> list[dict]:
         limit = max(1, min(500, int(limit)))
         where = "cleanup_candidate = 1 AND dismissed = 0"
+        params: list = []
+        if owner_id is not None:
+            where += " AND owner_id = ?"
+            params.append(owner_id)
         if kind == "low_quality":
             where += " AND (quality <= 2 OR category = 'accidental' OR issues != '[]')"
         elif kind == "documents":
             where += " AND category IN ('screenshot', 'document', 'receipt', 'meme')"
+        params.append(limit)
         with closing(self.connect()) as conn:
             rows = conn.execute(
                 f"""
@@ -575,7 +592,7 @@ class PhotoAiStore(SqliteStore):
                 ORDER BY quality ASC, analyzed_at DESC
                 LIMIT ?
                 """,
-                (limit,),
+                params,
             ).fetchall()
         return [
             {
@@ -607,14 +624,17 @@ class PhotoAiStore(SqliteStore):
             cur = conn.execute("DELETE FROM photo_insights WHERE asset_id = ?", (asset_id,))
             return cur.rowcount > 0
 
-    def stats(self) -> dict:
+    def stats(self, owner_id: str | None = None) -> dict:
+        where = " WHERE owner_id = ?" if owner_id is not None else ""
+        params = (owner_id,) if owner_id is not None else ()
         with closing(self.connect()) as conn:
             row = conn.execute(
-                """
+                f"""
                 SELECT COUNT(*) AS analyzed,
                        SUM(CASE WHEN cleanup_candidate = 1 AND dismissed = 0 THEN 1 ELSE 0 END) AS cleanup
-                FROM photo_insights
-                """
+                FROM photo_insights{where}
+                """,
+                params,
             ).fetchone()
         return {"analyzed_count": row["analyzed"] or 0, "cleanup_count": row["cleanup"] or 0}
 
@@ -714,31 +734,40 @@ class PhotoAiStore(SqliteStore):
             rows = conn.execute("SELECT asset_id FROM photo_insights WHERE is_sensitive = 1").fetchall()
         return {r["asset_id"] for r in rows}
 
-    def frame_worthy_ids(self) -> list[str]:
-        """AI-picked sharp, pleasant, non-sensitive photos suitable for a wall frame (T-090)."""
+    def frame_worthy_ids(self, owners: set[str] | None = None) -> list[str]:
+        """AI-picked sharp, pleasant, non-sensitive photos suitable for a wall frame (T-090, T-108)."""
+        where = "frame_worthy = 1 AND is_sensitive = 0 AND category = 'photo' AND quality >= ? AND dismissed = 0"
+        params: list = [BEST_MIN_QUALITY]
+        if owners is not None:
+            wanted = set(owners) | {""}
+            placeholders = ",".join("?" for _ in wanted)
+            where += f" AND owner_id IN ({placeholders})"
+            params.extend(wanted)
         with closing(self.connect()) as conn:
             rows = conn.execute(
-                """
-                SELECT asset_id FROM photo_insights
-                WHERE frame_worthy = 1 AND is_sensitive = 0 AND category = 'photo' AND quality >= ? AND dismissed = 0
-                """,
-                (BEST_MIN_QUALITY,),
+                f"SELECT asset_id FROM photo_insights WHERE {where}",
+                params,
             ).fetchall()
         return [r["asset_id"] for r in rows]
 
-    def known_album_keys(self) -> set[str]:
+    def known_album_keys(self, owner_id: str | None = None) -> set[str]:
         with closing(self.connect()) as conn:
-            rows = conn.execute("SELECT cluster_key FROM album_suggestions").fetchall()
+            if owner_id is not None:
+                rows = conn.execute(
+                    "SELECT cluster_key FROM album_suggestions WHERE owner_id = ?", (owner_id,)
+                ).fetchall()
+            else:
+                rows = conn.execute("SELECT cluster_key FROM album_suggestions").fetchall()
         return {r["cluster_key"] for r in rows}
 
-    def save_album_suggestion(self, cluster: dict, title: str, cover_asset_id: str):
+    def save_album_suggestion(self, cluster: dict, title: str, cover_asset_id: str, owner_id: str = ""):
         with closing(self.connect()) as conn, conn:
             conn.execute(
                 """
                 INSERT OR IGNORE INTO album_suggestions (
                     cluster_key, title, subtitle, cover_asset_id, asset_ids,
-                    start_date, end_date, city, country, status, created_at
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending', ?)
+                    start_date, end_date, city, country, status, created_at, owner_id
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending', ?, ?)
                 """,
                 (
                     cluster["cluster_key"],
@@ -751,21 +780,28 @@ class PhotoAiStore(SqliteStore):
                     cluster.get("city", ""),
                     cluster.get("country", ""),
                     self.clock(),
+                    owner_id or "",
                 ),
             )
 
-    def list_album_suggestions(self, limit: int = 20) -> list[dict]:
+    def list_album_suggestions(self, limit: int = 20, owner_id: str | None = None) -> list[dict]:
         limit = max(1, min(100, int(limit)))
+        where = "status = 'pending'"
+        params: list = []
+        if owner_id is not None:
+            where += " AND owner_id = ?"
+            params.append(owner_id)
+        params.append(limit)
         with closing(self.connect()) as conn:
             rows = conn.execute(
-                """
+                f"""
                 SELECT cluster_key, title, subtitle, cover_asset_id, asset_ids, start_date, end_date
                 FROM album_suggestions
-                WHERE status = 'pending'
+                WHERE {where}
                 ORDER BY end_date DESC
                 LIMIT ?
                 """,
-                (limit,),
+                params,
             ).fetchall()
         return [
             {
@@ -780,12 +816,25 @@ class PhotoAiStore(SqliteStore):
             for r in rows
         ]
 
-    def set_album_suggestion_status(self, cluster_key: str, status: str) -> bool:
+    def album_suggestion_owner(self, cluster_key: str) -> str | None:
+        with closing(self.connect()) as conn:
+            row = conn.execute(
+                "SELECT owner_id FROM album_suggestions WHERE cluster_key = ?", (cluster_key,)
+            ).fetchone()
+        return row["owner_id"] if row is not None else None
+
+    def set_album_suggestion_status(self, cluster_key: str, status: str, owner_id: str | None = None) -> bool:
         with closing(self.connect()) as conn, conn:
-            cur = conn.execute(
-                "UPDATE album_suggestions SET status = ? WHERE cluster_key = ?",
-                (status, cluster_key),
-            )
+            if owner_id is not None:
+                cur = conn.execute(
+                    "UPDATE album_suggestions SET status = ? WHERE cluster_key = ? AND owner_id = ?",
+                    (status, cluster_key, owner_id),
+                )
+            else:
+                cur = conn.execute(
+                    "UPDATE album_suggestions SET status = ? WHERE cluster_key = ?",
+                    (status, cluster_key),
+                )
             return cur.rowcount > 0
 
     def scenes_for(self, asset_ids: list[str], limit: int = 10) -> list[str]:
@@ -1013,17 +1062,21 @@ class Library:
     name: str = ""
 
 
+SERVER_USER_RETRY_TTL = 60.0
+
+
 class PhotoAiWorker:
     """Periodically analyzes unanalyzed Immich images via Ollama into PhotoAiStore."""
 
     def __init__(self, config: PhotoAiConfig, store: PhotoAiStore, immich, analyzer: OllamaAnalyzer,
-                 tagger: ImmichTagger, now=datetime.now, client_factory=None):
+                 tagger: ImmichTagger, now=datetime.now, client_factory=None, clock=time.monotonic):
         self.config = config
         self.store = store
         self.immich = immich
         self.analyzer = analyzer
         self.tagger = tagger
         self.now = now
+        self.clock = clock
         # api_key -> Immich client for a member's library (T-104); None: members are not analyzed.
         self.client_factory = client_factory
         self.running = False
@@ -1031,6 +1084,13 @@ class PhotoAiWorker:
         self._stop = threading.Event()
         self._turn = 0
         self._member_clients: dict[str, tuple[object, ImmichTagger]] = {}
+        self._server_user: dict | None = None
+        self._server_user_resolved = False
+        self._server_user_retry_at = 0.0
+
+    def evict_member(self, user_id: str):
+        """Drop cached client/tagger (holding the member's API key) from RAM when they opt out (T-108)."""
+        self._member_clients.pop(user_id, None)
 
     def libraries(self) -> list[Library]:
         """The server library first, then every member who added a key in the app (T-104)."""
@@ -1047,16 +1107,34 @@ class PhotoAiWorker:
         return libs
 
     def server_user(self) -> dict | None:
-        """Whose library the server's own key is, {"id", "name"} (cached; None if the key can't say:
-        it lacks user.read)."""
-        if not hasattr(self, "_server_user"):
-            try:
-                me = self.immich.me()
-                self._server_user = me if me.get("id") else None
-            except Exception as e:
+        """Whose library the server's own key is, {"id", "name"}.
+
+        Cached permanently once resolved or on 401/403 (missing user.read); retried after
+        SERVER_USER_RETRY_TTL on transient network/server errors (T-108).
+        """
+        if self._server_user_resolved:
+            return self._server_user
+        now = self.clock()
+        if now < self._server_user_retry_at:
+            return None
+        try:
+            me = self.immich.me()
+            self._server_user = me if isinstance(me, dict) and me.get("id") else None
+            self._server_user_resolved = True
+            return self._server_user
+        except requests.HTTPError as e:
+            if e.response is not None and e.response.status_code in (401, 403):
                 log.info("Can't tell whose library IMMICH_API_KEY is (%s); add user.read to see it", e)
                 self._server_user = None
-        return self._server_user
+                self._server_user_resolved = True
+            else:
+                log.warning("Could not fetch IMMICH_API_KEY owner (%s); will retry", e)
+                self._server_user_retry_at = now + SERVER_USER_RETRY_TTL
+            return None
+        except Exception as e:
+            log.warning("Could not fetch IMMICH_API_KEY owner (%s); will retry", e)
+            self._server_user_retry_at = now + SERVER_USER_RETRY_TTL
+            return None
 
     def server_user_id(self) -> str | None:
         user = self.server_user()
@@ -1157,17 +1235,20 @@ class PhotoAiWorker:
         return done
 
     def refresh_album_suggestions(self, max_pages: int = 5) -> int:
-        """Cluster unassigned Immich photos by location/date and name new clusters via Ollama (T-098)."""
+        """Cluster unassigned Immich photos by location/date and name new clusters via Ollama (T-098, T-108)."""
         if not hasattr(self.immich, "unassigned_images"):
             return 0
+        owner_id = self.server_user_id() or ""
         items: list[dict] = []
         for page in range(1, max_pages + 1):
             batch, has_next = self.immich.unassigned_images(page=page, size=100)
             items.extend(batch)
             if not has_next or not batch:
                 break
+        if owner_id:
+            items = [a for a in items if a.get("ownerId") in (None, "", owner_id)]
         clusters = cluster_album_candidates(items)
-        known = self.store.known_album_keys()
+        known = self.store.known_album_keys(owner_id=owner_id)
         added = 0
         for cluster in clusters:
             if cluster["cluster_key"] in known:
@@ -1184,7 +1265,7 @@ class PhotoAiWorker:
             if not worth:
                 continue
             cover = self.store.best_cover(cluster["asset_ids"]) or cluster["asset_ids"][0]
-            self.store.save_album_suggestion(cluster, title, cover)
+            self.store.save_album_suggestion(cluster, title, cover, owner_id=owner_id)
             added += 1
         return added
 

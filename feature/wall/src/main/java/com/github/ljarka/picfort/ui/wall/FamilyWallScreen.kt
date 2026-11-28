@@ -251,13 +251,8 @@ fun FamilyWallContent(
         // The frame's photo, blurred, tints the whole Wall like album art in a music player (T-106).
         PhotoBackdrop(state.frameBackdropUrl)
         Scaffold(
-            containerColor = if (state.frameBackdropUrl !=
-                null
-            ) {
-                Color.Transparent
-            } else {
-                MaterialTheme.colorScheme.background
-            },
+            containerColor = Color.Transparent,
+            contentColor = MaterialTheme.colorScheme.onBackground,
             topBar = {
                 TopAppBar(
                     title = { Text("Family Wall") },
