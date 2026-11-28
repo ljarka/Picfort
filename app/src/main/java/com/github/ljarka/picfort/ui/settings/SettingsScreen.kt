@@ -58,6 +58,7 @@ fun SettingsScreen(
     onFrameClick: () -> Unit,
     onFamilyClick: () -> Unit = {},
     onExperimentalClick: () -> Unit = {},
+    onTimelineClick: (() -> Unit)? = null,
 ) {
     val viewModel: SettingsViewModel = hiltViewModel()
     val backup by viewModel.backup.collectAsStateWithLifecycle()
@@ -101,6 +102,7 @@ fun SettingsScreen(
         onFrameClick = onFrameClick,
         onFamilyClick = onFamilyClick,
         onExperimentalClick = onExperimentalClick,
+        onTimelineClick = onTimelineClick,
         onEnable = onEnable,
         onWifiOnly = viewModel::setWifiOnly,
         onChargingOnly = viewModel::setChargingOnly,
@@ -138,6 +140,7 @@ fun SettingsContent(
     onFrameClick: () -> Unit = {},
     onFamilyClick: () -> Unit = {},
     onExperimentalClick: () -> Unit = {},
+    onTimelineClick: (() -> Unit)? = null,
     onEnable: (Boolean) -> Unit = {},
     onWifiOnly: (Boolean) -> Unit = {},
     onChargingOnly: (Boolean) -> Unit = {},
@@ -271,6 +274,16 @@ fun SettingsContent(
                 }
             }
             BackupQueueRow(queue, Modifier.padding(bottom = 8.dp))
+
+            if (onTimelineClick != null) {
+                HorizontalDivider(Modifier.padding(vertical = 8.dp))
+                SectionTitle("Timeline")
+                ListItem(
+                    modifier = Modifier.clickable(onClick = onTimelineClick),
+                    headlineContent = { Text("Timeline & tags") },
+                    supportingContent = { Text("Hide screenshots & documents, manage Immich search tags") },
+                )
+            }
 
             HorizontalDivider(Modifier.padding(vertical = 8.dp))
             SectionTitle("Picfort server")

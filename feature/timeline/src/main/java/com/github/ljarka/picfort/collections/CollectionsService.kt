@@ -160,4 +160,8 @@ interface CollectionsService {
 
     @GET("/api/tags")
     suspend fun tags(): List<TagDto>
+
+    /** Deletes a tag from Immich (its photos stay). 204 No Content (T-092). */
+    @DELETE("/api/tags/{id}")
+    suspend fun deleteTag(@Path("id") tagId: String): Response<Unit>
 }

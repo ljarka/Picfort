@@ -14,6 +14,10 @@ sealed interface Screen {
     @Serializable
     object Settings : Screen
 
+    /** Settings -> Timeline: display filters and Immich tag management (T-092). */
+    @Serializable
+    object TimelineSettings : Screen
+
     @Serializable
     object ExperimentalFeatures : Screen
 

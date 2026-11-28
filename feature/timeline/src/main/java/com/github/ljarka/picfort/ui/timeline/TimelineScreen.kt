@@ -40,7 +40,6 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.PlayArrow
@@ -49,8 +48,6 @@ import androidx.compose.material3.AssistChip
 import androidx.compose.material3.AssistChipDefaults
 import androidx.compose.material3.BottomSheetScaffold
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.FilterChip
-import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.SheetValue
@@ -145,7 +142,6 @@ fun TimelineScreen(
         val viewModel: TimelineViewModel = hiltViewModel()
         val state by viewModel.state.collectAsStateWithLifecycle()
         val syncLines by viewModel.syncLines.collectAsStateWithLifecycle()
-        val hideNonPhotos by viewModel.hideNonPhotos.collectAsStateWithLifecycle()
         val cleanupCount by viewModel.cleanupCount.collectAsStateWithLifecycle()
         // Back from the background (another app, the Immich web UI…): sync again.
         LifecycleEventEffect(Lifecycle.Event.ON_START) { viewModel.onForeground() }
@@ -180,46 +176,35 @@ fun TimelineScreen(
                 if (result == SnackbarResult.ActionPerformed) onEditMember?.invoke(member.id)
             }
         }
-        val header: @Composable () -> Unit = {
-            Column(Modifier.fillMaxWidth()) {
-                if (people.members.isNotEmpty()) {
-                    PeopleFilterRow(people, peopleViewModel::select, onEditMember, onOpenFamily)
-                }
-                Row(
-                    Modifier
-                        .fillMaxWidth()
-                        .horizontalScroll(rememberScrollState())
-                        .padding(horizontal = 12.dp, vertical = 4.dp),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                ) {
-                    FilterChip(
-                        selected = hideNonPhotos,
-                        onClick = viewModel::toggleHideNonPhotos,
-                        label = { Text("Hide screenshots & documents") },
-                        leadingIcon = if (hideNonPhotos) {
-                            {
-                                Icon(
-                                    imageVector = Icons.Default.Check,
-                                    contentDescription = null,
-                                    modifier = Modifier.size(FilterChipDefaults.IconSize),
-                                )
-                            }
-                        } else {
-                            null
-                        },
-                    )
-                    if (cleanupCount > 0 && onCleanupClick != null) {
-                        AssistChip(
-                            onClick = onCleanupClick,
-                            label = { Text("Clean up ($cleanupCount)") },
-                            leadingIcon = {
-                                Icon(
-                                    imageVector = Icons.Default.Delete,
-                                    contentDescription = null,
-                                    modifier = Modifier.size(AssistChipDefaults.IconSize),
-                                )
-                            },
-                        )
+        val showCleanupChip = cleanupCount > 0 && onCleanupClick != null
+        val header: (@Composable () -> Unit)? = if (people.members.isEmpty() && !showCleanupChip) {
+            null
+        } else {
+            {
+                Column(Modifier.fillMaxWidth()) {
+                    if (people.members.isNotEmpty()) {
+                        PeopleFilterRow(people, peopleViewModel::select, onEditMember, onOpenFamily)
+                    }
+                    if (showCleanupChip) {
+                        Row(
+                            Modifier
+                                .fillMaxWidth()
+                                .horizontalScroll(rememberScrollState())
+                                .padding(horizontal = 12.dp, vertical = 4.dp),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        ) {
+                            AssistChip(
+                                onClick = onCleanupClick!!,
+                                label = { Text("Clean up ($cleanupCount)") },
+                                leadingIcon = {
+                                    Icon(
+                                        imageVector = Icons.Default.Delete,
+                                        contentDescription = null,
+                                        modifier = Modifier.size(AssistChipDefaults.IconSize),
+                                    )
+                                },
+                            )
+                        }
                     }
                 }
             }
@@ -231,7 +216,7 @@ fun TimelineScreen(
             if (scrollToDate == null || scrolledToDate || timelineLayout == null) return@LaunchedEffect
             val row = timelineLayout.rowIndexOf(scrollToDate) ?: return@LaunchedEffect
             peopleViewModel.clear()
-            listState.requestScrollToItem(row + 1)
+            listState.requestScrollToItem(row + if (header != null) 1 else 0)
             scrolledToDate = true
         }
 
@@ -385,11 +370,13 @@ fun TimelineScreen(
 
         val months = state.layout?.months.orEmpty()
         if (months.isNotEmpty() && people.selectedId == null) {
+            val extraTop = (if (people.members.isNotEmpty()) CAROUSEL_HEIGHT else 0.dp) +
+                (if (showCleanupChip) FILTER_ROW_HEIGHT else 0.dp)
             FastScrollComponent(
                 months = months,
                 listState = listState,
-                firstRowIndex = 1,
-                extraTop = if (people.members.isNotEmpty()) CAROUSEL_HEIGHT + FILTER_ROW_HEIGHT else FILTER_ROW_HEIGHT,
+                firstRowIndex = if (header != null) 1 else 0,
+                extraTop = extraTop,
             )
         }
     }

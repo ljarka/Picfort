@@ -32,6 +32,7 @@ class DeleteAlbumTest {
         override suspend fun metadataSearch(body: MetadataSearchRequest) = SearchResponse()
         override suspend fun ocrSearch(body: OcrSearchRequest) = SearchResponse()
         override suspend fun tags(): List<TagDto> = emptyList()
+        override suspend fun deleteTag(tagId: String) = Response.success(204, Unit)
     }
     private val repository = CollectionsRepository({ service }, { error("unused") })
 

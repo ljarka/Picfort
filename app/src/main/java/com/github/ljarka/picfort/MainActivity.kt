@@ -73,6 +73,7 @@ import com.github.ljarka.picfort.ui.shopping.reminders.EXTRA_OPEN_SHOPPING_LIST_
 import com.github.ljarka.picfort.ui.timeline.AlbumRoute
 import com.github.ljarka.picfort.ui.timeline.ImageDetailsRoute
 import com.github.ljarka.picfort.ui.timeline.TimelineScreen
+import com.github.ljarka.picfort.ui.timeline.TimelineSettingsScreen
 import com.github.ljarka.picfort.ui.wall.FamilyWallScreen
 import dagger.hilt.android.AndroidEntryPoint
 import java.time.LocalDate
@@ -409,7 +410,13 @@ class MainActivity : ComponentActivity() {
                                             onExperimentalClick = {
                                                 navController.navigate(Screen.ExperimentalFeatures)
                                             },
+                                            onTimelineClick = {
+                                                navController.navigate(Screen.TimelineSettings)
+                                            },
                                         )
+                                    }
+                                    composable<Screen.TimelineSettings> {
+                                        TimelineSettingsScreen(onBack = { navController.popBackStack() })
                                     }
                                     composable<Screen.ExperimentalFeatures> {
                                         ExperimentalFeaturesScreen(onBack = { navController.popBackStack() })

@@ -132,6 +132,15 @@ class CollectionsRepository @Inject constructor(
     /** Immich tags formatted for Search chips (curated `ai/` tags first, then user tags, T-090). */
     suspend fun tags(): List<SearchTag> = formatSearchTags(service.get().tags())
 
+    /** Every Immich tag, sorted by value, for managing/deleting unwanted tags in Settings (T-092). */
+    suspend fun allTags(): List<TagDto> = service.get().tags().sortedBy { it.value.lowercase() }
+
+    /** Deletes a tag from Immich (photos stay); throws [HttpException] on error (T-092). */
+    suspend fun deleteTag(tagId: String) {
+        val response = service.get().deleteTag(tagId)
+        if (!response.isSuccessful) throw HttpException(response)
+    }
+
     /** Named, visible people in my Immich library, in Immich's order (most photos first). */
     suspend fun people(): List<SearchPerson> {
         val all = ArrayList<PersonDto>()
