@@ -97,9 +97,15 @@ class BrowserFrameTest(unittest.TestCase):
     def test_survives_a_restart(self):
         self.controller.show_local(jpeg((800, 600)))
         self.wait_idle()
+        before = self.controller.version
         client = self.make_client("s3cret")  # a new controller over the same data
-        self.assertTrue(client.get("/frame/state", headers=KEY).get_json()["shown"])
+        state = client.get("/frame/state", headers=KEY).get_json()
+        self.assertTrue(state["shown"])
         self.assertEqual(200, client.get("/frame/photo", headers=KEY).status_code)
+        # T-105: a restart never reuses an earlier version, so "?v=" in the Wall's URL never
+        # matches a photo a phone cached before the restart.
+        self.assertGreater(state["version"], before)
+        self.assertGreater(state["version"], 1_000_000_000)
 
     def test_too_many_wrong_keys(self):
         clock = Clock()

@@ -143,7 +143,9 @@ class FrameController:
                 with open(self._local_path, "rb") as f:
                     self.local_photo = f.read()
             if asset:
-                self.current_asset, self.version = asset, 1
+                # Not 1: every restart would reuse the same versions, and a phone that cached
+                # "/frame/photo?v=1" from an earlier run showed that old photo on the Wall (T-105).
+                self.current_asset, self.version = asset, int(time.time())
         except (OSError, ValueError, AttributeError):
             pass
 
