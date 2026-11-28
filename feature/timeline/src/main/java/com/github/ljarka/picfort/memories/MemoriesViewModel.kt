@@ -50,7 +50,7 @@ class MemoriesViewModel @Inject constructor(
         _state.update { it.copy(loading = true, error = null) }
         viewModelScope.launch {
             try {
-                // Opened from the shared Family Wall: photos the AI marked private never show (T-098).
+                // Opened from the shared Family Wall: photos the AI marked private never show (T-102).
                 val sensitive = timeline.aiLabels().first().sensitive
                 val memories = withoutSensitive(collections.memories(), sensitive)
                 val sections = memorySections(memories, LocalDate.now(), Locale.getDefault())

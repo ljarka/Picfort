@@ -64,7 +64,7 @@ data class RemoteAssetExifEntity(@PrimaryKey val assetId: String, val hasCameraE
 data class RemoteDocumentEntity(@PrimaryKey val assetId: String)
 
 /**
- * What the Picfort server's photo AI saw in an Immich asset (T-098, T-099): its [category]
+ * What the Picfort server's photo AI saw in an Immich asset (T-102, T-099): its [category]
  * ("photo", "screenshot", "document", …) and whether it holds private data ([sensitive]).
  */
 @Entity(tableName = "ai_labels")

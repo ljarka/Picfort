@@ -59,7 +59,7 @@ private fun yearsAgo(years: Int): String = when {
     else -> "$years years ago"
 }
 
-/** Memories without the [sensitive] photos (T-098); a memory left with no photos is dropped later. */
+/** Memories without the [sensitive] photos (T-102); a memory left with no photos is dropped later. */
 fun withoutSensitive(memories: List<MemoryDto>, sensitive: Set<String>): List<MemoryDto> = if (sensitive.isEmpty()) {
     memories
 } else {

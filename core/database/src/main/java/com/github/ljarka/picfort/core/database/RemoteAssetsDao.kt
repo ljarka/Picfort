@@ -114,7 +114,7 @@ interface RemoteAssetsDao {
     @Query("DELETE FROM ai_labels")
     suspend fun clearAiLabels()
 
-    /** The photo AI's labels (T-098, T-099). */
+    /** The photo AI's labels (T-102, T-099). */
     @Query("SELECT * FROM ai_labels")
     fun aiLabelsFlow(): Flow<List<AiLabelEntity>>
 

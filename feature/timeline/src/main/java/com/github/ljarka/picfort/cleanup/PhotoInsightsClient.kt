@@ -38,7 +38,7 @@ data class CleanupCandidateDto(
     @SerialName("analyzed_at") val analyzedAt: String = "",
 )
 
-/** One analyzed asset from `/photo-insights/labels`: `[id, category, sensitive 0/1]` (T-098). */
+/** One analyzed asset from `/photo-insights/labels`: `[id, category, sensitive 0/1]` (T-102). */
 @Serializable
 private data class LabelsResponse(val items: List<kotlinx.serialization.json.JsonArray> = emptyList())
 
@@ -83,7 +83,7 @@ class PhotoInsightsClient @Inject constructor(private val server: PicfortServerC
         }.getOrNull()
     }
 
-    /** Every asset the server's photo AI analyzed (T-098, T-099); throws when unavailable. */
+    /** Every asset the server's photo AI analyzed (T-102, T-099); throws when unavailable. */
     suspend fun labels(): List<AiLabel> {
         val url = server.base().newBuilder()
             .addPathSegment("photo-insights")

@@ -536,7 +536,7 @@ class PhotoAiStore(SqliteStore):
         }
 
     def labels(self) -> list[tuple[str, str, bool]]:
-        """(asset_id, category, is_sensitive) for every analyzed asset (T-098, T-099)."""
+        """(asset_id, category, is_sensitive) for every analyzed asset (T-102, T-099)."""
         with closing(self.connect()) as conn:
             rows = conn.execute("SELECT asset_id, category, is_sensitive FROM photo_insights").fetchall()
         return [(r["asset_id"], r["category"], bool(r["is_sensitive"])) for r in rows]

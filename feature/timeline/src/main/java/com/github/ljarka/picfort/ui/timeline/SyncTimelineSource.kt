@@ -131,7 +131,7 @@ class SyncTimelineSource @Inject constructor(
     }
 
     /**
-     * Refreshes the photo AI's labels from the Picfort server (T-098, T-099). No server, or one
+     * Refreshes the photo AI's labels from the Picfort server (T-102, T-099). No server, or one
      * without photo insights: keeps the previous cache (then the guesses decide).
      */
     private suspend fun refreshAiLabelsQuietly() {
@@ -152,7 +152,7 @@ class SyncTimelineSource @Inject constructor(
         }
     }
 
-    /** The photo AI's labels, split for the filters (T-098, T-099). */
+    /** The photo AI's labels, split for the filters (T-102, T-099). */
     fun aiLabels(): Flow<AiLabels> = dao.aiLabelsFlow().map(::aiLabelsOf)
 
     /** Immich asset ids tagged [BEST_TAG_VALUE] (T-094). */

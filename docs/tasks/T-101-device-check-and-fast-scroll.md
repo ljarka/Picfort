@@ -22,7 +22,7 @@
 
 ## Not covered
 
-Memories (T-096/T-098) need the Wall's frame card, which needs `PICFORT_API_KEY` on the server;
+Memories (T-096/T-102) need the Wall's frame card, which needs `PICFORT_API_KEY` on the server;
 the test server has none and its app setup sends no key. Enabling it means changing the test
 server and the login subflow for every flow: left for the owner to decide.
 

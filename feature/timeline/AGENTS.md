@@ -14,7 +14,7 @@ Immich photo timeline, gallery, full-screen viewer, collections, and media sync 
 | `ui/timeline/layout/TimelineRows.kt` | Row measurement and tile placement; `BestRow` after a month header when `TimelineMonth.best` (3..12, `bestOfMonth`) is set (T-094) |
 | `ui/timeline/TimelineRepository.kt` | Merged index; `phoneOnServer` + `loadPhoneMediaIfNeeded()` for the backup count in Settings (T-063) |
 | `ui/timeline/LocalDuplicates.kt` | `localIdsOnServer`: phone media already in Immich (backup link, SHA-1, or file name + time taken ± zone offset) is hidden, shown once as the Immich copy |
-| `ui/timeline/SyncTimelineSource.kt` | Local copy of Immich assets + EXIF (`AssetExifV1`) + daily OCR document ids (T-088) and `ai/best/frame-worthy` ids (T-094); photo AI labels from `/photo-insights/labels` into `ai_labels` (`aiLabels()`, T-098/T-099) |
+| `ui/timeline/SyncTimelineSource.kt` | Local copy of Immich assets + EXIF (`AssetExifV1`) + daily OCR document ids (T-088) and `ai/best/frame-worthy` ids (T-094); photo AI labels from `/photo-insights/labels` into `ai_labels` (`aiLabels()`, T-102/T-099) |
 | `ui/image/ImageDetailsScreen.kt` | Full-screen photo/video viewer, shared element transition |
 | `ui/image/AssetDetailsSheet.kt`, `assets/AssetDetails.kt` | "Details" sheet: tag chips on top (`assetTagLabels`, T-097), then date, file, camera, place, people |
 | `ui/image/ImageDetailsViewModel.kt` | Viewer ViewModel: zoom, EXIF metadata, pushing photo to frame via `FrameSender` |

@@ -1,4 +1,7 @@
-# T-098 — Memories never show photos the AI marked sensitive
+# T-102 — Memories never show photos the AI marked sensitive
+
+> Numbered T-098 in its commit (`f2eea60`); renumbered because a parallel session had already
+> used T-098 for suggested albums.
 
 **Status:** done (`f2eea60`)  
 **Component:** Server (`/photo-insights/labels`), Android (`:feature:timeline`, `:core:database`)  

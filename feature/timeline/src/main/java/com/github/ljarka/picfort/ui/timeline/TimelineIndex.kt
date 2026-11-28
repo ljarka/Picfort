@@ -69,7 +69,7 @@ class TimelineIndex(val months: List<TimelineMonth>) {
     }
 }
 
-/** What the photo AI saw (T-098, T-099). [analyzed] has every labelled id; the others are subsets. */
+/** What the photo AI saw (T-102, T-099). [analyzed] has every labelled id; the others are subsets. */
 data class AiLabels(
     val analyzed: Set<String> = emptySet(),
     val nonPhotos: Set<String> = emptySet(),

@@ -12,7 +12,7 @@ Room database, entities and DAOs for local caching and offline storage.
 | `remote_asset_exif` | `RemoteAssetExifEntity` | cache | Immich sync stream (`AssetExifV1`, T-088) |
 | `remote_documents` | `RemoteDocumentEntity` | cache | Immich metadata OCR search (T-088) |
 | `remote_best` | `RemoteBestEntity` | cache | Immich `ai/best/frame-worthy` tag search (T-094) |
-| `ai_labels` | `AiLabelEntity` | cache | Picfort server `/photo-insights/labels` (T-098, T-099) |
+| `ai_labels` | `AiLabelEntity` | cache | Picfort server `/photo-insights/labels` (T-102, T-099) |
 | `remote_stacks` | `RemoteStackEntity` | cache | Immich sync stream |
 | `partners` | `PartnerEntity` | cache | Immich sync stream |
 | `sync_state` | `SyncStateEntity` | cache | Immich sync cursor (full re-sync on wipe) |

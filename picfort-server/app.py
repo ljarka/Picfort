@@ -936,7 +936,7 @@ def register_photo_insights(app: Flask, store: PhotoAiStore, worker: PhotoAiWork
 
     @app.route("/photo-insights/labels", methods=["GET"])
     def photo_insights_labels():
-        """Every analyzed asset as [id, category, sensitive 0/1], compact for the app's cache (T-098)."""
+        """Every analyzed asset as [id, category, sensitive 0/1], compact for the app's cache (T-102)."""
         items = [[asset_id, category, 1 if sensitive else 0] for asset_id, category, sensitive in store.labels()]
         return jsonify(items=items, count=len(items))
 
