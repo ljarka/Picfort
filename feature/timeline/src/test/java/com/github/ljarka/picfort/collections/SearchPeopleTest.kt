@@ -8,13 +8,7 @@ class SearchPeopleTest {
 
     private val smart = mutableListOf<SmartSearchRequest>()
     private val metadata = mutableListOf<MetadataSearchRequest>()
-    private val service = object : CollectionsService {
-        override suspend fun albums(): List<AlbumDto> = emptyList()
-        override suspend fun album(albumId: String) = error("unused")
-        override suspend fun createAlbum(body: CreateAlbumRequest) = error("unused")
-        override suspend fun shareAlbum(albumId: String, body: ShareAlbumUsersRequest) = error("unused")
-        override suspend fun deleteAlbum(albumId: String) = retrofit2.Response.success(Unit)
-        override suspend fun addToAlbum(albumId: String, body: BulkIdsRequest): List<BulkIdResult> = emptyList()
+    private val service = object : FakeCollectionsService() {
         override suspend fun smartSearch(body: SmartSearchRequest): SearchResponse {
             smart += body
             return SearchResponse(SearchAssetsPage(listOf(SearchAssetDto("s1"))))
@@ -23,11 +17,6 @@ class SearchPeopleTest {
             metadata += body
             return SearchResponse(SearchAssetsPage(listOf(SearchAssetDto("m1")), nextPage = "2"))
         }
-        override suspend fun ocrSearch(body: OcrSearchRequest) = SearchResponse()
-        override suspend fun tags(): List<TagDto> = emptyList()
-        override suspend fun deleteTag(tagId: String) = retrofit2.Response.success(Unit)
-        override suspend fun memories(isUpcoming: Boolean, isTrashed: Boolean) =
-            emptyList<com.github.ljarka.picfort.memories.MemoryDto>()
         override suspend fun people(page: Int, size: Int, withHidden: Boolean) = when (page) {
             1 -> PeopleResponse(
                 listOf(PersonDto("p1", "Ola"), PersonDto("x", ""), PersonDto("h", "Hidden", isHidden = true)),

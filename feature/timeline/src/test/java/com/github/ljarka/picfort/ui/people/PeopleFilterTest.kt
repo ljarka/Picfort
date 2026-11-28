@@ -7,6 +7,7 @@ import com.github.ljarka.picfort.collections.BulkIdsRequest
 import com.github.ljarka.picfort.collections.CollectionsRepository
 import com.github.ljarka.picfort.collections.CollectionsService
 import com.github.ljarka.picfort.collections.CreateAlbumRequest
+import com.github.ljarka.picfort.collections.FakeCollectionsService
 import com.github.ljarka.picfort.collections.MetadataSearchRequest
 import com.github.ljarka.picfort.collections.PeopleResponse
 import com.github.ljarka.picfort.collections.SearchAssetDto
@@ -42,18 +43,7 @@ class PeopleFilterTest {
     @Test
     fun `photos of a person come from a metadata search, newest first, paged`() = runBlocking {
         val requests = mutableListOf<MetadataSearchRequest>()
-        val service = object : CollectionsService {
-            override suspend fun albums(): List<AlbumDto> = emptyList()
-            override suspend fun album(albumId: String) = error("unused")
-            override suspend fun createAlbum(body: CreateAlbumRequest) = error("unused")
-            override suspend fun shareAlbum(
-                albumId: String,
-                body: com.github.ljarka.picfort.collections.ShareAlbumUsersRequest,
-            ) = error("unused")
-            override suspend fun deleteAlbum(albumId: String) = retrofit2.Response.success(Unit)
-            override suspend fun addToAlbum(albumId: String, body: BulkIdsRequest): List<BulkIdResult> = emptyList()
-            override suspend fun smartSearch(body: SmartSearchRequest) = SearchResponse()
-            override suspend fun people(page: Int, size: Int, withHidden: Boolean) = PeopleResponse()
+        val service = object : FakeCollectionsService() {
             override suspend fun metadataSearch(body: MetadataSearchRequest): SearchResponse {
                 requests += body
                 return SearchResponse(
@@ -63,12 +53,6 @@ class PeopleFilterTest {
                     ),
                 )
             }
-            override suspend fun ocrSearch(body: com.github.ljarka.picfort.collections.OcrSearchRequest) =
-                SearchResponse()
-            override suspend fun tags(): List<com.github.ljarka.picfort.collections.TagDto> = emptyList()
-            override suspend fun deleteTag(tagId: String) = retrofit2.Response.success(Unit)
-            override suspend fun memories(isUpcoming: Boolean, isTrashed: Boolean) =
-                emptyList<com.github.ljarka.picfort.memories.MemoryDto>()
         }
         val repository = CollectionsRepository({ service }, { error("unused") })
         val page = repository.personAssets("person-ola", page = 1)
